@@ -1,0 +1,1 @@
+python "D:/Users/horyc/OneDrive - UW-Madison/c/codes/method_parallel_solve_4jmag.py" D:/femm42/PS_Qr32_NoEndRing_M15_17303l/static-jmag/ 5
