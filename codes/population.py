@@ -1128,7 +1128,7 @@ class swarm(object):
         print '---------------\nTranRef-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]'
         # print ForCon_Angle_List, 'deg'
         print 'Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]'
-        print 'basic info:', basic_info
+        print '\tbasic info:', basic_info
 
 
 
@@ -1147,7 +1147,7 @@ class swarm(object):
         print '---------------\nTran2TSS-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]'
         # print ForCon_Angle_List, 'deg'
         print 'Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]'
-        print 'basic info:', basic_info
+        print '\tbasic info:', basic_info
 
 
 
@@ -1213,8 +1213,58 @@ class swarm(object):
         print 'show results!'
         mpl.rcParams['font.family'] = ['serif'] # default is sans-serif
         mpl.rcParams['font.serif'] = ['Times New Roman']
+        
+        Fs = 500.*400.
+        def basefreqFFT(x, Fs, base_freq=500, ax=None, ax_time_domain=None): #频域横坐标除以基频，即以基频为单位
+            def nextpow2(L):
+                n = 0
+                while 2**n < L:
+                    n += 1
+                return n
+            L = len(x)
+            Ts = 1.0/Fs
+            t = [el*Ts for el in range(0,L)]
+            if ax_time_domain != None:
+                ax_time_domain.plot(t, x)
 
-        def add_plot(axeses, title=None, label=None, zorder=None, time_list=None, force_x=None, force_y=None, force_abs=None, torque=None, range_ss=None):
+            # NFFT = 2**nextpow2(L) # this causes incorrect dc bin (too large)
+            NFFT = L
+            y = np.fft.fft(x,NFFT) # y is a COMPLEX defined in numpy
+            Y = [2 * el.__abs__() / L for el in y] # /L for spectrum aplitude consistent with actual signal. 2* for single-sided. abs for amplitude.
+            Y[0] *= 0.5 # DC does not need to be times 2
+            if base_freq==None:
+                # f = np.fft.fftfreq(NFFT, t[1]-t[0]) # for double-sided
+                f = Fs/2.0*np.linspace(0,1,NFFT/2+1) # unit is Hz
+            else:
+                f = Fs/2.0/base_freq*np.linspace(0,1,NFFT/2+1) # unit is base_freq Hz
+
+            if ax == None:
+                fig, ax = subplots()
+            # ax.bar(f,Y[0:int(NFFT/2)+1], width=1.5)
+            ax.plot(f,Y[0:int(NFFT/2)+1])
+
+            # fig.title('Single-Sided Amplitude Spectrum of x(t)')
+            # ax.xlabel('Frequency divided by base_freq / base freq * Hz')
+            #ylabel('|Y(f)|')
+            # ax.ylabel('Amplitude / 1')
+
+            # # 计算频谱
+            # fft_parameters = np.fft.fft(y_data) / len(y_data)
+            # # 计算各个频率的振幅
+            # fft_data = np.clip(20*np.log10(np.abs(fft_parameters))[:self.fftsize/2+1], -120, 120)
+        def FFT_another_implementation(TorCon_list, Fs):
+            # 这个FFT的结果和上面那个差不多，但是会偏小一点！不知道为什么！
+
+            # Number of samplepoints
+            N = len(TorCon_list)
+            # Sample spacing
+            T = 1.0 / Fs
+            yf = np.fft.fft(TorCon_list)
+            yf[0] *= 0.5
+            xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
+            fig, ax = subplots()
+            ax.plot(xf, 2.0/N * np.abs(yf[:N//2]))
+        def add_plot(axeses, title=None, label=None, zorder=None, time_list=None, force_x=None, force_y=None, force_abs=None, torque=None, range_ss=None, alpha=0.7):
 
             Avg_ForCon_Vector, Avg_ForCon_Magnitude, Avg_ForCon_Angle, ForCon_Angle_List, Max_ForCon_Err_Angle = self.get_force_error_angle(force_x[-range_ss:], force_y[-range_ss:])
             print '\n\n---------------%s' % (title)
@@ -1225,51 +1275,91 @@ class swarm(object):
             print 'Force Mag Ripple (Peak-to-Peak)', max(force_abs[-range_ss:]) - min(force_abs[-range_ss:]), 'N'
             print 'Maximum Force Error Angle', Max_ForCon_Err_Angle, '[deg]'
 
-            ax = axeses[0][0]; ax.plot(time_list, torque, alpha=0.7, label=label, zorder=zorder)
-            ax = axeses[0][1]; ax.plot(time_list, force_abs, alpha=0.7, label=label, zorder=zorder)
-            ax = axeses[1][0]; ax.plot(time_list, force_abs - Avg_ForCon_Magnitude, label=label, alpha=0.7, zorder=zorder)
-            ax = axeses[1][1]; ax.plot(time_list, np.arctan2(force_y, force_x)/pi*180. - Avg_ForCon_Angle, label=label, alpha=0.7, zorder=zorder)
+            ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
+            ax = axeses[0][1]; ax.plot(time_list, force_abs, alpha=alpha, label=label, zorder=zorder)
+            ax = axeses[1][0]; ax.plot(time_list, (force_abs - Avg_ForCon_Magnitude)/Avg_ForCon_Magnitude, label=label, alpha=alpha, zorder=zorder)
+            ax = axeses[1][1]; ax.plot(time_list, np.arctan2(force_y, force_x)/pi*180. - Avg_ForCon_Angle, label=label, alpha=alpha, zorder=zorder)
 
-        fig, axeses = subplots(2, 2, sharex=True)
-        ax = axeses[0][0]; ax.set_xlabel('Time [s]'); ax.set_ylabel('Torque [Nm]')
-        ax = axeses[0][1]; ax.set_xlabel('Time [s]'); ax.set_ylabel('Force Magnitude [N]')
-        ax = axeses[1][0]; ax.set_xlabel('Time [s]'); ax.set_ylabel('Force Error Magnitude [N]')
-        ax = axeses[1][1]; ax.set_xlabel('Time [s]'); ax.set_ylabel('Force Error Angle [deg]')
+        fig_main, axeses = subplots(2, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+        ax = axeses[0][0]; ax.set_xlabel('(a)',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)
+        ax = axeses[0][1]; ax.set_xlabel('(b)',fontsize=14.5); ax.set_ylabel('Force Amplitude [N]',fontsize=14.5)
+        ax = axeses[1][0]; ax.set_xlabel('Time [s]\n(c)',fontsize=14.5); ax.set_ylabel('Normalized Force Error Magnitude [N]',fontsize=14.5)
+        ax = axeses[1][1]; ax.set_xlabel('Time [s]\n(d)',fontsize=14.5); ax.set_ylabel('Force Error Angle [deg]',fontsize=14.5)
 
-        ''' TranRef '''
+        ''' TranRef400 '''
         study_name = 'TranRef'
-        dm = self.read_csv_results_4_comparison_transient(study_name)        
+        dm = self.read_csv_results_4_comparison_transient(study_name, path_prefix=r'D:\JMAG_Files\TimeStepSensitivity/'+'PS_Qr%d_NoEndRing_M15_17303l/'%(int(self.im.Qr)))
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
-        end_time = time_list[-1]
         add_plot( axeses,
                   title=study_name,
-                  label='TranFEARef40',
-                  zorder=5,
+                  label='Transient FEA', #'TranFEARef', #400',
+                  zorder=1,
                   time_list=time_list,
                   force_x=ForConX_list,
                   force_y=ForConY_list,
                   force_abs=ForConAbs_list,
                   torque=TorCon_list,
-                  range_ss=480) # samples in the tail that are in steady state
-        print 'basic info:', basic_info
+                  range_ss=480*10) # samples in the tail that are in steady state
+        print '\tbasic info:', basic_info
 
         # Current of TranRef
         fig_cur, axes_cur = subplots(2,1)
         ax_cur = axes_cur[0]
+        # for key in dm.key_list:
+        #     if 'A1' in key: # e.g., ConductorA1
+        #         ax_cur.plot(dm.Current_dict['Time(s)'], 
+        #                 dm.Current_dict[key], 
+        #                 label=study_name, #+'40',
+        #                 alpha=0.7)
+        # Current of TranRef400
         for key in dm.key_list:
+            # if 'Coil' in key:
+            #     ax_cur.plot(dm.Current_dict['Time(s)'], 
+            #             dm.Current_dict[key], 
+            #             label=key,
+            #             alpha=0.7)
             if 'A1' in key: # e.g., ConductorA1
                 ax_cur.plot(dm.Current_dict['Time(s)'], 
                         dm.Current_dict[key], 
-                        label=study_name+'40',
-                        alpha=0.7)
+                        label=study_name+'400',
+                        alpha=0.7,
+                        color='blue') #'purple')
+                basefreqFFT(dm.Current_dict[key], Fs, ax=axes_cur[1])
+                print '\tcheck time step', time_list[1], 1./Fs
+                break
+
+        # basefreqFFT(np.sin(2*pi*1500*np.arange(0,0.1,1./Fs)), Fs)
+        fig, axes = subplots(2,1)
+        basefreqFFT(TorCon_list[int(len(TorCon_list)/2):], Fs, base_freq=500., ax=axes[1], ax_time_domain=axes[0])
+        fig, axes = subplots(2,1)
+        basefreqFFT(ForConAbs_list[int(len(TorCon_list)/2):], Fs, ax=axes[1], ax_time_domain=axes[0])
+
+
+        # ''' TranRef '''
+        # study_name = 'TranRef'
+        # dm = self.read_csv_results_4_comparison_transient(study_name)        
+        # basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
+        # add_plot( axeses,
+        #           title=study_name,
+        #           label='TranFEARef40',
+        #           zorder=5,
+        #           time_list=time_list,
+        #           force_x=ForConX_list,
+        #           force_y=ForConY_list,
+        #           force_abs=ForConAbs_list,
+        #           torque=TorCon_list,
+        #           range_ss=480) # samples in the tail that are in steady state
+        # print '\tbasic info:', basic_info
+
 
         ''' Tran2TSS '''
         study_name = 'Tran2TSS'
         dm = self.read_csv_results_4_comparison_transient(study_name)
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
+        end_time = time_list[-1]
         add_plot( axeses,
                   title=study_name,
-                  label='TranFEAwi2TSS',
+                  label='Transient FEA w/ 2 Time Step Sections',
                   zorder=8,
                   time_list=time_list,
                   force_x=ForConX_list,
@@ -1277,7 +1367,7 @@ class swarm(object):
                   force_abs=ForConAbs_list,
                   torque=TorCon_list,
                   range_ss=48) # samples in the tail that are in steady state
-        print 'basic info:', basic_info
+        print '\tbasic info:', basic_info
 
         # Current of Tran2TSS
         for key in dm.key_list:
@@ -1315,14 +1405,15 @@ class swarm(object):
 
         add_plot( axeses,
                   title=study_name,
-                  label='StaticFEAwiRR',
-                  zorder=2,
+                  label='Static FEA', #'StaticFEAwiRR',
+                  zorder=3,
                   time_list=time_list,
                   force_x=femm_force_x,
                   force_y=femm_force_y,
                   force_abs=femm_force_abs,
                   torque=femm_torque,
-                  range_ss=len(rotor_position_in_deg)) # samples in the tail that are in steady state
+                  range_ss=len(rotor_position_in_deg), # samples in the tail that are in steady state
+                  alpha=0.5) 
         
         ''' EddyCurrent '''
         study_name = 'Freq-FFVRC'
@@ -1344,7 +1435,7 @@ class swarm(object):
 
         add_plot( axeses,
                   title=study_name,
-                  label='EddyCurFEAwiRR',
+                  label='Eddy Current FEA', #'EddyCurFEAwiRR',
                   zorder=2,
                   time_list=time_list,
                   force_x=ec_force_x,
@@ -1364,89 +1455,26 @@ class swarm(object):
         # ax.set_xlabel('Force X (FEMM) [N]'); 
         # ax.set_ylabel('Force Y (FEMM) [N]')
 
-        ''' TranRef400 '''
-        study_name = 'TranRef'
-        dm = self.read_csv_results_4_comparison_transient(study_name, path_prefix=r'D:\JMAG_Files\TimeStepSensitivity/'+'PS_Qr%d_NoEndRing_M15_17303l/'%(int(self.im.Qr)))
-        basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
-        add_plot( axeses,
-                  title=study_name,
-                  label='TranFEARef400',
-                  zorder=4,
-                  time_list=time_list,
-                  force_x=ForConX_list,
-                  force_y=ForConY_list,
-                  force_abs=ForConAbs_list,
-                  torque=TorCon_list,
-                  range_ss=480*10) # samples in the tail that are in steady state
-        print 'basic info:', basic_info
-
-        def basefreqFFT(x, Fs, base_freq=500, ax=None, ax_time_domain=None): #频域横坐标除以基频，即以基频为单位
-            def nextpow2(L):
-                n = 0
-                while 2**n < L:
-                    n += 1
-                return n
-            L = len(x)
-            Ts = 1.0/Fs
-            t = [el*Ts for el in range(0,L)]
-            if ax_time_domain != None:
-                ax_time_domain.plot(t, x)
-
-            NFFT = 2**nextpow2(L)
-            y = np.fft.fft(x,NFFT) # y is a COMPLEX defined in numpy
-            Y = [2 * el.__abs__() / L for el in y] # /L for spectrum aplitude consistent with actual signal. 2* for single-sided. abs for amplitude.
-            f = np.fft.fftfreq(NFFT, t[1]-t[0])
-            f = Fs/2.0/base_freq*np.linspace(0,1,NFFT/2+1) # unit is base_freq Hz
-            #f = Fs/2.0*linspace(0,1,NFFT/2+1) # unit is Hz
-
-            if ax == None:
-                fig, ax = subplots()
-            ax.plot(f,Y[0:int(NFFT/2)+1])
-            # fig.title('Single-Sided Amplitude Spectrum of x(t)')
-            # ax.xlabel('Frequency divided by base_freq / base freq * Hz')
-            #ylabel('|Y(f)|')
-            # ax.ylabel('Amplitude / 1')
-
-            # # 计算频谱
-            # fft_parameters = np.fft.fft(y_data) / len(y_data)
-            # # 计算各个频率的振幅
-            # fft_data = np.clip(20*np.log10(np.abs(fft_parameters))[:self.fftsize/2+1], -120, 120)
-
-
-        Fs = 500.*400.
-        # basefreqFFT(np.sin(2*pi*1500*np.arange(0,0.1,1./Fs)), Fs)
-        fig, axes = subplots(2,1)
-        basefreqFFT(TorCon_list[int(len(TorCon_list)/2):], Fs, ax=axes[1], ax_time_domain=axes[0])
-        fig, axes = subplots(2,1)
-        basefreqFFT(ForConAbs_list[int(len(TorCon_list)/2):], Fs, ax=axes[1], ax_time_domain=axes[0])
-
-        # Current of TranRef400
-        for key in dm.key_list:
-            if 'Coil' in key:
-                ax_cur.plot(dm.Current_dict['Time(s)'], 
-                        dm.Current_dict[key], 
-                        label=key,
-                        alpha=0.7)
-            if 'A1' in key: # e.g., ConductorA1
-                ax_cur.plot(dm.Current_dict['Time(s)'], 
-                        dm.Current_dict[key], 
-                        label=study_name+'400',
-                        alpha=0.7,
-                        color='purple')
-                basefreqFFT(dm.Current_dict[key], Fs, ax=axes_cur[1])
-                print 'check time step', time_list[1], 1./Fs
-                break
-
-
-
         for ax in [axeses[0][0],axeses[0][1],axeses[1][0],axeses[1][1]]:
             ax.grid()
-            ax.legend()
+            ax.legend(loc='lower center')
+            ax.set_xlim([0,0.35335])
+
+
+        axeses[0][1].set_ylim([260, 335])
+        axeses[1][0].set_ylim([-0.06, 0.06])
 
         ax_cur.legend()
         ax_cur.grid()
         ax_cur.set_xlabel('Time [s]'); 
         ax_cur.set_ylabel('Rotor Current (of One Bar) [A]')
+        # plt.figtext(0.5, 0.01, txt, wrap=True, horizontalalignment='center', fontsize=12)
+
+        fig_main.tight_layout()
+        if int(self.im.Qr) == 36:
+            fig_main.savefig('FEA_Model_Comparisons.png', dpi=150)
+            fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 BlessIMDesign\p2019_iemdc_bearingless_induction full paper\images\FEA_Model_Comparisons.png', dpi=150)
+
 
     def read_csv_results_4_comparison_transient(self, study_name, path_prefix=None):
         if path_prefix == None:
@@ -1610,8 +1638,6 @@ class swarm(object):
         axes[0].legend()
         axes[1].grid()
         axes[1].legend()
-
-
 
 class bearingless_induction_motor_design(object):
 

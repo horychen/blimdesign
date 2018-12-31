@@ -1,7 +1,9 @@
-*.pyc
 /csv
 /pop
 /Arnon5
 *.txt
 *.log
 *.dmp
+*.pyc
+*.png
+

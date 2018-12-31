@@ -1,5 +1,5 @@
 #coding:utf-8
-#execfile('D:/Users/horyc/OneDrive - UW-Madison/c/codes/pyfemm_script.py')
+#execfile('D:/OneDrive - UW-Madison/c/codes/pyfemm_script.py')
 #execfile(r'K:\jchen782\JMAG\c\codes/pyfemm_script.py')
 
 ''' 0. Configuration
@@ -53,7 +53,7 @@ def where_am_i(fea_config_dict):
     print dir_interpreter
     if os.path.exists('D:/'):
         print 'you are on Legion Y730'
-        dir_parent = 'D:/Users/horyc/OneDrive - UW-Madison/c/'
+        dir_parent = 'D:/OneDrive - UW-Madison/c/'
         dir_codes = dir_parent + 'codes/'
         dir_lib = dir_parent + 'codes/'
         # dir_initial_design = dir_parent + 'pop/'
