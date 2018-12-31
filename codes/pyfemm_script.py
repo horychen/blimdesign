@@ -1,4 +1,4 @@
-#coding:utf-8
+# coding:utf-8
 #execfile('D:/OneDrive - UW-Madison/c/codes/pyfemm_script.py')
 #execfile(r'K:\jchen782\JMAG\c\codes/pyfemm_script.py')
 
@@ -8,10 +8,10 @@
 
 # 端环有的：TranRef 10 Steps Per Cycle
 # run_folder = r'run#12/'; deg_per_step = 0.5; run_list = [1,0,0,0,0]; # dense run: 0.1 deg
-# run_folder = r'run#14/'; deg_per_step = 0.5; run_list = [1,0,0,1,0]; # Qr=32 
+# run_folder = r'run#14/'; deg_per_step = 0.5; run_list = [1,0,0,1,0]; # Qr=32
 
 # 验证FEMM和JMAG的结果匹配
-# run_folder = r'run#15/'; deg_per_step = 0.5; run_list = [1,0,0,0,0]; # Qr=32 
+# run_folder = r'run#15/'; deg_per_step = 0.5; run_list = [1,0,0,0,0]; # Qr=32
 
 # 端环有的：TranRef 100 Steps Per Cycle
 # run_folder = r'run#12/'; deg_per_step = 0.5; run_list = [1,0,0,0,0]; # Qr=36 TranRef with 100 Steps per cycle
@@ -19,7 +19,8 @@
 
 # 端环没的：TranRef 40 Steps Per Cycle
 run_folder = r'run#100/'
-deg_per_step = 0.5; run_list = [1,1,1,1,0]
+deg_per_step = 0.5
+run_list = [1,1,1,1,0]
 
 fea_config_dict = {
     ##########################

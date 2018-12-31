@@ -3,12 +3,36 @@
 from __future__ import division
 from math import cos, sin, pi
 from csv import reader as csv_reader
-import numpy as np # for de
 import logging
+import numpy as np  # for de
 import os
-from pylab import plot, show, legend, grid, figure, subplots, arctan2, array, mpl
+from pylab import plot, legend, grid, figure, subplots, array, mpl
+
+class suspension_force_vector(object):
+    """docstring for suspension_force_vector"""
+    def __init__(self, force_x, force_y, range_ss=None):
+        super(suspension_force_vector, self).__init__()
+        self.force_x = force_x
+        self.force_y = force_y
+        self.force_ang = np.arctan2(force_y, force_x) / pi * 180 # [deg]
+        self.force_abs = np.sqrt(np.array(force_x)**2 + np.array(force_y)**2 )
+
+        if range_ss == None:
+            range_ss = len(force_x)
+        self.range_ss = range_ss
+
+        self.ss_avg_force_vector    = np.array([sum(force_x[-range_ss:]), sum(force_y[-range_ss:])]) / range_ss #len(force_x[-range_ss:])
+        self.ss_avg_force_angle     = np.arctan2(self.ss_avg_force_vector[1], self.ss_avg_force_vector[0]) / pi * 180
+        self.ss_avg_force_magnitude = np.sqrt(self.ss_avg_force_vector[0]**2 + self.ss_avg_force_vector[1]**2)
+
+        self.force_err_ang = self.force_ang - self.ss_avg_force_angle
+        self.force_err_abs = self.force_abs - self.ss_avg_force_magnitude
+
+        self.ss_max_force_err_ang = max(self.force_err_ang[-range_ss:]), min(self.force_err_ang[-range_ss:])
+        self.ss_max_force_err_abs = max(self.force_err_abs[-range_ss:]), min(self.force_err_abs[-range_ss:])
 
 class data_manager(object):
+
     def __init__(self):
         self.basic_info = []
         self.time_list = []
@@ -21,6 +45,7 @@ class data_manager(object):
         return self.basic_info, self.time_list, self.TorCon_list, self.ForConX_list, self.ForConY_list, self.ForConAbs_list
 
 class swarm(object):
+
     def __init__(self, fea_config_dict, de_config_dict=None):
         # design objective
         self.model_name_prefix = fea_config_dict['model_name_prefix']
@@ -698,12 +723,8 @@ class swarm(object):
         logger = logging.getLogger(__name__)
         logger.debug(a_name + ','.join('%.16f'%(y) for y in a)) # convert 1d array to string
 
-
-
-
     ''' API for FEMM Solver
     '''
-
     def get_breakdown_results(self, im, study_type=1):
         if study_type == 1:
             study_name = u"Freq"
@@ -1115,7 +1136,7 @@ class swarm(object):
 
         ''' TranRef '''
         study_name = 'TranRef'
-        dm = self.read_csv_results_4_comparison_transient(study_name)
+        dm = self.read_csv_results_4_comparison__transient(study_name)
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
         end_time = time_list[-1]
 
@@ -1135,7 +1156,7 @@ class swarm(object):
 
         ''' Tran2TSS '''
         study_name = 'Tran2TSS'
-        dm = self.read_csv_results_4_comparison_transient(study_name)
+        dm = self.read_csv_results_4_comparison__transient(study_name)
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
 
         ax = axes[0]; ax.plot(time_list, TorCon_list, alpha=0.7, label=study_name); ax.set_xlabel('Time [s]'); ax.set_ylabel('Torque [Nm]')
@@ -1199,16 +1220,6 @@ class swarm(object):
         axes[1].legend()
         # return basic_info
 
-    def get_force_error_angle(self, force_x, force_y):
-        Avg_ForCon_Vector    = np.array([sum(force_x), sum(force_y)]) / len(force_y)
-        Avg_ForCon_Magnitude = np.sqrt(Avg_ForCon_Vector[0]**2+Avg_ForCon_Vector[1]**2)
-        Avg_ForCon_Angle     = np.arctan2(Avg_ForCon_Vector[1], Avg_ForCon_Vector[0]) / pi * 180
-
-        ForCon_Angle_List = np.arctan2(force_y, force_x) / pi * 180
-        Max_ForCon_Err_Angle  = 0.5*(max(ForCon_Angle_List) - min(ForCon_Angle_List))
-
-        return Avg_ForCon_Vector, Avg_ForCon_Magnitude, Avg_ForCon_Angle, ForCon_Angle_List, Max_ForCon_Err_Angle
-
     def show_results_iemdc19(self, femm_solver_data=None, femm_rotor_current_function=None):
         print 'show results!'
         mpl.rcParams['font.family'] = ['serif'] # default is sans-serif
@@ -1264,21 +1275,23 @@ class swarm(object):
             xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
             fig, ax = subplots()
             ax.plot(xf, 2.0/N * np.abs(yf[:N//2]))
-        def add_plot(axeses, title=None, label=None, zorder=None, time_list=None, force_x=None, force_y=None, force_abs=None, torque=None, range_ss=None, alpha=0.7):
+        def add_plot(axeses, title=None, label=None, zorder=None, time_list=None, sfv=None, torque=None, range_ss=None, alpha=0.7):
 
-            Avg_ForCon_Vector, Avg_ForCon_Magnitude, Avg_ForCon_Angle, ForCon_Angle_List, Max_ForCon_Err_Angle = self.get_force_error_angle(force_x[-range_ss:], force_y[-range_ss:])
+            # Avg_ForCon_Vector, Avg_ForCon_Magnitude, Avg_ForCon_Angle, ForCon_Angle_List, Max_ForCon_Err_Angle = self.get_force_error_angle(force_x[-range_ss:], force_y[-range_ss:])
             print '\n\n---------------%s' % (title)
-            print 'Average Force Vecotr:', Avg_ForCon_Vector, '[N]'
-            print 'Average Force Mag:', Avg_ForCon_Magnitude, '[N]'
+            print 'Average Force Mag:', sfv.ss_avg_force_magnitude, '[N]'
             print 'Average Torque', sum(torque[-range_ss:])/len(torque[-range_ss:])
-            print 'Torque Ripple (Peak-to-Peak)', max(torque[-range_ss:]) - min(torque[-range_ss:]), 'Nm'
-            print 'Force Mag Ripple (Peak-to-Peak)', max(force_abs[-range_ss:]) - min(force_abs[-range_ss:]), 'N'
-            print 'Maximum Force Error Angle', Max_ForCon_Err_Angle, '[deg]'
+            print 'Normalized Force Error Mag', sfv.ss_max_force_err_abs[0]/sfv.ss_avg_force_magnitude*100, '%', sfv.ss_max_force_err_abs[1]/sfv.ss_avg_force_magnitude*100, '%'
+            print 'Maximum Force Error Angle', sfv.ss_max_force_err_ang[0], '[deg]', sfv.ss_max_force_err_ang[1], '[deg]'
+            print 'Extra Information:'
+            print '\tAverage Force Vecotr:', sfv.ss_avg_force_vector, '[N]'
+            print '\tTorque Ripple (Peak-to-Peak)', max(torque[-range_ss:]) - min(torque[-range_ss:]), 'Nm'
+            print '\tForce Mag Ripple (Peak-to-Peak)', sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1], 'N'
 
             ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
-            ax = axeses[0][1]; ax.plot(time_list, force_abs, alpha=alpha, label=label, zorder=zorder)
-            ax = axeses[1][0]; ax.plot(time_list, (force_abs - Avg_ForCon_Magnitude)/Avg_ForCon_Magnitude, label=label, alpha=alpha, zorder=zorder)
-            ax = axeses[1][1]; ax.plot(time_list, np.arctan2(force_y, force_x)/pi*180. - Avg_ForCon_Angle, label=label, alpha=alpha, zorder=zorder)
+            ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs, alpha=alpha, label=label, zorder=zorder)
+            ax = axeses[1][0]; ax.plot(time_list, sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
+            ax = axeses[1][1]; ax.plot(time_list, np.arctan2(sfv.force_y, sfv.force_x)/pi*180. - sfv.ss_avg_force_angle, label=label, alpha=alpha, zorder=zorder)
 
         fig_main, axeses = subplots(2, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
         ax = axeses[0][0]; ax.set_xlabel('(a)',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)
@@ -1286,20 +1299,21 @@ class swarm(object):
         ax = axeses[1][0]; ax.set_xlabel('Time [s]\n(c)',fontsize=14.5); ax.set_ylabel('Normalized Force Error Magnitude [N]',fontsize=14.5)
         ax = axeses[1][1]; ax.set_xlabel('Time [s]\n(d)',fontsize=14.5); ax.set_ylabel('Force Error Angle [deg]',fontsize=14.5)
 
-        ''' TranRef400 '''
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # TranRef400
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         study_name = 'TranRef'
-        dm = self.read_csv_results_4_comparison_transient(study_name, path_prefix=r'D:\JMAG_Files\TimeStepSensitivity/'+'PS_Qr%d_NoEndRing_M15_17303l/'%(int(self.im.Qr)))
+        dm = self.read_csv_results_4_comparison__transient(study_name, path_prefix=r'D:\JMAG_Files\TimeStepSensitivity/'+'PS_Qr%d_NoEndRing_M15_17303l/'%(int(self.im.Qr)))
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
+        sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=400*10) # samples in the tail that are in steady state
         add_plot( axeses,
                   title=study_name,
                   label='Transient FEA', #'TranFEARef', #400',
                   zorder=1,
                   time_list=time_list,
-                  force_x=ForConX_list,
-                  force_y=ForConY_list,
-                  force_abs=ForConAbs_list,
+                  sfv=sfv,
                   torque=TorCon_list,
-                  range_ss=480*10) # samples in the tail that are in steady state
+                  range_ss=sfv.range_ss) 
         print '\tbasic info:', basic_info
 
         # Current of TranRef
@@ -1325,7 +1339,7 @@ class swarm(object):
                         alpha=0.7,
                         color='blue') #'purple')
                 basefreqFFT(dm.Current_dict[key], Fs, ax=axes_cur[1])
-                print '\tcheck time step', time_list[1], 1./Fs
+                print '\tcheck time step', time_list[1], '=',  1./Fs
                 break
 
         # basefreqFFT(np.sin(2*pi*1500*np.arange(0,0.1,1./Fs)), Fs)
@@ -1337,7 +1351,7 @@ class swarm(object):
 
         # ''' TranRef '''
         # study_name = 'TranRef'
-        # dm = self.read_csv_results_4_comparison_transient(study_name)        
+        # dm = self.read_csv_results_4_comparison__transient(study_name)        
         # basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
         # add_plot( axeses,
         #           title=study_name,
@@ -1352,21 +1366,22 @@ class swarm(object):
         # print '\tbasic info:', basic_info
 
 
-        ''' Tran2TSS '''
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # Tran2TSS
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         study_name = 'Tran2TSS'
-        dm = self.read_csv_results_4_comparison_transient(study_name)
+        dm = self.read_csv_results_4_comparison__transient(study_name)
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
         end_time = time_list[-1]
+        sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=48) # samples in the tail that are in steady state
         add_plot( axeses,
                   title=study_name,
                   label='Transient FEA w/ 2 Time Step Sections',
                   zorder=8,
                   time_list=time_list,
-                  force_x=ForConX_list,
-                  force_y=ForConY_list,
-                  force_abs=ForConAbs_list,
+                  sfv=sfv,
                   torque=TorCon_list,
-                  range_ss=48) # samples in the tail that are in steady state
+                  range_ss=sfv.range_ss)
         print '\tbasic info:', basic_info
 
         # Current of Tran2TSS
@@ -1386,7 +1401,9 @@ class swarm(object):
                     alpha=1,
                     c='r')
 
-        ''' Static FEA with FEMM '''
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # Static FEA with FEMM
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         study_name = 'FEMM'
         rotor_position_in_deg = femm_solver_data[0]*0.1 
         time_list = rotor_position_in_deg/180.*pi / self.im.Omega
@@ -1403,19 +1420,20 @@ class swarm(object):
         femm_force_y = number_of_repeat * femm_solver_data[3].tolist()
         femm_force_abs = number_of_repeat * femm_force_abs.tolist()
 
+        sfv = suspension_force_vector(femm_force_x, femm_force_y, range_ss=len(rotor_position_in_deg)) # samples in the tail that are in steady state
         add_plot( axeses,
                   title=study_name,
                   label='Static FEA', #'StaticFEAwiRR',
                   zorder=3,
                   time_list=time_list,
-                  force_x=femm_force_x,
-                  force_y=femm_force_y,
-                  force_abs=femm_force_abs,
+                  sfv=sfv,
                   torque=femm_torque,
-                  range_ss=len(rotor_position_in_deg), # samples in the tail that are in steady state
+                  range_ss=sfv.range_ss,
                   alpha=0.5) 
-        
-        ''' EddyCurrent '''
+
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # EddyCurrent
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         study_name = 'Freq-FFVRC'
         dm = self.read_csv_results_4_comparison_eddycurrent(study_name)
         _, _, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
@@ -1433,16 +1451,15 @@ class swarm(object):
         ec_force_x       = number_of_repeat*ForConX_list
         ec_force_y       = number_of_repeat*ForConY_list
 
+        sfv = suspension_force_vector(ec_force_x, ec_force_y, range_ss=len(rotor_position_in_deg))
         add_plot( axeses,
                   title=study_name,
                   label='Eddy Current FEA', #'EddyCurFEAwiRR',
                   zorder=2,
                   time_list=time_list,
-                  force_x=ec_force_x,
-                  force_y=ec_force_y,
-                  force_abs=ec_force_abs,
+                  sfv=sfv,
                   torque=ec_torque,
-                  range_ss=len(rotor_position_in_deg)) # samples in the tail that are in steady state
+                  range_ss=sfv.range_ss) # samples in the tail that are in steady state
 
         # # Force Vector plot
         # ax = figure().gca()
@@ -1477,7 +1494,7 @@ class swarm(object):
             fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 BlessIMDesign\p2019_iemdc_bearingless_induction full paper\images\FEA_Model_Comparisons.png', dpi=150)
 
 
-    def read_csv_results_4_comparison_transient(self, study_name, path_prefix=None):
+    def read_csv_results_4_comparison__transient(self, study_name, path_prefix=None):
         if path_prefix == None:
             path_prefix = self.dir_csv_output_folder
         # print 'look into:', path_prefix
@@ -1601,7 +1618,7 @@ class swarm(object):
 
         ''' Super TranRef '''
         path_prefix = r'D:\JMAG_Files\TimeStepSensitivity/'
-        dm = self.read_csv_results_4_comparison_transient('TranRef', path_prefix=path_prefix+self.run_folder)
+        dm = self.read_csv_results_4_comparison__transient('TranRef', path_prefix=path_prefix+self.run_folder)
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
 
         study_name = 'SuperTranRef'
@@ -1619,7 +1636,7 @@ class swarm(object):
 
         ''' TranRef '''
         study_name = 'TranRef'
-        dm = self.read_csv_results_4_comparison_transient(study_name)
+        dm = self.read_csv_results_4_comparison__transient(study_name)
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
         end_time = time_list[-1]
 
@@ -2538,7 +2555,6 @@ class bearingless_induction_motor_design(object):
                     condition.AddSet(model.GetSetList().GetSet(set_name), 0) # 0: group
         create_stator_current_conditions(self.DriveW_turns, [u"Coil4A-",u"Coil4B-",u"Coil4C-",u"Coil4A+",u"Coil4B+",u"Coil4C+"])
         create_stator_current_conditions(self.DriveW_turns, [u"Coil2A-",u"Coil2B-",u"Coil2C-",u"Coil2A+",u"Coil2B+",u"Coil2C+"])
-
 
     def add_rotor_current_condition_obsolete_slow_version(self, app, model, study, total_number_of_cases, eddy_current_circuit_current_csv_file): # r'D:\Users\horyc\OneDrive - UW-Madison\csv\Freq_#4_circuit_current.csv'
 
