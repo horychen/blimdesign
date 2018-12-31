@@ -3515,9 +3515,6 @@ def get_max_and_index(the_list):
     return max(enumerate(the_list), key=operator.itemgetter(1))
 
 
-# <<<<<<< HEAD
-# =======
-
 def add_M15Steel(app):
     app.GetMaterialLibrary().CreateCustomMaterial(u"M-15 Steel", u"Custom Materials")
     app.GetMaterialLibrary().GetUserMaterial(u"M-15 Steel").SetValue(u"Density", 7.85)
@@ -4146,7 +4143,4 @@ def add_Arnon5(app):
     app.GetMaterialLibrary().GetUserMaterial(u"Arnon5").SetValue(u"G66", 0)
 
 
-
-
-# just some codes master does not own
-# >>>>>>> goBack
+# some new code
