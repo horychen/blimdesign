@@ -6,4 +6,4 @@
 *.dmp
 *.pyc
 *.png
-
+*.sublime-package
