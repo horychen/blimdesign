@@ -1470,6 +1470,7 @@ class swarm(object):
         ax_cur.set_ylabel('Rotor Current (of One Bar) [A]')
         # plt.figtext(0.5, 0.01, txt, wrap=True, horizontalalignment='center', fontsize=12)
 
+
         fig_main.tight_layout()
         if int(self.im.Qr) == 36:
             fig_main.savefig('FEA_Model_Comparisons.png', dpi=150)
