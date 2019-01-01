@@ -185,6 +185,7 @@ sw.show_results_iemdc19(femm_solver_data=data, femm_rotor_current_function=solve
 
 from pylab import show; show()
 
+
 # if not sw.has_results(im_jmag, study_type='Tran2TSS'):
 #     os.system(r'set InsDir=D:\Program Files\JMAG-Designer17.1/')
 #     os.system(r'set WorkDir=D:\JMAG_Files\JCF/')

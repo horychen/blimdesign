@@ -7,6 +7,7 @@ import logging
 import numpy as np  # for de
 import os
 from pylab import plot, legend, grid, figure, subplots, array, mpl
+import utility
 
 class suspension_force_vector(object):
     """docstring for suspension_force_vector"""
@@ -1275,23 +1276,44 @@ class swarm(object):
             xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
             fig, ax = subplots()
             ax.plot(xf, 2.0/N * np.abs(yf[:N//2]))
+        global count_plot
+        count_plot = 0
         def add_plot(axeses, title=None, label=None, zorder=None, time_list=None, sfv=None, torque=None, range_ss=None, alpha=0.7):
 
             # Avg_ForCon_Vector, Avg_ForCon_Magnitude, Avg_ForCon_Angle, ForCon_Angle_List, Max_ForCon_Err_Angle = self.get_force_error_angle(force_x[-range_ss:], force_y[-range_ss:])
-            print '\n\n---------------%s' % (title)
-            print 'Average Force Mag:', sfv.ss_avg_force_magnitude, '[N]'
-            print 'Average Torque', sum(torque[-range_ss:])/len(torque[-range_ss:])
-            print 'Normalized Force Error Mag', sfv.ss_max_force_err_abs[0]/sfv.ss_avg_force_magnitude*100, '%', sfv.ss_max_force_err_abs[1]/sfv.ss_avg_force_magnitude*100, '%'
-            print 'Maximum Force Error Angle', sfv.ss_max_force_err_ang[0], '[deg]', sfv.ss_max_force_err_ang[1], '[deg]'
-            print 'Extra Information:'
-            print '\tAverage Force Vecotr:', sfv.ss_avg_force_vector, '[N]'
-            print '\tTorque Ripple (Peak-to-Peak)', max(torque[-range_ss:]) - min(torque[-range_ss:]), 'Nm'
-            print '\tForce Mag Ripple (Peak-to-Peak)', sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1], 'N'
+            # print '\n\n---------------%s' % (title)
+            # print 'Average Force Mag:', sfv.ss_avg_force_magnitude, '[N]'
+            # print 'Average Torque:', sum(torque[-range_ss:])/len(torque[-range_ss:]), '[Nm]'
+            # print 'Normalized Force Error Mag: %g%%, (+)%g%% (-)%g%%' % (0.5*(sfv.ss_max_force_err_abs[0]-sfv.ss_max_force_err_abs[1])/sfv.ss_avg_force_magnitude*100,
+            #                                                               sfv.ss_max_force_err_abs[0]/sfv.ss_avg_force_magnitude*100,
+            #                                                               sfv.ss_max_force_err_abs[1]/sfv.ss_avg_force_magnitude*100)
+            # print 'Maximum Force Error Angle: %g [deg], (+)%g deg (-)%g deg' % (0.5*(sfv.ss_max_force_err_ang[0]-sfv.ss_max_force_err_ang[1]),
+            #                                                              sfv.ss_max_force_err_ang[0],
+            #                                                              sfv.ss_max_force_err_ang[1])
+            # print 'Extra Information:'
+            # print '\tAverage Force Vecotr:', sfv.ss_avg_force_vector, '[N]'
+            # print '\tTorque Ripple (Peak-to-Peak)', max(torque[-range_ss:]) - min(torque[-range_ss:]), 'Nm'
+            # print '\tForce Mag Ripple (Peak-to-Peak)', sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1], 'N'
 
             ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
             ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs, alpha=alpha, label=label, zorder=zorder)
             ax = axeses[1][0]; ax.plot(time_list, sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
             ax = axeses[1][1]; ax.plot(time_list, np.arctan2(sfv.force_y, sfv.force_x)/pi*180. - sfv.ss_avg_force_angle, label=label, alpha=alpha, zorder=zorder)
+
+            global count_plot
+            count_plot += 1
+            # This is used for table in latex
+            print '''
+            \\newcommand\\torqueAvg%s{%s}
+            \\newcommand\\torqueRipple%s{%s}
+            \\newcommand\\forceAvg%s{%s}
+            \\newcommand\\forceErrMag%s{%s}
+            \\newcommand\\forceErrAng%s{%s}
+            ''' % (chr(64+count_plot), utility.to_precision(sum(torque[-range_ss:])/len(torque[-range_ss:])),
+                   chr(64+count_plot), utility.to_precision(0.5*(max(torque[-range_ss:]) - min(torque[-range_ss:]))),
+                   chr(64+count_plot), utility.to_precision(sfv.ss_avg_force_magnitude),
+                   chr(64+count_plot), utility.to_precision(0.5*(sfv.ss_max_force_err_abs[0]-sfv.ss_max_force_err_abs[1])/sfv.ss_avg_force_magnitude*100),
+                   chr(64+count_plot), utility.to_precision(0.5*(sfv.ss_max_force_err_ang[0]-sfv.ss_max_force_err_ang[1])))
 
         fig_main, axeses = subplots(2, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
         ax = axeses[0][0]; ax.set_xlabel('(a)',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)
