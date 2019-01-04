@@ -5,6 +5,7 @@
 import os
 import sys
 import femm
+from time import time
 
 number_solver = int(sys.argv[1])
 number_of_instances = int(sys.argv[2])
@@ -18,11 +19,11 @@ femm.openfemm(True) # bHide
 femm.smartmesh(False) # this is essential to reduce elements counts from >50000 to ~20000.
 
 for i in range(number_solver, len(fem_file_list), number_of_instances):
-    print i, fem_file_list[i]
 
     output_file_name = dir_run + fem_file_list[i][:-4]
 
     if not os.path.exists(output_file_name + '.ans'):
+        tic = time()
         femm.opendocument(output_file_name + '.fem')
         try:
             # femm.mi_createmesh() # [useless] 
@@ -32,9 +33,9 @@ for i in range(number_solver, len(fem_file_list), number_of_instances):
             print i, fem_file_list[i]
         femm.mi_close()
         # femm.mi_loadsolution()
+        toc = time()
+    print i, fem_file_list[i], toc - tic, 's'
 femm.closefemm()
-
-
 
 
 

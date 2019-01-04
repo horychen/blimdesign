@@ -3,6 +3,19 @@ import os
 import logging
 import datetime
 
+import operator
+def get_max_and_index(the_list):
+    return max(enumerate(the_list), key=operator.itemgetter(1))
+
+def gcd(a,b):
+    while b:
+        a,b = b, a%b
+    return a
+# Now find LCM using GCD
+def lcm(a,b):
+    return a*b // gcd(a,b)
+# print lcm(8,7.5)
+
 def myLogger(dir_codes, prefix='opti_script_'): # This works even when the module is reloaded (which is not the case of the other answers) https://stackoverflow.com/questions/7173033/duplicate-log-output-when-using-python-logging-module
     logger=logging.getLogger()
     if not len(logger.handlers):

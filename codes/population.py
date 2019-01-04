@@ -647,7 +647,7 @@ class swarm(object):
 
             breakdown_force = max(np.sqrt(np.array(l_ForCon_X)**2 + np.array(l_ForCon_Y)**2))
 
-            index, breakdown_torque = get_max_and_index(l_TorCon)
+            index, breakdown_torque = utility.get_max_and_index(l_TorCon)
             slip_freq_breakdown_torque = l_slip_freq[index]
             return slip_freq_breakdown_torque, breakdown_torque, breakdown_force
 
@@ -2751,7 +2751,7 @@ class local_design_variant(bearingless_induction_motor_design):
 
             # inferred design parameters
         else:
-            print 'What are you feeding me?'
+            raise Exception('im is None.')
 
         #03 Mechanical Parameters
         self.update_mechanical_parameters(slip_freq=2.75, syn_freq=500.)
@@ -3547,10 +3547,6 @@ class draw(object):
         # sketch.GetItem(u"Region Mirror Copy").SetProperty(u"SymmetryType", 3)
 
         sketch.CloseSketch()
-
-import operator
-def get_max_and_index(the_list):
-    return max(enumerate(the_list), key=operator.itemgetter(1))
 
 
 def add_M15Steel(app):

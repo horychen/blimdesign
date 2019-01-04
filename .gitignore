@@ -1,9 +1,11 @@
 /csv
 /pop
 /Arnon5
+/A-1D-Optimization
 *.txt
 *.log
 *.dmp
 *.pyc
 *.png
 *.sublime*
+*.bat

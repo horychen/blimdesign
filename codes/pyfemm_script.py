@@ -18,36 +18,11 @@
 # run_folder = r'run#16/'; deg_per_step = 6; run_list = [1,0,0,0,0]; # Qr=32 TranRef with 100 Steps per cycle
 
 # 端环没的：TranRef 40 Steps Per Cycle
-run_folder = r'run#100/'
-deg_per_step = 0.5
-run_list = [1,1,1,1,0]
 
-fea_config_dict = {
-    ##########################
-    # Sysetm Controlc
-    ##########################
-    'Active_Qr':36, # 36
-    'TranRef-StepPerCycle':40,
-    'OnlyTableResults':False, # modified later according to pc_name
-        # multiple cpu (SMP)
-        # directSolver over ICCG Solver
-    'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
+# No TranRef40 or 400 is ever needed again - 20180104
 
-    ##########################
-    # Design Specifications
-    ##########################
-    'Steel':'M15',
-        # 'Steel':'Arnon5'
-    'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents
-        # 'End_Ring_Resistance':9.69e-6, # this may too small for Chiba's winding
-    'Bar_Conductivity':40e6,
-}
-if fea_config_dict['End_Ring_Resistance'] == 0:
-    fea_config_dict['model_name_prefix'] = 'PS_Qr%d_NoEndRing_%s_17303l'%(fea_config_dict['Active_Qr'], fea_config_dict['Steel'])
-if fea_config_dict['Restart'] == True:
-    fea_config_dict['model_name_prefix'] += '_Restart'
-
-
+''' 1. General Information & Packages Loading
+'''
 import os 
 def where_am_i(fea_config_dict):
     dir_interpreter = os.path.abspath('')
@@ -104,12 +79,24 @@ def where_am_i(fea_config_dict):
     if pc_name == 'Y730':
         if fea_config_dict['Restart'] == False:
             fea_config_dict['OnlyTableResults'] = True # save disk space for my PC
+fea_config_dict = {
+    ##########################
+    # Sysetm Controlc
+    ##########################
+    'Active_Qr':36, # 36
+    'TranRef-StepPerCycle':40,
+    'OnlyTableResults':False, # modified later according to pc_name
+        # multiple cpu (SMP)
+        # directSolver over ICCG Solver
+    'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
 
-''' 1. General Information & Packages Loading
-'''
-fea_config_dict['run_folder'] = run_folder
-fea_config_dict['femm_deg_per_step'] = deg_per_step
-fea_config_dict['jmag_run_list'] = run_list
+    ##########################
+    # Design Specifications
+    ##########################
+    'Steel': 'M15', # 'Arnon5', 
+    'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
+    'Bar_Conductivity':40e6, # 40e6 for Aluminium; 1/1.673e-08 for Copper
+}
 where_am_i(fea_config_dict)
 from sys import path as sys_path
 sys_path.append(fea_config_dict['dir_lib'])
@@ -120,6 +107,18 @@ reload(population)
 reload(FEMM_Solver)
 logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='iemdc_')
 
+run_folder = r'run#100/'
+run_list = [1,1,1,1,0]
+fea_config_dict['run_folder'] = run_folder
+fea_config_dict['jmag_run_list'] = run_list
+if fea_config_dict['End_Ring_Resistance'] == 0:
+    fea_config_dict['model_name_prefix'] = 'PS_Qr%d_NoEndRing_%s_17303l'%(fea_config_dict['Active_Qr'], fea_config_dict['Steel'])
+if fea_config_dict['Restart'] == True:
+    fea_config_dict['model_name_prefix'] += '_Restart'
+
+fea_config_dict['femm_deg_per_step'] = 0.25 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
+fea_config_dict['femm_deg_per_step'] = 0.5 # deg
+print 'femm_deg_per_step is', fea_config_dict['femm_deg_per_step'], 'deg (Qs=24, p=2)'
 
 
 ''' 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG)
@@ -145,30 +144,47 @@ im_jmag = sw.im
 
 # define problem
 logger.info('Running Script for FEMM with %s'%(run_folder))
-solver_jmag = FEMM_Solver.FEMM_Solver(im_jmag, True, freq=0) # static
-solver_femm = FEMM_Solver.FEMM_Solver(im_jmag, False, freq=0) # static
+solver_jmag = FEMM_Solver.FEMM_Solver(im_jmag, flag_read_from_jmag=True, freq=0) # static
+solver_femm = FEMM_Solver.FEMM_Solver(im_jmag, flag_read_from_jmag=False, freq=0) # static
 
 ''' 4. Show results, if not exist then produce it
 '''
-bool_temp = solver_jmag.has_results()
-print 'femm has results?', bool_temp
-if not bool_temp:
+if not solver_jmag.has_results():
     solver_jmag.run_rotating_static_FEA()
     solver_jmag.parallel_solve()
 
-data = solver_jmag.show_results(bool_plot=False)
-# sw.show_results(femm_solver_data=data)
-sw.show_results_iemdc19(femm_solver_data=data, femm_rotor_current_function=solver_jmag.get_rotor_current_function())
+if False:
+    data = solver_jmag.show_results(bool_plot=False)
+    # sw.show_results(femm_solver_data=data)
+    sw.show_results_iemdc19(femm_solver_data=data, femm_rotor_current_function=solver_jmag.get_rotor_current_function())
+    # sw.timeStepSensitivity()
+else:
 
+    print 'Rotor current solved by JMAG is shown here:'
+    solver_jmag.read_current_from_EC_FEA()
+    for key, item in solver_jmag.dict_rotor_current_from_EC_FEA.iteritems():
+        if '1' in key:
+            from math import sqrt
+            print key, sqrt(item[0]**2+item[1]**2)
 
-# sw.timeStepSensitivity()
+    if not solver_femm.has_results():
+        # if solver_femm.has_results()
+        solver_femm.run_frequency_sweeping(range(1,6))
+        # data = solver_femm.show_results(bool_plot=True)
 
+        solver_femm.run_rotating_static_FEA()
+        solver_femm.parallel_solve()    
+    else:
 
+        data_femm = solver_femm.show_results(bool_plot=False)
+        data_jmag = solver_jmag.show_results(bool_plot=False)
 
-
-
-
-
+        from pylab import subplots
+        fig, axes = subplots(3, 1, sharex=True)
+        for data in [data_femm, data_jmag]:
+            ax = axes[0]; ax.plot(data[0]*0.1, data[1], alpha=0.5, label='torque'); ax.legend(); ax.grid()
+            ax = axes[1]; ax.plot(data[0]*0.1, data[2], alpha=0.5, label='Fx'); ax.legend(); ax.grid()
+            ax = axes[2]; ax.plot(data[0]*0.1, data[3], alpha=0.5, label='Fy'); ax.legend(); ax.grid()
 
 
 
@@ -222,10 +238,11 @@ Tran2TSS: 3:38 (81 Steps)
 Freq-FFVRC: 1:33 (10 Steps)
 TranRef: 1:49:02 (3354 Steps) -> 3:18:19 if no MultiCPU
 StaticJMAG: 
-StaticFEMM: 
+StaticFEMM: 15 sec one eddy current solve
+            7 sec one static solve
 '''
 
-''' Loss Study of Transient FEA
+a=''' Loss Study of Transient FEA
 # -*- coding: utf-8 -*-
 app = designer.GetApplication()
 app.GetModel(u"PS_ID32").GetStudy(u"Loss_Tran2TSS-Prolong").GetCondition(u"P1").SetValue(u"BasicFrequencyType", 1)
