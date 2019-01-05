@@ -86,13 +86,14 @@ fea_config_dict = {
     'Active_Qr':36, # 36
     'TranRef-StepPerCycle':40,
     'OnlyTableResults':False, # modified later according to pc_name
-        # multiple cpu (SMP)
+        # multiple cpu (SMP=2)
         # directSolver over ICCG Solver
     'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
 
     ##########################
     # Design Specifications
     ##########################
+    'DPNV': True,
     'Steel': 'M15', # 'Arnon5', 
     'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
     'Bar_Conductivity':40e6, # 40e6 for Aluminium; 1/1.673e-08 for Copper
@@ -107,17 +108,19 @@ reload(population)
 reload(FEMM_Solver)
 logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='iemdc_')
 
+run_list = [1,1,0,0,0] 
 run_folder = r'run#100/'
-run_list = [1,1,1,1,0]
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
 if fea_config_dict['End_Ring_Resistance'] == 0:
     fea_config_dict['model_name_prefix'] = 'PS_Qr%d_NoEndRing_%s_17303l'%(fea_config_dict['Active_Qr'], fea_config_dict['Steel'])
+if fea_config_dict['DPNV'] == True:
+    fea_config_dict['model_name_prefix'] += '_DPNV'
 if fea_config_dict['Restart'] == True:
     fea_config_dict['model_name_prefix'] += '_Restart'
 
 fea_config_dict['femm_deg_per_step'] = 0.25 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
-fea_config_dict['femm_deg_per_step'] = 0.5 # deg
+# fea_config_dict['femm_deg_per_step'] = 0.5 # deg
 print 'femm_deg_per_step is', fea_config_dict['femm_deg_per_step'], 'deg (Qs=24, p=2)'
 
 
@@ -136,29 +139,42 @@ sw = population.swarm(fea_config_dict, de_config_dict=None)
 # generate the initial generation
 # sw.generate_pop()
 
-im_jmag = sw.im
-
+im_initial = sw.im
+print im_initial.l21
+print im_initial.l22
 
 ''' 3. Initialize FEMM Solver
 '''
-
 # define problem
 logger.info('Running Script for FEMM with %s'%(run_folder))
-solver_jmag = FEMM_Solver.FEMM_Solver(im_jmag, flag_read_from_jmag=True, freq=0) # static
-solver_femm = FEMM_Solver.FEMM_Solver(im_jmag, flag_read_from_jmag=False, freq=0) # static
+solver_jmag = FEMM_Solver.FEMM_Solver(im_initial, flag_read_from_jmag=True, freq=0) # static
+solver_femm = FEMM_Solver.FEMM_Solver(im_initial, flag_read_from_jmag=False, freq=2.23) # eddy+static
 
 ''' 4. Show results, if not exist then produce it
 '''
-if not solver_jmag.has_results():
-    solver_jmag.run_rotating_static_FEA()
-    solver_jmag.parallel_solve()
-
-if False:
+if False: # this generate plots for iemdc19
     data = solver_jmag.show_results(bool_plot=False)
     # sw.show_results(femm_solver_data=data)
     sw.show_results_iemdc19(femm_solver_data=data, femm_rotor_current_function=solver_jmag.get_rotor_current_function())
     # sw.timeStepSensitivity()
+
 else:
+    # FEMM Static Solver with pre-determined rotor currents from FEMM
+    if not solver_femm.has_results():
+        solver_femm.run_frequency_sweeping(range(1,6))
+        data_femm = solver_femm.show_results(bool_plot=False) # this write rotor currents to file, which will be used later for static FEA
+
+        solver_femm.run_rotating_static_FEA()
+        solver_femm.parallel_solve()
+
+    # JMAG 
+    if not sw.has_results(im_initial, 'Freq'):
+        sw.run(im_initial, run_list=sw.fea_config_dict['jmag_run_list'])
+        if not sw.has_results(im_initial, 'Freq'):
+            raise Exception('Something went south with JMAG.')
+
+    print 'Rotor current solved by FEMM is shown here:'
+    solver_femm.read_current_conditions_from_FEMM()
 
     print 'Rotor current solved by JMAG is shown here:'
     solver_jmag.read_current_from_EC_FEA()
@@ -167,18 +183,22 @@ else:
             from math import sqrt
             print key, sqrt(item[0]**2+item[1]**2)
 
-    if not solver_femm.has_results():
-        # if solver_femm.has_results()
-        solver_femm.run_frequency_sweeping(range(1,6))
-        # data = solver_femm.show_results(bool_plot=True)
+    # FEMM Static Solver with pre-determined rotor currents from JMAG
+    if not solver_jmag.has_results():
+        solver_jmag.run_rotating_static_FEA()
+        solver_jmag.parallel_solve()
 
-        solver_femm.run_rotating_static_FEA()
-        solver_femm.parallel_solve()    
+
+    # Compare JMAG and FEMM's rotor currents to see DPNV is implemented correctly in bot JMAG and FEMM    
+    data_femm = solver_femm.show_results_static(bool_plot=False)
+    data_jmag = solver_jmag.show_results_static(bool_plot=False)
+
+    if data_femm is None or data_jmag is None:
+        if data_femm is None:
+            print 'data_femm is', data_femm, 'try run again'
+        if data_jmag is None:
+            print 'data_jmag is', data_jmag, 'try run again'
     else:
-
-        data_femm = solver_femm.show_results(bool_plot=False)
-        data_jmag = solver_jmag.show_results(bool_plot=False)
-
         from pylab import subplots
         fig, axes = subplots(3, 1, sharex=True)
         for data in [data_femm, data_jmag]:
@@ -188,21 +208,11 @@ else:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+sw.write_to_file_fea_config_dict()
 from pylab import show; show()
 
 
-# if not sw.has_results(im_jmag, study_type='Tran2TSS'):
+# if not sw.has_results(im_initial, study_type='Tran2TSS'):
 #     os.system(r'set InsDir=D:\Program Files\JMAG-Designer17.1/')
 #     os.system(r'set WorkDir=D:\JMAG_Files\JCF/')
 #     os.system(r'cd /d "%InsDir%"')
@@ -216,7 +226,7 @@ if False: # Test and Debug
     ''' 3. Eddy Current FEA with FEMM
     '''
     from numpy import arange
-    solver = FEMM_Solver.FEMM_Solver(deg_per_step, im_jmag, dir_codes, dir_femm_files + run_folder)
+    solver = FEMM_Solver.FEMM_Solver(deg_per_step, im_initial, dir_codes, dir_femm_files + run_folder)
 
     solver.read_current_from_EC_FEA()
     for key, item in solver.dict_rotor_current_from_EC_FEA.iteritems():
