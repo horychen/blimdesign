@@ -2,7 +2,6 @@
 import os
 import logging
 import datetime
-
 import operator
 def get_max_and_index(the_list):
     return max(enumerate(the_list), key=operator.itemgetter(1))
@@ -113,3 +112,35 @@ def to_precision(x,p=4):
 
     return "".join(out)
 
+import numpy as np
+def singleSidedDFT(signal, samp_freq):
+    NFFT = len(signal)
+    dft_complex = np.fft.fft(signal,NFFT) # y is a COMPLEX defined in numpy
+    dft_single_sided = [2 * abs(dft_bin) / NFFT for dft_bin in dft_complex][0:int(NFFT/2)+1] # /NFFT for spectrum aplitude consistent with actual signal. 2* for single-sided. abs for amplitude of complem number.
+    dft_single_sided[0] *= 0.5 # DC bin in single sided spectrem does not need to be times 2
+    return np.array(dft_single_sided)
+    dft_freq = 0.5*samp_freq*np.linspace(0,1,NFFT/2+1) # unit is Hz # # f = np.fft.fftfreq(NFFT, Ts) # for double-sided
+
+def basefreqDFT(signal, samp_freq, ax_time_domain=None, ax_freq_domain=None, base_freq=1):
+    NFFT = len(signal)
+
+    dft_complex = np.fft.fft(signal,NFFT) # y is a COMPLEX defined in numpy
+    dft_double_sided = [abs(dft_bin) / NFFT for dft_bin in dft_complex]
+    dft_single_sided = [2 * abs(dft_bin) / NFFT for dft_bin in dft_complex][0:int(NFFT/2)+1] # /NFFT for spectrum aplitude consistent with actual signal. 2* for single-sided. abs for amplitude of complem number.
+    dft_single_sided[0] *= 0.5 # DC bin in single sided spectrem does not need to be times 2
+
+    if base_freq==None:
+        dft_freq = 0.5*samp_freq*np.linspace(0,1,NFFT/2+1) # unit is Hz # # f = np.fft.fftfreq(NFFT, Ts) # for double-sided
+    else: # 0.5*samp_freq is the Nyquist frequency
+        dft_freq = 0.5*samp_freq/base_freq*np.linspace(0,1,NFFT/2+1) # unit is per base_freq 
+
+    if ax_time_domain != None:
+        Ts = 1.0/samp_freq
+        t = [el*Ts for el in range(0,NFFT)]
+        ax_time_domain.plot(t, signal, '*', alpha=0.4)
+        ax_time_domain.set_xlabel('time [s]')
+        ax_time_domain.set_ylabel('B [T]')
+    if ax_freq_domain != None:
+        ax_freq_domain.plot(dft_freq, dft_single_sided, '*',alpha=0.4)
+        ax_freq_domain.set_xlabel('per base frequency')
+        ax_time_domain.set_ylabel('B [T]')

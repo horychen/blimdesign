@@ -1,1 +1,1 @@
-python "D:/OneDrive - UW-Madison/c/codes/method_parallel_solve_4jmag.py" D:/femm42/PS_Qr36_NoEndRing_M15_17303l_DPNV/static-jmag/ 5
+python "D:/OneDrive - UW-Madison/c/codes/method_parallel_solve_4jmag.py" D:/femm42/PS_Qr36_NoEndRing_M15_17303l_DPNV/static-femm/ 5 1.25

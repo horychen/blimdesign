@@ -939,150 +939,154 @@ class swarm(object):
                 # study.WriteAllSolidJcf(self.dir_jcf, self.im.model_name+study.GetName()+'Solid', True) # True : Outputs cases that do not have results 
                 # study.WriteAllMeshJcf(self.dir_jcf, self.im.model_name+study.GetName()+'Mesh', True)
 
-        # # EC Rotate
-        # ecrot_study_name = original_study_name + u"-FFVRC"
-        # if model.NumStudies()<3:
-        #     # EC Rotate: Rotate the rotor to find the ripples in force and torque # 不关掉这些云图，跑第二个study的时候，JMAG就挂了：app.View().SetVectorView(False); app.View().SetFluxLineView(False); app.View().SetContourView(False)
-        #     casearray = [0 for i in range(1)]
-        #     casearray[0] = 1
-        #     model.DuplicateStudyWithCases(original_study_name, ecrot_study_name, casearray)
 
-        #     app.SetCurrentStudy(ecrot_study_name)
-        #     study = app.GetCurrentStudy()
-        #     divisions_per_slot_pitch = 24
-        #     study.GetStep().SetValue(u"Step", divisions_per_slot_pitch) 
-        #     study.GetStep().SetValue(u"StepType", 0)
-        #     study.GetStep().SetValue(u"FrequencyStep", 0)
-        #     study.GetStep().SetValue(u"Initialfrequency", slip_freq_breakdown_torque)
+        # These two studies are not needed in optimization
+        if self.flag_optimization == False:
+            # These two studies are no longer needed after iemdc digest 
+            # EC Rotate
+            ecrot_study_name = original_study_name + u"-FFVRC"
+            if model.NumStudies()<3:
+                # EC Rotate: Rotate the rotor to find the ripples in force and torque # 不关掉这些云图，跑第二个study的时候，JMAG就挂了：app.View().SetVectorView(False); app.View().SetFluxLineView(False); app.View().SetContourView(False)
+                casearray = [0 for i in range(1)]
+                casearray[0] = 1
+                model.DuplicateStudyWithCases(original_study_name, ecrot_study_name, casearray)
 
-        #         # study.GetCondition(u"RotCon").SetValue(u"MotionGroupType", 1)
-        #     study.GetCondition(u"RotCon").SetValue(u"Displacement", + 360.0/im.Qr/divisions_per_slot_pitch)
+                app.SetCurrentStudy(ecrot_study_name)
+                study = app.GetCurrentStudy()
+                divisions_per_slot_pitch = 24
+                study.GetStep().SetValue(u"Step", divisions_per_slot_pitch) 
+                study.GetStep().SetValue(u"StepType", 0)
+                study.GetStep().SetValue(u"FrequencyStep", 0)
+                study.GetStep().SetValue(u"Initialfrequency", slip_freq_breakdown_torque)
 
-        #     # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
-        #     study.GetStudyProperties().SetValue(u"DirectSolverType", 1)
+                    # study.GetCondition(u"RotCon").SetValue(u"MotionGroupType", 1)
+                study.GetCondition(u"RotCon").SetValue(u"Displacement", + 360.0/im.Qr/divisions_per_slot_pitch)
 
-        #     if run_list[2] == True:
-        #         # model.RestoreCadLink()
-        #         study.Run()
-        #         app.Save()
-        #         # model.CloseCadLink()
-        #     else:
-        #         pass # if the jcf file already exists, it pops a msg window
-        #         # study.WriteAllSolidJcf(self.dir_jcf, self.im.model_name+study.GetName()+'Solid', True) # True : Outputs cases that do not have results 
-        #         # study.WriteAllMeshJcf(self.dir_jcf, self.im.model_name+study.GetName()+'Mesh', True)
+                # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
+                study.GetStudyProperties().SetValue(u"DirectSolverType", 1)
 
-        # # Transient Reference
-        # tranRef_study_name = u"TranRef"
-        # if model.NumStudies()<4:
-        #     model.DuplicateStudyWithType(tran2tss_study_name, u"Transient2D", tranRef_study_name)
-        #     app.SetCurrentStudy(tranRef_study_name)
-        #     study = app.GetCurrentStudy()
-
-        #     # 将一个滑差周期和十个同步周期，分成 400 * end_point / (1.0/self.im.DriveW_Freq) 份。
-        #     end_point = 1.0/slip_freq_breakdown_torque + 10.0/self.im.DriveW_Freq
-        #     # Pavel Ponomarev 推荐每个电周期400~600个点来捕捉槽效应。
-        #     division = self.fea_config_dict['TranRef-StepPerCycle'] * end_point / (1.0/self.im.DriveW_Freq)  # int(end_point * 1e4)
-        #                                                             # end_point = division * 1e-4
-        #     study.GetStep().SetValue(u"Step", division + 1) 
-        #     study.GetStep().SetValue(u"StepType", 1) # regular inverval
-        #     study.GetStep().SetValue(u"StepDivision", division)
-        #     study.GetStep().SetValue(u"EndPoint", end_point)
-
-        #     # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
-        #     study.GetStudyProperties().SetValue(u"DirectSolverType", 1)
-
-        #     if run_list[3] == True:
-        #         study.RunAllCases()
-        #         app.Save()
-        #     else:
-        #         pass # if the jcf file already exists, it pops a msg window
-        #         # study.WriteAllSolidJcf(self.dir_jcf, self.im.model_name+study.GetName()+'Solid', True) # True : Outputs cases that do not have results 
-        #         # study.WriteAllMeshJcf(self.dir_jcf, self.im.model_name+study.GetName()+'Mesh', True)
-
-        # Rotating Static FEA (This can be done in FEMM)
-        if run_list[4] == True:
-
-            im.MODEL_ROTATE = True # this is used in Rotating Static FEA
-            im.total_number_of_cases = 1 # 这个值取24的话，就可以得到24个不同位置下，电机的转矩-滑差曲线了，这里取1，真正的cases在StaticFEA中添加。
-
-            # draw another model with MODEL_ROTATE as True
-            if True:
-                DRAW_SUCCESS = self.draw_model( 1, # +1
-                                                im,
-                                                self.im.model_name + 'MODEL_ROTATE')
-                self.jmag_control_state = True # indicating that the jmag project is already created
-                if DRAW_SUCCESS == 0:
-                    # TODO: skip this model and its evaluation
-                    cost_function = 99999
-                    return cost_function
-                elif DRAW_SUCCESS == -1:
-                    # The model already exists
-                    print 'Model Already Exists'
-                    logging.getLogger(__name__).debug('Model Already Exists')
-                # Tip: 在JMAG Designer中DEBUG的时候，删掉模型，必须要手动save一下，否则再运行脚本重新load project的话，是没有删除成功的，只是删掉了model的name，新导入进来的model name与project name一致。
-                if app.NumModels()>=2: # +1
-                    model = app.GetModel(self.im.model_name + 'MODEL_ROTATE')
+                if run_list[2] == True:
+                    # model.RestoreCadLink()
+                    study.Run()
+                    app.Save()
+                    # model.CloseCadLink()
                 else:
-                    logging.getLogger(__name__).error('there is no model yet!')
-                    print 'why is there no model yet?'
-                    raise
+                    pass # if the jcf file already exists, it pops a msg window
+                    # study.WriteAllSolidJcf(self.dir_jcf, self.im.model_name+study.GetName()+'Solid', True) # True : Outputs cases that do not have results 
+                    # study.WriteAllMeshJcf(self.dir_jcf, self.im.model_name+study.GetName()+'Mesh', True)
 
-                if model.NumStudies() == 0:
-                    study = im.add_study(app, model, self.dir_csv_output_folder, choose_study_type='static')
+            # Transient Reference
+            tranRef_study_name = u"TranRef"
+            if model.NumStudies()<4:
+                model.DuplicateStudyWithType(tran2tss_study_name, u"Transient2D", tranRef_study_name)
+                app.SetCurrentStudy(tranRef_study_name)
+                study = app.GetCurrentStudy()
+
+                # 将一个滑差周期和十个同步周期，分成 400 * end_point / (1.0/self.im.DriveW_Freq) 份。
+                end_point = 1.0/slip_freq_breakdown_torque + 10.0/self.im.DriveW_Freq
+                # Pavel Ponomarev 推荐每个电周期400~600个点来捕捉槽效应。
+                division = self.fea_config_dict['TranRef-StepPerCycle'] * end_point / (1.0/self.im.DriveW_Freq)  # int(end_point * 1e4)
+                                                                        # end_point = division * 1e-4
+                study.GetStep().SetValue(u"Step", division + 1) 
+                study.GetStep().SetValue(u"StepType", 1) # regular inverval
+                study.GetStep().SetValue(u"StepDivision", division)
+                study.GetStep().SetValue(u"EndPoint", end_point)
+
+                # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
+                study.GetStudyProperties().SetValue(u"DirectSolverType", 1)
+
+                if run_list[3] == True:
+                    study.RunAllCases()
+                    app.Save()
                 else:
-                    # there is already a study. then get the first study.
-                    study = model.GetStudy(0)
+                    pass # if the jcf file already exists, it pops a msg window
+                    # study.WriteAllSolidJcf(self.dir_jcf, self.im.model_name+study.GetName()+'Solid', True) # True : Outputs cases that do not have results 
+                    # study.WriteAllMeshJcf(self.dir_jcf, self.im.model_name+study.GetName()+'Mesh', True)
 
-            im.theta = 6./180.0*pi # 5 deg
-            total_number_of_cases = 2 #12 #36
+            # Rotating Static FEA (This can be done in FEMM)
+            if run_list[4] == True:
 
-            # add equations
-                # DriveW_Freq = self.im.DriveW_Freq
-                # slip = slip_freq_breakdown_torque / DriveW_Freq
-                # im.DriveW_Freq = DriveW_Freq
-                # im.the_speed = DriveW_Freq * (1 - slip) * 30
-                # im.the_slip = slip
-            study.GetDesignTable().AddEquation(u"freq")
-            study.GetDesignTable().AddEquation(u"slip")
-            study.GetDesignTable().AddEquation(u"speed")
-            study.GetDesignTable().GetEquation(u"freq").SetType(0)
-            study.GetDesignTable().GetEquation(u"freq").SetExpression("%g"%((im.DriveW_Freq)))
-            study.GetDesignTable().GetEquation(u"freq").SetDescription(u"Excitation Frequency")
-            study.GetDesignTable().GetEquation(u"slip").SetType(0)
-            study.GetDesignTable().GetEquation(u"slip").SetExpression("%g"%(im.the_slip))
-            study.GetDesignTable().GetEquation(u"slip").SetDescription(u"Slip [1]")
-            study.GetDesignTable().GetEquation(u"speed").SetType(1)
-            study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * 30")
-            study.GetDesignTable().GetEquation(u"speed").SetDescription(u"mechanical speed of four pole")
+                im.MODEL_ROTATE = True # this is used in Rotating Static FEA
+                im.total_number_of_cases = 1 # 这个值取24的话，就可以得到24个不同位置下，电机的转矩-滑差曲线了，这里取1，真正的cases在StaticFEA中添加。
 
-            # rotate the rotor by cad parameters via Park Transformation
-            # cad parameters cannot be duplicated! even you have a list of cad paramters after duplicating, but they cannot be used to create cases! So you must set total_number_of_cases to 1 in the first place if you want to do Rotating Static FEA in JMAG
-            im.add_cad_parameters(study)
-            im.add_cases_rotate_rotor(study, total_number_of_cases) 
-                # print study.GetDesignTable().NumParameters()
+                # draw another model with MODEL_ROTATE as True
+                if True:
+                    DRAW_SUCCESS = self.draw_model( 1, # +1
+                                                    im,
+                                                    self.im.model_name + 'MODEL_ROTATE')
+                    self.jmag_control_state = True # indicating that the jmag project is already created
+                    if DRAW_SUCCESS == 0:
+                        # TODO: skip this model and its evaluation
+                        cost_function = 99999
+                        return cost_function
+                    elif DRAW_SUCCESS == -1:
+                        # The model already exists
+                        print 'Model Already Exists'
+                        logging.getLogger(__name__).debug('Model Already Exists')
+                    # Tip: 在JMAG Designer中DEBUG的时候，删掉模型，必须要手动save一下，否则再运行脚本重新load project的话，是没有删除成功的，只是删掉了model的name，新导入进来的model name与project name一致。
+                    if app.NumModels()>=2: # +1
+                        model = app.GetModel(self.im.model_name + 'MODEL_ROTATE')
+                    else:
+                        logging.getLogger(__name__).error('there is no model yet!')
+                        print 'why is there no model yet?'
+                        raise
 
-            # set rotor current conditions
-            im.slip_freq_breakdown_torque = slip_freq_breakdown_torque
-            im.add_rotor_current_condition(app, model, study, total_number_of_cases, 
-                                          self.dir_csv_output_folder + original_study_name + '_circuit_current.csv')
-            print self.dir_csv_output_folder + original_study_name + '_circuit_current.csv'
-            print self.dir_csv_output_folder + original_study_name + '_circuit_current.csv'
-            print self.dir_csv_output_folder + original_study_name + '_circuit_current.csv'
-                # print self.dir_csv_output_folder + im.get_model_name() + original_study_name + '_circuit_current.csv'
-                # print self.dir_csv_output_folder + im.get_model_name() + original_study_name + '_circuit_current.csv'
-                # print self.dir_csv_output_folder + im.get_model_name() + original_study_name + '_circuit_current.csv'
-            # set stator current conditions
-            im.add_stator_current_condition(app, model, study, total_number_of_cases, 
-                                          self.dir_csv_output_folder + original_study_name + '_circuit_current.csv')
+                    if model.NumStudies() == 0:
+                        study = im.add_study(app, model, self.dir_csv_output_folder, choose_study_type='static')
+                    else:
+                        # there is already a study. then get the first study.
+                        study = model.GetStudy(0)
 
-            # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
-            study.GetStudyProperties().SetValue(u"DirectSolverType", 1)
+                im.theta = 6./180.0*pi # 5 deg
+                total_number_of_cases = 2 #12 #36
 
-            model.RestoreCadLink()
+                # add equations
+                    # DriveW_Freq = self.im.DriveW_Freq
+                    # slip = slip_freq_breakdown_torque / DriveW_Freq
+                    # im.DriveW_Freq = DriveW_Freq
+                    # im.the_speed = DriveW_Freq * (1 - slip) * 30
+                    # im.the_slip = slip
+                study.GetDesignTable().AddEquation(u"freq")
+                study.GetDesignTable().AddEquation(u"slip")
+                study.GetDesignTable().AddEquation(u"speed")
+                study.GetDesignTable().GetEquation(u"freq").SetType(0)
+                study.GetDesignTable().GetEquation(u"freq").SetExpression("%g"%((im.DriveW_Freq)))
+                study.GetDesignTable().GetEquation(u"freq").SetDescription(u"Excitation Frequency")
+                study.GetDesignTable().GetEquation(u"slip").SetType(0)
+                study.GetDesignTable().GetEquation(u"slip").SetExpression("%g"%(im.the_slip))
+                study.GetDesignTable().GetEquation(u"slip").SetDescription(u"Slip [1]")
+                study.GetDesignTable().GetEquation(u"speed").SetType(1)
+                study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * 30")
+                study.GetDesignTable().GetEquation(u"speed").SetDescription(u"mechanical speed of four pole")
 
-            study.RunAllCases()
-            app.Save()
-            model.CloseCadLink()
+                # rotate the rotor by cad parameters via Park Transformation
+                # cad parameters cannot be duplicated! even you have a list of cad paramters after duplicating, but they cannot be used to create cases! So you must set total_number_of_cases to 1 in the first place if you want to do Rotating Static FEA in JMAG
+                im.add_cad_parameters(study)
+                im.add_cases_rotate_rotor(study, total_number_of_cases) 
+                    # print study.GetDesignTable().NumParameters()
+
+                # set rotor current conditions
+                im.slip_freq_breakdown_torque = slip_freq_breakdown_torque
+                im.add_rotor_current_condition(app, model, study, total_number_of_cases, 
+                                              self.dir_csv_output_folder + original_study_name + '_circuit_current.csv')
+                print self.dir_csv_output_folder + original_study_name + '_circuit_current.csv'
+                print self.dir_csv_output_folder + original_study_name + '_circuit_current.csv'
+                print self.dir_csv_output_folder + original_study_name + '_circuit_current.csv'
+                    # print self.dir_csv_output_folder + im.get_model_name() + original_study_name + '_circuit_current.csv'
+                    # print self.dir_csv_output_folder + im.get_model_name() + original_study_name + '_circuit_current.csv'
+                    # print self.dir_csv_output_folder + im.get_model_name() + original_study_name + '_circuit_current.csv'
+                # set stator current conditions
+                im.add_stator_current_condition(app, model, study, total_number_of_cases, 
+                                              self.dir_csv_output_folder + original_study_name + '_circuit_current.csv')
+
+                # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
+                study.GetStudyProperties().SetValue(u"DirectSolverType", 1)
+
+                model.RestoreCadLink()
+
+                study.RunAllCases()
+                app.Save()
+                model.CloseCadLink()
 
         # Loss Study
         pass
@@ -1259,7 +1263,7 @@ class swarm(object):
             # NFFT = 2**nextpow2(L) # this causes incorrect dc bin (too large)
             NFFT = L
             y = np.fft.fft(x,NFFT) # y is a COMPLEX defined in numpy
-            Y = [2 * el.__abs__() / L for el in y] # /L for spectrum aplitude consistent with actual signal. 2* for single-sided. abs for amplitude.
+            Y = [2 * el.__abs__() / L for el in y] # /L for spectrum aplitude consistent with actual signal. 2* for single-sided. abs for amplitude of complem number.
             Y[0] *= 0.5 # DC does not need to be times 2
             if base_freq==None:
                 # f = np.fft.fftfreq(NFFT, t[1]-t[0]) # for double-sided
@@ -1823,8 +1827,8 @@ class bearingless_induction_motor_design(object):
         self.dict_coil_connection = {41:self.l41, 42:self.l42, 21:self.l21, 22:self.l22}
 
         #06 Meshing & Solver Properties
-        self.max_nonlinear_iteration = 30 # 50 # for transient solve
-        self.meshSize_Rotor = 1.2 # mm
+        self.max_nonlinear_iteration = 50 # 30 for transient solve
+        self.meshSize_Rotor = 1.8 #1.2 0.6 # mm
 
 
         #07: Some Checking
@@ -1928,7 +1932,10 @@ class bearingless_induction_motor_design(object):
         #     model.GetSetList().GetSet(name).AddSelected(sel)
         # edge_set(u"AirGapCoast", 0, self.Radius_OuterRotor+0.5*self.Length_AirGap)
 
-        # 4 poles Winding
+        # Create Set for Shaft
+        part_set(u"ShaftSet", 0.0, 0.0)
+
+        # Create Set for 4 poles Winding
         R = 0.5*(self.Radius_InnerStatorYoke  +  (self.Radius_OuterRotor+self.Width_StatorTeethHeadThickness+self.Width_StatorTeethNeck)) 
             # THETA = (0.5*(self.Angle_StatorSlotSpan) -  0.05*(self.Angle_StatorSlotSpan-self.Angle_StatorSlotOpen))/180.*pi
         THETA = (0.5*(self.Angle_StatorSlotSpan) -  0.05*(self.Angle_StatorSlotSpan-self.Width_StatorTeethBody))/180.*pi
@@ -1945,7 +1952,7 @@ class bearingless_induction_motor_design(object):
             X = R*cos(THETA)
             Y = R*sin(THETA)
 
-        # 2 poles Winding
+        # Create Set for 2 poles Winding
             # THETA = (0.5*(self.Angle_StatorSlotSpan) +  0.05*(self.Angle_StatorSlotSpan-self.Angle_StatorSlotOpen))/180.*pi
         THETA = (0.5*(self.Angle_StatorSlotSpan) +  0.05*(self.Angle_StatorSlotSpan-self.Width_StatorTeethBody))/180.*pi
         X = R*cos(THETA)
@@ -1963,7 +1970,7 @@ class bearingless_induction_motor_design(object):
 
 
 
-        # Bars and Air within rotor slots
+        # Create Set for Bars and Air within rotor slots
         R = self.Location_RotorBarCenter
                                                                                 # Another BUG:对于这种槽型，part_set在将AirWithin添加为set的时候，会错误选择到转子导条上！实际上，AirWithinRotorSlots对于JMAG来说完全是没有必要的！
         # R_airR = self.Radius_OuterRotor - 0.1*self.Length_HeadNeckRotorSlot # if the airWithin is too big, minus 1e-2 is not enough anymore
@@ -1983,7 +1990,7 @@ class bearingless_induction_motor_design(object):
             X = R*cos(THETA)
             Y = R*sin(THETA)
 
-        # Motion
+        # Create Set for Motion Region
         def part_list_set(name, list_xy, prefix=None):
             model.GetSetList().CreatePartSet(name)
             model.GetSetList().GetSet(name).SetMatcherType(u"Selection")
@@ -1995,7 +2002,7 @@ class bearingless_induction_motor_design(object):
         # part_list_set(u'Motion_Region', [[0,0],[0,self.Radius_Shaft+1e-2]] + list_xy_bars + list_xy_airWithinRotorSlot) 
         part_list_set(u'Motion_Region', [[0,0],[0,self.Radius_Shaft+1e-2]] + list_xy_bars) 
 
-        # Cage
+        # Create Set for Cage
         model.GetSetList().CreatePartSet(u"CageSet")
         model.GetSetList().GetSet(u"CageSet").SetMatcherType(u"MatchNames")
         model.GetSetList().GetSet(u"CageSet").SetParameter(u"style", u"prefix")
@@ -2451,7 +2458,7 @@ class bearingless_induction_motor_design(object):
 
         study.GetMeshControl().SetValue(u"MeshType", 1) # make sure this has been exe'd: study.GetCondition(u"RotCon").AddSet(model.GetSetList().GetSet(u"Motion_Region"), 0)
         study.GetMeshControl().SetValue(u"RadialDivision", 4) # for air region near which motion occurs
-        study.GetMeshControl().SetValue(u"CircumferentialDivision", 1440) # for air region near which motion occurs 这个数足够大，sliding mesh才准确。
+        study.GetMeshControl().SetValue(u"CircumferentialDivision", 720) #1440) # for air region near which motion occurs 这个数足够大，sliding mesh才准确。
         study.GetMeshControl().SetValue(u"AirRegionScale", 1.05) # [Model Length]: Specify a value within the following area. (1.05 <= value < 1000)
         study.GetMeshControl().SetValue(u"MeshSize", 4) # mm
         study.GetMeshControl().SetValue(u"AutoAirMeshSize", 0)
@@ -2464,6 +2471,11 @@ class bearingless_induction_motor_design(object):
         study.GetMeshControl().GetCondition(u"CageMeshCtrl").SetValue(u"Size", self.meshSize_Rotor)
         study.GetMeshControl().GetCondition(u"CageMeshCtrl").ClearParts()
         study.GetMeshControl().GetCondition(u"CageMeshCtrl").AddSet(model.GetSetList().GetSet(u"CageSet"), 0)
+
+        study.GetMeshControl().CreateCondition(u"Part", u"ShaftMeshCtrl")
+        study.GetMeshControl().GetCondition(u"ShaftMeshCtrl").SetValue(u"Size", 10) # 10 mm
+        study.GetMeshControl().GetCondition(u"ShaftMeshCtrl").ClearParts()
+        study.GetMeshControl().GetCondition(u"ShaftMeshCtrl").AddSet(model.GetSetList().GetSet(u"ShaftSet"), 0)
 
         def mesh_all_cases(study):
             numCase = study.GetDesignTable().NumCases()
@@ -3683,13 +3695,7 @@ class draw(object):
 
         sketch.CloseSketch()
 
-
-def add_M15Steel(app):
-    app.GetMaterialLibrary().CreateCustomMaterial(u"M-15 Steel", u"Custom Materials")
-    app.GetMaterialLibrary().GetUserMaterial(u"M-15 Steel").SetValue(u"Density", 7.85)
-    app.GetMaterialLibrary().GetUserMaterial(u"M-15 Steel").SetValue(u"MagneticSteelPermeabilityType", 2)
-    app.GetMaterialLibrary().GetUserMaterial(u"M-15 Steel").SetValue(u"CoerciveForce", 0)
-    app.GetMaterialLibrary().GetUserMaterial(u"M-15 Steel").GetTable("BhTable").SetName(u"Untitled")
+def print_array(self):
     refarray = [[0 for i in range(2)] for j in range(47)]
     refarray[0][0] = 0
     refarray[0][1] = 0
@@ -3785,6 +3791,17 @@ def add_M15Steel(app):
     refarray[45][1] = 2.25
     refarray[46][0] = 234024.751347
     refarray[46][1] = 2.3
+    print refarray
+
+def add_M15Steel(app):
+    app.GetMaterialLibrary().CreateCustomMaterial(u"M-15 Steel", u"Custom Materials")
+    app.GetMaterialLibrary().GetUserMaterial(u"M-15 Steel").SetValue(u"Density", 7.85)
+    app.GetMaterialLibrary().GetUserMaterial(u"M-15 Steel").SetValue(u"MagneticSteelPermeabilityType", 2)
+    app.GetMaterialLibrary().GetUserMaterial(u"M-15 Steel").SetValue(u"CoerciveForce", 0)
+    app.GetMaterialLibrary().GetUserMaterial(u"M-15 Steel").GetTable("BhTable").SetName(u"Untitled")
+
+    array
+
     app.GetMaterialLibrary().GetUserMaterial(u"M-15 Steel").GetTable("BhTable").SetTable(refarray)
     app.GetMaterialLibrary().GetUserMaterial(u"M-15 Steel").SetValue(u"DemagnetizationCoerciveForce", 0)
     app.GetMaterialLibrary().GetUserMaterial(u"M-15 Steel").SetValue(u"MagnetizationSaturated", 0)

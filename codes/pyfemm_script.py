@@ -96,7 +96,7 @@ fea_config_dict = {
     'DPNV': True,
     'Steel': 'M15', # 'Arnon5', 
     'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
-    'Bar_Conductivity':40e6, # 40e6 for Aluminium; 1/1.673e-08 for Copper
+    'Bar_Conductivity':40e6, # 40e6 for Aluminium; 1/((3.76*25+873)*10^(-9)/55.) for Copper
 }
 where_am_i(fea_config_dict)
 from sys import path as sys_path
@@ -136,6 +136,10 @@ sw = population.swarm(fea_config_dict, de_config_dict=None)
 # sw.show(which='all')
 # print sw.im.show()
 
+# load Arnon5 from file
+# population.print_array(1)
+# quit()
+
 # generate the initial generation
 # sw.generate_pop()
 
@@ -149,6 +153,40 @@ print im_initial.l22
 logger.info('Running Script for FEMM with %s'%(run_folder))
 solver_jmag = FEMM_Solver.FEMM_Solver(im_initial, flag_read_from_jmag=True, freq=0) # static
 solver_femm = FEMM_Solver.FEMM_Solver(im_initial, flag_read_from_jmag=False, freq=2.23) # eddy+static
+
+# # debug
+# solver_femm.load_B_data('stator_B_data')
+# solver_femm.load_B_data('rotor_B_data')
+# quit()
+solver_femm.keep_collecting_static_results_for_optimization()
+quit()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ''' 4. Show results, if not exist then produce it
 '''
