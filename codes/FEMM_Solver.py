@@ -1835,12 +1835,12 @@ class FEMM_Solver(object):
         # https://www.mathworks.com/help/matlab/math/fourier-transforms.html
 
         global threshold 
-        def remove_noises(bxfft, threshold_tunner=1e2):
+        def remove_noises(bxfft, threshold_tunner=3e1):
             global threshold 
             threshold = threshold_tunner * np.mean(bxfft)
             noises_places = np.where(bxfft<threshold, 0, 1)
             bxfft *= noises_places
-            print 'threshold', threshold
+            # print 'threshold', threshold
             return bxfft
 
         # Stator iron loss
@@ -1852,10 +1852,10 @@ class FEMM_Solver(object):
             bxfft = utility.singleSidedDFT(stator_Bx_waveform, samp_freq)
             byfft = utility.singleSidedDFT(stator_By_waveform, samp_freq)
 
-            # test remove noises in spectrum
-            index_enough = -1
-            fig_dft, axes_dft = subplots(4,1, sharex=True)
-            axes_dft[3].plot(dft_freq[:index_enough], bxfft[:index_enough], '>',alpha=0.4)
+            # # test remove noises in spectrum
+            # index_enough = -1
+            # fig_dft, axes_dft = subplots(4,1, sharex=True)
+            # axes_dft[3].plot(dft_freq[:index_enough], bxfft[:index_enough], '>',alpha=0.4)
 
             bxfft = remove_noises(bxfft)
             byfft = remove_noises(byfft)
@@ -1867,17 +1867,17 @@ class FEMM_Solver(object):
             stator_hysteresis_loss_dft  += (ch*dft_freq    * volume_element/cs ) * bsq
             stator_volume += volume_element
 
-            # test remove noises in spectrum
-            axes_dft[0].plot(dft_freq[:index_enough], stator_eddycurrent_loss_dft[:index_enough], '+',alpha=0.4)
-            axes_dft[0].set_xlabel('Frequency [Hz]')
-            axes_dft[0].set_ylabel('Stator\nEddy\nCurrent\nLoss [W]')
-            axes_dft[1].plot(dft_freq[:index_enough], stator_hysteresis_loss_dft[:index_enough], '^',alpha=0.4)
-            axes_dft[1].set_xlabel('Frequency [Hz]')
-            axes_dft[1].set_ylabel('Stator\nHysteresis\nLoss [W]')
-            axes_dft[2].plot(dft_freq[:index_enough], bxfft[:index_enough], '>',alpha=0.4)
-            axes_dft[2].plot(dft_freq[:index_enough], np.ones(len(dft_freq[:index_enough]))*threshold)
-            axes_dft[3].plot(dft_freq[:index_enough], np.ones(len(dft_freq[:index_enough]))*threshold)
-            show()
+            # # test remove noises in spectrum
+            # axes_dft[0].plot(dft_freq[:index_enough], stator_eddycurrent_loss_dft[:index_enough], '+',alpha=0.4)
+            # axes_dft[0].set_xlabel('Frequency [Hz]')
+            # axes_dft[0].set_ylabel('Stator\nEddy\nCurrent\nLoss [W]')
+            # axes_dft[1].plot(dft_freq[:index_enough], stator_hysteresis_loss_dft[:index_enough], '^',alpha=0.4)
+            # axes_dft[1].set_xlabel('Frequency [Hz]')
+            # axes_dft[1].set_ylabel('Stator\nHysteresis\nLoss [W]')
+            # axes_dft[2].plot(dft_freq[:index_enough], bxfft[:index_enough], '>',alpha=0.4)
+            # axes_dft[2].plot(dft_freq[:index_enough], np.ones(len(dft_freq[:index_enough]))*threshold)
+            # axes_dft[3].plot(dft_freq[:index_enough], np.ones(len(dft_freq[:index_enough]))*threshold)
+            # show()
 
         # find the index of dft_freq that corresponds to 50e3 Hz, because higher results are contaminated by noises in fourier analysis
         index_enough = next(ind for ind, el in enumerate(dft_freq) if el > MAX_FREQUENCY) # 50e3 Hz is enough 10 times base frequency 500 Hz
