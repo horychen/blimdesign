@@ -51,12 +51,12 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     required_torque = mec_power/(2*pi*speed_rpm)*60
     print 'required_torque', required_torque, 'Nm'
 
-    rotor_volumn_Vr = required_torque/(2*tangential_stress)
+    rotor_volume_Vr = required_torque/(2*tangential_stress)
 
     length_ratio_chi = pi/(2*no_pole_pairs) * no_pole_pairs**(1/3) # Table 6.5
     print 'length_ratio_chi=', length_ratio_chi
 
-    rotor_outer_diameter_Dr = (4/pi*rotor_volumn_Vr*length_ratio_chi)**(1/3)
+    rotor_outer_diameter_Dr = (4/pi*rotor_volume_Vr*length_ratio_chi)**(1/3)
     rotor_outer_radius_r_or = 0.5 * rotor_outer_diameter_Dr
     print 'rotor_outer_diameter_Dr=', rotor_outer_diameter_Dr*1e3, 'mm'
     print 'rotor_outer_radius_r_or=', rotor_outer_radius_r_or*1e3, 'mm'
@@ -312,15 +312,15 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         coef_eddy = 0.07324; # Eddy current coefficient in (Watt/(meter^3 * T^2 * Hz^2)
         coef_hysteresis = 187.6; # Hysteresis coefficient in (Watts/(meter^3 * T^2 * Hz)
 
-        volumn_stator_tooth = stator_tooth_width_b_ds * stator_tooth_height_h_ds * stack_length
-        volumn_rotor_tooth = rotor_tooth_width_b_dr * rotor_tooth_height_h_dr * stack_length
+        volume_stator_tooth = stator_tooth_width_b_ds * stator_tooth_height_h_ds * stack_length
+        volume_rotor_tooth = rotor_tooth_width_b_dr * rotor_tooth_height_h_dr * stack_length
 
         stator_tooth_core_loss_power_per_meter_cube = 1.8 * coef_hysteresis* 2*pi*rated_frequency * stator_tooth_flux_density_B_ds**2 + coef_eddy* (2*pi*rated_frequency * stator_tooth_flux_density_B_ds) **2  # table 3.2
-        stator_tooth_core_loss_power = Qs* volumn_stator_tooth * stator_tooth_core_loss_power_per_meter_cube
+        stator_tooth_core_loss_power = Qs* volume_stator_tooth * stator_tooth_core_loss_power_per_meter_cube
         print 'stator_tooth_core_loss_power=', stator_tooth_core_loss_power, 'W'
 
         rotor_tooth_core_loss_power_per_meter_cube = 1.8 * coef_hysteresis* 2*pi*rated_frequency * rotor_tooth_flux_density_B_dr**2 + coef_eddy* (2*pi*rated_frequency * rotor_tooth_flux_density_B_dr) **2 
-        rotor_tooth_core_loss_power = Qr* volumn_rotor_tooth * rotor_tooth_core_loss_power_per_meter_cube
+        rotor_tooth_core_loss_power = Qr* volume_rotor_tooth * rotor_tooth_core_loss_power_per_meter_cube
         print 'rotor_tooth_core_loss_power=', rotor_tooth_core_loss_power, 'W'
 
 

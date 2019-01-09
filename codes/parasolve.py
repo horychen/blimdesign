@@ -2,6 +2,9 @@
 # https://stackoverflow.com/questions/19156467/run-multiple-instances-of-python-script-simultaneously
 # https://docs.python.org/2/library/subprocess.html#subprocess.Popen
 
+# wait 
+# https://stackoverflow.com/questions/100624/python-on-windows-how-to-wait-for-multiple-child-processes
+
 import os
 import sys
 import femm
@@ -93,7 +96,10 @@ fem_file_list = os.listdir(dir_run)
 fem_file_list = [f for f in fem_file_list if '.fem' in f]
 
 femm.openfemm(True) # bHide
-femm.smartmesh(False) # this is essential to reduce elements counts from >50000 to ~20000.
+
+bool_automesh = False
+femm.smartmesh(bool_automesh) # this is essential to reduce elements counts from >50000 to ~20000.
+print 'smartmesh is', bool_automesh
 
 for i in range(id_solver, len(fem_file_list), number_of_instances):
 
