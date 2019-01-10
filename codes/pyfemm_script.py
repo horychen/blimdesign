@@ -163,27 +163,27 @@ solver_femm = FEMM_Solver.FEMM_Solver(im_initial, flag_read_from_jmag=False, fre
 
 
 
-# debug
-if not solver_femm.has_results(solver_femm.dir_run + 'sweeping/'):
-    solver_femm.run_frequency_sweeping(range(1,6))
-    data_femm = solver_femm.show_results(bool_plot=False) # this write rotor currents to file, which will be used later for static FEA
-else:
-    solver_femm.show_results_eddycurrent(True) # get right slip
-print solver_femm.get_iron_loss(MAX_FREQUENCY=50e3)
-print solver_femm.get_iron_loss(MAX_FREQUENCY=30e3)
-print solver_femm.get_iron_loss(MAX_FREQUENCY=10e3)
-print solver_femm.get_iron_loss(MAX_FREQUENCY=5e3)
-from pylab import show; show()
-quit()
-# solver_femm.read_current_conditions_from_FEMM()
-# solver_femm.get_copper_loss()
+# # debug
+# if not solver_femm.has_results(solver_femm.dir_run + 'sweeping/'):
+#     solver_femm.run_frequency_sweeping(range(1,6))
+#     data_femm = solver_femm.show_results(bool_plot=False) # this write rotor currents to file, which will be used later for static FEA
+# else:
+#     solver_femm.show_results_eddycurrent(True) # get right slip
+# print solver_femm.get_iron_loss(MAX_FREQUENCY=50e3)
+# print solver_femm.get_iron_loss(MAX_FREQUENCY=30e3)
+# print solver_femm.get_iron_loss(MAX_FREQUENCY=10e3)
+# print solver_femm.get_iron_loss(MAX_FREQUENCY=5e3)
+# from pylab import show; show()
 # quit()
+    # solver_femm.read_current_conditions_from_FEMM()
+    # solver_femm.get_copper_loss()
+    # quit()
 
-# solver_femm.keep_collecting_static_results_for_optimization()
-# # # # quit()
-# # # # # load Arnon5 from file
-# # # # sw.print_array()
-# # # # quit()
+    # solver_femm.keep_collecting_static_results_for_optimization()
+    # # # # quit()
+    # # # # # load Arnon5 from file
+    # # # # sw.print_array()
+    # # # # quit()
 
 
 

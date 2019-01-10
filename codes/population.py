@@ -2243,25 +2243,25 @@ class bearingless_induction_motor_design(object):
         if 'M19' in self.fea_config_dict['Steel']:
             study.SetMaterialByName(u"Stator Core", u"M-19 Steel Gauge-29")
             # study.GetMaterial(u"Stator Core").SetValue(u"UserConductivityValue", 1900000)
-            # study.GetMaterial(u"Stator Core").SetValue(u"Laminated", 1)
-            # study.GetMaterial(u"Stator Core").SetValue(u"LaminationFactor", 95)
+            study.GetMaterial(u"Stator Core").SetValue(u"Laminated", 1)
+            study.GetMaterial(u"Stator Core").SetValue(u"LaminationFactor", 95)
 
             study.SetMaterialByName(u"Rotor Core", u"M-19 Steel Gauge-29")
             # study.GetMaterial(u"Rotor Core").SetValue(u"UserConductivityValue", 1900000)
-            # study.GetMaterial(u"Rotor Core").SetValue(u"Laminated", 1)
-            # study.GetMaterial(u"Rotor Core").SetValue(u"LaminationFactor", 95)
+            study.GetMaterial(u"Rotor Core").SetValue(u"Laminated", 1)
+            study.GetMaterial(u"Rotor Core").SetValue(u"LaminationFactor", 95)
 
 
         elif 'M15' in self.fea_config_dict['Steel']:
             study.SetMaterialByName(u"Stator Core", u"M-15 Steel")
             # study.GetMaterial(u"Stator Core").SetValue(u"UserConductivityValue", 1900000)
-            # study.GetMaterial(u"Stator Core").SetValue(u"Laminated", 1)
-            # study.GetMaterial(u"Stator Core").SetValue(u"LaminationFactor", 98)
+            study.GetMaterial(u"Stator Core").SetValue(u"Laminated", 1)
+            study.GetMaterial(u"Stator Core").SetValue(u"LaminationFactor", 98)
 
             study.SetMaterialByName(u"Rotor Core", u"M-15 Steel")
             # study.GetMaterial(u"Rotor Core").SetValue(u"UserConductivityValue", 1900000)
-            # study.GetMaterial(u"Rotor Core").SetValue(u"Laminated", 1)
-            # study.GetMaterial(u"Rotor Core").SetValue(u"LaminationFactor", 98)
+            study.GetMaterial(u"Rotor Core").SetValue(u"Laminated", 1)
+            study.GetMaterial(u"Rotor Core").SetValue(u"LaminationFactor", 98)
 
         elif self.fea_config_dict['Steel'] == 'Arnon5':
             study.SetMaterialByName(u"Stator Core", u"Arnon5-final")
@@ -2338,6 +2338,20 @@ class bearingless_induction_motor_design(object):
             # 静态场不需要用到电路和FEM Coil/Conductor，这里设置完直接返回了
             # no mesh results are needed
             study.GetStudyProperties().SetValue(u"OnlyTableResults", self.fea_config_dict['OnlyTableResults'])
+            study.GetStudyProperties().SetValue(u"Magnetization", 0)
+            study.GetStudyProperties().SetValue(u"PermeanceFactor", 0)
+            study.GetStudyProperties().SetValue(u"DifferentialPermeability", 0)
+            study.GetStudyProperties().SetValue(u"LossDensity", 0)
+            study.GetStudyProperties().SetValue(u"SurfaceForceDensity", 0)
+            study.GetStudyProperties().SetValue(u"LorentzForceDensity", 0)
+            study.GetStudyProperties().SetValue(u"Stress", 0)
+            study.GetStudyProperties().SetValue(u"HysteresisLossDensity", 0)
+            study.GetStudyProperties().SetValue(u"RestartFile", 0)
+            study.GetStudyProperties().SetValue(u"JCGMonitor", 0)
+            study.GetStudyProperties().SetValue(u"CoerciveForceNormal", 0)
+            study.GetStudyProperties().SetValue(u"Temperature", 0)
+            study.GetStudyProperties().SetValue(u"IronLossDensity", 0) # 我们要铁耗作为后处理，而不是和磁场同时求解。（[搜Iron Loss Formulas] Use one of the following methods to calculate iron loss and iron loss density generated in magnetic materials in JMAG. • Calculating Iron Loss Using Only the Magnetic Field Analysis Solver (page 6): It is a method to run magnetic field analysis considering the effect of iron loss. In this method, iron loss condition is not used. • Calculating Iron Loss Using the Iron Loss Analysis Solver (page 8): It is a method to run iron loss analysis using the results data of magnetic field analysis. It will be one of the following procedures. • Run magnetic field analysis study with iron loss condition • Run iron loss analysis study with reference to the result file of magnetic field analysis This chapter describes these two methods.）
+
 
             # Linear Solver
             if False:

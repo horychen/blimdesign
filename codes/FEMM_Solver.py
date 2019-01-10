@@ -1065,7 +1065,7 @@ class FEMM_Solver(object):
 
         if self.im.fea_config_dict['Steel'] == 'M19Gauge29':
             # femm.mi_getmaterial('M-19 Steel') # for Stator & Rotor Iron Cores (Nonlinear with B-H curve)
-            femm.mi_addmaterial('M19Gauge29',0,0, 0,0, 0,0.3556,0, 1) #0.95) # no lamination for testing consistency with JMAG
+            femm.mi_addmaterial('M19Gauge29',0,0, 0,0, 0,0.3556,0, 0.95) # no lamination for testing consistency with JMAG
             hdata, bdata = np.loadtxt(self.dir_codes + '../Arnon5/M-19-Steel-BH-Curve-afterJMAGsmooth.txt', unpack=True, usecols=(0,1))
             for n in range(0,len(bdata)):
                 femm.mi_addbhpoint('M19Gauge29', bdata[n], hdata[n])
@@ -1080,7 +1080,7 @@ class FEMM_Solver(object):
                 femm.mi_addbhpoint('Arnon5-final', bdata[n], hdata[n])
 
         elif self.im.fea_config_dict['Steel'] == 'M15':
-            femm.mi_addmaterial('My M-15 Steel',0,0, 0,0, 0,0.635,0, 1) #0.98)
+            femm.mi_addmaterial('My M-15 Steel',0,0, 0,0, 0,0.635,0, 0.98)
             BH = np.loadtxt(self.dir_codes + '../Arnon5/M-15-Steel-BH-Curve.txt', unpack=True, usecols=(0,1))
             bdata = BH[1]
             hdata = BH[0]
@@ -1835,7 +1835,7 @@ class FEMM_Solver(object):
         # https://www.mathworks.com/help/matlab/math/fourier-transforms.html
 
         global threshold 
-        def remove_noises(bxfft, threshold_tunner=3e1):
+        def remove_noises(bxfft, threshold_tunner=0.3): # square window in freq domain
             global threshold 
             threshold = threshold_tunner * np.mean(bxfft)
             noises_places = np.where(bxfft<threshold, 0, 1)
