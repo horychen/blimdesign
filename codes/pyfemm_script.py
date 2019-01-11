@@ -24,6 +24,9 @@
 ''' 1. General Information & Packages Loading
 '''
 import os 
+if os.path.exists('d:/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz'):
+    os.system('bash -c "rm -r /mnt/d/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz"')
+os.system('bash -c "mv /mnt/d/OneDrive\ -\ UW-Madison/c/pop/Tran2TSS_PS_Opti.txt /mnt/d/OneDrive\ -\ UW-Madison/c/pop/initial_design.txt"')
 def where_am_i(fea_config_dict):
     dir_interpreter = os.path.abspath('')
     print dir_interpreter
@@ -86,7 +89,7 @@ fea_config_dict = {
     ##########################
     # Sysetm Controlc
     ##########################
-    'Active_Qr':36, # 36
+    'Active_Qr':32, # 36
     'TranRef-StepPerCycle':40,
     'OnlyTableResults':False, # modified later according to pc_name
         # multiple cpu (SMP=2)
@@ -213,6 +216,7 @@ solver_femm = FEMM_Solver.FEMM_Solver(im_initial, flag_read_from_jmag=False, fre
 
 ''' 4. Show results, if not exist then produce it
 '''
+from numpy import arange
 if False: # this generate plots for iemdc19
     data = solver_jmag.show_results(bool_plot=False)
     # sw.show_results(femm_solver_data=data)
@@ -221,11 +225,14 @@ if False: # this generate plots for iemdc19
 else:
     # FEMM Static Solver with pre-determined rotor currents from FEMM
     if not solver_femm.has_results():
-        solver_femm.run_frequency_sweeping(range(1,6))
+        solver_femm.run_frequency_sweeping(arange(0.5,5.1,0.5))
         data_femm = solver_femm.show_results(bool_plot=False) # this write rotor currents to file, which will be used later for static FEA
+
+        quit()
 
         solver_femm.run_rotating_static_FEA()
         solver_femm.parallel_solve()
+
 
     # JMAG 
     if not sw.has_results(im_initial, 'Freq'):
@@ -285,7 +292,6 @@ if False: # Test and Debug
 
     ''' 3. Eddy Current FEA with FEMM
     '''
-    from numpy import arange
     solver = FEMM_Solver.FEMM_Solver(deg_per_step, im_initial, dir_codes, dir_femm_files + run_folder)
 
     solver.read_current_from_EC_FEA()

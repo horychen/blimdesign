@@ -3,48 +3,63 @@ from __future__ import division
 from pylab import *
 
 print 'Pyrhonen 2009 Chapter 7.'
-
-# class initial_induction_motor_design(object):
-
 print 'Guesses: alpha_i, efficiency, power_factor.'
 
 # model_name_prefix = 'Qr_loop'
 # model_name_prefix = 'Qr_loop_B' # longer solve time, less models, better mesh, higher turns for bearing winding.
 # model_name_prefix = 'EC_Rotate_PS' # longer solve time, less models, better mesh, higher turns for bearing winding.
 # model_name_prefix = 'ECRot_PS_Opti' # longer solve time, less models, better mesh, higher turns for bearing winding.
-model_name_prefix = 'StaticFEA_PS_Opti' # Fix Bug for the rotor slot radius as half of rotor tooth width
+# model_name_prefix = 'StaticFEA_PS_Opti' # Fix Bug for the rotor slot radius as half of rotor tooth width
+model_name_prefix = 'Tran2TSS_PS_Opti' 
 
 loc_txt_file = '../pop/%s.txt'%(model_name_prefix)
 f=open(loc_txt_file, 'w')
 f.close()
 # for THE_IM_DESIGN_ID, Qr in enumerate([16,20,28,32,36]): # any Qr>36 will not converge (for alpha_i and k_sat)
-for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (for alpha_i and k_sat)
 # for THE_IM_DESIGN_ID, Qr in enumerate([32]):
+for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (for alpha_i and k_sat) with Arnon5 at least
+
+    # # debug    
+    # if Qr == 32:
+    #     continue
 
     THE_IM_DESIGN_ID = Qr
 
     print '''\n1. Initial Design Parameters '''
     mec_power = 50e3 # W
-    rated_frequency = 500 # Hz
+    rated_frequency = 1000 # Hz
     no_pole_pairs = 2
     speed_rpm = rated_frequency * 60 / no_pole_pairs # rpm
     U1_rms = 500 / sqrt(3) # V - Wye-connect
     # U1_rms = 500  # V - Delta-connect
     stator_phase_voltage_rms = U1_rms
     no_phase_m = 3
+    print 'rated_frequency=', rated_frequency
     print 'speed_rpm=', speed_rpm
+    bool_we_have_plenty_voltage = True
+    print 'The default option for voltage avaliability is plenty. That is, the dc bus can be high enough (higher than the specified U1_rms) for allowing more conductors in stator slots.'
+    bool_pole_specific_rotor = True
+    if bool_pole_specific_rotor==True:
+        print 'Pole-specific wound rotor.'
+    else:
+        print 'Cage rotor.'
+    print 
 
 
 
     print '''\n2. Machine Constants '''
-    tangential_stress = 21500 # 12000 ~ 33000
+    if bool_pole_specific_rotor == False:
+        tangential_stress = 21500 # 12000 ~ 33000
+    else: # for wound rotor, the required rotor slot is really too large to find a solution, we must reduce tangential_stress to make a larger rotor.    
+        tangential_stress = 12000
+
     if no_pole_pairs == 1:
-        machine_constant_Cmec = 150 # kW s / m^3. Figure 6.3
+        machine_constant_Cmec = 150 # kW s / m^3. Figure 6.3 <- This is what Eric calls the penalty on the 2 pole IM---you loss power density.
     else:
         machine_constant_Cmec = 250 # kW s / m^3. 这里的电机常数都是按100kW去查的表哦，偏大了。
     print 'tangential_stress=', tangential_stress
     print 'machine_constant_Cmec=', machine_constant_Cmec
-
+    print 'The former is used to determine motor size, and the latter is for determining linear current density A according to the air gap B.'
 
 
     print '''\n3. Machine Sizing '''
@@ -53,10 +68,10 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 
     rotor_volume_Vr = required_torque/(2*tangential_stress)
 
-    length_ratio_chi = pi/(2*no_pole_pairs) * no_pole_pairs**(1/3) # Table 6.5
+    length_ratio_chi = pi/(2*no_pole_pairs) * no_pole_pairs**(1/3.) # Table 6.5
     print 'length_ratio_chi=', length_ratio_chi
 
-    rotor_outer_diameter_Dr = (4/pi*rotor_volume_Vr*length_ratio_chi)**(1/3)
+    rotor_outer_diameter_Dr = (4/pi*rotor_volume_Vr*length_ratio_chi)**(1/3.)
     rotor_outer_radius_r_or = 0.5 * rotor_outer_diameter_Dr
     print 'rotor_outer_diameter_Dr=', rotor_outer_diameter_Dr*1e3, 'mm'
     print 'rotor_outer_radius_r_or=', rotor_outer_radius_r_or*1e3, 'mm'
@@ -73,18 +88,18 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         air_gap_length_delta = (0.2 + 0.01*mec_power**0.4) / 1000
     else:
         air_gap_length_delta = (0.18 + 0.006*mec_power**0.4) / 1000
-    print 'air_gap_length_delta=', air_gap_length_delta*1e3, 'mm', 'this is for 50 Hz line-start IM'
-    print 'Kevin S. Campbell: this is too small. 3 mm is good!'
-    air_gap_length_delta *= 2
-    print 'air_gap_length_delta=', air_gap_length_delta*1e3, 'mm', 'high speed inverted driven IM'
-
+    print 'air_gap_length_delta=', air_gap_length_delta*1e3, 'mm,', 'but this is for 50 Hz line-start IM.'
+    print 'Kevin S. Campbell: this is too small. 3.5 mm is good!'
+    air_gap_length_delta *= 2 # *=3 will not converge
+    print 'air_gap_length_delta=', air_gap_length_delta*1e3, 'mm.', 'Double it for high speed inverted driven IM.'
+    
 
     stack_length_eff = stack_length + 2 * air_gap_length_delta
     print 'stack_length_eff=', stack_length_eff*1e3, 'mm'
 
     air_gap_diameter_D = 1*air_gap_length_delta + rotor_outer_diameter_Dr
-    stator_inner_diameter_Ds = 2*air_gap_length_delta + rotor_outer_diameter_Dr
-    stator_inner_radius_r_s = 0.5*stator_inner_diameter_Ds
+    stator_inner_diameter_Dis = 2*air_gap_length_delta + rotor_outer_diameter_Dr
+    stator_inner_radius_r_is = 0.5*stator_inner_diameter_Dis
 
 
 
@@ -103,7 +118,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 
     按照公式计算一下短距、分布、斜槽系数啊！
     '''
-    print 'Available Qs choice: k * 2*no_pole_pairs * no_phase_m. However, we have to make sure it is integral slot for the bearing winding that has two pole pairs'
+    print 'Regular available Qs choice: k * 2*no_pole_pairs * no_phase_m. However, we have to make sure it is integral slot for the bearing winding that has two pole pairs'
     for i in range(1, 5):
         if no_pole_pairs == 1:
             print i * 2*(no_pole_pairs+1)*no_phase_m,
@@ -120,7 +135,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     if no_winding_layer == 1:
         coil_span_W = pole_pitch_tau_p # full pitch - easy
         print 'coil_span_W=', coil_span_W, '= pole_pitch_tau_p =', pole_pitch_tau_p
-    else:
+    else: # short pitch (not tested)
         if no_pole_pairs == 1:
             stator_slot_pitch_tau_us = pi * air_gap_diameter_D / Qs
             coil_span_W = 0.7 * Qs/2 # for 2 pole motor, p76
@@ -135,23 +150,25 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     kq1 = sin(coil_span_W/pole_pitch_tau_p*pi/2)
     ksq1 = sin(pi/(2*no_phase_m*distribution_q)) / (pi/(2*no_phase_m*distribution_q)) # (4.77), skew_s = slot_pitch_tau_u
     kw1 = kd1 * kq1 * ksq1
-    print 'winding factor:', kw1, kd1, kq1, ksq1
+    print 'winding factor:', kw1, '=', kd1, '*', kq1, '*', ksq1
 
 
     # Qr = 30 # Table 7.5. If Qs=24, then Qr!=28, see (7.113).
 
 
 
-    print '''\n6. Air Gap Density '''
+    print '''\n6. Air Gap Flux Density '''
     air_gap_flux_density_B = 0.8 # 0.7 ~ 0.9 Table 6.3
     print 'air_gap_flux_density_B=', air_gap_flux_density_B
     linear_current_density_A = machine_constant_Cmec / (pi**2/sqrt(2)*kw1*air_gap_flux_density_B)
-    print 'linear_current_density_A=', linear_current_density_A, 'kA/m'
-
-
+    
+    if linear_current_density_A<65 and linear_current_density_A>30:
+        print 'linear_current_density_A=', linear_current_density_A, 'kA/m'
+    else:
+        raise Exception('Bad linear_current_density_A.')
 
     print '''\n7. Number of Coil Turns '''
-    desired_emf_Em = 0.95 * U1_rms # 0.96~0.98, high speed motor has higher leakage reactance
+    desired_emf_Em = 0.95 * U1_rms # 0.96~0.98, high speed motor has higher leakage reactance hence 0.95
     flux_linkage_Psi_m = desired_emf_Em / (2*pi*rated_frequency) 
 
     alpha_i = 2/pi # ideal sinusoidal flux density distribusion, when the saturation happens in teeth, alpha_i becomes higher.
@@ -164,10 +181,13 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     no_series_coil_turns_N = round(no_series_coil_turns_N)
     print 'no_series_coil_turns_N=', no_series_coil_turns_N
 
-    print 'no_series_coil_turns_N must be divisible by pq=%d' %(no_pole_pairs*distribution_q)
-    print 'remainder is', int(no_series_coil_turns_N) % int(no_pole_pairs*distribution_q)
-    no_series_coil_turns_N = min([no_pole_pairs*distribution_q*i for i in range(100)], key=lambda x:abs(x - no_series_coil_turns_N)) # https://stackoverflow.com/questions/12141150/from-list-of-integers-get-number-closest-to-a-given-value
-    print 'suggested no_series_coil_turns_N is', no_series_coil_turns_N, 'modify this manually, if necessary'
+    print 'The no_series_coil_turns_N must be divisible by pq=%d' %(no_pole_pairs*distribution_q)
+    print 'Remainder is', int(no_series_coil_turns_N) % int(no_pole_pairs*distribution_q)
+    if bool_we_have_plenty_voltage:
+        no_series_coil_turns_N = min([no_pole_pairs*distribution_q*i for i in range(100,0,-1)], key=lambda x:abs(x - no_series_coil_turns_N))
+    else:
+        no_series_coil_turns_N = min([no_pole_pairs*distribution_q*i for i in range(100)], key=lambda x:abs(x - no_series_coil_turns_N)) # https://stackoverflow.com/questions/12141150/from-list-of-integers-get-number-closest-to-a-given-value
+    print 'Suggested no_series_coil_turns_N is', no_series_coil_turns_N, '---modify this manually, if necessary.'
 
     no_parallel_path = 1
     print '''In some cases, especially in low-voltage, high-power machines, there may be a need to change the stator slot number, the number of parallel paths or even the main dimensions of the machine in order to find the appropriate number of conductors in a slot.'''
@@ -175,9 +195,11 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     print 'no_conductors_per_slot_zQ=', no_conductors_per_slot_zQ
 
     loop_count = 0
-    global BH_lookup, B_Arnon5, H_Arnon5
+    global BH_lookup, bdata, hdata
     while True:
     # if True:
+        if loop_count>25:
+            raise Exception("Abort. This script may not converge anyway.")
         loop_count += 1
         print '''\n9. Recalculate Air Gap Flux Density '''
         air_gap_flux_density_B = sqrt(2)*desired_emf_Em / (2*pi*rated_frequency * kw1 *  alpha_i * no_series_coil_turns_N * pole_pitch_tau_p * stack_length_eff) # p306
@@ -187,7 +209,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 
         print '''\n10. Tooth Flux Density '''
         stator_tooth_flux_density_B_ds = 1.4 #1.4–2.1 (stator) 
-        rotor_tooth_flux_density_B_dr = 1.5 #1.5–2.2 (rotor)
+        rotor_tooth_flux_density_B_dr = 1.5 #1.8 #1.5–2.2 (rotor)
 
         stator_slot_pitch_tau_us = pi * air_gap_diameter_D / Qs
         stator_tooth_apparent_flux_over_slot_pitch_Phi_ds = stack_length_eff * stator_slot_pitch_tau_us * air_gap_flux_density_B
@@ -212,53 +234,83 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         print 'power_factor=', power_factor
 
         stator_phase_current_rms = mec_power / (no_phase_m*efficiency*stator_phase_voltage_rms*power_factor)
-        print 'stator_phase_current_rms', stator_phase_current_rms, 'A'
+        print 'stator_phase_current_rms', stator_phase_current_rms, 'Arms'
 
         rotor_current_referred = stator_phase_current_rms * power_factor
         rotor_current_actual = no_conductors_per_slot_zQ / no_parallel_path * Qs / Qr * rotor_current_referred
-        print 'rotor current:', rotor_current_referred, rotor_current_actual
+        print 'rotor current:', rotor_current_referred, '(referred)', rotor_current_actual, '(actual) Arms'
 
-        stator_current_density_Js = 3.7e6 # A/m^2
-        print 'stator_current_density_Js=', stator_current_density_Js, 'A/m^2'
+    
+        # Current density (Pyrhonen09@Example6.4)
+
+        stator_current_density_Js = 3.7e6 # typical value is 3.7e6 Arms/m^2 = stator_current_density_Js
+        my_AJ_value = stator_current_density_Js*(linear_current_density_A*1e3)   # \in [9e10, 52e10]
+        print '\nstator_current_density_Js=', stator_current_density_Js, 'A/m^2'
+        if my_AJ_value*1e-10 < 52 and my_AJ_value > 9:
+            print '\tmy_AJ_value is', my_AJ_value*1e-10, 'e10 A^2/m^3. It is \\in [9e10, 52e10].'
+        else:
+            print '\tmy_AJ_value is', my_AJ_value*1e-10, 'e10 A^2/m^3.'
+            raise Exception('The liear or slot current density is bad.')
         area_conductor_stator_Scs = stator_phase_current_rms / (no_parallel_path * stator_current_density_Js)
-        print 'area_conductor_stator_Scs=', area_conductor_stator_Scs * 1e6, 'A/mm^2'
+        print 'area_conductor_stator_Scs=', area_conductor_stator_Scs * 1e6, 'mm^2'
 
-        space_factor_kCu = 0.50 # 未计入绝缘的导体填充率 slot packing factor
+        # space factor or slot packing factor
+        space_factor_kCu = 0.50 # 不计绝缘的导体填充率：也就是说，一般来说槽满率能达到60%-66%，但是，这里用于下式计算的，要求考虑导体，而槽满率已经考虑了细导线的绝缘了，所以space factor会比槽满率更小，一般在0.5-0.6，低压电机则取下限0.5。
+        print 'space_factor_kCu=', space_factor_kCu
         area_stator_slot_Sus = no_conductors_per_slot_zQ * area_conductor_stator_Scs / space_factor_kCu 
-        print 'area_stator_slot_Sus', area_stator_slot_Sus*1e6, 'A/mm^2'
+        print 'area_stator_slot_Sus', area_stator_slot_Sus*1e6, 'mm^2'
 
-        rotor_current_density_Js = 4e6 # A/m^2
+        # guess these local design values or adapt from other designs
+        width_statorTeethHeadThickness = 1e-3 # m
+        width_StatorTeethNeck = 0.5 * width_statorTeethHeadThickness
+
+        # stator slot height
+        stator_inner_radius_r_is_eff = stator_inner_radius_r_is + (width_statorTeethHeadThickness + width_StatorTeethNeck)
+        temp = (2*pi*stator_inner_radius_r_is_eff - Qs*stator_tooth_width_b_ds)
+        stator_tooth_height_h_ds = ( sqrt(temp**2 + 4*pi*area_stator_slot_Sus*Qs) - temp ) / (2*pi)
+        print 'stator_tooth_height_h_ds', stator_tooth_height_h_ds*1e3, 'mm\n'
+
+        rotor_current_density_Js = 6.4e6 # 减少电流密度有效减少转子欧姆热 # 修正4*pi*area_rotor_slot_Sur*Qr处的BUG前，这里设置的转子电流密度都是没用的，和FEA的结果对不上，现在能对上了（用FEMM积分电流和面积验证）！
         print 'rotor_current_density_Js=', rotor_current_density_Js, 'A/m^2'
         area_conductor_rotor_Scr = rotor_current_actual / (1 * rotor_current_density_Js)
-        print 'area_conductor_rotor_Scr=', area_conductor_rotor_Scr * 1e6, 'A/mm^2'
+        print 'area_conductor_rotor_Scr=', area_conductor_rotor_Scr * 1e6, 'mm^2'
 
-        space_factor_kAl = 1 # no clearance for die cast aluminium bar
+        if bool_pole_specific_rotor == True:
+            # space_factor_kAl = 0.6 # We use wound-rotor to implement Chiba's pole specific rotor. That is, it is coils.
+            space_factor_kAl = 0.95 # (debug)
+            print 'space_factor_kAl=', space_factor_kAl
+        else:
+            space_factor_kAl = 1 # no clearance for die cast aluminium bar
+                                 # However, if a cage winding is produced from copper bars by soldering, a clearance of about 0.4mm in width and 1mm in height has to be left in the rotor slot. This clearance also decreases the space factor.
+        # no_conductors_per_slot_zQ (z_Qr) for cage rotor is clearly 1. 
+        # Even though you use coils in rotor (wound rotor), since all the coils within a slot are parallel connected.
+        # This will give give a no_parallel_path equal to z_Qr, so they will cancel out, anyway. 
+        # Just let both no_parallel_path and z_Qr to be 1 and don't bother.
         area_rotor_slot_Sur = 1 * area_conductor_rotor_Scr / space_factor_kAl 
-        print 'area_rotor_slot_Sur', area_rotor_slot_Sur*1e6, 'A/mm^2'
+        print 'area_rotor_slot_Sur', area_rotor_slot_Sur*1e6, 'mm^2'
 
+        # guess this local design values or adapt from other designs
+        length_headNeckRotorSlot = 1e-3 # m
+        try:
+            rotor_outer_radius_r_or_eff = rotor_outer_radius_r_or - length_headNeckRotorSlot
+            temp = (2*pi*rotor_outer_radius_r_or_eff - Qr*rotor_tooth_width_b_dr)
+            rotor_tooth_height_h_dr = ( +sqrt(temp**2 - 4*pi*area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
+            print 'rotor_tooth_height_h_dr(+)=', rotor_tooth_height_h_dr*1e3, 'mm' # too large to be right answer
+            rotor_tooth_height_h_dr = ( -sqrt(temp**2 - 4*pi*area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
+            print 'rotor_tooth_height_h_dr(-)=', rotor_tooth_height_h_dr*1e3, 'mm'
+        except:
+            print 'Lower your tangential_stress. If that is not possible, increase your B in the rotor tooth because rotor iron loss is of slip freqnecy---it is not that 怖い.'
+            raise Exception('There are no space on the rotor to fulfill the required rotor slot to reach your J_r and space_factor_kAl. Reduce your tangential_stress and run the script again.')
 
-
-
-        temp = (2*pi*stator_inner_radius_r_s - Qs*stator_tooth_width_b_ds)
-        stator_tooth_height_h_ds = ( sqrt(temp**2 + 4*area_stator_slot_Sus*Qs) - temp ) / (2*pi)
-        print 'stator_tooth_height_h_ds', stator_tooth_height_h_ds*1e3, 'mm'
-
-
-        temp = (2*pi*rotor_outer_radius_r_or - Qr*rotor_tooth_width_b_dr)
-        rotor_tooth_height_h_dr = ( +sqrt(temp**2 - 4*area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
-        print 'rotor_tooth_height_h_dr(+)=', rotor_tooth_height_h_dr*1e3, 'mm' # too large to be right answer
-        rotor_tooth_height_h_dr = ( -sqrt(temp**2 - 4*area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
-        print 'rotor_tooth_height_h_dr(-)=', rotor_tooth_height_h_dr*1e3, 'mm'
-
-
-
-
-
+        # quit()
 
         print '''\n12. Magnetic Voltage '''
         # Arnon5
-        H_Arnon5 = [0, 9.51030700000000, 11.2124700000000, 13.2194140000000, 15.5852530000000, 18.3712620000000, 21.6562210000000, 25.5213000000000, 30.0619920000000, 35.3642410000000, 41.4304340000000, 48.3863030000000, 56.5103700000000, 66.0660360000000, 77.3405760000000, 90.5910260000000, 106.212089000000, 124.594492000000, 146.311191000000, 172.062470000000, 202.524737000000, 238.525598000000, 281.012026000000, 331.058315000000, 390.144609000000, 459.695344000000, 541.731789000000, 638.410494000000, 752.333643000000, 886.572927000000, 1044.77299700000, 1231.22308000000, 1450.53867000000, 1709.16554500000, 2013.86779200000, 2372.52358500000, 2795.15968800000, 3292.99652700000, 3878.92566000000, 4569.10131700000, 5382.06505800000, 6339.70069300000, 7465.56316200000, 8791.72220000000, 10352.2369750000, 12188.8856750000, 14347.8232500000, 16887.9370500000, 19872.0933000000, 23380.6652750000, 27504.3713250000, 32364.9650250000, 38095.3408000000, 44847.4916750000, 52819.5656250000, 62227.2176750000, 73321.1169500000]
-        B_Arnon5 = [0, 0.0654248125493027, 0.0748613131259592, 0.0852200097732390, 0.0964406675582732, 0.108404414030963, 0.120978202862830, 0.133981410558774, 0.147324354453074, 0.161128351463696, 0.175902377184132, 0.193526821151857, 0.285794748353625, 0.411139883513949, 0.532912618951425, 0.658948953940289, 0.787463844307836, 0.911019620277348, 1.01134216103736, 1.09097860155578, 1.15946725009315, 1.21577636425715, 1.26636706123955, 1.29966244236095, 1.32941739086224, 1.35630922421149, 1.37375630182574, 1.39003487040401, 1.41548927346395, 1.43257623013269, 1.44423937756642, 1.45969672805890, 1.47405771023894, 1.48651531058339, 1.49890498452922, 1.51343941451204, 1.52867783835158, 1.54216506561365, 1.55323686869400, 1.56223503150867, 1.56963683394210, 1.57600636116484, 1.58332795425880, 1.59306861236599, 1.60529276088440, 1.61939615147952, 1.63357053682375, 1.64622605475232, 1.65658227422276, 1.66426678010510, 1.66992280459884, 1.67585542605930, 1.68316554465867, 1.69199548893857, 1.70235212334602, 1.71387033561736, 1.72578827760282]
+        # hdata = [0, 9.51030700000000, 11.2124700000000, 13.2194140000000, 15.5852530000000, 18.3712620000000, 21.6562210000000, 25.5213000000000, 30.0619920000000, 35.3642410000000, 41.4304340000000, 48.3863030000000, 56.5103700000000, 66.0660360000000, 77.3405760000000, 90.5910260000000, 106.212089000000, 124.594492000000, 146.311191000000, 172.062470000000, 202.524737000000, 238.525598000000, 281.012026000000, 331.058315000000, 390.144609000000, 459.695344000000, 541.731789000000, 638.410494000000, 752.333643000000, 886.572927000000, 1044.77299700000, 1231.22308000000, 1450.53867000000, 1709.16554500000, 2013.86779200000, 2372.52358500000, 2795.15968800000, 3292.99652700000, 3878.92566000000, 4569.10131700000, 5382.06505800000, 6339.70069300000, 7465.56316200000, 8791.72220000000, 10352.2369750000, 12188.8856750000, 14347.8232500000, 16887.9370500000, 19872.0933000000, 23380.6652750000, 27504.3713250000, 32364.9650250000, 38095.3408000000, 44847.4916750000, 52819.5656250000, 62227.2176750000, 73321.1169500000]
+        # bdata = [0, 0.0654248125493027, 0.0748613131259592, 0.0852200097732390, 0.0964406675582732, 0.108404414030963, 0.120978202862830, 0.133981410558774, 0.147324354453074, 0.161128351463696, 0.175902377184132, 0.193526821151857, 0.285794748353625, 0.411139883513949, 0.532912618951425, 0.658948953940289, 0.787463844307836, 0.911019620277348, 1.01134216103736, 1.09097860155578, 1.15946725009315, 1.21577636425715, 1.26636706123955, 1.29966244236095, 1.32941739086224, 1.35630922421149, 1.37375630182574, 1.39003487040401, 1.41548927346395, 1.43257623013269, 1.44423937756642, 1.45969672805890, 1.47405771023894, 1.48651531058339, 1.49890498452922, 1.51343941451204, 1.52867783835158, 1.54216506561365, 1.55323686869400, 1.56223503150867, 1.56963683394210, 1.57600636116484, 1.58332795425880, 1.59306861236599, 1.60529276088440, 1.61939615147952, 1.63357053682375, 1.64622605475232, 1.65658227422276, 1.66426678010510, 1.66992280459884, 1.67585542605930, 1.68316554465867, 1.69199548893857, 1.70235212334602, 1.71387033561736, 1.72578827760282]
+
+        # M19-Gauge29
+        hdata, bdata = np.loadtxt('../Arnon5/M-19-Steel-BH-Curve-afterJMAGsmooth.txt', unpack=True, usecols=(0,1))
 
         def BH_lookup(B_list, H_list, your_B):
             if your_B<=0:
@@ -275,14 +327,14 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
                     return (your_B - B) * slope + H_list[ind]
 
 
-        stator_tooth_field_strength_H = BH_lookup(B_Arnon5, H_Arnon5, stator_tooth_flux_density_B_ds)
-        rotor_tooth_field_strength_H = BH_lookup(B_Arnon5, H_Arnon5, rotor_tooth_flux_density_B_dr)
-        mu0 = 4*pi*10e-7
+        stator_tooth_field_strength_H = BH_lookup(bdata, hdata, stator_tooth_flux_density_B_ds)
+        rotor_tooth_field_strength_H = BH_lookup(bdata, hdata, rotor_tooth_flux_density_B_dr)
+        mu0 = 4*pi*1e-7
         air_gap_field_strength_H = air_gap_flux_density_B / mu0
         print 'stator_tooth_field_strength_H=', stator_tooth_field_strength_H, 'A/m'
         print 'rotor_tooth_field_strength_H=', rotor_tooth_field_strength_H, 'A/m'
         print 'air_gap_field_strength_H=', air_gap_field_strength_H, 'A/m'
-        # for B, H in zip(B_Arnon5, H_Arnon5):
+        # for B, H in zip(bdata, hdata):
         #     print B, H
 
         stator_tooth_magnetic_voltage_Um_ds = stator_tooth_field_strength_H*stator_tooth_height_h_ds
@@ -291,7 +343,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         print 'rotor_tooth_magnetic_voltage_Um_dr=', rotor_tooth_magnetic_voltage_Um_dr, 'A'
 
         angle_stator_slop_open = 0.2*(360/Qs) / 180 * pi # 参考Chiba的电机槽的开口比例
-        b1 = angle_stator_slop_open * stator_inner_radius_r_s
+        b1 = angle_stator_slop_open * stator_inner_radius_r_is
         kappa = b1/air_gap_length_delta / (5 + b1/air_gap_length_delta)
         Carter_factor_kCs = stator_slot_pitch_tau_us / (stator_slot_pitch_tau_us - kappa * b1)
 
@@ -378,7 +430,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 
 
     print '''\n15. Machine Main Geometry and Total Magnetic Voltage '''
-    stator_yoke_diameter_Dsyi = stator_inner_diameter_Ds + 2*stator_tooth_height_h_ds
+    stator_yoke_diameter_Dsyi = stator_inner_diameter_Dis + 2*stator_tooth_height_h_ds
     stator_outer_diameter_Dse = stator_yoke_diameter_Dsyi + 2*stator_yoke_height_h_ys
     print 'stator_outer_diameter_Dse=', stator_outer_diameter_Dse*1e3, 'mm'
     print 'Yegu Kang: stator_outer_diameter fixed at 250 mm '
@@ -407,7 +459,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
                 slope = (coef_c_list[ind]-coef_c_list[ind-1]) / (By-By_list[ind-1]) 
                 return (your_By - By) * slope + coef_c_list[ind]
 
-    stator_yoke_field_strength_Hys = BH_lookup(B_Arnon5, H_Arnon5, stator_yoke_flux_density_Bys)
+    stator_yoke_field_strength_Hys = BH_lookup(bdata, hdata, stator_yoke_flux_density_Bys)
     stator_yoke_middle_pole_pitch_tau_ys = pi*(stator_outer_diameter_Dse - stator_yoke_height_h_ys) / (2*no_pole_pairs)
     coef_c = coef_c_lookup(By_list, coef_c_list, stator_yoke_flux_density_Bys)
     print 'coef_c', coef_c
@@ -416,7 +468,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 
 
 
-    rotor_yoke_field_strength_Hys = BH_lookup(B_Arnon5, H_Arnon5, rotor_yoke_flux_density_Byr)
+    rotor_yoke_field_strength_Hys = BH_lookup(bdata, hdata, rotor_yoke_flux_density_Byr)
     rotor_yoke_middle_pole_pitch_tau_yr = pi*(rotor_yoke_diameter_Dryi - rotor_yoke_height_h_yr) / (2*no_pole_pairs) # (3.53b)
     coef_c = coef_c_lookup(By_list, coef_c_list, rotor_yoke_flux_density_Byr)
     print 'coef_c', coef_c
@@ -441,7 +493,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 
     # fig, axes = subplots(1,3, dpi=80)
     # ax = axes[0]
-    # ax.plot(H_Arnon5, B_Arnon5)
+    # ax.plot(hdata, bdata)
     # ax.set_xlabel(r'$H [A/m]$')
     # ax.set_ylabel(r'$B [T]$')
     # ax.grid()
@@ -470,7 +522,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     Radius_OuterRotor       = 0.5*rotor_outer_diameter_Dr * 1e3
     Radius_Shaft            = 0.5*rotor_inner_diameter_Dri * 1e3
 
-    Length_HeadNeckRotorSlot = 1.0 # mm # 这里假设与HeadNeck相对的槽的部分也能放导体了。准确来说应该有：rotor_inner_diameter_Dri = rotor_yoke_diameter_Dryi - 2*rotor_yoke_height_h_yr - 2*1e-3*Length_HeadNeckRotorSlot
+    Length_HeadNeckRotorSlot = length_headNeckRotorSlot *1e3 # mm # 这里假设与HeadNeck相对的槽的部分也能放导体了。准确来说应该有：rotor_inner_diameter_Dri = rotor_yoke_diameter_Dryi - 2*rotor_yoke_height_h_yr - 2*1e-3*Length_HeadNeckRotorSlot
 
     rotor_slot_radius = (2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3 - rotor_tooth_width_b_dr*Qr) / (2*Qr+2*pi)
     print 'Rotor Slot Radius:', rotor_slot_radius * 1e3, rotor_tooth_width_b_dr * 1e3
@@ -489,19 +541,30 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 
     Angle_StatorSlotOpen = angle_stator_slop_open / pi *180 # in deg.
     Width_StatorTeethBody = stator_tooth_width_b_ds*1e3
-    Width_StatorTeethHeadThickness = 1 # mm # 这里假设与齿头、齿脖相对的槽的部分也能放导体了。准确来说应该stator_yoke_diameter_Dsyi = stator_inner_diameter_Ds + 2*stator_tooth_height_h_ds + 2*1e-3*(Width_StatorTeethHeadThickness+Width_StatorTeethNeck)
-    Width_StatorTeethNeck = 0.5 # mm 
+    
+    Width_StatorTeethHeadThickness = width_statorTeethHeadThickness*1e3 # mm # 这里假设与齿头、齿脖相对的槽的部分也能放导体了。准确来说应该stator_yoke_diameter_Dsyi = stator_inner_diameter_Dis + 2*stator_tooth_height_h_ds + 2*1e-3*(Width_StatorTeethHeadThickness+Width_StatorTeethNeck)
+    Width_StatorTeethNeck = 0.5*Width_StatorTeethHeadThickness # mm 
 
 
-
-    DriveW_Rs = 0.1 # 按照书上的公式算一下
 
     DriveW_poles=no_pole_pairs*2
     DriveW_turns=no_conductors_per_slot_zQ
-    DriveW_Rs = 0.1
     DriveW_CurrentAmp = stator_phase_current_rms * sqrt(2); 
     DriveW_Freq = rated_frequency
 
+    # 参考FEMM_Solver.py 或 按照书上的公式算一下
+    stator_slot_area = area_stator_slot_Sus # FEMM是对槽积分得到的，更准哦
+    TEMPERATURE_OF_COIL = 25
+    rho_Copper = (3.76*TEMPERATURE_OF_COIL+873)*1e-9/55.
+    SLOT_FILL_FACTOR = space_factor_kCu
+    coil_pitch_slot_count = Qs / DriveW_poles # 整距！        
+    length_endArcConductor = coil_pitch_slot_count/Qs * (0.5*(Radius_OuterRotor + Length_AirGap + Radius_InnerStatorYoke)) * 2*pi # [mm] arc length = pi * diameter  
+    length_conductor = (stack_length*1e3 + length_endArcConductor) * 1e-3 # mm to m  ## imagine: two conductors + two end conducotors = one loop (in and out)
+    area_conductor   = (stator_slot_area) * SLOT_FILL_FACTOR / DriveW_turns # TODO: 这里绝缘用槽满率算进去了，但是没有考虑圆形导体之间的空隙？槽满率就是空隙，这里没有考虑绝缘的面积占用。
+    number_parallel_branch = 1
+    resistance_per_conductor = rho_Copper * length_conductor / (area_conductor * number_parallel_branch)
+    DriveW_Rs = resistance_per_conductor * DriveW_turns * Qs / 3. # resistance per phase
+    print 'DriveW_Rs=', DriveW_Rs, 'Ohm'
 
     with open(loc_txt_file, 'a') as f:
         f.write('%d, '%(THE_IM_DESIGN_ID))
@@ -510,7 +573,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         f.write('%f, %f, %f, %f, %f, %f, ' % (Length_HeadNeckRotorSlot,Radius_of_RotorSlot, Location_RotorBarCenter, Width_RotorSlotOpen, Radius_of_RotorSlot2, Location_RotorBarCenter2))
         f.write('%f, %f, %f, %f, ' % (Angle_StatorSlotOpen, Width_StatorTeethBody, Width_StatorTeethHeadThickness, Width_StatorTeethNeck))
         f.write('%f, %f, %f, %f, %f, %f,' % (DriveW_poles, DriveW_turns, DriveW_Rs, DriveW_CurrentAmp, DriveW_Freq, stack_length*1000))
-        f.write('%f, %f\n' % (area_stator_slot_Sus, area_rotor_slot_Sur)) # this line exports values need to impose constraints among design parameters for the de optimization
+        f.write('%.14f, %.14f\n' % (area_stator_slot_Sus, area_rotor_slot_Sur)) # this line exports values need to impose constraints among design parameters for the de optimization
 
 
 
@@ -561,14 +624,14 @@ if False:
     speed_rpm = 20000
 
     Omega = speed_rpm/(60)*2*pi
-    modulus_of_elasticity = 190 * 10e9 # Young's modulus
+    modulus_of_elasticity = 190 * 1e9 # Young's modulus
     D_out = rotor_radius * 2
     D_in = 0
     second_moment_of_inertia_of_area_I = pi*(D_out**4 - D_in**4) / 64 
-    stack_length_max = sqrt( 1**2 * pi**2 / (1.5*Omega) * sqrt( 200*10e9 * second_moment_of_inertia_of_area_I / (8760* pi*(D_out/2)**2) ) )
+    stack_length_max = sqrt( 1**2 * pi**2 / (1.5*Omega) * sqrt( 200*1e9 * second_moment_of_inertia_of_area_I / (8760* pi*(D_out/2)**2) ) )
     print 'stack_length_max=', stack_length_max
 
-    stack_length_max = sqrt(1*pi**2/(1.5*20000/60*2*pi)*sqrt(200*10e9*pi*0.15**4/64/(8760*pi*0.15**2/4)))
+    stack_length_max = sqrt(1*pi**2/(1.5*20000/60*2*pi)*sqrt(200*1e9*pi*0.15**4/64/(8760*pi*0.15**2/4)))
     print 'stack_length_max=', stack_length_max
 
     speed_rpm = 30000

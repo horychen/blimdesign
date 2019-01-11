@@ -48,12 +48,38 @@ class data_manager(object):
 class swarm(object):
 
     def __init__(self, fea_config_dict, de_config_dict=None):
-        # design objective
-        self.model_name_prefix = fea_config_dict['model_name_prefix']
-
-        # directories
+        # directories I
         self.dir_parent             = fea_config_dict['dir_parent']
         self.initial_design_file    = self.dir_parent + 'pop/' + r'initial_design.txt'
+
+        # load initial design using the obsolete class bearingless_induction_motor_design
+        self.im_list = []
+        with open(self.initial_design_file, 'r') as f: 
+            read_iterator = csv_reader(f, skipinitialspace=True)
+            for row in self.whole_row_reader(read_iterator):
+                im = bearingless_induction_motor_design([float(el) for el in row], fea_config_dict, model_name_prefix=fea_config_dict['model_name_prefix'])
+                self.im_list.append(im)
+        for im in self.im_list:
+            if im.Qr == fea_config_dict['Active_Qr']:
+                self.im = im
+        try: 
+            self.im
+        except:
+            print 'There is no design matching Active_Qr.'
+            msg = 'Please activate one initial design. Refer %s.' % (self.initial_design_file)
+            logger = logging.getLogger(__name__)
+            logger.warn(msg)
+            raise Exception('no match for Active_Qr')
+
+        # directories II        
+        if im.DriveW_Freq == 1000: # New design for 1000 Hz machine. some patch for my scrappy codes (lot of bugs are fixed, we need a new name).
+            im.model_name_prefix += '_1e3Hz'
+            self.model_name_prefix = im.model_name_prefix
+            fea_config_dict['model_name_prefix'] = im.model_name_prefix
+            print '[Updated]', self.model_name_prefix
+        else:
+            # design objective
+            self.model_name_prefix = fea_config_dict['model_name_prefix']
         self.dir_csv_output_folder  = self.dir_parent + 'csv/' + self.model_name_prefix + '/'
         if not os.path.exists(self.dir_csv_output_folder):
             os.makedirs(self.dir_csv_output_folder)
@@ -64,27 +90,8 @@ class swarm(object):
         self.pc_name                = fea_config_dict['pc_name']
         self.fea_config_dict        = fea_config_dict
 
-        # optimization
+        # dict of optimization
         self.de_config_dict = de_config_dict
-
-        # load initial design using the obsolete class bearingless_induction_motor_design
-        self.im_list = []
-        with open(self.initial_design_file, 'r') as f: 
-            read_iterator = csv_reader(f, skipinitialspace=True)
-            for row in self.whole_row_reader(read_iterator):
-                im = bearingless_induction_motor_design([float(el) for el in row], fea_config_dict, model_name_prefix=self.model_name_prefix)
-                self.im_list.append(im)
-        for im in self.im_list:
-            if im.Qr == self.fea_config_dict['Active_Qr']:
-                self.im = im
-        try: 
-            self.im
-        except:
-            print 'There is no design matching Active_Qr.'
-            msg = 'Please activate one initial design. Refer %s.' % (self.initial_design_file)
-            logger = logging.getLogger(__name__)
-            logger.warn(msg)
-            raise Exception('no match for Active_Qr')
 
     def write_to_file_fea_config_dict(self):
         with open(self.dir_run + '../FEA_CONFIG-%s.txt'%(self.fea_config_dict['model_name_prefix']), 'w') as f:
@@ -1834,7 +1841,12 @@ class swarm(object):
 
 class bearingless_induction_motor_design(object):
 
-    def update_mechanical_parameters(self, slip_freq=None, syn_freq=500.):
+    def update_mechanical_parameters(self, slip_freq=None, syn_freq=None):
+        if syn_freq is None:
+            syn_freq = self.DriveW_Freq
+        else:
+            raise Exception('I do not recommend to modify synchronous speed at instance level. Go update the initial design.')
+
         if syn_freq == 0.0:
             # lock rotor
             self.the_slip = 0. # this is not totally correct
@@ -1919,7 +1931,7 @@ class bearingless_induction_motor_design(object):
             print 'What are you feeding me?'
 
         #03 Mechanical Parameters
-        self.update_mechanical_parameters(slip_freq=2.75, syn_freq=500.)
+        self.update_mechanical_parameters(slip_freq=2.75) #, syn_freq=500.)
 
         #04 Material Condutivity Properties
         self.End_Ring_Resistance = fea_config_dict['End_Ring_Resistance']
@@ -3057,11 +3069,11 @@ class local_design_variant(bearingless_induction_motor_design):
             raise Exception('im is None.')
 
         #03 Mechanical Parameters
-        self.update_mechanical_parameters(slip_freq=2.75, syn_freq=500.)
+        self.update_mechanical_parameters(slip_freq=2.75) #, syn_freq=500.)
 
         #04 Material Condutivity Properties
-        self.End_Ring_Resistance = 9.69e-6 # this may too small for Chiba's winding
-        self.Bar_Conductivity = 40000000 #
+        self.End_Ring_Resistance = fea_config_dict['End_Ring_Resistance']
+        self.Bar_Conductivity = fea_config_dict['Bar_Conductivity']
         self.Copper_Loss = self.DriveW_CurrentAmp**2 / 2 * self.DriveW_Rs * 3
         # self.Resistance_per_Turn = 0.01 # TODO
 

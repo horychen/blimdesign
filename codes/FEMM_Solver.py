@@ -21,6 +21,13 @@ from time import time as clock_time
 SELECT_ALL = 4
 EPS = 1e-2
 
+class Drawer_Is_Not_Inside_A_Table(object):
+    """docstring for Drawer_Is_Not_Inside_A_Table"""
+    def __init__(self, arg):
+        super(Drawer_Is_Not_Inside_A_Table, self).__init__()
+        self.arg = arg
+        
+
 class FEMM_Solver(object):
 
     def __init__(self, im, flag_read_from_jmag=True, freq=0):
@@ -1681,7 +1688,7 @@ class FEMM_Solver(object):
 
         femm.mo_close()
 
-    def get_copper_loss(self, SLOT_FILL_FACTOR=0.7, TEMPERATURE_OF_COIL=100): 
+    def get_copper_loss(self, SLOT_FILL_FACTOR=0.5, TEMPERATURE_OF_COIL=25): 
         # 100 25 % temperature increase, degrees C
         # Here, by conductor it means the parallel branch (=1) is considered, and number_of_coil_per_slot = 8 (and will always be 8, see example below).
         # Just for example, if parallel branch is 2, number_of_coil_per_slot will still be 8, even though we cut the motor in half and count there will be 16 wire cross-sections,
@@ -1727,7 +1734,7 @@ class FEMM_Solver(object):
 
         return stator_copper_loss, rotor_copper_loss
 
-    def get_iron_loss(self, MAX_FREQUENCY=50e3, SLOT_FILL_FACTOR=0.7, TEMPERATURE_OF_COIL=100):
+    def get_iron_loss(self, MAX_FREQUENCY=50e3, SLOT_FILL_FACTOR=0.5, TEMPERATURE_OF_COIL=25):
         # http://www.femm.info/wiki/SPMLoss
         # % Now, total core loss can be computed in one fell swoop...
         im = self.im
