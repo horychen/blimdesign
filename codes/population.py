@@ -8,6 +8,7 @@ import numpy as np  # for de
 import os
 from pylab import plot, legend, grid, figure, subplots, array, mpl
 import utility
+from VanGogh import VanGogh
 
 class suspension_force_vector(object):
     """docstring for suspension_force_vector"""
@@ -48,7 +49,7 @@ class data_manager(object):
 class swarm(object):
 
     def __init__(self, fea_config_dict, de_config_dict=None):
-        # directories I
+        # directories part I
         self.dir_parent             = fea_config_dict['dir_parent']
         self.initial_design_file    = self.dir_parent + 'pop/' + r'initial_design.txt'
 
@@ -57,7 +58,7 @@ class swarm(object):
         with open(self.initial_design_file, 'r') as f: 
             read_iterator = csv_reader(f, skipinitialspace=True)
             for row in self.whole_row_reader(read_iterator):
-                im = bearingless_induction_motor_design([float(el) for el in row], fea_config_dict, model_name_prefix=fea_config_dict['model_name_prefix'])
+                im = bearingless_induction_motor_design([row[0]]+[float(el) for el in row[1:]], fea_config_dict, model_name_prefix=fea_config_dict['model_name_prefix'])
                 self.im_list.append(im)
         for im in self.im_list:
             if im.Qr == fea_config_dict['Active_Qr']:
@@ -71,7 +72,7 @@ class swarm(object):
             logger.warn(msg)
             raise Exception('no match for Active_Qr')
 
-        # directories II        
+        # directories part II        
         if im.DriveW_Freq == 1000: # New design for 1000 Hz machine. some patch for my scrappy codes (lot of bugs are fixed, we need a new name).
             im.model_name_prefix += '_1e3Hz'
             self.model_name_prefix = im.model_name_prefix
@@ -321,7 +322,7 @@ class swarm(object):
                 # self.app.SubmitAllModelsLocal() # we'd better do it one by one for easing the programing?
 
         # draw the model in JMAG Designer
-        DRAW_SUCCESS = self.draw_model( individual_index, 
+        DRAW_SUCCESS = self.draw_jmag_model( individual_index, 
                                         im_variant,
                                         im_variant.model_name)
         self.jmag_control_state = True # indicating that the jmag project is already created
@@ -571,7 +572,7 @@ class swarm(object):
 
         # TODO: 跑完一轮优化以后，必须把de_config_dict和当前的代数存在文件里，否则gen文件里面存的normalized data就没有物理意义了。
 
-    def draw_model(self, individual_index, im_variant, model_name):
+    def draw_jmag_model(self, individual_index, im_variant, model_name):
 
         if individual_index+1 <= self.app.NumModels():
             logger = logging.getLogger(__name__)
@@ -587,19 +588,26 @@ class swarm(object):
         ass = doc.GetAssembly()
 
         # draw parts
-        d = draw(im_variant) # 传递的是地址哦
+        if True:
+            d = draw(im_variant) # 传递的是地址哦
+        else:
+            d = VanGogh_JMAG(im_variant) # 传递的是地址哦
         d.doc = doc
         d.ass = ass
         try:
-            d.plot_shaft(u"Shaft")
-            d.plot_rotorCore(u"Rotor Core")
-            d.plot_statorCore(u"Stator Core")
-                # ass.GetItem("Rotor Core").SetProperty(u"Visible", 1)
-            d.plot_cage(u"Cage")
-                # ass.GetItem("Stator Core").SetProperty(u"Visible", 1)
-            d.plot_coil(u"Coil")
-            # d.plot_airWithinRotorSlots(u"Air Within Rotor Slots")
+            if True:
+                d.plot_shaft(u"Shaft")
+
+                d.plot_rotorCore(u"Rotor Core")
+                d.plot_cage(u"Cage")
+
+                d.plot_statorCore(u"Stator Core")
+                d.plot_coil(u"Coil")
+                # d.plot_airWithinRotorSlots(u"Air Within Rotor Slots")
+            else:
+                d.draw_model()
         except Exception, e:
+            print 'See log file to plotting error.'
             logger = logging.getLogger(__name__)
             logger.error(u'The drawing is terminated. Please check whether the specified bounds are proper.', exc_info=True)
 
@@ -800,9 +808,11 @@ class swarm(object):
                 # app.SubmitAllModelsLocal() # we'd better do it one by one for easing the programing?
 
         # draw the model in JMAG Designer
-        DRAW_SUCCESS = self.draw_model( 0, 
+        DRAW_SUCCESS = self.draw_jmag_model( 0, 
                                         im,
                                         self.im.model_name)
+        print 'TEST.'
+        return
         self.jmag_control_state = True # indicating that the jmag project is already created
         if DRAW_SUCCESS == 0:
             # TODO: skip this model and its evaluation
@@ -1046,7 +1056,7 @@ class swarm(object):
 
                 # draw another model with MODEL_ROTATE as True
                 if True:
-                    DRAW_SUCCESS = self.draw_model( 1, # +1
+                    DRAW_SUCCESS = self.draw_jmag_model( 1, # +1
                                                     im,
                                                     self.im.model_name + 'MODEL_ROTATE')
                     self.jmag_control_state = True # indicating that the jmag project is already created
@@ -1353,7 +1363,7 @@ class swarm(object):
 
             ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
             ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs, alpha=alpha, label=label, zorder=zorder)
-            ax = axeses[1][0]; ax.plot(time_list, sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
+            ax = axeses[1][0]; ax.plot(time_list, 100*sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
             ax = axeses[1][1]; ax.plot(time_list, np.arctan2(sfv.force_y, sfv.force_x)/pi*180. - sfv.ss_avg_force_angle, label=label, alpha=alpha, zorder=zorder)
 
             global count_plot
@@ -1374,7 +1384,7 @@ class swarm(object):
         fig_main, axeses = subplots(2, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
         ax = axeses[0][0]; ax.set_xlabel('(a)',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)
         ax = axeses[0][1]; ax.set_xlabel('(b)',fontsize=14.5); ax.set_ylabel('Force Amplitude [N]',fontsize=14.5)
-        ax = axeses[1][0]; ax.set_xlabel('Time [s]\n(c)',fontsize=14.5); ax.set_ylabel('Normalized Force Error Magnitude [N]',fontsize=14.5)
+        ax = axeses[1][0]; ax.set_xlabel('Time [s]\n(c)',fontsize=14.5); ax.set_ylabel('Normalized Force Error Magnitude [%]',fontsize=14.5)
         ax = axeses[1][1]; ax.set_xlabel('Time [s]\n(d)',fontsize=14.5); ax.set_ylabel('Force Error Angle [deg]',fontsize=14.5)
 
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -1878,17 +1888,18 @@ class bearingless_induction_motor_design(object):
 
     def __init__(self, row, fea_config_dict, model_name_prefix='PS'):
 
-        # introspection
+        # introspection (settings that may differ for initial design and variant designs)
         self.bool_initial_design = True
         self.fea_config_dict = fea_config_dict
         self.slip_freq_breakdown_torque = None
-
+        self.MODEL_ROTATE = False 
+        
         #01 Model Name
         self.model_name_prefix = model_name_prefix # do include 'PS' here
 
         #02 Pyrhonen Data
         if row != None:
-            self.ID = str(int(row[0]))
+            self.ID = str(row[0])
             self.Qs = row[1]
             self.Qr = row[2]
             self.Angle_StatorSlotSpan = 360. / self.Qs # in deg.
@@ -1994,8 +2005,105 @@ class bearingless_induction_motor_design(object):
                     self.RSH.append( (pm * self.Qr*(1-self.the_slip)/(0.5*self.DriveW_poles) + v)*self.DriveW_Freq )
         # print self.Qr, ', '.join("%g" % (rsh/self.DriveW_Freq) for rsh in self.RSH), '\n'
 
-        # during optimization, rotate at model level is not needed.
-        self.MODEL_ROTATE = False
+
+
+    @staticmethod
+    def get_stator_yoke_diameter_Dsyi(stator_tooth_width_b_ds, area_stator_slot_Sus, stator_inner_radius_r_s, Qs):
+        stator_inner_diameter_Ds = 2*stator_inner_radius_r_s
+        temp = (2*pi*stator_inner_radius_r_s - Qs*stator_tooth_width_b_ds)
+        stator_tooth_height_h_ds = ( np.sqrt(temp**2 + 4*LEFTOUT_PI_HERE*area_stator_slot_Sus*Qs) - temp ) / (2*pi)
+        stator_yoke_diameter_Dsyi = stator_inner_diameter_Ds + 2*stator_tooth_height_h_ds
+        return stator_yoke_diameter_Dsyi
+
+    @staticmethod
+    def get_rotor_tooth_height_h_dr(rotor_tooth_width_b_dr, area_rotor_slot_Sur, rotor_outer_radius_r_or, Qr):
+        temp = (2*pi*rotor_outer_radius_r_or - Qr*rotor_tooth_width_b_dr)
+        rotor_tooth_height_h_dr = ( -np.sqrt(temp**2 - 4*LEFTOUT_PI_HERE*area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
+        return rotor_tooth_height_h_dr
+
+    @classmethod
+    def local_design_variant(cls, im, number_current_generation, individual_index, design_parameters):
+
+        # unpack design_parameters
+        stator_tooth_width_b_ds       = design_parameters[0]*1e-3 # m
+        air_gap_length_delta          = design_parameters[1]*1e-3 # m
+        b1                            = design_parameters[2]*1e-3 # m
+        rotor_tooth_width_b_dr        = design_parameters[3]*1e-3 # m
+
+        self.Length_HeadNeckRotorSlot = design_parameters[4]
+        rotor_slot_radius = (2*pi*(im.Radius_OuterRotor - self.Length_HeadNeckRotorSlot)*1e-3 - rotor_tooth_width_b_dr*im.Qr) / (2*im.Qr+2*pi)
+
+        # Constraint #1: Rotor slot opening cannot be larger than rotor slot width.
+        self.punishment = 0.0
+        if b1>2*rotor_slot_radius:
+            logger = logging.getLogger(__name__)
+            logger.warn('Constraint #1: Rotor slot opening cannot be larger than rotor slot width. Gen#%04d. Individual index=%d.', number_current_generation, individual_index)
+            # we will plot a model with b1 = rotor_tooth_width_b_dr instead, and apply a punishment for this model
+            b1 = 0.95 * 2*rotor_slot_radius # 确保相交
+            self.punishment = 0.0
+
+        # stator_tooth_width_b_ds imposes constraint on stator slot height
+        area_stator_slot_Sus    = im.parameters_for_imposing_constraints_among_design_parameters[0]
+        stator_inner_radius_r_s = im.Radius_OuterRotor*1e-3 + air_gap_length_delta 
+        stator_yoke_diameter_Dsyi = self.get_stator_yoke_diameter_Dsyi(  stator_tooth_width_b_ds, 
+                                                                    area_stator_slot_Sus, 
+                                                                    stator_inner_radius_r_s,
+                                                                    im.Qs)
+
+        # rotor_tooth_width_b_dr imposes constraint on rotor slot height
+        area_rotor_slot_Sur = im.parameters_for_imposing_constraints_among_design_parameters[1]
+        rotor_outer_radius_r_or = im.Radius_OuterRotor*1e-3
+        rotor_tooth_height_h_dr = self.get_rotor_tooth_height_h_dr(  rotor_tooth_width_b_dr,
+                                                                area_rotor_slot_Sur,
+                                                                rotor_outer_radius_r_or,
+                                                                im.Qr)
+
+        Arc_betweenOuterRotorSlot     = 360./self.Qr*pi/180.*self.Location_RotorBarCenter - 2*self.Radius_of_RotorSlot
+        Location_RotorBarCenter2 = self.Radius_OuterRotor - self.Length_HeadNeckRotorSlot - rotor_tooth_height_h_dr*1e3 # 本来还应该减去转子内槽半径的，但是这里还不知道，干脆不要了，这样槽会比预计的偏深，
+        Radius_of_RotorSlot2     = 0.5 * (360./self.Qr*pi/180.*self.Location_RotorBarCenter2 - Arc_betweenOuterRotorSlot) # 应该小于等于这个值，保证转子齿等宽。
+
+        # translate design_parameters into row variable
+        row_translated_from_design_paramters = \
+            [   im.ID + '-' + str(number_current_generation) + '-' + str(individual_index), # the ID is str
+                im.Qs,
+                im.Qr,
+                im.Radius_OuterStatorYoke,
+                0.5*stator_yoke_diameter_Dsyi * 1e3,   # [0]            # 定子内轭部处的半径由需要的定子槽面积和定子齿宽来决定。
+                air_gap_length_delta * 1e3.            # [1]
+                im.Radius_OuterRotor,
+                im.Radius_Shaft, 
+                design_parameters[4],                # [4]
+                rotor_slot_radius*1e3,               # [3]
+                self.Radius_OuterRotor - self.Length_HeadNeckRotorSlot - self.Radius_of_RotorSlot,
+                b1*1e3,                              # [2]
+                Radius_of_RotorSlot2,
+                Location_RotorBarCenter2,
+                design_parameters[5],             # [5]
+                stator_tooth_width_b_ds *1e3, # [0]
+                design_parameters[6],             # [6]
+                0.5 * self.Width_StatorTeethHeadThickness,
+                im.DriveW_poles,     
+                im.DriveW_turns, # turns per slot
+                im.DriveW_Rs,        
+                im.DriveW_CurrentAmp,
+                im.DriveW_Freq,
+                im.stack_length,
+                im.parameters_for_imposing_constraints_among_design_parameters[0], # area_stator_slot_Sus
+                im.parameters_for_imposing_constraints_among_design_parameters[1]  # area_rotor_slot_Sur 
+            ]
+        # initialze with the class's __init__ method
+        cls(row_translated_from_design_paramters, 
+            im.fea_config_dict, 
+            im.model_name_prefix)
+
+        # introspection (settings that may differ for initial design and variant designs)
+        self.bool_initial_design = False # no, this is a variant design of the initial design
+        self.fea_config_dict = im.fea_config_dict # important FEA configuration data
+        self.slip_freq_breakdown_torque = None # initialize this slip freq for FEMM or JMAG
+        self.MODEL_ROTATE = False # during optimization, rotate at model level is not needed.
+        logger = logging.getLogger(__name__) 
+        logger.info('im_variant ID %s is initialized.', self.ID)
+
 
     def whole_row_reader(self, reader):
         for row in reader:
@@ -2042,9 +2150,8 @@ class bearingless_induction_motor_design(object):
 
         id_shaft = part_ID_list[0]
         id_rotorCore = part_ID_list[1]
-        id_statorCore = part_ID_list[2]
-
-        partIDRange_Cage = part_ID_list[3 : 3+int(self.Qr)]
+        partIDRange_Cage = part_ID_list[2 : 2+int(self.Qr)]
+        id_statorCore = part_ID_list[3+int(self.Qr)]
         partIDRange_Coil = part_ID_list[3+int(self.Qr) : 3+int(self.Qr) + int(self.Qs*2)]
         # partIDRange_AirWithinRotorSlots = part_ID_list[3+int(self.Qr) + int(self.Qs*2) : 3+int(self.Qr) + int(self.Qs*2) + int(self.Qr)]
 
@@ -2057,12 +2164,13 @@ class bearingless_induction_motor_design(object):
         # group(u"AirWithinRotorSlots", partIDRange_AirWithinRotorSlots) # 123-108 = 15 = self.Qr - 1
 
 
-        ''' Add to Set for later references '''
+        ''' Add Part to Set for later references '''
         def part_set(name, x, y):
             model.GetSetList().CreatePartSet(name)
             model.GetSetList().GetSet(name).SetMatcherType(u"Selection")
             model.GetSetList().GetSet(name).ClearParts()
             sel = model.GetSetList().GetSet(name).GetSelection()
+            print x,y
             sel.SelectPartByPosition(x,y,0) # z=0 for 2D
             model.GetSetList().GetSet(name).AddSelected(sel)
 
@@ -2124,6 +2232,7 @@ class bearingless_induction_motor_design(object):
         # list_xy_airWithinRotorSlot = []
         for ind in range(int(self.Qr)):
             natural_ind = ind + 1
+            print THETA / pi *180
             part_set(u"Bar %d"%(natural_ind), X, Y)
             list_xy_bars.append([X,Y])
             # # # part_set(u"AirWithin %d"%(natural_ind), R_airR*cos(THETA),R_airR*sin(THETA))
@@ -2970,172 +3079,201 @@ class bearingless_induction_motor_design(object):
     def get_model_name(self):
         return u"%s_ID%s" % (self.model_name_prefix, self.ID)
 
-class local_design_variant(bearingless_induction_motor_design):
+# class local_design_variant(bearingless_induction_motor_design):
 
-    def get_stator_yoke_diameter_Dsyi(self, stator_tooth_width_b_ds, area_stator_slot_Sus, stator_inner_radius_r_s, Qs):
-        stator_inner_diameter_Ds = 2*stator_inner_radius_r_s
-        temp = (2*pi*stator_inner_radius_r_s - Qs*stator_tooth_width_b_ds)
-        stator_tooth_height_h_ds = ( np.sqrt(temp**2 + 4*area_stator_slot_Sus*Qs) - temp ) / (2*pi)
-        stator_yoke_diameter_Dsyi = stator_inner_diameter_Ds + 2*stator_tooth_height_h_ds
-        return stator_yoke_diameter_Dsyi
 
-    def get_rotor_tooth_height_h_dr(self, rotor_tooth_width_b_dr, area_rotor_slot_Sur, rotor_outer_radius_r_or, Qr):
-        temp = (2*pi*rotor_outer_radius_r_or - Qr*rotor_tooth_width_b_dr)
-        rotor_tooth_height_h_dr = ( -np.sqrt(temp**2 - 4*area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
-        return rotor_tooth_height_h_dr
+class VanGogh_JMAG(VanGogh):
+    def __init__(self, im, child_index=1):
+        super(VanGogh_JMAG, self).__init__(im, child_index)
 
-    def __init__(self, im, number_current_generation, individual_index, design_parameters):
+        self.SketchName = None
+        self.dict_count_arc = {}
+        self.dict_count_region = {}
 
-        # introspection
-        self.bool_initial_design = False # no, this is a variant design of the initial design
-        self.fea_config_dict = fea_config_dict # important FEA configuration data
-        self.slip_freq_breakdown_torque = None # initialize this slip freq for FEMM or JMAG
+        self.count = 0
 
-        # unpacking
-        stator_tooth_width_b_ds       = design_parameters[0]*1e-3 # m
-        air_gap_length_delta          = design_parameters[1]*1e-3 # m
-        b1                            = design_parameters[2]*1e-3 # m
-        rotor_tooth_width_b_dr        = design_parameters[3]*1e-3 # m
+    def mirror_and_copyrotate(self, Q, Radius, fraction, 
+                                edge4ref=None,
+                                symmetry_type=None,
+                                merge=True,
+                                do_you_have_region_in_the_mirror=False
+                                ):
 
-        self.Length_HeadNeckRotorSlot = design_parameters[4]
-        rotor_slot_radius = (2*pi*(im.Radius_OuterRotor - self.Length_HeadNeckRotorSlot)*1e-3 - rotor_tooth_width_b_dr*im.Qr) / (2*im.Qr+2*pi)
+        region = self.create_region([art.GetName() for art in self.artist_list]) 
 
-        # Constraint #1: Rotor slot opening cannot be larger than rotor slot width.
-        self.punishment = 0.0
-        if b1>2*rotor_slot_radius:
-            logger = logging.getLogger(__name__)
-            logger.warn('Constraint #1: Rotor slot opening cannot be larger than rotor slot width. Gen#%04d. Individual index=%d.', number_current_generation, individual_index)
-            # we will plot a model with b1 = rotor_tooth_width_b_dr instead, and apply a punishment for this model
-            b1 = 0.95 * 2*rotor_slot_radius # 确保相交
-            self.punishment = 0.0
+        self.region_mirror_copy(region, edge4ref=edge4ref, symmetry_type=symmetry_type, merge=merge)
+        self.count+=1
+        # if self.count == 4: # debug
+            # raise Exception
+            # merge = True # When overlap occurs between regions because of copying, a boolean operation (sum) is executed and they are merged into 1 region.
+        self.region_circular_pattern_360_origin(region, float(Q), merge=merge,
+                                                do_you_have_region_in_the_mirror=do_you_have_region_in_the_mirror)
+        # print self.artist_list
+        self.sketch.CloseSketch()
 
-        # stator_tooth_width_b_ds imposes constraint on stator slot height
-        area_stator_slot_Sus    = im.parameters_for_imposing_constraints_among_design_parameters[0]
-        stator_inner_radius_r_s = im.Radius_OuterRotor*1e-3 + air_gap_length_delta 
-        stator_yoke_diameter_Dsyi = self.get_stator_yoke_diameter_Dsyi(  stator_tooth_width_b_ds, 
-                                                                    area_stator_slot_Sus, 
-                                                                    stator_inner_radius_r_s,
-                                                                    im.Qs)
+    def draw_arc(self, p1, p2, angle, maxseg=1): # angle in rad
+        center = self.find_center_of_a_circle_using_2_points_and_arc_angle(p1, p2, angle) # ordered p1 and p2 are
+        art = self.sketch.CreateArc(center[0], center[1], p1[0], p1[1], p2[0], p2[1])
+        self.artist_list.append(art)
+    
+    def add_arc(self, p1, p2, angle, maxseg=1): # angle in rad
+        center = self.find_center_of_a_circle_using_2_points_and_arc_angle(p1, p2, angle) # ordered p1 and p2 are
+        art = self.sketch.CreateArc(center[0], center[1], p1[0], p1[1], p2[0], p2[1])
+        self.artist_list.append(art)
 
-        # rotor_tooth_width_b_dr imposes constraint on rotor slot height
-        area_rotor_slot_Sur = im.parameters_for_imposing_constraints_among_design_parameters[1]
-        rotor_outer_radius_r_or = im.Radius_OuterRotor*1e-3
-        rotor_tooth_height_h_dr = self.get_rotor_tooth_height_h_dr(  rotor_tooth_width_b_dr,
-                                                                area_rotor_slot_Sur,
-                                                                rotor_outer_radius_r_or,
-                                                                im.Qr)
+    def draw_line(self, p1, p2):
+        # return self.line(p1[0],p1[1],p2[0],p2[1])
+        art = self.sketch.CreateLine(p1[0],p1[1],p2[0],p2[1])
+        self.artist_list.append(art)
 
-        #01 Model Name
-        self.model_name_prefix = im.model_name_prefix
+    def add_line(self, p1, p2):
+        # return self.line(p1[0],p1[1],p2[0],p2[1])
+        art = self.sketch.CreateLine(p1[0],p1[1],p2[0],p2[1])
+        self.artist_list.append(art)
 
-        #02 Pyrhonen Data
-        if im != None:
-            self.ID = im.ID + '-' + str(number_current_generation) + '-' + str(individual_index) # the ID is str
-            self.Qs = im.Qs
-            self.Qr = im.Qr
-            self.Angle_StatorSlotSpan = 360. / self.Qs # in deg.
-            self.Angle_RotorSlotSpan  = 360. / self.Qr # in deg.
+    def plot_sketch_shaft(self):
+        self.SketchName = u"Shaft"
+        SketchName = self.SketchName
+        sketch = self.create_sketch(SketchName, u"#D1B894")
 
-            self.Radius_OuterStatorYoke = im.Radius_OuterStatorYoke
-            self.Radius_InnerStatorYoke = 0.5*stator_yoke_diameter_Dsyi * 1e3   # [0]            # 定子内轭部处的半径由需要的定子槽面积和定子齿宽来决定。
-            self.Length_AirGap          = air_gap_length_delta * 1e3            # [1]
-            self.Radius_OuterRotor      = im.Radius_OuterRotor
-            self.Radius_Shaft           = im.Radius_Shaft
+        self.circle(0, 0, self.im.Radius_Shaft)
 
-            self.Length_HeadNeckRotorSlot                                          # [4]
-            self.Radius_of_RotorSlot      = rotor_slot_radius*1e3               # [3]
-            self.Location_RotorBarCenter  = self.Radius_OuterRotor - self.Length_HeadNeckRotorSlot - self.Radius_of_RotorSlot
-            self.Width_RotorSlotOpen      = b1*1e3                              # [2]
+        self.doc.GetSelection().Clear()
+        self.doc.GetSelection().Add(sketch.GetItem(u"Circle"))
+        sketch.CreateRegions()
 
-            Arc_betweenOuterRotorSlot     = 360./self.Qr*pi/180.*self.Location_RotorBarCenter - 2*self.Radius_of_RotorSlot
-            self.Location_RotorBarCenter2 = self.Radius_OuterRotor - self.Length_HeadNeckRotorSlot - rotor_tooth_height_h_dr*1e3 # 本来还应该减去转子内槽半径的，但是这里还不知道，干脆不要了，这样槽会比预计的偏深，
-            self.Radius_of_RotorSlot2     = 0.5 * (360./self.Qr*pi/180.*self.Location_RotorBarCenter2 - Arc_betweenOuterRotorSlot) # 应该小于等于这个值，保证转子齿等宽。
+        sketch.CloseSketch()
+        # sketch.SetProperty(u"Visible", 0)
 
-            self.Angle_StatorSlotOpen            = design_parameters[5]             # [5]
-            self.Width_StatorTeethBody           = stator_tooth_width_b_ds *1e3 # [0]
-            self.Width_StatorTeethHeadThickness  = design_parameters[6]             # [6]
-            self.Width_StatorTeethNeck           = 0.5 * self.Width_StatorTeethHeadThickness
+    def init_sketch_statorCore(self):
+        self.SketchName=u"Stator Core"
+        sketch = self.create_sketch(self.SketchName, u"#E8B5CE")
+        return 
 
-            self.DriveW_poles       = im.DriveW_poles     
-            self.DriveW_turns       = im.DriveW_turns # turns per slot
-            self.DriveW_Rs          = im.DriveW_Rs        
-            self.DriveW_CurrentAmp  = im.DriveW_CurrentAmp
-            self.DriveW_Freq        = im.DriveW_Freq      
+    def init_sketch_coil(self):
+        self.SketchName=u"Coil"
+        sketch = self.create_sketch(self.SketchName, u"#EC9787")
+        return
 
-            self.stack_length       = im.stack_length
+    def init_sketch_rotorCore(self):
+        self.SketchName=u"Rotor Core"
+        sketch = self.create_sketch(self.SketchName, u"#FE840E")
+        return
 
-            # inferred design parameters
+    def init_sketch_cage(self):
+        self.SketchName=u"Cage"
+        sketch = self.create_sketch(self.SketchName, u"#8D9440")
+        return
+
+
+
+    # Utility wrap function for JMAG
+    def create_sketch(self, SketchName, color):
+        self.artist_list = []
+
+        try:self.dict_count_arc[SketchName]
+        except: self.dict_count_arc[SketchName] = 0
+        try:self.dict_count_region[SketchName]
+        except: self.dict_count_region[SketchName] = 0
+        ref1 = self.ass.GetItem(u"XY Plane")
+        ref2 = self.doc.CreateReferenceFromItem(ref1)
+        self.sketch = self.ass.CreateSketch(ref2)
+        self.sketch.OpenSketch()
+        self.sketch.SetProperty(u"Name", SketchName)
+        self.sketch.SetProperty(u"Color", color)
+        return self.sketch
+    def circle(self, x,y,r):
+        # SketchName = self.SketchName
+        self.sketch.CreateVertex(x, y)
+        # return self.circle(x, y, r)
+        return self.sketch.CreateCircle(x, y, r)
+    def line(self, x1,y1,x2,y2):
+        # SketchName = self.SketchName
+        self.sketch.CreateVertex(x1,y1)
+        self.sketch.CreateVertex(x2,y2)
+        # return self.line(x1,y1,x2,y2)
+        return self.sketch.CreateLine(x1,y1,x2,y2)
+    def create_region(self, l):
+        SketchName = self.SketchName
+        self.doc.GetSelection().Clear()
+        for art_name in l:
+            self.doc.GetSelection().Add(self.sketch.GetItem(art_name))
+            # self.doc.GetSelection().Add(el)
+        self.sketch.CreateRegions() # this returns None
+        # self.sketch.CreateRegionsWithCleanup(0.05, True) # mm. difference at stator outter radius is up to 0.09mm! This turns out to be neccessary for shapely to work with JMAG. Shapely has poor 
+
+        self.dict_count_region[SketchName] += 1
+        if self.dict_count_region[SketchName]==1:
+            return self.sketch.GetItem(u"Region")
         else:
-            raise Exception('im is None.')
+            return self.sketch.GetItem(u"Region.%d"%(self.dict_count_region[SketchName]))
+    def region_mirror_copy(self, region, edge4ref=None, symmetry_type=None, merge=True):
+        mirror = self.sketch.CreateRegionMirrorCopy()
+        mirror.SetProperty(u"Merge", merge)
+        ref2 = self.doc.CreateReferenceFromItem(region)
+        mirror.SetPropertyByReference(u"Region", ref2)
 
-        #03 Mechanical Parameters
-        self.update_mechanical_parameters(slip_freq=2.75) #, syn_freq=500.)
-
-        #04 Material Condutivity Properties
-        self.End_Ring_Resistance = fea_config_dict['End_Ring_Resistance']
-        self.Bar_Conductivity = fea_config_dict['Bar_Conductivity']
-        self.Copper_Loss = self.DriveW_CurrentAmp**2 / 2 * self.DriveW_Rs * 3
-        # self.Resistance_per_Turn = 0.01 # TODO
-
-
-        #05 Windings & Excitation
-        self.l41=[ 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', ]
-        self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', ]
-        if self.fea_config_dict['DPNV'] == True:
-            # DPNV style for one phase: -- oo ++ oo
-            self.l21=[  'A', 'A', 'B', 'B', 'C', 'C', 
-                        'A', 'A', 'B', 'B', 'C', 'C', 
-                        'A', 'A', 'B', 'B', 'C', 'C', 
-                        'A', 'A', 'B', 'B', 'C', 'C']
-            self.l22=[  '-', '-', 'o', 'o', '+', '+', # 横着读和竖着读都是负零正零。 
-                        'o', 'o', '-', '-', 'o', 'o', 
-                        '+', '+', 'o', 'o', '-', '-', 
-                        'o', 'o', '+', '+', 'o', 'o']
+        # å¯¹ç§°è½´
+        if edge4ref == None:
+            if symmetry_type == None:
+                print "At least give one of edge4ref and symmetry_type"
+                raise Exception
+            else:
+                mirror.SetProperty(u"SymmetryType", symmetry_type)
         else:
-            # separate style for one phase: ---- ++++
-            self.l21=[ 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', ]
-            self.l22=[ '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', ]
+            ref1 = self.sketch.GetItem(edge4ref.GetName()) # e.g., u"Line"
+            ref2 = self.doc.CreateReferenceFromItem(ref1)
+            mirror.SetPropertyByReference(u"Symmetry", ref2)
 
-        if self.DriveW_poles == 2:
-            self.BeariW_poles = self.DriveW_poles+2; 
-        else:
-            self.BeariW_poles = 2; 
-        self.BeariW_turns= self.DriveW_turns; # TODO Revision here. 20181117
-        self.BeariW_Rs = self.BeariW_turns / self.DriveW_turns * self.DriveW_Rs; 
-        self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975; 
-        self.BeariW_Freq =self.DriveW_Freq;
-        self.dict_coil_connection = {41:self.l41, 42:self.l42, 21:self.l21, 22:self.l22}
+        # print region
+        # print ass.GetItem(u"Region.1")
+        if merge == False and region.GetName()==u"Region":
+            return self.ass.GetItem(u"Region.1")
+    def region_circular_pattern_360_origin(self, region, Q_float, merge=True, do_you_have_region_in_the_mirror=False):
+        circular_pattern = self.sketch.CreateRegionCircularPattern()
+        circular_pattern.SetProperty(u"Merge", merge)
 
-        #06 Meshing & Solver Properties
-        self.max_nonlinear_iteration = 30 # 50 # for transient solve
-        self.meshSize_Rotor = 0.6 # mm
+        ref2 = self.doc.CreateReferenceFromItem(region)
+        circular_pattern.SetPropertyByReference(u"Region", ref2)
+        face_region_string = circular_pattern.GetProperty("Region")
+        face_region_string = face_region_string[0]
+        # print circular_pattern.GetProperty("Region") # this will produce faceRegion references!
+
+        if do_you_have_region_in_the_mirror == True:
+            # è¿™é‡Œå‡è®¾face_region_stringæœ€åŽä¸¤ä½æ˜¯æ•°å­—
+            if face_region_string[-7:-3] == 'Item':
+                number_plus_1 = str(int(face_region_string[-3:-1]) + 1)
+                refarray = [0 for i in range(2)]
+                refarray[0] = u"faceregion(TRegionMirrorPattern%s+%s_2)" % (number_plus_1, face_region_string)
+                refarray[1] = face_region_string
+                circular_pattern.SetProperty(u"Region", refarray)
+                # print refarray[0]
+                # print refarray[1]
+            elif face_region_string[-6:-2] == 'Item':
+                # è¿™é‡Œå‡è®¾face_region_stringæœ€åŽä¸€ä½æ˜¯æ•°å­—
+                number_plus_1 = str(int(face_region_string[-2:-1]) + 1)
+                refarray = [0 for i in range(2)]
+                refarray[0] = u"faceregion(TRegionMirrorPattern%s+%s_2)" % (number_plus_1, face_region_string)
+                refarray[1] = face_region_string
+                circular_pattern.SetProperty(u"Region", refarray)
+            elif face_region_string[-8:-4] == 'Item':
+                # è¿™é‡Œå‡è®¾face_region_stringæœ€åŽä¸‰ä½æ˜¯æ•°å­—
+                number_plus_1 = str(int(face_region_string[-4:-1]) + 1)
+                refarray = [0 for i in range(2)]
+                refarray[0] = u"faceregion(TRegionMirrorPattern%s+%s_2)" % (number_plus_1, face_region_string)
+                refarray[1] = face_region_string
+                circular_pattern.SetProperty(u"Region", refarray)
 
 
-        #07: Some Checking
-        if abs(self.Location_RotorBarCenter2 - self.Location_RotorBarCenter) < self.Radius_of_RotorSlot*0.25:
-            print 'Warning: There is no need to use a drop shape rotor, because the required rotor bar height is not high.'
-            self.use_drop_shape_rotor_bar = False
-        else:
-            self.use_drop_shape_rotor_bar = True
 
-        if abs(self.Qs-self.Qr)<1:
-            print 'Warning: Must not use a same Qs and Qr, to avoid synchronous torques created by slot harmonics. - (7.111)'
+        circular_pattern.SetProperty(u"CenterType", 2)
+        circular_pattern.SetProperty(u"Angle", u"360/%d"%(int(Q_float)))
+        circular_pattern.SetProperty(u"Instance", int(Q_float))
 
-        self.no_slot_per_pole = self.Qr/self.DriveW_poles
-        if self.no_slot_per_pole.is_integer() == False:
-            print 'This slot-pole combination will not be applied with pole-specific rotor winding'
+# if __name__ == '__main__':
+#     vg_jmag = VanGogh_JMAG(None)
+#     print vg_jmag.find_center_of_a_circle_using_2_points_and_arc_angle
 
-        self.RSH = []
-        for pm in [-1, +1]:
-            for v in [-1, +1]:
-                    self.RSH.append( (pm * self.Qr*(1-self.the_slip)/(0.5*self.DriveW_poles) + v)*self.DriveW_Freq )
-        # print self.Qr, ', '.join("%g" % (rsh/self.DriveW_Freq) for rsh in self.RSH), '\n'
-
-        # during optimization, rotate at model level is not needed.
-        self.MODEL_ROTATE = False
-
-        logger = logging.getLogger(__name__) 
-        logger.info('im_variant ID %s is initialized.', self.ID)
 
 class draw(object):
 
@@ -3253,6 +3391,10 @@ class draw(object):
         # print circular_pattern.GetProperty("Region") # this will produce faceRegion references!
 
         if do_you_have_region_in_the_mirror == True:
+            # 这里假设face_region_string最后两位是数字
+            # 乱码的原因是因为我有一次手贱，用DOS-CMD把所有文件的大小扫了一遍还是怎么的，中文就乱码了。
+            # 20181114 (Designer from scratch) 没有乱码哦（好像是从Onedrive上找回的）
+            # 总结JMAG的代码生成规律……
             # è¿™é‡Œå‡è®¾face_region_stringæœ€åŽä¸¤ä½æ˜¯æ•°å­—
             if face_region_string[-7:-3] == 'Item':
                 number_plus_1 = str(int(face_region_string[-3:-1]) + 1)
@@ -3263,6 +3405,7 @@ class draw(object):
                 # print refarray[0]
                 # print refarray[1]
             elif face_region_string[-6:-2] == 'Item':
+                # 这里假设face_region_string最后一位是数字
                 # è¿™é‡Œå‡è®¾face_region_stringæœ€åŽä¸€ä½æ˜¯æ•°å­—
                 number_plus_1 = str(int(face_region_string[-2:-1]) + 1)
                 refarray = [0 for i in range(2)]
@@ -3270,6 +3413,7 @@ class draw(object):
                 refarray[1] = face_region_string
                 circular_pattern.SetProperty(u"Region", refarray)
             elif face_region_string[-8:-4] == 'Item':
+                # 这里假设face_region_string最后三位是数字
                 # è¿™é‡Œå‡è®¾face_region_stringæœ€åŽä¸‰ä½æ˜¯æ•°å­—
                 number_plus_1 = str(int(face_region_string[-4:-1]) + 1)
                 refarray = [0 for i in range(2)]
@@ -3984,8 +4128,3 @@ def add_Arnon5(app, dir_parent):
     app.GetMaterialLibrary().GetUserMaterial(u"Arnon5-final").SetValue(u"LossConstantKhX", 186.6)
     app.GetMaterialLibrary().GetUserMaterial(u"Arnon5-final").SetValue(u"LossConstantKeX", 0.07324)
 
-
-# some new code
-
-
-# now I add some more codes!

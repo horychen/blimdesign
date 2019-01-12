@@ -78,14 +78,15 @@ def write_Torque_and_B_data_to_file(str_rotor_position, rotation_operator):
     femm.mo_close()
 
 # test
-# id_solver = 1
+# print '-----------------Testing!!!'
+# id_solver = 0
 # number_of_instances = 5
-# dir_run = r'D:\femm42\PS_Qr36_NoEndRing_M15_17303l_DPNV\static-femm/'
+# # dir_run = r'D:\femm42\PS_Qr36_NoEndRing_M15_17303l_DPNV\static-femm/'
+# dir_run = r'D:\femm42\PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz\static-femm\sweeping/'
 
-deg_per_step = float(sys.argv[1])
-id_solver = int(sys.argv[2])
-number_of_instances = int(sys.argv[3])
-dir_run = sys.argv[4]
+id_solver = int(sys.argv[1])
+number_of_instances = int(sys.argv[2])
+dir_run = sys.argv[3]
 print 'ParaSolve', id_solver
 
 # handle_torque = open(dir_run + "static_results_%d.txt"%(id_solver), 'a')
@@ -96,10 +97,10 @@ fem_file_list = os.listdir(dir_run)
 fem_file_list = [f for f in fem_file_list if '.fem' in f]
 
 femm.openfemm(True) # bHide
+femm.callfemm_noeval('smartmesh(0)')
 
-bool_automesh = False
-femm.smartmesh(bool_automesh) # this is essential to reduce elements counts from >50000 to ~20000.
-print 'smartmesh is', bool_automesh
+# this is essential to reduce elements counts from >50000 to ~20000.
+print 'mi_smartmesh is off'
 
 for i in range(id_solver, len(fem_file_list), number_of_instances):
 
@@ -108,6 +109,7 @@ for i in range(id_solver, len(fem_file_list), number_of_instances):
     if not os.path.exists(output_file_name + '.ans'):
         tic = time()
         femm.opendocument(output_file_name + '.fem')
+        # femm.callfemm_noeval('mi_smartmesh(0)')
         try:
             # femm.mi_createmesh() # [useless] 
             femm.mi_analyze(1) # None for inherited. 1 for a minimized window,

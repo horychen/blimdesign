@@ -18,19 +18,137 @@ from itertools import izip # will not create new list as zip does
 from time import sleep
 from time import time as clock_time
 
+from VanGogh import VanGogh
+
 SELECT_ALL = 4
 EPS = 1e-2
 
-class Drawer_Is_Not_Inside_A_Table(object):
-    """docstring for Drawer_Is_Not_Inside_A_Table"""
-    def __init__(self, arg):
-        super(Drawer_Is_Not_Inside_A_Table, self).__init__()
-        self.arg = arg
-        
+class VanGogh_FEMM(VanGogh):
+    def __init__(self, im, child_index=0):
+        super(VanGogh_FEMM, self).__init__(im, child_index)
+
+    @staticmethod
+    def mirror_and_copyrotate(Q, Radius, fraction):
+        # Mirror
+        femm.mi_selectcircle(0,0,Radius+EPS,SELECT_ALL) # this EPS is sometime necessary to selece the arc at Radius.
+        femm.mi_mirror2(0,0,-Radius,0, SELECT_ALL)
+
+        # Rotate
+        femm.mi_selectcircle(0,0,Radius+EPS,SELECT_ALL)
+        femm.mi_copyrotate2(0, 0, 360./Q, int(Q)/fraction, SELECT_ALL)
+
+    @staticmethod
+    def draw_arc(p1, p2, angle, maxseg=1):
+        femm.mi_drawarc(p1[0],p1[1],p2[0],p2[1],angle/pi*180,maxseg) # [deg]
+    
+    @staticmethod
+    def add_arc(p1, p2, angle, maxseg=1):
+        femm.mi_addarc(p1[0],p1[1],p2[0],p2[1],angle/pi*180,maxseg) # [deg]
+
+    @staticmethod
+    def draw_line(p1, p2):
+        femm.mi_drawline(p1[0],p1[1],p2[0],p2[1])
+
+    @staticmethod
+    def add_line(p1, p2):
+        femm.mi_addsegment(p1[0],p1[1],p2[0],p2[1])
+
+    def some_solver_related_operations_rotor_before_mirror_rotation(self, im, P6, P8):
+        # constraint to reduce element number @rotor-P6
+        femm.mi_selectarcsegment(P6[0], P6[1])
+        femm.mi_setarcsegmentprop(8, "<None>", False, 100)
+        femm.mi_clearselected()
+
+        # constraint to reduce element number @rotor-P8
+        femm.mi_selectarcsegment(P8[0], P8[1])
+        femm.mi_setarcsegmentprop(8, "<None>", False, 100)
+        femm.mi_clearselected()
+
+    def some_solver_related_operations_fraction(self, im, fraction):
+        # Boundary
+        if fraction == 1:
+            femm.mi_drawarc(im.Radius_Shaft,0, -im.Radius_Shaft,0, 180, 20) # 边界不要用太小的segment咯！避免剖分过细（这里设置无效）
+            femm.mi_drawarc(-im.Radius_Shaft,0, im.Radius_Shaft,0, 180, 20)
+            femm.mi_drawarc(im.Radius_OuterStatorYoke,0, -im.Radius_OuterStatorYoke,0, 180, 20)
+            femm.mi_drawarc(-im.Radius_OuterStatorYoke,0, im.Radius_OuterStatorYoke,0, 180, 20)
+        elif fraction == 4:
+            femm.mi_drawarc(-im.Radius_Shaft,0, 0, -im.Radius_Shaft, 90, 10)
+            femm.mi_drawarc(-im.Radius_OuterStatorYoke,0, 0, -im.Radius_OuterStatorYoke, 90, 10)
+            femm.mi_selectrectangle(-EPS-im.Radius_Shaft,EPS,EPS-im.Radius_OuterStatorYoke,im.Radius_OuterStatorYoke,SELECT_ALL)
+            femm.mi_selectrectangle(EPS,-EPS-im.Radius_Shaft,im.Radius_OuterStatorYoke,EPS-im.Radius_OuterStatorYoke,SELECT_ALL)
+            femm.mi_deleteselected()
+
+            # between 2rd and 3th quarters
+            p1 = (-im.Location_RotorBarCenter2+im.Radius_of_RotorSlot2, 0)
+            p2 = (-im.Radius_Shaft, 0)
+            self.add_line(p1, p2)
+            p2 = (-im.Location_RotorBarCenter-im.Radius_of_RotorSlot, 0)
+            self.add_line(p1, p2)
+            p1 = (-im.Radius_OuterRotor-0.5*im.Length_AirGap, 0) # for later extending for moverotate with anti-periodic boundary condition
+            self.draw_line(p1, p2)
+            p2 = (-im.Radius_OuterRotor-im.Length_AirGap, 0)
+            self.draw_line(p1, p2)
+            p1 = (-im.Radius_OuterStatorYoke, 0)
+            self.add_line(p1, p2)
+
+            # between 3rd and 4th quarters
+            p1 = (0, -im.Location_RotorBarCenter2+im.Radius_of_RotorSlot2)
+            p2 = (0, -im.Radius_Shaft)
+            self.add_line(p1, p2)
+            p2 = (0, -im.Location_RotorBarCenter-im.Radius_of_RotorSlot)
+            self.add_line(p1, p2)
+            p1 = (0, -im.Radius_OuterRotor-0.5*im.Length_AirGap)
+            self.draw_line(p1, p2)
+            p2 = (0, -im.Radius_OuterRotor-im.Length_AirGap)
+            self.draw_line(p1, p2)
+            p1 = (0, -im.Radius_OuterStatorYoke)
+            self.add_line(p1, p2)
+        elif fraction == 2:
+            femm.mi_drawarc(-im.Radius_Shaft,0, im.Radius_Shaft,0, 180, 15)
+            femm.mi_drawarc(-im.Radius_OuterStatorYoke,0, im.Radius_OuterStatorYoke,0, 180, 15)
+            femm.mi_selectrectangle(EPS-im.Radius_OuterStatorYoke,EPS, -EPS+im.Radius_OuterStatorYoke,EPS+im.Radius_OuterStatorYoke, SELECT_ALL)
+            femm.mi_deleteselected()
+
+            # between 2rd and 3th quarters
+            p1 = (-im.Location_RotorBarCenter2+im.Radius_of_RotorSlot2, 0)
+            p2 = (-im.Radius_Shaft, 0)
+            self.add_line(p1, p2)
+            p2 = (-im.Location_RotorBarCenter-im.Radius_of_RotorSlot, 0)
+            self.add_line(p1, p2)
+            p1 = (-im.Radius_OuterRotor-0.5*im.Length_AirGap, 0) # for later extending for moverotate with anti-periodic boundary condition
+            self.draw_line(p1, p2)
+            p2 = (-im.Radius_OuterRotor-im.Length_AirGap, 0)
+            self.draw_line(p1, p2)
+            p1 = (-im.Radius_OuterStatorYoke, 0)
+            self.add_line(p1, p2)
+
+            # between 1rd and 4th quarters
+            p1 = (+im.Location_RotorBarCenter2-im.Radius_of_RotorSlot2, 0)
+            p2 = (+im.Radius_Shaft, 0)
+            self.add_line(p1, p2)
+            p2 = (+im.Location_RotorBarCenter+im.Radius_of_RotorSlot, 0)
+            self.add_line(p1, p2)
+            p1 = (+im.Radius_OuterRotor+0.5*im.Length_AirGap, 0) # for later extending for moverotate with anti-periodic boundary condition
+            self.draw_line(p1, p2)
+            p2 = (+im.Radius_OuterRotor+im.Length_AirGap, 0)
+            self.draw_line(p1, p2)
+            p1 = (+im.Radius_OuterStatorYoke, 0)
+            self.add_line(p1, p2)
+        else:
+            raise Exception('not supported fraction = %d' % (fraction))
+        # Air Gap Boundary for Rotor Motion #1
+        # R = im.Radius_OuterRotor+0.6*im.Length_AirGap
+        # femm.mi_drawarc(R,0, -R,0, 180, 5)
+        # femm.mi_drawarc(-R,0, R,0, 180, 5)
+        # R = im.Radius_OuterRotor+0.4*im.Length_AirGap
+        # femm.mi_drawarc(R,0, -R,0, 180, 5)
+        # femm.mi_drawarc(-R,0, R,0, 180, 5)
 
 class FEMM_Solver(object):
 
     def __init__(self, im, flag_read_from_jmag=True, freq=0):
+
+        self.vangogh = VanGogh_FEMM(im)
 
         self.deg_per_step = im.fea_config_dict['femm_deg_per_step'] # deg, we need this for show_results
         self.flag_read_from_jmag = flag_read_from_jmag
@@ -391,15 +509,17 @@ class FEMM_Solver(object):
         # Other arc-segment-specific mesh constraints are already done in draw_model()
 
     def draw_model(self, fraction=1):
-        im = self.im
 
         from shapely.geometry import LineString
         from shapely.geometry import Point
+
+        im = self.im
+
         origin = Point(0,0)
         Stator_Sector_Angle = 2*pi/im.Qs*0.5
         Rotor_Sector_Angle = 2*pi/im.Qr*0.5
 
-        def mirror_and_copyrotate(Q, Radius):
+        def mirror_and_copyrotate(Q, Radius, fraction):
             # Mirror
             femm.mi_selectcircle(0,0,Radius+EPS,SELECT_ALL) # this EPS is sometime necessary to selece the arc at Radius.
             femm.mi_mirror2(0,0,-Radius,0, SELECT_ALL)
@@ -437,7 +557,7 @@ class FEMM_Solver(object):
         # P2
         # Parallel to Line? No they are actually not parallel
         P2_angle = Stator_Sector_Angle -im.Angle_StatorSlotOpen*0.5/180*pi
-        k = -tan(P2_angle)
+        k = -tan(P2_angle) # slope
         l_sector_parallel = LineString([(0,0), (-im.Radius_OuterStatorYoke, -im.Radius_OuterStatorYoke*k)])
         c = create_circle(origin, im.Radius_OuterRotor+im.Length_AirGap)
         P2 = get_node_at_intersection(c,l_sector_parallel)
@@ -481,7 +601,7 @@ class FEMM_Solver(object):
         draw_line(P4, P_Coil)
         draw_line(P6, P_Coil)
 
-        mirror_and_copyrotate(im.Qs, im.Radius_OuterStatorYoke)
+        mirror_and_copyrotate(im.Qs, im.Radius_OuterStatorYoke, fraction)
 
 
 
@@ -547,7 +667,7 @@ class FEMM_Solver(object):
         draw_arc(P5, P_Bar, get_postive_angle(P5))
         # add_line(P_Bar, P8)
 
-        mirror_and_copyrotate(im.Qr, im.Radius_OuterRotor)
+        mirror_and_copyrotate(im.Qr, im.Radius_OuterRotor, fraction)
 
         # Boundary
         if fraction == 1:
@@ -671,7 +791,8 @@ class FEMM_Solver(object):
         # self.time = 0.0
         # self.rotor_position_in_deg = 0.0
         self.add_material()
-        self.draw_model()
+        # self.draw_model()
+        self.vangogh.draw_model()
         self.add_block_labels()
 
         # # debug here
@@ -725,7 +846,7 @@ class FEMM_Solver(object):
         if True: # for running script in JMAG
             # os.system('python "%smethod_parallel_solve_4jmag.py" %s' % (self.dir_codes, dir_run))
             with open('temp.bat', 'w') as f:
-                f.write('python "%smethod_parallel_solve_4jmag.py" %s %d %g' % (self.dir_codes, dir_run, number_of_instantces, self.deg_per_step))
+                f.write('python "%smethod_parallel_solve_4jmag.py" %s %d' % (self.dir_codes, dir_run, number_of_instantces))
             os.startfile('temp.bat')
             # os.remove('temp.bat')
 
@@ -1045,11 +1166,12 @@ class FEMM_Solver(object):
         return list_B_magitude
 
     def probdef(self):
+        # femm.smartmesh(False) <- This will not work due to bug of femm.__init__  # let mi_smartmesh deside. You must turn it off in parasolver.py
+        femm.callfemm_noeval('smartmesh(0)') # call this after probdef
         femm.mi_probdef(self.freq, 'millimeters', 'planar', 1e-8, # must < 1e-8
                         self.stack_length, 18, 1) # The acsolver parameter (default: 0) specifies which solver is to be used for AC problems: 0 for successive approximation, 1 for Newton.
                                              # 1 for 'I intend to try the acsolver of Newton, as this is the default for JMAG@[Nonlinear Calculation] Setting Panel in the [Study Properties] Dialog Box'
-        femm.smartmesh(False) # let mi_smartmesh deside. You must turn it off in parasolver.py
-        # femm.mi_smartmesh(False)
+        # femm.callfemm_noeval('mi_smartmesh(0)') # call this after probdef
         self.bool_automesh = False # setting to false gives no effect?
 
         # femm.smartmesh(True) # let mi_smartmesh deside. You must turn it off in parasolver.py
@@ -1417,7 +1539,8 @@ class FEMM_Solver(object):
         # self.bool_automesh = True
 
         self.add_material()
-        self.draw_model(fraction=fraction)
+        # self.draw_model(fraction=fraction)
+        self.vangogh.draw_model(fraction=fraction)
         self.add_block_labels(fraction=fraction)
 
         # # debug here

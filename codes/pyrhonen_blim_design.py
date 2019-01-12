@@ -305,13 +305,16 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         # quit()
 
         print '''\n12. Magnetic Voltage '''
-        # Arnon5
-        # hdata = [0, 9.51030700000000, 11.2124700000000, 13.2194140000000, 15.5852530000000, 18.3712620000000, 21.6562210000000, 25.5213000000000, 30.0619920000000, 35.3642410000000, 41.4304340000000, 48.3863030000000, 56.5103700000000, 66.0660360000000, 77.3405760000000, 90.5910260000000, 106.212089000000, 124.594492000000, 146.311191000000, 172.062470000000, 202.524737000000, 238.525598000000, 281.012026000000, 331.058315000000, 390.144609000000, 459.695344000000, 541.731789000000, 638.410494000000, 752.333643000000, 886.572927000000, 1044.77299700000, 1231.22308000000, 1450.53867000000, 1709.16554500000, 2013.86779200000, 2372.52358500000, 2795.15968800000, 3292.99652700000, 3878.92566000000, 4569.10131700000, 5382.06505800000, 6339.70069300000, 7465.56316200000, 8791.72220000000, 10352.2369750000, 12188.8856750000, 14347.8232500000, 16887.9370500000, 19872.0933000000, 23380.6652750000, 27504.3713250000, 32364.9650250000, 38095.3408000000, 44847.4916750000, 52819.5656250000, 62227.2176750000, 73321.1169500000]
-        # bdata = [0, 0.0654248125493027, 0.0748613131259592, 0.0852200097732390, 0.0964406675582732, 0.108404414030963, 0.120978202862830, 0.133981410558774, 0.147324354453074, 0.161128351463696, 0.175902377184132, 0.193526821151857, 0.285794748353625, 0.411139883513949, 0.532912618951425, 0.658948953940289, 0.787463844307836, 0.911019620277348, 1.01134216103736, 1.09097860155578, 1.15946725009315, 1.21577636425715, 1.26636706123955, 1.29966244236095, 1.32941739086224, 1.35630922421149, 1.37375630182574, 1.39003487040401, 1.41548927346395, 1.43257623013269, 1.44423937756642, 1.45969672805890, 1.47405771023894, 1.48651531058339, 1.49890498452922, 1.51343941451204, 1.52867783835158, 1.54216506561365, 1.55323686869400, 1.56223503150867, 1.56963683394210, 1.57600636116484, 1.58332795425880, 1.59306861236599, 1.60529276088440, 1.61939615147952, 1.63357053682375, 1.64622605475232, 1.65658227422276, 1.66426678010510, 1.66992280459884, 1.67585542605930, 1.68316554465867, 1.69199548893857, 1.70235212334602, 1.71387033561736, 1.72578827760282]
+        bool_use_M19 = True
+        if bool_use_M19 == True:
+            # M19-Gauge29
+            hdata, bdata = np.loadtxt('../Arnon5/M-19-Steel-BH-Curve-afterJMAGsmooth.txt', unpack=True, usecols=(0,1))
+        else:
+            # Arnon5
+            hdata = [0, 9.51030700000000, 11.2124700000000, 13.2194140000000, 15.5852530000000, 18.3712620000000, 21.6562210000000, 25.5213000000000, 30.0619920000000, 35.3642410000000, 41.4304340000000, 48.3863030000000, 56.5103700000000, 66.0660360000000, 77.3405760000000, 90.5910260000000, 106.212089000000, 124.594492000000, 146.311191000000, 172.062470000000, 202.524737000000, 238.525598000000, 281.012026000000, 331.058315000000, 390.144609000000, 459.695344000000, 541.731789000000, 638.410494000000, 752.333643000000, 886.572927000000, 1044.77299700000, 1231.22308000000, 1450.53867000000, 1709.16554500000, 2013.86779200000, 2372.52358500000, 2795.15968800000, 3292.99652700000, 3878.92566000000, 4569.10131700000, 5382.06505800000, 6339.70069300000, 7465.56316200000, 8791.72220000000, 10352.2369750000, 12188.8856750000, 14347.8232500000, 16887.9370500000, 19872.0933000000, 23380.6652750000, 27504.3713250000, 32364.9650250000, 38095.3408000000, 44847.4916750000, 52819.5656250000, 62227.2176750000, 73321.1169500000]
+            bdata = [0, 0.0654248125493027, 0.0748613131259592, 0.0852200097732390, 0.0964406675582732, 0.108404414030963, 0.120978202862830, 0.133981410558774, 0.147324354453074, 0.161128351463696, 0.175902377184132, 0.193526821151857, 0.285794748353625, 0.411139883513949, 0.532912618951425, 0.658948953940289, 0.787463844307836, 0.911019620277348, 1.01134216103736, 1.09097860155578, 1.15946725009315, 1.21577636425715, 1.26636706123955, 1.29966244236095, 1.32941739086224, 1.35630922421149, 1.37375630182574, 1.39003487040401, 1.41548927346395, 1.43257623013269, 1.44423937756642, 1.45969672805890, 1.47405771023894, 1.48651531058339, 1.49890498452922, 1.51343941451204, 1.52867783835158, 1.54216506561365, 1.55323686869400, 1.56223503150867, 1.56963683394210, 1.57600636116484, 1.58332795425880, 1.59306861236599, 1.60529276088440, 1.61939615147952, 1.63357053682375, 1.64622605475232, 1.65658227422276, 1.66426678010510, 1.66992280459884, 1.67585542605930, 1.68316554465867, 1.69199548893857, 1.70235212334602, 1.71387033561736, 1.72578827760282]
 
-        # M19-Gauge29
-        hdata, bdata = np.loadtxt('../Arnon5/M-19-Steel-BH-Curve-afterJMAGsmooth.txt', unpack=True, usecols=(0,1))
-
+     
         def BH_lookup(B_list, H_list, your_B):
             if your_B<=0:
                 print 'positive B only'
@@ -359,21 +362,28 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         air_gap_magnetic_voltage_Um_delta = air_gap_field_strength_H * air_gap_length_delta_eff
         print 'air_gap_magnetic_voltage_Um_delta=', air_gap_magnetic_voltage_Um_delta, 'A'
 
-
-        #Arnon7
-        coef_eddy = 0.07324; # Eddy current coefficient in (Watt/(meter^3 * T^2 * Hz^2)
-        coef_hysteresis = 187.6; # Hysteresis coefficient in (Watts/(meter^3 * T^2 * Hz)
+        if bool_use_M19 == True:
+            #M19
+            coef_eddy = 0.530 # % Eddy current coefficient in (Watt/(meter^3 * T^2 * Hz^2)
+            coef_hysteresis = 143.  # % Hysteresis coefficient in (Watts/(meter^3 * T^2 * Hz)
+        else:
+            #Arnon7
+            coef_eddy = 0.07324; # Eddy current coefficient in (Watt/(meter^3 * T^2 * Hz^2)
+            coef_hysteresis = 187.6; # Hysteresis coefficient in (Watts/(meter^3 * T^2 * Hz)
 
         volume_stator_tooth = stator_tooth_width_b_ds * stator_tooth_height_h_ds * stack_length
         volume_rotor_tooth = rotor_tooth_width_b_dr * rotor_tooth_height_h_dr * stack_length
 
-        stator_tooth_core_loss_power_per_meter_cube = 1.8 * coef_hysteresis* 2*pi*rated_frequency * stator_tooth_flux_density_B_ds**2 + coef_eddy* (2*pi*rated_frequency * stator_tooth_flux_density_B_ds) **2  # table 3.2
-        stator_tooth_core_loss_power = Qs* volume_stator_tooth * stator_tooth_core_loss_power_per_meter_cube
-        print 'stator_tooth_core_loss_power=', stator_tooth_core_loss_power, 'W'
+        # 这里在瞎算什么，人家Example 7.4用的是loss table的结果P15，不要混淆了！还有，这个2pi是什么鬼？虽然写的是omega，但是人家是指频率Hz啊！
+        # stator_tooth_core_loss_power_per_meter_cube = 1.8 * coef_hysteresis* 2*pi*rated_frequency * stator_tooth_flux_density_B_ds**2 \
+        #                                                   + coef_eddy* (2*pi*rated_frequency * stator_tooth_flux_density_B_ds) **2  # table 3.2
+        # stator_tooth_core_loss_power = Qs* volume_stator_tooth * stator_tooth_core_loss_power_per_meter_cube
+        # print 'stator_tooth_core_loss_power=', stator_tooth_core_loss_power, 'W'
 
-        rotor_tooth_core_loss_power_per_meter_cube = 1.8 * coef_hysteresis* 2*pi*rated_frequency * rotor_tooth_flux_density_B_dr**2 + coef_eddy* (2*pi*rated_frequency * rotor_tooth_flux_density_B_dr) **2 
-        rotor_tooth_core_loss_power = Qr* volume_rotor_tooth * rotor_tooth_core_loss_power_per_meter_cube
-        print 'rotor_tooth_core_loss_power=', rotor_tooth_core_loss_power, 'W'
+        # rotor_tooth_core_loss_power_per_meter_cube = 1.8 * coef_hysteresis* 2*pi*rated_frequency * rotor_tooth_flux_density_B_dr**2 \
+        #                                                  + coef_eddy* (2*pi*rated_frequency * rotor_tooth_flux_density_B_dr) **2 
+        # rotor_tooth_core_loss_power = Qr* volume_rotor_tooth * rotor_tooth_core_loss_power_per_meter_cube
+        # print 'rotor_tooth_core_loss_power=', rotor_tooth_core_loss_power, 'W'
 
 
         print '''\n13. Saturation Factor '''
@@ -525,7 +535,8 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     Length_HeadNeckRotorSlot = length_headNeckRotorSlot *1e3 # mm # 这里假设与HeadNeck相对的槽的部分也能放导体了。准确来说应该有：rotor_inner_diameter_Dri = rotor_yoke_diameter_Dryi - 2*rotor_yoke_height_h_yr - 2*1e-3*Length_HeadNeckRotorSlot
 
     rotor_slot_radius = (2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3 - rotor_tooth_width_b_dr*Qr) / (2*Qr+2*pi)
-    print 'Rotor Slot Radius:', rotor_slot_radius * 1e3, rotor_tooth_width_b_dr * 1e3
+    print 'Rotor Slot Radius=', rotor_slot_radius * 1e3, 'mm'
+    print 'rotor_tooth_width_b_dr=', rotor_tooth_width_b_dr * 1e3, 'mm'
 
     Radius_of_RotorSlot = rotor_slot_radius*1e3 
     Location_RotorBarCenter = Radius_OuterRotor - Length_HeadNeckRotorSlot - Radius_of_RotorSlot
@@ -536,8 +547,8 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         print 'There is no need to use a drop shape rotor, because the required rotor bar height is not high.'
     print 'the width of outer rotor slot: %g' % (Radius_of_RotorSlot)
     print 'the height of total rotor slot: %g' % (rotor_tooth_height_h_dr*1e3)
-    Arc_betweenOuterRotorSlot = 360/Qr*pi/180*Location_RotorBarCenter - 2*Radius_of_RotorSlot
-    Radius_of_RotorSlot2 = 0.5 * (360/Qr*pi/180*Location_RotorBarCenter2 - Arc_betweenOuterRotorSlot) # 应该小于等于这个值，保证转子齿等宽。
+    Arc_betweenOuterRotorSlot = 2*pi/Qr*Location_RotorBarCenter - 2*Radius_of_RotorSlot
+    Radius_of_RotorSlot2 = 0.5 * (2*pi/Qr*Location_RotorBarCenter2 - Arc_betweenOuterRotorSlot) # 应该小于等于这个值，保证转子齿等宽。
 
     Angle_StatorSlotOpen = angle_stator_slop_open / pi *180 # in deg.
     Width_StatorTeethBody = stator_tooth_width_b_ds*1e3
