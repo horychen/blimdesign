@@ -1,159 +1,199 @@
-# coding:u8
-# execfile(r'D:\Users\horyc\OneDrive - UW-Madison\codes\opti_script.py')
-# execfile(r'C:\Users\Hory Chen\OneDrive - UW-Madison\codes\opti_script.py')
+# coding:utf-8
+#execfile('D:/OneDrive - UW-Madison/c/codes/opti_script.py')
+#execfile(r'K:\jchen782\JMAG\c\codes/opti_script.py')
 
-
-def where_am_i():
-    from os import path
-    pc_name = None
-    if path.isdir("D:"): 
-        # print 'you are on Legion Y730'
+''' 1. General Information & Packages Loading
+'''
+import os
+# Debug
+# if os.path.exists('d:/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz'):
+#     os.system('bash -c "rm -r /mnt/d/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz"')
+# if os.path.exists('d:/OneDrive - UW-Madison/c/pop/Tran2TSS_PS_Opti.txt'):
+#     os.system('bash -c "mv /mnt/d/OneDrive\ -\ UW-Madison/c/pop/Tran2TSS_PS_Opti.txt /mnt/d/OneDrive\ -\ UW-Madison/c/pop/initial_design.txt"')
+def where_am_i(fea_config_dict):
+    dir_interpreter = os.path.abspath('')
+    print dir_interpreter
+    if os.path.exists('D:/'):
+        print 'you are on Legion Y730'
+        dir_parent = 'D:/OneDrive - UW-Madison/c/'
+        dir_codes = dir_parent + 'codes/'
+        dir_lib = dir_parent + 'codes/'
+        # dir_initial_design = dir_parent + 'pop/'
+        # dir_csv_output_folder = dir_parent + 'csv_opti/'
+        dir_femm_files = 'D:/femm42/' # .ans files are too large to store on OneDrive anymore
         dir_project_files = 'D:/JMAG_Files/'
-        dir_initial_design = 'D:/Users/horyc/OneDrive - UW-Madison/pop/'
-        dir_csv_output_folder = u"D:/Users/horyc/OneDrive - UW-Madison/csv_opti/"
         pc_name = 'Y730'
-    elif path.isdir("I:"):
-        # print 'you are on Severson02'
+    elif os.path.exists('I:/'):
+        print 'you are on Severson02'
+        dir_parent = 'I:/jchen782/JMAG/c/'
+        dir_codes = dir_parent + 'codes/'
+        dir_lib = dir_parent + 'codes/'
+        dir_femm_files = 'I:/jchen782/FEMM/'
         dir_project_files = 'I:/jchen782/JMAG/'
-        dir_initial_design = 'I:/jchen782/JMAG/pop/'
-        dir_csv_output_folder = u"I:/jchen782/JMAG/csv_opti/"
-    elif path.isdir("K:"):
-        # print 'you are on Severson01'
+        pc_name = 'Seversion02'
+    elif os.path.exists('K:/'):
+        print 'you are on Severson01'
+        dir_parent = 'K:/jchen782/JMAG/c/'
+        dir_codes = dir_parent + 'codes/'
+        dir_lib = dir_parent + 'codes/'
+        dir_femm_files = 'K:/jchen782/FEMM/'
         dir_project_files = 'K:/jchen782/JMAG/'
-        dir_initial_design = 'K:/jchen782/JMAG/pop/'
-        dir_csv_output_folder = u"K:/jchen782/JMAG/csv_opti/"
+        pc_name = 'Seversion01'
+    # elif 'chen' in 'dir_interpreter':
+    #     print 'you are on T440p'
+    #     dir_parent = 'C:/Users/Hory Chen/OneDrive - UW-Madison/'
+    #     dir_lib = dir_parent + 'codes2/'
+    #     dir_initial_design = dir_parent + 'pop/'
+    #     dir_csv_output_folder = dir_parent + 'csv_opti/'
+    #     dir_femm_files = 'C:/femm42/'
+    #     dir_project_files = 'C:/JMAG_Files/'
+    #     pc_name = 't440p'
     else:
-        print 'you are on T440p'
-        dir_project_files = 'C:/JMAG_Files/'
-        dir_initial_design = 'C:/Users/hory chen/OneDrive - UW-Madison/pop/'
-        dir_csv_output_folder = u"C:/Users/hory chen/OneDrive - UW-Madison/csv_opti/"
+        # T440p
+        print 'where are you? T440p?'
+    os.chdir(dir_codes)
 
-    return dir_project_files, dir_initial_design, dir_csv_output_folder, pc_name
+    fea_config_dict['dir_parent']            = dir_parent
+    fea_config_dict['dir_lib']               = dir_lib
+    fea_config_dict['dir_codes']             = dir_codes
+    fea_config_dict['dir_femm_files']        = dir_femm_files
+    fea_config_dict['dir_project_files']     = dir_project_files
+    # fea_config_dict['dir_initial_design']    = dir_initial_design
+    # fea_config_dict['dir_csv_output_folder'] = dir_csv_output_folder
+    fea_config_dict['pc_name']               = pc_name
+    fea_config_dict['dir_interpreter']       = dir_interpreter
 
+    if pc_name == 'Y730':
+        if fea_config_dict['Restart'] == False:
+            fea_config_dict['OnlyTableResults'] = True  # save disk space for my PC
+    # However, we need field data for iron loss calculation
+    fea_config_dict['OnlyTableResults'] = False 
 
-# add Pyrhonen deisng to the swarm.
-# select the best five individuals from the first solve
-class Pyrhonen_design(object):
-    def __init__(self):
-        ''' Determine bounds for these parameters:
-            stator_tooth_width_b_ds       = design_parameters[0]*1e-3 # m                       # stator tooth width [mm]
-            air_gap_length_delta          = design_parameters[1]*1e-3 # m                       # air gap length [mm]
-            b1                            = design_parameters[2]*1e-3 # m                       # rotor slot opening [mm]
-            rotor_tooth_width_b_dr        = design_parameters[3]*1e-3 # m                       # rotor tooth width [mm]
-            self.Length_HeadNeckRotorSlot        = design_parameters[4]             # [4]       # rotor tooth head & neck length [mm]
-            self.Angle_StatorSlotOpen            = design_parameters[5]             # [5]       # stator slot opening [deg]
-            self.Width_StatorTeethHeadThickness  = design_parameters[6]             # [6]       # stator tooth head length [mm]
-        '''
-        self.stator_tooth_width_b_ds = 0.007457249477380651* 1e3
-        self.air_gap_length_delta = 0.00126942993991* 1e3
-        self.b1 = 0.000959197921278* 1e3
-        self.rotor_tooth_width_b_dr = 0.005250074634166455* 1e3
-        self.Length_HeadNeckRotorSlot = 1.0
-        self.Angle_StatorSlotOpen = 3.0
-        self.Width_StatorTeethHeadThickness = 1
+fea_config_dict = {
+    ##########################
+    # Sysetm Controlc
+    ##########################
+    'Active_Qr':32, # 36
+    'TranRef-StepPerCycle':40,
+    'OnlyTableResults':False, # modified later according to pc_name
+        # multiple cpu (SMP=2)
+        # directSolver over ICCG Solver
+    'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
+    'flag_optimization':True,
 
-        self.design_parameters_denorm = [  self.stator_tooth_width_b_ds,
-                                    self.air_gap_length_delta,
-                                    self.b1,
-                                    self.rotor_tooth_width_b_dr,
-                                    self.Length_HeadNeckRotorSlot,
-                                    self.Angle_StatorSlotOpen,
-                                    self.Width_StatorTeethHeadThickness]
+    ##########################
+    # Optimization
+    ##########################
+    'FrequencyRange':range(1,6), # first generation for PSO
 
-    def show_denorm(self):
-        print self.design_parameters_denorm
+    ##########################
+    # Design Specifications
+    ##########################
+    'DPNV': True,
+    'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
 
-    def show_norm(self, bounds):
-        import numpy as np
-        min_b, max_b = np.asarray(bounds).T 
-        diff = np.fabs(min_b - max_b)
-        self.design_parameters_norm = (self.design_parameters_denorm - min_b)/diff #= pop
-        print type(self.design_parameters_norm)
-        for el in self.design_parameters_norm:
-            print el, ',',
-        print 
+    'Steel': 'M19Gauge29', 
+    # 'Steel': 'M15',
+    # 'Steel': 'Arnon5', 
+    'Bar_Conductivity':1/((3.76*25+873)*1e-9/55.), # 1/((3.76*100+873)*1e-9/55.) for Copper, where temperature is 25 or 100 deg Celsius.
+    # 'Bar_Conductivity':40e6, # 40e6 for Aluminium; 
+}
+where_am_i(fea_config_dict)
+from sys import path as sys_path
+sys_path.append(fea_config_dict['dir_lib'])
+import population
+import FEMM_Solver
+import utility
+reload(population) # relaod for JMAG's python environment
+reload(FEMM_Solver)
+logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_')
 
-        pop = self.design_parameters_norm
-        min_b, max_b = np.asarray(bounds).T 
-        diff = np.fabs(min_b - max_b)
-        pop_denorm = min_b + pop * diff
-        print pop_denorm
-        print self.design_parameters_denorm
+run_list = [1,1,0,0,0] 
+run_folder = r'run#100/'
+fea_config_dict['run_folder'] = run_folder
+fea_config_dict['jmag_run_list'] = run_list
+if fea_config_dict['flag_optimization'] == True:
+    fea_config_dict['model_name_prefix'] = 'OP_PS_Qr%d_%s' % (fea_config_dict['Active_Qr'], fea_config_dict['Steel'])
+else:
+    fea_config_dict['model_name_prefix'] = 'PS_Qr%d_%s' % (fea_config_dict['Active_Qr'], fea_config_dict['Steel'])
+if fea_config_dict['DPNV'] == True:
+    fea_config_dict['model_name_prefix'] += '_DPNV'
+if fea_config_dict['End_Ring_Resistance'] == 0:
+    fea_config_dict['model_name_prefix'] += '_NoEndRing'
+if fea_config_dict['Restart'] == True:
+    fea_config_dict['model_name_prefix'] += '_Restart'
+print fea_config_dict['model_name_prefix']
 
-
-if __name__ == '__main__':
-    dir_project_files, dir_initial_design, dir_csv_output_folder, pc_name = where_am_i()
-    dir_codes = dir_initial_design[:-4] + r'codes/'
-    from sys import path as sys_path
-    sys_path.append(dir_codes)
-    import population
-    import utility
-    reload(population) 
-
-    # testing
-    try:
-        if os.path.exists(dir_codes + r'opti_script.log'):
-            os.remove(dir_codes + r'opti_script.log')
-    except Exception, e:
-        print 'Repeated run of script in JMAG Designer is detected. As a result, you will see duplicated logging entries because more than one logger is activated.'
-    # logger = logger_init()
-    logger = utility.myLogger(dir_codes)
-
-    ''' Determine bounds for these parameters:
-        stator_tooth_width_b_ds       = design_parameters[0]*1e-3 # m                       # stator tooth width [mm]
-        air_gap_length_delta          = design_parameters[1]*1e-3 # m                       # air gap length [mm]
-        b1                            = design_parameters[2]*1e-3 # m                       # rotor slot opening [mm]
-        rotor_tooth_width_b_dr        = design_parameters[3]*1e-3 # m                       # rotor tooth width [mm]
-        self.Length_HeadNeckRotorSlot        = design_parameters[4]             # [4]       # rotor tooth head & neck length [mm]
-        self.Angle_StatorSlotOpen            = design_parameters[5]             # [5]       # stator slot opening [deg]
-        self.Width_StatorTeethHeadThickness  = design_parameters[6]             # [6]       # stator tooth head length [mm]
-    '''
-    # 1e-1也还是太小了（第三次报错），至少0.5mm长吧
-    de_config_dict = { 'bounds':     [[3,9], [0.5,4], [5e-1,3], [1.5,8], [5e-1,3], [1,10], [5e-1,3]], # 1e-1 is the least geometry value. a 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
-                    'mut':        0.8,
-                    'crossp':     0.7,
-                    'popsize':    100,
-                    'iterations': 20 } # begin at 5
-
-    ''' Remember to check the file 'initial_design.txt'.
-    '''
-    # generate the initial generation
-    sw = population.swarm(dir_initial_design, r'run#1/', dir_csv_output_folder, dir_project_files, model_name_prefix='BLIM_PS', de_config_dict=de_config_dict, pc_name=pc_name)
-    # logger.info(sw.show('all', toString=True))
-
-    # the_initial_design = Pyrhonen_design()
-    # the_initial_design.show_norm(de_config_dict['bounds'])
+fea_config_dict['femm_deg_per_step'] = 0.25 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
+# fea_config_dict['femm_deg_per_step'] = 1 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
+# fea_config_dict['femm_deg_per_step'] = 0.1 #0.5 # deg
+print 'femm_deg_per_step is', fea_config_dict['femm_deg_per_step'], 'deg (Qs=24, p=2)'
 
 
+''' 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG)
+''' # 1e-1也还是太小了（第三次报错），至少0.5mm长吧 # 1e-1 is the least geometry value. a 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
+if fea_config_dict['flag_optimization'] == True:
+    de_config_dict = {  'bounds':     [[3,9], [0.5,4], [5e-1,3], [1.5,8], [5e-1,3], [1,10], [5e-1,3]], 
+                        'mut':        0.8,
+                        'crossp':     0.7,
+                        'popsize':    20,
+                        'iterations': 48 } # begin at 5
+else:
+    de_config_dict = None
 
-    # de_config_dict = { 'bounds':     [[3,9], [0.5,4], [5e-1,3], [1.5,8], [5e-1,3], [1,10], [5e-1,3]], # 1e-1 is the least geometry value. a 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
-    #                 'mut':        0.8,
-    #                 'crossp':     0.7,
-    #                 'popsize':    4,
-    #                 'iterations': 1 } # begin at 5
-    # sw = population.swarm(dir_initial_design, r'run#36/', dir_csv_output_folder, dir_project_files, de_config_dict, pc_name=pc_name)
+# init the swarm
+sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)
+# sw.show(which='all')
+
+# generate the initial generation
+sw.generate_pop()
+logger.info('Initial pop generated.')
 
 
 
-    if False:
-        # run
-        de_generator = sw.de()
-        result = list(de_generator)
-
-        # de version 2 is called by this
-        for el in result:
-            pop, fit, idx = el
-            logger.info('some information')
-            print 'pop:' + pop + 'fit & index:' %(fit, idx)
-            # for ind in pop:
-            #     data = fmodel(x, ind)
-            #     ax.plot(x, data, alpha=0.3)
-        
-        # de version 1 is called by this:
-        # result = list(de(fobj,bounds))
-        # print(result[-1])
-    else:
-        sw.plot_csv_results_for_all()
+''' 3. Initialize FEMM Solver
+'''
+if fea_config_dict['jmag_run_list'][0] == 0:
+    # and let jmag know about it
+    sw.solver_femm = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static
 
 
 
+''' 4. Run DE Optimization
+'''
+
+# run
+de_generator = sw.de()
+result = list(de_generator)
+
+# de version 2 is called by this
+for el in result:
+    pop, fit, idx = el
+    logger.info('some information')
+    print 'pop:' + pop + 'fit & index:' %(fit, idx)
+    # for ind in pop:
+    #     data = fmodel(x, ind)
+    #     ax.plot(x, data, alpha=0.3)
+
+sw.write_to_file_fea_config_dict()
+
+
+# Run JCF from command linie instead of GUI
+# if not sw.has_results(im_initial, study_type='Tran2TSS'):
+#     os.system(r'set InsDir=D:\Program Files\JMAG-Designer17.1/')
+#     os.system(r'set WorkDir=D:\JMAG_Files\JCF/')
+#     os.system(r'cd /d "%InsDir%"')
+#     for jcf_file in os.listdir(sw.dir_jcf):
+#         if 'Tran2TSS' in jcf_file and 'Mesh' in jcf_file:
+#             os.system('ExecSolver "%WorkDir%' + jcf_file + '"')
+
+'''
+Two Shared process - Max CPU occupation 32.6%
+Freq: 2:16 (13 Steps)
+Tran2TSS: 3:38 (81 Steps)
+Freq-FFVRC: 1:33 (10 Steps)
+TranRef: 1:49:02 (3354 Steps) -> 3:18:19 if no MultiCPU
+StaticJMAG: 
+StaticFEMM: 15 sec one eddy current solve
+            7 sec one static solve
+'''

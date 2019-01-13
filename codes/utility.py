@@ -21,8 +21,11 @@ def myLogger(dir_codes, prefix='opti_script_'): # This works even when the modul
         logger.setLevel(logging.DEBUG)
         now = datetime.datetime.now()
 
+        if not os.path.isdir(dir_codes + 'log/'):
+            os.makedirs(dir_codes + 'log/')
+
         # create a file handler
-        handler=logging.FileHandler(dir_codes + prefix + now.strftime("%Y-%m-%d") +'.log')
+        handler=logging.FileHandler(dir_codes + 'log/' + prefix + now.strftime("%Y-%m-%d") +'.log')
         handler.setLevel(logging.DEBUG)
 
         # create a logging format
@@ -40,6 +43,8 @@ def logger_init(): # This will lead to duplicated logging output
 
     # create a file handler
     now = datetime.datetime.now()
+    if not os.path.isdir(dir_codes + 'log/'):
+        os.makedir(dir_codes + 'log/')
     handler = logging.FileHandler(dir_codes + r'opti_script.log')
     handler.setLevel(logging.DEBUG)
 

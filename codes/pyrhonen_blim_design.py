@@ -230,7 +230,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         print '''\n11. Dimension of Slots '''
         efficiency = 0.9 # iterative?
         print 'efficiency=', efficiency
-        power_factor = 0.85
+        power_factor =0.6  #0.85
         print 'power_factor=', power_factor
 
         stator_phase_current_rms = mec_power / (no_phase_m*efficiency*stator_phase_voltage_rms*power_factor)
@@ -269,6 +269,9 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         temp = (2*pi*stator_inner_radius_r_is_eff - Qs*stator_tooth_width_b_ds)
         stator_tooth_height_h_ds = ( sqrt(temp**2 + 4*pi*area_stator_slot_Sus*Qs) - temp ) / (2*pi)
         print 'stator_tooth_height_h_ds', stator_tooth_height_h_ds*1e3, 'mm\n'
+        # The slot depth equals the tooth height hs = hd Pyrhonen09@p309
+        stator_slot_height_h_ss = stator_tooth_height_h_ds
+        print 'stator_slot_height_h_ss', stator_slot_height_h_ss*1e3, 'mm\n'
 
         rotor_current_density_Js = 6.4e6 # 减少电流密度有效减少转子欧姆热 # 修正4*pi*area_rotor_slot_Sur*Qr处的BUG前，这里设置的转子电流密度都是没用的，和FEA的结果对不上，现在能对上了（用FEMM积分电流和面积验证）！
         print 'rotor_current_density_Js=', rotor_current_density_Js, 'A/m^2'
@@ -298,6 +301,10 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
             print 'rotor_tooth_height_h_dr(+)=', rotor_tooth_height_h_dr*1e3, 'mm' # too large to be right answer
             rotor_tooth_height_h_dr = ( -sqrt(temp**2 - 4*pi*area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
             print 'rotor_tooth_height_h_dr(-)=', rotor_tooth_height_h_dr*1e3, 'mm'
+            # The slot depth equals the tooth height hs = hd Pyrhonen09@p309
+            rotor_slot_height_h_sr = rotor_tooth_height_h_dr
+            print 'rotor_slot_height_h_sr', rotor_slot_height_h_sr*1e3, 'mm\n'
+
         except:
             print 'Lower your tangential_stress. If that is not possible, increase your B in the rotor tooth because rotor iron loss is of slip freqnecy---it is not that 怖い.'
             raise Exception('There are no space on the rotor to fulfill the required rotor slot to reach your J_r and space_factor_kAl. Reduce your tangential_stress and run the script again.')
@@ -542,14 +549,22 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     Location_RotorBarCenter = Radius_OuterRotor - Length_HeadNeckRotorSlot - Radius_of_RotorSlot
     Width_RotorSlotOpen = b1*1e3 # 10% of 360/Qr
 
-    Location_RotorBarCenter2 = Radius_OuterRotor - Length_HeadNeckRotorSlot - rotor_tooth_height_h_dr*1e3 # 本来还应该减去转子内槽半径的，但是这里还不知道，干脆不要了，这样槽会比预计的偏深，
-    if abs(Location_RotorBarCenter2 - Location_RotorBarCenter) < Radius_of_RotorSlot*0.25:
-        print 'There is no need to use a drop shape rotor, because the required rotor bar height is not high.'
-    print 'the width of outer rotor slot: %g' % (Radius_of_RotorSlot)
-    print 'the height of total rotor slot: %g' % (rotor_tooth_height_h_dr*1e3)
-    Arc_betweenOuterRotorSlot = 2*pi/Qr*Location_RotorBarCenter - 2*Radius_of_RotorSlot
-    Radius_of_RotorSlot2 = 0.5 * (2*pi/Qr*Location_RotorBarCenter2 - Arc_betweenOuterRotorSlot) # 应该小于等于这个值，保证转子齿等宽。
 
+    # new method
+    Radius_of_RotorSlot2 = 1e3 * (2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot - rotor_slot_height_h_sr*1e3)*1e-3 - rotor_tooth_width_b_dr*Qr) / (2*Qr-2*pi)
+    print 'Radius_of_RotorSlot2=', Radius_of_RotorSlot2
+    Location_RotorBarCenter2 = Radius_OuterRotor - Length_HeadNeckRotorSlot - rotor_slot_height_h_sr*1e3 + Radius_of_RotorSlot2 
+
+    # old approximate mehtod
+    # Location_RotorBarCenter2 = Radius_OuterRotor - Length_HeadNeckRotorSlot - rotor_tooth_height_h_dr*1e3 # 本来还应该减去转子内槽半径的，但是这里还不知道，干脆不要了，这样槽会比预计的偏深，
+    # if abs(Location_RotorBarCenter2 - Location_RotorBarCenter) < Radius_of_RotorSlot*0.25:
+    #     print 'There is no need to use a drop shape rotor, because the required rotor bar height is not high.'
+    # print 'the width of outer rotor slot: %g' % (Radius_of_RotorSlot)
+    # print 'the height of total rotor slot: %g' % (rotor_tooth_height_h_dr*1e3)
+    # Arc_betweenOuterRotorSlot = 2*pi/Qr*Location_RotorBarCenter - 2*Radius_of_RotorSlot
+    # Radius_of_RotorSlot2 = 0.5 * (2*pi/Qr*Location_RotorBarCenter2 - Arc_betweenOuterRotorSlot) # 应该小于等于这个值，保证转子齿等宽。
+    # print 'Radius_of_RotorSlot2=', Radius_of_RotorSlot2
+    
     Angle_StatorSlotOpen = angle_stator_slop_open / pi *180 # in deg.
     Width_StatorTeethBody = stator_tooth_width_b_ds*1e3
     
@@ -600,7 +615,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     '''
     print 'stator_tooth_width_b_ds =', stator_tooth_width_b_ds
     print 'air_gap_length_delta =', air_gap_length_delta         
-    print 'b1 =', b1
+    print 'b1 (rotor slot opening) =', b1 
     print 'rotor_tooth_width_b_dr =', rotor_tooth_width_b_dr
     print 'Length_HeadNeckRotorSlot =', Length_HeadNeckRotorSlot
     print 'Angle_StatorSlotOpen =', Angle_StatorSlotOpen
@@ -628,11 +643,12 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 
 
 
-'mechanical limits'
+print '\n\n\nMechanical Limits Check:'
 
-if False:
-    rotor_radius = 0.075
-    speed_rpm = 20000
+if True:
+    print 'Radius_OuterRotor=', Radius_OuterRotor, 'mm'
+    rotor_radius = Radius_OuterRotor*1e-3
+    speed_rpm = 30000
 
     Omega = speed_rpm/(60)*2*pi
     modulus_of_elasticity = 190 * 1e9 # Young's modulus
@@ -640,14 +656,14 @@ if False:
     D_in = 0
     second_moment_of_inertia_of_area_I = pi*(D_out**4 - D_in**4) / 64 
     stack_length_max = sqrt( 1**2 * pi**2 / (1.5*Omega) * sqrt( 200*1e9 * second_moment_of_inertia_of_area_I / (8760* pi*(D_out/2)**2) ) )
-    print 'stack_length_max=', stack_length_max
+    print 'stack_length_max=', stack_length_max*1e3, 'mm'
 
-    stack_length_max = sqrt(1*pi**2/(1.5*20000/60*2*pi)*sqrt(200*1e9*pi*0.15**4/64/(8760*pi*0.15**2/4)))
-    print 'stack_length_max=', stack_length_max
+    # stack_length_max = sqrt(1*pi**2/(1.5*20000/60*2*pi)*sqrt(200*1e9*pi*0.15**4/64/(8760*pi*0.15**2/4)))
+    # print 'stack_length_max=', stack_length_max
 
-    speed_rpm = 30000
-    Omega = speed_rpm/(60)*2*pi
+    # speed_rpm = 30000
+    # Omega = speed_rpm/(60)*2*pi
     C_prime = (3+0.29)/4
     rotor_radius_max = sqrt(300e6/(C_prime*8760*Omega**2))
-    print 'rotor_radius_max', rotor_radius_max
-    print 'rotor_diameter_max', 2*rotor_radius_max
+    print 'rotor_radius_max', rotor_radius_max*1e3, 'mm'
+    print 'rotor_diameter_max', 2*rotor_radius_max*1e3, 'mm'

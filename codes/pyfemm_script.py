@@ -23,12 +23,12 @@
 
 ''' 1. General Information & Packages Loading
 '''
-import os 
+import os
 # Debug
-# if os.path.exists('d:/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz'):
-#     os.system('bash -c "rm -r /mnt/d/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz"')
-# if os.path.exists('d:/OneDrive - UW-Madison/c/pop/Tran2TSS_PS_Opti.txt'):
-#     os.system('bash -c "mv /mnt/d/OneDrive\ -\ UW-Madison/c/pop/Tran2TSS_PS_Opti.txt /mnt/d/OneDrive\ -\ UW-Madison/c/pop/initial_design.txt"')
+if os.path.exists('d:/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz'):
+    os.system('bash -c "rm -r /mnt/d/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz"')
+if os.path.exists('d:/OneDrive - UW-Madison/c/pop/Tran2TSS_PS_Opti.txt'):
+    os.system('bash -c "mv /mnt/d/OneDrive\ -\ UW-Madison/c/pop/Tran2TSS_PS_Opti.txt /mnt/d/OneDrive\ -\ UW-Madison/c/pop/initial_design.txt"')
 def where_am_i(fea_config_dict):
     dir_interpreter = os.path.abspath('')
     print dir_interpreter
@@ -97,7 +97,7 @@ fea_config_dict = {
         # multiple cpu (SMP=2)
         # directSolver over ICCG Solver
     'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
-    'flag_optimization':True,
+    'flag_optimization':False,
 
     ##########################
     # Design Specifications
@@ -108,7 +108,7 @@ fea_config_dict = {
     'Steel': 'M19Gauge29', 
     # 'Steel': 'M15',
     # 'Steel': 'Arnon5', 
-    'Bar_Conductivity':1/((3.76*100+873)*1e-9/55.), # 40e6 for Aluminium; 1/((3.76*100+873)*1e-9/55.) for Copper
+    'Bar_Conductivity':1/((3.76*25+873)*1e-9/55.), # 40e6 for Aluminium; 1/((3.76*100+873)*1e-9/55.) for Copper
     # 'Bar_Conductivity':40e6, # 40e6 for Aluminium; 1/((3.76*100+873)*1e-9/55.) for Copper
 }
 where_am_i(fea_config_dict)
@@ -238,52 +238,51 @@ else:
     # JMAG 
     if not sw.has_results(im_initial, 'Freq'):
         sw.run(im_initial, run_list=sw.fea_config_dict['jmag_run_list'])
-#         if not sw.has_results(im_initial, 'Freq'):
-#             raise Exception('Something went south with JMAG.')
+        if not sw.has_results(im_initial, 'Freq'):
+            raise Exception('Something went south with JMAG.')
 
-#     print 'Rotor current solved by FEMM is shown here:'
-#     solver_femm.read_current_conditions_from_FEMM()
+    print 'Rotor current solved by FEMM is shown here:'
+    solver_femm.read_current_conditions_from_FEMM()
 
-#     print 'Rotor current solved by JMAG is shown here:'
-#     solver_jmag.read_current_from_EC_FEA()
-#     for key, item in solver_jmag.dict_rotor_current_from_EC_FEA.iteritems():
-#         if '1' in key:
-#             from math import sqrt
-#             print key, sqrt(item[0]**2+item[1]**2)
+    print 'Rotor current solved by JMAG is shown here:'
+    solver_jmag.read_current_from_EC_FEA()
+    for key, item in solver_jmag.dict_rotor_current_from_EC_FEA.iteritems():
+        if '1' in key:
+            from math import sqrt
+            print key, sqrt(item[0]**2+item[1]**2)
 
-#     # FEMM Static Solver with pre-determined rotor currents from JMAG
-#     if not solver_jmag.has_results():
-#         solver_jmag.run_rotating_static_FEA()
-#         solver_jmag.parallel_solve()
+    # # FEMM Static Solver with pre-determined rotor currents from JMAG
+    # if not solver_jmag.has_results():
+    #     solver_jmag.run_rotating_static_FEA()
+    #     solver_jmag.parallel_solve()
 
+    # # Compare JMAG and FEMM's rotor currents to see DPNV is implemented correctly in bot JMAG and FEMM    
+    # data_femm = solver_femm.show_results_static(bool_plot=False)
+    # data_jmag = solver_jmag.show_results_static(bool_plot=False)
 
-#     # Compare JMAG and FEMM's rotor currents to see DPNV is implemented correctly in bot JMAG and FEMM    
-#     data_femm = solver_femm.show_results_static(bool_plot=False)
-#     data_jmag = solver_jmag.show_results_static(bool_plot=False)
-
-#     if data_femm is None or data_jmag is None:
-#         if data_femm is None:
-#             print 'data_femm is', data_femm, 'try run again'
-#         if data_jmag is None:
-#             print 'data_jmag is', data_jmag, 'try run again'
-#     else:
-#         from pylab import subplots
-#         fig, axes = subplots(3, 1, sharex=True)
-#         for data in [data_femm, data_jmag]:
-#             ax = axes[0]; ax.plot(data[0]*0.1, data[1], alpha=0.5, label='torque'); ax.legend(); ax.grid()
-#             ax = axes[1]; ax.plot(data[0]*0.1, data[2], alpha=0.5, label='Fx'); ax.legend(); ax.grid()
-#             ax = axes[2]; ax.plot(data[0]*0.1, data[3], alpha=0.5, label='Fy'); ax.legend(); ax.grid()
-
+    # if data_femm is None or data_jmag is None:
+    #     if data_femm is None:
+    #         print 'data_femm is', data_femm, 'try run again'
+    #     if data_jmag is None:
+    #         print 'data_jmag is', data_jmag, 'try run again'
+    # else:
+    #     from pylab import subplots
+    #     fig, axes = subplots(3, 1, sharex=True)
+    #     for data in [data_femm, data_jmag]:
+    #         ax = axes[0]; ax.plot(data[0]*0.1, data[1], alpha=0.5, label='torque'); ax.legend(); ax.grid()
+    #         ax = axes[1]; ax.plot(data[0]*0.1, data[2], alpha=0.5, label='Fx'); ax.legend(); ax.grid()
+    #         ax = axes[2]; ax.plot(data[0]*0.1, data[3], alpha=0.5, label='Fy'); ax.legend(); ax.grid()
 
 
-# sw.write_to_file_fea_config_dict()
-# from pylab import show; show()
 
+sw.write_to_file_fea_config_dict()
+from pylab import show; show()
 
 
 
 
 
+# Run JCF from command linie instead of GUI
 # if not sw.has_results(im_initial, study_type='Tran2TSS'):
 #     os.system(r'set InsDir=D:\Program Files\JMAG-Designer17.1/')
 #     os.system(r'set WorkDir=D:\JMAG_Files\JCF/')
