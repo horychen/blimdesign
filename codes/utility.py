@@ -25,7 +25,7 @@ def myLogger(dir_codes, prefix='opti_script_'): # This works even when the modul
             os.makedirs(dir_codes + 'log/')
 
         # create a file handler
-        handler=logging.FileHandler(dir_codes + 'log/' + prefix + now.strftime("%Y-%m-%d") +'.log')
+        handler=logging.FileHandler(dir_codes + 'log/' + prefix + '-' + now.strftime("%Y-%m-%d") +'.log')
         handler.setLevel(logging.DEBUG)
 
         # create a logging format

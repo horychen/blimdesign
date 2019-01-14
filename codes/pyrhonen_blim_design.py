@@ -275,7 +275,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 
         rotor_current_density_Js = 6.4e6 # 减少电流密度有效减少转子欧姆热 # 修正4*pi*area_rotor_slot_Sur*Qr处的BUG前，这里设置的转子电流密度都是没用的，和FEA的结果对不上，现在能对上了（用FEMM积分电流和面积验证）！
         print 'rotor_current_density_Js=', rotor_current_density_Js, 'A/m^2'
-        area_conductor_rotor_Scr = rotor_current_actual / (1 * rotor_current_density_Js)
+        area_conductor_rotor_Scr = rotor_current_actual / (1 * rotor_current_density_Js) # no_parallel_path=1
         print 'area_conductor_rotor_Scr=', area_conductor_rotor_Scr * 1e6, 'mm^2'
 
         if bool_pole_specific_rotor == True:
@@ -295,6 +295,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         # guess this local design values or adapt from other designs
         length_headNeckRotorSlot = 1e-3 # m
         try:
+            # rotor slot height depends on rotor_tooth_width_b_dr and rotor current (power factor)
             rotor_outer_radius_r_or_eff = rotor_outer_radius_r_or - length_headNeckRotorSlot
             temp = (2*pi*rotor_outer_radius_r_or_eff - Qr*rotor_tooth_width_b_dr)
             rotor_tooth_height_h_dr = ( +sqrt(temp**2 - 4*pi*area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
@@ -309,6 +310,11 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
             print 'Lower your tangential_stress. If that is not possible, increase your B in the rotor tooth because rotor iron loss is of slip freqnecy---it is not that 怖い.'
             raise Exception('There are no space on the rotor to fulfill the required rotor slot to reach your J_r and space_factor_kAl. Reduce your tangential_stress and run the script again.')
 
+        minimum__area_rotor_slot_Sur = rotor_current_actual / (8e6) / space_factor_kAl
+        print 'minimum__area_rotor_slot_Sur', minimum__area_rotor_slot_Sur, area_rotor_slot_Sur
+        minimum__rotor_tooth_height_h_dr = ( -sqrt(temp**2 - 4*pi*minimum__area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
+        print 'minimum__rotor_tooth_height_h_dr', minimum__rotor_tooth_height_h_dr, rotor_tooth_height_h_dr
+        print 'rotor_tooth_width_b_dr', rotor_tooth_width_b_dr*1e3, 'mm'
         # quit()
 
         print '''\n12. Magnetic Voltage '''
@@ -580,7 +586,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 
     # 参考FEMM_Solver.py 或 按照书上的公式算一下
     stator_slot_area = area_stator_slot_Sus # FEMM是对槽积分得到的，更准哦
-    TEMPERATURE_OF_COIL = 25
+    TEMPERATURE_OF_COIL = 75
     rho_Copper = (3.76*TEMPERATURE_OF_COIL+873)*1e-9/55.
     SLOT_FILL_FACTOR = space_factor_kCu
     coil_pitch_slot_count = Qs / DriveW_poles # 整距！        
@@ -599,9 +605,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         f.write('%f, %f, %f, %f, %f, %f, ' % (Length_HeadNeckRotorSlot,Radius_of_RotorSlot, Location_RotorBarCenter, Width_RotorSlotOpen, Radius_of_RotorSlot2, Location_RotorBarCenter2))
         f.write('%f, %f, %f, %f, ' % (Angle_StatorSlotOpen, Width_StatorTeethBody, Width_StatorTeethHeadThickness, Width_StatorTeethNeck))
         f.write('%f, %f, %f, %f, %f, %f,' % (DriveW_poles, DriveW_turns, DriveW_Rs, DriveW_CurrentAmp, DriveW_Freq, stack_length*1000))
-        f.write('%.14f, %.14f\n' % (area_stator_slot_Sus, area_rotor_slot_Sur)) # this line exports values need to impose constraints among design parameters for the de optimization
-
-
+        f.write('%.14f, %.14f, %.14f\n' % (area_stator_slot_Sus, area_rotor_slot_Sur, minimum__area_rotor_slot_Sur)) # this line exports values need to impose constraints among design parameters for the de optimization
 
 
     ''' Determine bounds for these parameters:

@@ -84,7 +84,10 @@ fea_config_dict = {
     ##########################
     # Optimization
     ##########################
-    'FrequencyRange':range(1,6), # first generation for PSO
+    'FrequencyRange':range(1,6), # the first generation for PSO
+    'number_of_steps_2ndTTS':32, # 8*32 # steps for half period (0.5). That is, we implement two time sections, the 1st section lasts half slip period and the 2nd section lasts half fandamental period.
+    'JMAG_Scheduler':False, # multi-cores run
+    'delete_results_after_calculation': False,
 
     ##########################
     # Design Specifications
@@ -95,7 +98,8 @@ fea_config_dict = {
     'Steel': 'M19Gauge29', 
     # 'Steel': 'M15',
     # 'Steel': 'Arnon5', 
-    'Bar_Conductivity':1/((3.76*25+873)*1e-9/55.), # 1/((3.76*100+873)*1e-9/55.) for Copper, where temperature is 25 or 100 deg Celsius.
+                                # If you modify the temperature here, you should update the initial design (the im.DriveW_Rs should be updated and it used in JMAG FEM Coil)
+    'Bar_Conductivity':1/((3.76*75+873)*1e-9/55.), # 1/((3.76*100+873)*1e-9/55.) for Copper, where temperature is 25 or 100 deg Celsius.
     # 'Bar_Conductivity':40e6, # 40e6 for Aluminium; 
 }
 where_am_i(fea_config_dict)
@@ -106,10 +110,10 @@ import FEMM_Solver
 import utility
 reload(population) # relaod for JMAG's python environment
 reload(FEMM_Solver)
-logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_')
 
 run_list = [1,1,0,0,0] 
-run_folder = r'run#100/'
+# run_folder = r'run#100/' # no iron loss csv data but there are field data!
+run_folder = r'run#101/' # 75 deg Celsius, iron loss csv data, delete field data after calculation.
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
 if fea_config_dict['flag_optimization'] == True:
@@ -129,11 +133,19 @@ fea_config_dict['femm_deg_per_step'] = 0.25 * (360/4) / utility.lcm(24/4., fea_c
 # fea_config_dict['femm_deg_per_step'] = 0.1 #0.5 # deg
 print 'femm_deg_per_step is', fea_config_dict['femm_deg_per_step'], 'deg (Qs=24, p=2)'
 
+logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_'+run_folder[:-1])
+
 
 ''' 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG)
 ''' # 1e-1也还是太小了（第三次报错），至少0.5mm长吧 # 1e-1 is the least geometry value. a 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
 if fea_config_dict['flag_optimization'] == True:
-    de_config_dict = {  'bounds':     [[3,9], [0.5,4], [5e-1,3], [1.5,8], [5e-1,3], [1,10], [5e-1,3]], 
+    de_config_dict = {  'bounds':     [ [   3, 9],   # stator_tooth_width_b_ds
+                                        [ 0.5, 4],   # air_gap_length_delta
+                                        [5e-1, 3],   # Width_RotorSlotOpen 
+                                        [ 1.5, 6],   # rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                        [5e-1, 3],   # Length_HeadNeckRotorSlot
+                                        [   1, 10],  # Angle_StatorSlotOpen
+                                        [5e-1, 3] ], # Width_StatorTeethHeadThickness
                         'mut':        0.8,
                         'crossp':     0.7,
                         'popsize':    20,
