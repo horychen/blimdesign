@@ -278,86 +278,108 @@ class Goertzel_Data_Struct(object):
 
 
 if __name__ == '__main__':
-    from pylab import *
-    gs_u = Goertzel_Data_Struct("Goertzel Struct for Voltage\n")
-    gs_i = Goertzel_Data_Struct("Goertzel Struct for Current\n")
+    # from pylab import *
 
-    phase = arccos(0.6) # PF=0.6
-    targetFreq = 1000.
-    TS = 1.5625e-5
+    for generation in range(5):
+        print '----------gen#%d'%(generation)
+        generation_file_path = r'D:\OneDrive - UW-Madison\c\pop\run#101/' + 'gen#%04d.txt'%(generation)
+        print generation_file_path
+        if os.path.exists( generation_file_path ):
+            with open(generation_file_path, 'r') as f:
+                for el in f.readlines():
+                    print el[:-1]
+
+    # read voltage and current to see the power factor!
+    # read voltage and current to see the power factor!
+    # read voltage and current to see the power factor!
+    
+    # 绘制损耗图形。
+    # 绘制损耗图形。
+    # 绘制损耗图形。
 
     if False:
-        time = arange(0./targetFreq, 100.0/targetFreq, TS)
-        voltage = 3*sin(targetFreq*2*pi*time + 30/180.*pi)
-        current = 2*sin(targetFreq*2*pi*time + 30/180.*pi - phase)
-    else:
-        time = arange(0.5/targetFreq, 1.0/targetFreq, TS)
-        voltage = 3*sin(targetFreq*2*pi*time + 30/180.*pi)
-        current = 2*sin(targetFreq*2*pi*time + 30/180.*pi - phase)
+        gs_u = Goertzel_Data_Struct("Goertzel Struct for Voltage\n")
+        gs_i = Goertzel_Data_Struct("Goertzel Struct for Current\n")
 
-    N_SAMPLE = len(voltage)
-    noise = ( 2*rand(N_SAMPLE) - 1 ) * 0.233
-    voltage += noise
+        phase = arccos(0.6) # PF=0.6
+        targetFreq = 1000.
+        TS = 1.5625e-5
 
-    # plot(voltage+0.5)
-    # plot(current+0.5)
-
-    # Check for resolution
-    end_time = N_SAMPLE * TS
-    resolution = 1./end_time
-    print resolution, targetFreq
-    if resolution > targetFreq:
-
-        print 'Data length (N_SAMPLE) too short or sampling frequency too high (1/TS too high).'
-        print 'Periodical extension is applied. This will not really increase your resolution. It is a visual trick for Fourier Analysis.'
-        voltage = voltage.tolist() + (-voltage).tolist() #[::-1]
-        current = current.tolist() + (-current).tolist() #[::-1]
-
-        voltage *= 1000
-        current *= 1000
+        if False:
+            time = arange(0./targetFreq, 100.0/targetFreq, TS)
+            voltage = 3*sin(targetFreq*2*pi*time + 30/180.*pi)
+            current = 2*sin(targetFreq*2*pi*time + 30/180.*pi - phase)
+        else:
+            time = arange(0.5/targetFreq, 1.0/targetFreq, TS)
+            voltage = 3*sin(targetFreq*2*pi*time + 30/180.*pi)
+            current = 2*sin(targetFreq*2*pi*time + 30/180.*pi - phase)
 
         N_SAMPLE = len(voltage)
+        noise = ( 2*rand(N_SAMPLE) - 1 ) * 0.233
+        voltage += noise
+
+        # plot(voltage+0.5)
+        # plot(current+0.5)
+
+        # Check for resolution
         end_time = N_SAMPLE * TS
         resolution = 1./end_time
-        print resolution, targetFreq, 'Hz'
-        if resolution <= targetFreq:
-            print 'Now we are good.'
+        print resolution, targetFreq
+        if resolution > targetFreq:
+
+            print 'Data length (N_SAMPLE) too short or sampling frequency too high (1/TS too high).'
+            print 'Periodical extension is applied. This will not really increase your resolution. It is a visual trick for Fourier Analysis.'
+            voltage = voltage.tolist() + (-voltage).tolist() #[::-1]
+            current = current.tolist() + (-current).tolist() #[::-1]
+
+            voltage *= 1000
+            current *= 1000
+
+            N_SAMPLE = len(voltage)
+            end_time = N_SAMPLE * TS
+            resolution = 1./end_time
+            print resolution, targetFreq, 'Hz'
+            if resolution <= targetFreq:
+                print 'Now we are good.'
 
 
-        # 目前就写了二分之一周期的处理，只有四分之一周期的数据，可以用反对称的方法周期延拓。
+            # 目前就写了二分之一周期的处理，只有四分之一周期的数据，可以用反对称的方法周期延拓。
 
-    print gs_u.goertzel_offline(targetFreq, N_SAMPLE, 1./TS, voltage)
-    print gs_i.goertzel_offline(targetFreq, N_SAMPLE, 1./TS, current)
+        print gs_u.goertzel_offline(targetFreq, N_SAMPLE, 1./TS, voltage)
+        print gs_i.goertzel_offline(targetFreq, N_SAMPLE, 1./TS, current)
 
-    gs_u.ampl = sqrt(gs_u.real*gs_u.real + gs_u.imag*gs_u.imag) 
-    gs_u.phase = arctan2(gs_u.imag, gs_u.real)
+        gs_u.ampl = sqrt(gs_u.real*gs_u.real + gs_u.imag*gs_u.imag) 
+        gs_u.phase = arctan2(gs_u.imag, gs_u.real)
 
-    print 'N_SAMPLE=', N_SAMPLE
-    print "\n"
-    print gs_u.id
-    print "RT:\tAmplitude: %g, %g\n" % (gs_u.ampl, sqrt(2.0*gs_u.accumSquaredData/N_SAMPLE))
-    print "RT:\tre=%g, im=%g\n\tampl=%g, phase=%g\n" % (gs_u.real, gs_u.imag, gs_u.ampl, gs_u.phase*180/math.pi)
+        print 'N_SAMPLE=', N_SAMPLE
+        print "\n"
+        print gs_u.id
+        print "RT:\tAmplitude: %g, %g\n" % (gs_u.ampl, sqrt(2.0*gs_u.accumSquaredData/N_SAMPLE))
+        print "RT:\tre=%g, im=%g\n\tampl=%g, phase=%g\n" % (gs_u.real, gs_u.imag, gs_u.ampl, gs_u.phase*180/math.pi)
 
-    # // do the analysis
-    gs_i.ampl = sqrt(gs_i.real*gs_i.real + gs_i.imag*gs_i.imag) 
-    gs_i.phase = arctan2(gs_i.imag, gs_i.real)
-    print gs_i.id
-    print "RT:\tAmplitude: %g, %g\n" % (gs_i.ampl, sqrt(2.0*gs_i.accumSquaredData/N_SAMPLE))
-    print "RT:\tre=%g, im=%g\n\tampl=%g, phase=%g\n" % (gs_i.real, gs_i.imag, gs_i.ampl, gs_i.phase*180/math.pi)
+        # // do the analysis
+        gs_i.ampl = sqrt(gs_i.real*gs_i.real + gs_i.imag*gs_i.imag) 
+        gs_i.phase = arctan2(gs_i.imag, gs_i.real)
+        print gs_i.id
+        print "RT:\tAmplitude: %g, %g\n" % (gs_i.ampl, sqrt(2.0*gs_i.accumSquaredData/N_SAMPLE))
+        print "RT:\tre=%g, im=%g\n\tampl=%g, phase=%g\n" % (gs_i.real, gs_i.imag, gs_i.ampl, gs_i.phase*180/math.pi)
 
-    print "------------------------"
-    print "\tPhase Difference of I (version 1): %g\n" % ((gs_i.phase-gs_u.phase)*180/math.pi), 'PF=', cos(gs_i.phase-gs_u.phase)
+        print "------------------------"
+        print "\tPhase Difference of I (version 1): %g\n" % ((gs_i.phase-gs_u.phase)*180/math.pi), 'PF=', cos(gs_i.phase-gs_u.phase)
 
-    # // Take reference to the voltage phaser
-    Ireal = sqrt(2.0*gs_i.accumSquaredData/N_SAMPLE) * cos(gs_i.phase-gs_u.phase)
-    Iimag = sqrt(2.0*gs_i.accumSquaredData/N_SAMPLE) * sin(gs_i.phase-gs_u.phase)
-    print "\tAmplitude from accumSquaredData->%g\n" % (sqrt(2.0*gs_u.accumSquaredData/N_SAMPLE))
-    print "\tPhaser I:\tre=%g, im=%g\n" % (Ireal, Iimag)
-    print "\tPhase Difference of I (version 2): %g\n" % (arctan2(Iimag,Ireal)*180/math.pi), 'PF=', cos(arctan2(Iimag,Ireal))
+        # // Take reference to the voltage phaser
+        Ireal = sqrt(2.0*gs_i.accumSquaredData/N_SAMPLE) * cos(gs_i.phase-gs_u.phase)
+        Iimag = sqrt(2.0*gs_i.accumSquaredData/N_SAMPLE) * sin(gs_i.phase-gs_u.phase)
+        print "\tAmplitude from accumSquaredData->%g\n" % (sqrt(2.0*gs_u.accumSquaredData/N_SAMPLE))
+        print "\tPhaser I:\tre=%g, im=%g\n" % (Ireal, Iimag)
+        print "\tPhase Difference of I (version 2): %g\n" % (arctan2(Iimag,Ireal)*180/math.pi), 'PF=', cos(arctan2(Iimag,Ireal))
 
-    plot(voltage)
-    plot(current)
-    show()
+        plot(voltage)
+        plot(current)
 
-    # send_notification('Test email')
+        show()
+
+        # it works!
+        # send_notification('Test email')
+
 
