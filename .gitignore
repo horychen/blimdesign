@@ -8,6 +8,8 @@
 *.bat
 *.csv
 *.dmp
+*.xls
+*.xlsx
 *.log
 *.png
 *.pyc

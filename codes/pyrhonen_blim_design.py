@@ -1,6 +1,8 @@
 #coding:u8
 from __future__ import division
 from pylab import *
+import sys
+import os
 
 print 'Pyrhonen 2009 Chapter 7.'
 print 'Guesses: alpha_i, efficiency, power_factor.'
@@ -10,14 +12,36 @@ print 'Guesses: alpha_i, efficiency, power_factor.'
 # model_name_prefix = 'EC_Rotate_PS' # longer solve time, less models, better mesh, higher turns for bearing winding.
 # model_name_prefix = 'ECRot_PS_Opti' # longer solve time, less models, better mesh, higher turns for bearing winding.
 # model_name_prefix = 'StaticFEA_PS_Opti' # Fix Bug for the rotor slot radius as half of rotor tooth width
-model_name_prefix = 'Tran2TSS_PS_Opti' 
+model_name_prefix = 'Tran2TSS_PS_Opti'
 
+# delete existing file
 loc_txt_file = '../pop/%s.txt'%(model_name_prefix)
-f=open(loc_txt_file, 'w')
-f.close()
-# for THE_IM_DESIGN_ID, Qr in enumerate([16,20,28,32,36]): # any Qr>36 will not converge (for alpha_i and k_sat)
-# for THE_IM_DESIGN_ID, Qr in enumerate([32]):
-for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (for alpha_i and k_sat) with Arnon5 at least
+open(loc_txt_file, 'w').close()
+
+# decorater used to block function printing to the console
+def blockPrinting(func):
+    def func_wrapper(*args, **kwargs):
+        # block all printing to the console
+        sys.stdout = open(os.devnull, 'w')
+        # call the method in question
+        func(*args, **kwargs)
+        # enable all printing to the console
+        sys.stdout = sys.__stdout__
+
+    return func_wrapper
+
+# Disable
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore
+def enablePrint():
+    sys.stdout = sys.__stdout__
+
+# @blockPrinting
+def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_density_B_ds, rotor_current_density_Jr):
+    # for tangential_stress in arange(12000, 33001, 3000):
+    # tangential_stress - this value will change the motor size, so it is not suited for loop for optimization bounds
 
     # # debug    
     # if Qr == 32:
@@ -51,12 +75,12 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     if bool_pole_specific_rotor == False:
         tangential_stress = 21500 # 12000 ~ 33000
     else: # for wound rotor, the required rotor slot is really too large to find a solution, we must reduce tangential_stress to make a larger rotor.    
-        tangential_stress = 12000
+        tangential_stress = 12000 # larger rotor to increase rotor slot area and to reduce rotor heating.
 
     if no_pole_pairs == 1:
         machine_constant_Cmec = 150 # kW s / m^3. Figure 6.3 <- This is what Eric calls the penalty on the 2 pole IM---you loss power density.
     else:
-        machine_constant_Cmec = 250 # kW s / m^3. 这里的电机常数都是按100kW去查的表哦，偏大了。
+        machine_constant_Cmec = 250 # kW s / m^3. 这里的电机常数都是按100kW去查的表哦，偏大了。不过电机常数在这里只用于检查AJ值的合理性。
     print 'tangential_stress=', tangential_stress
     print 'machine_constant_Cmec=', machine_constant_Cmec
     print 'The former is used to determine motor size, and the latter is for determining linear current density A according to the air gap B.'
@@ -208,9 +232,10 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 
 
         print '''\n10. Tooth Flux Density '''
-        stator_tooth_flux_density_B_ds = 1.4 #1.4–2.1 (stator) 
-        rotor_tooth_flux_density_B_dr = 1.5 #1.8 #1.5–2.2 (rotor)
-
+        # stator_tooth_flux_density_B_ds = 1.4 #1.4–2.1 (stator) 
+        # rotor_tooth_flux_density_B_dr = 1.5 #1.8 #1.5–2.2 (rotor)
+        print 'stator_tooth_flux_density_B_ds=' , stator_tooth_flux_density_B_ds
+        print 'rotor_tooth_flux_density_B_dr=' , rotor_tooth_flux_density_B_dr
         stator_slot_pitch_tau_us = pi * air_gap_diameter_D / Qs
         stator_tooth_apparent_flux_over_slot_pitch_Phi_ds = stack_length_eff * stator_slot_pitch_tau_us * air_gap_flux_density_B
         lamination_stacking_factor_kFe = 0.91 # Yegu Kang
@@ -273,28 +298,32 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         stator_slot_height_h_ss = stator_tooth_height_h_ds
         print 'stator_slot_height_h_ss', stator_slot_height_h_ss*1e3, 'mm\n'
 
-        rotor_current_density_Js = 6.4e6 # 减少电流密度有效减少转子欧姆热 # 修正4*pi*area_rotor_slot_Sur*Qr处的BUG前，这里设置的转子电流密度都是没用的，和FEA的结果对不上，现在能对上了（用FEMM积分电流和面积验证）！
-        print 'rotor_current_density_Js=', rotor_current_density_Js, 'A/m^2'
-        area_conductor_rotor_Scr = rotor_current_actual / (1 * rotor_current_density_Js) # no_parallel_path=1
-        print 'area_conductor_rotor_Scr=', area_conductor_rotor_Scr * 1e6, 'mm^2'
+        # we move this loop outside
+        # for rotor_current_density_Jr in arange(3e6, 8e6+1, 1e6):
+        if True:
+            # rotor_current_density_Jr = 8e6 # 8e6 for Cu # 6.5e6 for Al # 减少电流密度有效减少转子欧姆热 # 修正4*pi*area_rotor_slot_Sur*Qr处的BUG前，这里设置的转子电流密度都是没用的，和FEA的结果对不上，现在能对上了（用FEMM积分电流和面积验证）！
+            print 'rotor_current_density_Jr=', rotor_current_density_Jr, 'A/m^2'
+            area_conductor_rotor_Scr = rotor_current_actual / (1 * rotor_current_density_Jr) # no_parallel_path=1
+            print 'area_conductor_rotor_Scr=', area_conductor_rotor_Scr * 1e6, 'mm^2'
 
-        if bool_pole_specific_rotor == True:
-            # space_factor_kAl = 0.6 # We use wound-rotor to implement Chiba's pole specific rotor. That is, it is coils.
-            space_factor_kAl = 0.95 # (debug)
-            print 'space_factor_kAl=', space_factor_kAl
-        else:
-            space_factor_kAl = 1 # no clearance for die cast aluminium bar
-                                 # However, if a cage winding is produced from copper bars by soldering, a clearance of about 0.4mm in width and 1mm in height has to be left in the rotor slot. This clearance also decreases the space factor.
-        # no_conductors_per_slot_zQ (z_Qr) for cage rotor is clearly 1. 
-        # Even though you use coils in rotor (wound rotor), since all the coils within a slot are parallel connected.
-        # This will give give a no_parallel_path equal to z_Qr, so they will cancel out, anyway. 
-        # Just let both no_parallel_path and z_Qr to be 1 and don't bother.
-        area_rotor_slot_Sur = 1 * area_conductor_rotor_Scr / space_factor_kAl 
-        print 'area_rotor_slot_Sur', area_rotor_slot_Sur*1e6, 'mm^2'
+            if bool_pole_specific_rotor == True:
+                # space_factor_kAl = 0.6 # We use wound-rotor to implement Chiba's pole specific rotor. That is, it is coils.
+                # space_factor_kAl = 0.95 # (debug)
+                space_factor_kAl = 1.0
+                print 'space_factor_kAl=', space_factor_kAl
+            else:
+                space_factor_kAl = 1 # no clearance for die cast aluminium bar
+                                     # However, if a cage winding is produced from copper bars by soldering, a clearance of about 0.4mm in width and 1mm in height has to be left in the rotor slot. This clearance also decreases the space factor.
+            # no_conductors_per_slot_zQ (z_Qr) for cage rotor is clearly 1. 
+            # Even though you use coils in rotor (wound rotor), since all the coils within a slot are parallel connected.
+            # This will give give a no_parallel_path equal to z_Qr, so they will cancel out, anyway. 
+            # Just let both no_parallel_path and z_Qr to be 1 and don't bother.
+            area_rotor_slot_Sur = 1 * area_conductor_rotor_Scr / space_factor_kAl 
+            print 'area_rotor_slot_Sur', area_rotor_slot_Sur*1e6, 'mm^2'
 
-        # guess this local design values or adapt from other designs
-        length_headNeckRotorSlot = 1e-3 # m
-        try:
+            # guess this local design values or adapt from other designs
+            length_headNeckRotorSlot = 1e-3 # m
+
             # rotor slot height depends on rotor_tooth_width_b_dr and rotor current (power factor)
             rotor_outer_radius_r_or_eff = rotor_outer_radius_r_or - length_headNeckRotorSlot
             temp = (2*pi*rotor_outer_radius_r_or_eff - Qr*rotor_tooth_width_b_dr)
@@ -302,18 +331,29 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
             print 'rotor_tooth_height_h_dr(+)=', rotor_tooth_height_h_dr*1e3, 'mm' # too large to be right answer
             rotor_tooth_height_h_dr = ( -sqrt(temp**2 - 4*pi*area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
             print 'rotor_tooth_height_h_dr(-)=', rotor_tooth_height_h_dr*1e3, 'mm'
-            # The slot depth equals the tooth height hs = hd Pyrhonen09@p309
-            rotor_slot_height_h_sr = rotor_tooth_height_h_dr
-            print 'rotor_slot_height_h_sr', rotor_slot_height_h_sr*1e3, 'mm\n'
+            if isnan(rotor_tooth_height_h_dr) == True:
+                bool_enough_rotor_slot_space = False
+                'Loop for working rotor_current_density_Jr, not', rotor_current_density_Jr
+                # continue
+                # raise Exception('There are no space on the rotor to fulfill the required rotor slot to reach your J_r and space_factor_kAl. Reduce your tangential_stress and run the script again.')
+                return
+            else:
+                bool_enough_rotor_slot_space = True
+                # print 'The working rotor_current_density_Jr is', rotor_current_density_Jr
+                # break
 
-        except:
-            print 'Lower your tangential_stress. If that is not possible, increase your B in the rotor tooth because rotor iron loss is of slip freqnecy---it is not that 怖い.'
-            raise Exception('There are no space on the rotor to fulfill the required rotor slot to reach your J_r and space_factor_kAl. Reduce your tangential_stress and run the script again.')
+        if bool_enough_rotor_slot_space == False:
+            raise Exception('Lower your tangential_stress. If that is not possible, increase your B in the rotor tooth because rotor iron loss is of slip freqnecy---it is not that 怖い.')
+
+        # The slot depth equals the tooth height hs = hd Pyrhonen09@p309
+        rotor_slot_height_h_sr = rotor_tooth_height_h_dr
+        print 'rotor_slot_height_h_sr', rotor_slot_height_h_sr*1e3, 'mm\n'
+
 
         minimum__area_rotor_slot_Sur = rotor_current_actual / (8e6) / space_factor_kAl
-        print 'minimum__area_rotor_slot_Sur', minimum__area_rotor_slot_Sur, area_rotor_slot_Sur
+        print 'minimum__area_rotor_slot_Sur', minimum__area_rotor_slot_Sur, '<', area_rotor_slot_Sur
         minimum__rotor_tooth_height_h_dr = ( -sqrt(temp**2 - 4*pi*minimum__area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
-        print 'minimum__rotor_tooth_height_h_dr', minimum__rotor_tooth_height_h_dr, rotor_tooth_height_h_dr
+        print 'minimum__rotor_tooth_height_h_dr', minimum__rotor_tooth_height_h_dr, '<', rotor_tooth_height_h_dr
         print 'rotor_tooth_width_b_dr', rotor_tooth_width_b_dr*1e3, 'mm'
         # quit()
 
@@ -322,10 +362,12 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         if bool_use_M19 == True:
             # M19-Gauge29
             hdata, bdata = np.loadtxt('../Arnon5/M-19-Steel-BH-Curve-afterJMAGsmooth.txt', unpack=True, usecols=(0,1))
+            print 'The magnetic material is M19-Gauge29.'
         else:
             # Arnon5
             hdata = [0, 9.51030700000000, 11.2124700000000, 13.2194140000000, 15.5852530000000, 18.3712620000000, 21.6562210000000, 25.5213000000000, 30.0619920000000, 35.3642410000000, 41.4304340000000, 48.3863030000000, 56.5103700000000, 66.0660360000000, 77.3405760000000, 90.5910260000000, 106.212089000000, 124.594492000000, 146.311191000000, 172.062470000000, 202.524737000000, 238.525598000000, 281.012026000000, 331.058315000000, 390.144609000000, 459.695344000000, 541.731789000000, 638.410494000000, 752.333643000000, 886.572927000000, 1044.77299700000, 1231.22308000000, 1450.53867000000, 1709.16554500000, 2013.86779200000, 2372.52358500000, 2795.15968800000, 3292.99652700000, 3878.92566000000, 4569.10131700000, 5382.06505800000, 6339.70069300000, 7465.56316200000, 8791.72220000000, 10352.2369750000, 12188.8856750000, 14347.8232500000, 16887.9370500000, 19872.0933000000, 23380.6652750000, 27504.3713250000, 32364.9650250000, 38095.3408000000, 44847.4916750000, 52819.5656250000, 62227.2176750000, 73321.1169500000]
             bdata = [0, 0.0654248125493027, 0.0748613131259592, 0.0852200097732390, 0.0964406675582732, 0.108404414030963, 0.120978202862830, 0.133981410558774, 0.147324354453074, 0.161128351463696, 0.175902377184132, 0.193526821151857, 0.285794748353625, 0.411139883513949, 0.532912618951425, 0.658948953940289, 0.787463844307836, 0.911019620277348, 1.01134216103736, 1.09097860155578, 1.15946725009315, 1.21577636425715, 1.26636706123955, 1.29966244236095, 1.32941739086224, 1.35630922421149, 1.37375630182574, 1.39003487040401, 1.41548927346395, 1.43257623013269, 1.44423937756642, 1.45969672805890, 1.47405771023894, 1.48651531058339, 1.49890498452922, 1.51343941451204, 1.52867783835158, 1.54216506561365, 1.55323686869400, 1.56223503150867, 1.56963683394210, 1.57600636116484, 1.58332795425880, 1.59306861236599, 1.60529276088440, 1.61939615147952, 1.63357053682375, 1.64622605475232, 1.65658227422276, 1.66426678010510, 1.66992280459884, 1.67585542605930, 1.68316554465867, 1.69199548893857, 1.70235212334602, 1.71387033561736, 1.72578827760282]
+            print 'The magnetic material is Arnon5.'
 
      
         def BH_lookup(B_list, H_list, your_B):
@@ -404,7 +446,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
         saturation_factor_k_sat = (stator_tooth_magnetic_voltage_Um_ds + rotor_tooth_magnetic_voltage_Um_dr) / air_gap_magnetic_voltage_Um_delta
         print 'saturation_factor_k_sat=', saturation_factor_k_sat
 
-        tick = 1/60 # Figure 7.2
+        tick = 1/60. # Figure 7.2
         k_sat_list =   [   0, 2.5*tick, 5.5*tick, 9.5*tick, 14.5*tick, 20*tick, 28*tick, 37.5*tick, 52.5*tick, 70*tick, 100*tick]
         alpha_i_list = [2/pi,     0.66,     0.68,     0.70,      0.72,    0.74,    0.76,      0.78,      0.80,    0.82,     0.84]
 
@@ -414,14 +456,18 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
                 return None 
             for ind, k_sat in enumerate(k_sat_list):
                 if your_k_sat > k_sat:
-                    continue
+                    if ind == len(k_sat_list)-1: # it is the last one
+                        slope = (alpha_i_list[ind]-alpha_i_list[ind-1]) / (k_sat-k_sat_list[ind-1]) 
+                        return (your_k_sat - k_sat) * slope + alpha_i_list[ind]
+                    else:
+                        continue
                 elif your_k_sat <= k_sat:
                     return (your_k_sat - k_sat_list[ind-1]) / (k_sat-k_sat_list[ind-1]) * (alpha_i_list[ind] - alpha_i_list[ind-1]) + alpha_i_list[ind-1]
 
-                if ind == len(k_sat_list)-1:
-                    slope = (alpha_i_list[ind]-alpha_i_list[ind-1]) / (k_sat-k_sat_list[ind-1]) 
-                    return (your_k_sat - k_sat) * slope + alpha_i_list[ind]
-
+            # these will not be reached
+            print 'Reach the end of the curve of k_sat.'
+            print 'End of Loop Error.\n'*3
+            return None
 
         alpha_i_next = alpha_i_lookup(k_sat_list, alpha_i_list, saturation_factor_k_sat)
         print 'alpha_i_next=', alpha_i_next, 'alpha_i=', alpha_i
@@ -463,7 +509,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     print 'rotor_inner_diameter_Dri=', rotor_inner_diameter_Dri*1e3, 'mm'
 
 
-
+    # B@yoke
     By_list     = [    0,  0.5,   0.6, 0.7,   0.8,  0.9, 0.95,  1.0, 1.08,   1.1, 1.2,   1.3,   1.4, 1.5,  1.6,  1.7,   1.8,  1.9,   2.0] # Figure 3.17
     coef_c_list = [ 0.72, 0.72, 0.715, 0.7, 0.676, 0.62,  0.6, 0.56,  0.5, 0.485, 0.4, 0.325, 0.255, 0.2, 0.17, 0.15, 0.142, 0.13, 0.125]
 
@@ -509,7 +555,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 
 
 
-    print '''\n17. Losses Computation and Efficiency '''
+    print '''\n17. Losses Computation and Efficiency]\n略。 '''
 
 
 
@@ -532,7 +578,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     # ax.grid()
     # show()
 
-    print '''\n[Export to %d-entry ./pop/xxx.txt] Geometry for Plotting and Its Constraints ''' %(THE_IM_DESIGN_ID)
+    print '''\n[Export ID-%d ./pop/xxx.txt] Geometry for Plotting and Its Constraints ''' %(THE_IM_DESIGN_ID)
 
     Qs # number of stator slots
     Qr # number of rotor slots
@@ -587,6 +633,7 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     # 参考FEMM_Solver.py 或 按照书上的公式算一下
     stator_slot_area = area_stator_slot_Sus # FEMM是对槽积分得到的，更准哦
     TEMPERATURE_OF_COIL = 75
+    print 'TEMPERATURE_OF_COIL=', TEMPERATURE_OF_COIL, 'deg Celcius'
     rho_Copper = (3.76*TEMPERATURE_OF_COIL+873)*1e-9/55.
     SLOT_FILL_FACTOR = space_factor_kCu
     coil_pitch_slot_count = Qs / DriveW_poles # 整距！        
@@ -599,14 +646,14 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     print 'DriveW_Rs=', DriveW_Rs, 'Ohm'
 
     with open(loc_txt_file, 'a') as f:
-        f.write('%d, '%(THE_IM_DESIGN_ID))
-        f.write('%d, %d, '%(Qs, Qr))
+        f.write('%d, ' %(THE_IM_DESIGN_ID))
+        f.write('%d, %d, ' %(Qs, Qr))
         f.write('%f, %f, %f, %f, %f, ' % (Radius_OuterStatorYoke, Radius_InnerStatorYoke, Length_AirGap, Radius_OuterRotor, Radius_Shaft))
         f.write('%f, %f, %f, %f, %f, %f, ' % (Length_HeadNeckRotorSlot,Radius_of_RotorSlot, Location_RotorBarCenter, Width_RotorSlotOpen, Radius_of_RotorSlot2, Location_RotorBarCenter2))
         f.write('%f, %f, %f, %f, ' % (Angle_StatorSlotOpen, Width_StatorTeethBody, Width_StatorTeethHeadThickness, Width_StatorTeethNeck))
         f.write('%f, %f, %f, %f, %f, %f,' % (DriveW_poles, DriveW_turns, DriveW_Rs, DriveW_CurrentAmp, DriveW_Freq, stack_length*1000))
-        f.write('%.14f, %.14f, %.14f\n' % (area_stator_slot_Sus, area_rotor_slot_Sur, minimum__area_rotor_slot_Sur)) # this line exports values need to impose constraints among design parameters for the de optimization
-
+        f.write('%.14f, %.14f, %.14f,' % (area_stator_slot_Sus, area_rotor_slot_Sur, minimum__area_rotor_slot_Sur)) # this line exports values need to impose constraints among design parameters for the de optimization
+        f.write('%g, %g, %g, %g\n' % (rotor_tooth_flux_density_B_dr, stator_tooth_flux_density_B_ds, rotor_current_density_Jr, rotor_tooth_width_b_dr))
 
     ''' Determine bounds for these parameters:
         stator_tooth_width_b_ds       = design_parameters[0]*1e-3 # m                       # stator tooth width [mm]
@@ -626,7 +673,16 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
     print 'Width_StatorTeethHeadThickness =', Width_StatorTeethHeadThickness
 
 
-
+# for THE_IM_DESIGN_ID, Qr in enumerate([16,20,28,32,36]): # any Qr>36 will not converge (for alpha_i and k_sat)
+# for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (for alpha_i and k_sat) with Arnon5 at least
+# for THE_IM_DESIGN_ID, Qr in enumerate([32]):
+Qr = 32
+for rotor_tooth_flux_density_B_dr in arange(1.5, 2.11, 0.2): #1.5–2.2 (rotor) 
+    for stator_tooth_flux_density_B_ds in arange(1.4, 1.81, 0.2): #1.4–2.1 (stator) # too large you will get End of Loop Error (Fixed by extropolating the k_sat vs alpha_i curve.)
+        for rotor_current_density_Jr in arange(3e6, 8e6+1, 1e6):
+            pyrhonen_blim_design(   rotor_tooth_flux_density_B_dr,
+                                    stator_tooth_flux_density_B_ds,
+                                    rotor_current_density_Jr)
 
 
 
@@ -646,8 +702,8 @@ for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (f
 '''
 
 
-
 print '\n\n\nMechanical Limits Check:'
+quit()
 
 if True:
     print 'Radius_OuterRotor=', Radius_OuterRotor, 'mm'

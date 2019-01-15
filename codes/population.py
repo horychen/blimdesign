@@ -12,6 +12,8 @@ from VanGogh import VanGogh
 
 from time import time
 
+EPS = 1e-2
+
 class suspension_force_vector(object):
     """docstring for suspension_force_vector"""
     def __init__(self, force_x, force_y, range_ss=None): # range_ss means range_steadystate
@@ -166,7 +168,7 @@ class swarm(object):
                     logger.warn('Unfinished iteration is found with ongoing files in run folder. Make sure the project is not opened in JMAG, and we are going to remove the project files and ongoing files.')
                     logger.warn(u'不出意外，就从第一个个体开始迭代。但是很多时候跑到第150个个体的时候跑断了，你总不会想要把这一代都删了，重新跑吧？')
                     # os.remove(u"D:/JMAG_Files/" + run_folder[:-1] + file[:-12] + ".jproj")
-                    print self.interrupt_pop
+                    print 'List interrupt_pop here:', self.interrupt_pop
 
                 if 'fit' in file:
                     self.interrupt_fitness = []
@@ -175,8 +177,9 @@ class swarm(object):
                         for row in self.whole_row_reader(read_iterator):
                             if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
                                 self.interrupt_fitness.append(float(row[0])) # not neccessary to be an array. a list is enough
-                    print self.interrupt_fitness
-
+                    print 'List interrupt_fitness here:', self.interrupt_fitness
+                    # interrupt_pop and interrupt_fitness will be directly used in de.
+                    
         # search for generation files
         generations = [file[4:8] for file in os.listdir(self.dir_run) if 'gen' in file and not 'ongoing' in file]
         popsize = self.de_config_dict['popsize']
@@ -329,7 +332,7 @@ class swarm(object):
     @staticmethod
     def add_plot(axeses, title=None, label=None, zorder=None, time_list=None, sfv=None, torque=None, range_ss=None, alpha=0.7):
 
-        results = '\n---------------%s' % (title)
+        results = '%s' % (title)
         torque_average = sum(torque[-range_ss:])/len(torque[-range_ss:])
         results += '\nAverage Torque: %g Nm' % (torque_average)
         # torque error = torque - avg. torque
@@ -350,7 +353,7 @@ class swarm(object):
         results += '\nMaximum Force Error Angle: %g [deg], (+)%g deg (-)%g deg' % (force_error_angle,
                                                                      sfv.ss_max_force_err_ang[0],
                                                                      sfv.ss_max_force_err_ang[1])
-        results += '\nExtra Information:'
+        results += '\nExtra Info:'
         results += '\n\tAverage Force Vecotr: (%g, %g) N' % (sfv.ss_avg_force_vector[0], sfv.ss_avg_force_vector[1])
         results += '\n\tTorque Ripple (Peak-to-Peak) %g Nm'% ( max(torque[-range_ss:]) - min(torque[-range_ss:]))
         results += '\n\tForce Mag Ripple (Peak-to-Peak) %g N'% (sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1])
@@ -375,6 +378,7 @@ class swarm(object):
 
         self.project_name = self.run_folder[:-1]+'gen#%04dind#%04d' % (self.number_current_generation, individual_index)
         self.jmag_control_state = False
+
         # local scripts
         def open_jmag():
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -404,13 +408,14 @@ class swarm(object):
 
             self.jmag_control_state = True # indicating that the jmag project is already created
             return app
-        def exe_frequency():
+
+        def draw_jmag():
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             # Draw the model in JMAG Designer
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-            DRAW_SUCCESS = self.draw_jmag_model( individual_index, 
-                                            im_variant,
-                                            im_variant.individual_name)
+            DRAW_SUCCESS = self.draw_jmag_model(individual_index, 
+                                                im_variant,
+                                                im_variant.individual_name)
             if DRAW_SUCCESS == 0:
                 # TODO: skip this model and its evaluation
                 cost_function = 99999 # penalty
@@ -421,33 +426,21 @@ class swarm(object):
                 print 'Model Already Exists'
                 logging.getLogger(__name__).debug('Model Already Exists')
             # Tip: 在JMAG Designer中DEBUG的时候，删掉模型，必须要手动save一下，否则再运行脚本重新load project的话，是没有删除成功的，只是删掉了model的name，新导入进来的model name与project name一致。
+            
+            # JMAG
+            if app.NumModels()>=1:
+                model = app.GetModel(im_variant.individual_name)
+            else:
+                logger.error('there is no model yet!')
+                raise Exception('why is there no model yet?')
+            return model
 
-
+        def exe_frequency():
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             # Eddy Current Solver for Breakdown Torque and Slip
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             tic = time()
-            if self.fea_config_dict['jmag_run_list'][0] == 0:
-                # FEMM
-                # Freq Study: you can choose to not use JMAG to find the breakdown slip.
-                # In this case, you have to set im.slip_freq_breakdown_torque by FEMM Solver
-                # sw.femm_solver.freq_sweeping
-                # sw.slip_freq_breakdown_torque = 
-                # slip_freq_breakdown_torque, breakdown_torque, breakdown_force
-                pass
-                # Besides, you need to add study for TranFEAwi2TSS directly rather than duplicate from a Freq study.
-                # im_variant.add_study_TranFEAwi2TSS()
-            else:
-                # JMAG
-                # add study
-                # remember to export the B data using subroutine 
-                # and check export table results only
-                if app.NumModels()>=1:
-                    model = app.GetModel(im_variant.individual_name)
-                else:
-                    logger.error('there is no model yet!')
-                    print 'why is there no model yet?'
-
+            if True:
                 # Freq Sweeping for break-down Torque Slip
                 if model.NumStudies() == 0:
                     study = im_variant.add_study(app, model, self.dir_csv_output_folder, choose_study_type='frequency')
@@ -496,35 +489,25 @@ class swarm(object):
             toc = time()
             logger.debug('Time spent on Eddy Current Solver is %g s.'%(toc - tic))
             return slip_freq_breakdown_torque, breakdown_torque, breakdown_force
+
         def exe_transient(slip_freq_breakdown_torque):
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             # TranFEAwi2TSS for ripples and iron loss
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-            # this will be used for other duplicated studies
-            # original_study_name = study.GetName()
-            try:
-                slip_freq_breakdown_torque
-            except:
-                raise Exception('Missing eddy current study results.')
-            im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
 
             # Transient FEA wi 2 Time Step Section
             # JMAG+JMAG
-            if self.fea_config_dict['jmag_run_list'][0] == 1:
+            # if self.fea_config_dict['jmag_run_list'][0] == 1:
                 
-                model = app.GetCurrentModel()
-                self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, time())
+            model = app.GetCurrentModel()
+            self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, time())
 
-                if self.fea_config_dict['delete_results_after_calculation'] == False:
-                    # Export Circuit Voltage
-                    ref1 = app.GetDataManager().GetDataSet(u"Circuit Voltage")
-                    app.GetDataManager().CreateGraphModel(ref1)
-                    app.GetDataManager().GetGraphModel(u"Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+            if self.fea_config_dict['delete_results_after_calculation'] == False:
+                # Export Circuit Voltage
+                ref1 = app.GetDataManager().GetDataSet(u"Circuit Voltage")
+                app.GetDataManager().CreateGraphModel(ref1)
+                app.GetDataManager().GetGraphModel(u"Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
 
-            # FEMM+JMAG
-            else:
-                model = app.GetCurrentModel()
-                self.add_TranFEAwi2TSS_study(im_variant, slip_freq_breakdown_torque, app, model, tran2tss_study_name, logger, time())
         def load_transeint():
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             # Load Results for Tran2TSS
@@ -545,7 +528,6 @@ class swarm(object):
                 str_results += '\n\tbasic info:' + ''.join([str(el) for el in basic_info])
                 self.fig_main.savefig(self.dir_run + im_variant.individual_name + 'results.png', dpi=150)
                 self.pyplot_clear()
-                logger.debug(str_results)
             except Exception, e:
                 logger.error(u'Error when loading csv results for Tran2TSS.', exc_info=True)
                 raise Exception('Error: see log file.')
@@ -555,14 +537,32 @@ class swarm(object):
         ################################################################
         # Begin from where left: Frequency Study
         ################################################################
+        # Freq Study: you can choose to not use JMAG to find the breakdown slip.
         original_study_name = im_variant.individual_name + u"Freq"
-        temp = self.check_csv_results(original_study_name)
-        if temp is None:
-            app = open_jmag()
-            slip_freq_breakdown_torque, breakdown_torque, breakdown_force = exe_frequency()
+        if self.fea_config_dict['jmag_run_list'][0] == 0:
+            # FEMM # In this case, you have to set im_variant.slip_freq_breakdown_torque by FEMM Solver
+            # check for existing results
+            output_file_path = self.dir_csv_output_folder + original_study_name + '_FEMM'
+            if os.path.exists(output_file_path):
+                data = []
+                with open(output_file_path, 'r') as f:
+                    for row in self.whole_row_reader(csv_reader(f, skipinitialspace=True)):
+                        data.append([float(el) for el in row])
+                index, breakdown_torque = utility.get_max_and_index(data[1])
+                return data[0][index], breakdown_torque, None 
+            else:
+                # no direct returning of results, wait for it later when you need it.
+                self.femm_solver.greedy_search_for_breakdown_slip( output_file_path, initial_pop=self.fea_config_dict['FrequencyRange'] )
         else:
-            slip_freq_breakdown_torque, breakdown_torque, breakdown_force = temp
-            toc = time()
+            # check for existing results
+            temp = self.check_csv_results(original_study_name)
+            if temp is None:
+                app = open_jmag()
+                model = draw_jmag()
+                slip_freq_breakdown_torque, breakdown_torque, breakdown_force = exe_frequency()
+            else:
+                slip_freq_breakdown_torque, breakdown_torque, breakdown_force = temp
+                toc = time()
 
         ################################################################
         # Begin from where left: Transient Study
@@ -572,15 +572,29 @@ class swarm(object):
         if self.jmag_control_state == False: # means that no jmag project is loaded because the eddy current problem is already solved.
             # check whether or not the transient problem is also solved.
             if self.check_csv_results(tran2tss_study_name, returnBoolean=True):
-                bool_skip_transient =True
-            else:
+                bool_skip_transient = True # because the csv files already exist.
+
+            # yes, leave this here: jmag_control_state == False
+            if bool_skip_transient == False:
                 app = open_jmag() # will set self.jmag_control_state to True
+                model = draw_jmag()
+
+        if bool_skip_transient == False:
+            # add or duplicate study for transient FEA 
+            if self.fea_config_dict['jmag_run_list'][0] == 0:
+                # wait for femm to finish, and get your slip of breakdown
+                slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait()
+                # FEMM+JMAG
+                im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
+                self.add_TranFEAwi2TSS_study(im_variant, slip_freq_breakdown_torque, app, model, tran2tss_study_name, logger, time())
+            else:
+                # JMAG+JMAG
+                im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
+                exe_transient(slip_freq_breakdown_torque)
 
         ################################################################
         # Load data for cost function evaluation
         ################################################################
-        if bool_skip_transient == False:
-            exe_transient(slip_freq_breakdown_torque)
         str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = load_transeint()
 
         # compute the fitness 
@@ -603,12 +617,17 @@ class swarm(object):
             # this will lead to lower bound of air gap length
             # cost_function = 30e3 / ( breakdown_torque/rotor_volume ) \
             #                 + 1.0 / ( breakdown_force/rotor_weight )
-        logger = logging.getLogger(__name__)
-        logger.debug('cost_function of %s-%s is %g\n%s\n\n', 
-                        self.project_name, im_variant.individual_name, 
-                        cost_function, 
-                        ','.join(['%g'%(el) for el in list_weighted_cost]))
 
+
+
+        
+
+        with open(self.dir_run + 'swarm_data.txt', 'a') as f:
+            f.write('\n-------\n%s-%s\n%d,%d,%g\n%s\n%s\n' % (
+                        self.project_name, im_variant.individual_name, 
+                        self.number_current_generation, individual_index, cost_function, 
+                        ','.join(['%g'%(el) for el in list_weighted_cost]),
+                        ','.join(['%g'%(el) for el in individual]) ) + str_results)
 
         self.im = mylatch
         # raise Exception(u'确认能继续跑！')
@@ -678,6 +697,9 @@ class swarm(object):
             with open(fitness_file, 'w') as f:
                 f.write('\n'.join('%.16f'%(x) for x in fitness)) 
                 # TODO: also write self.fitness_in_physics_data
+            # over-write the file for normalized initial generation of population with de-normalized data
+            with open(self.get_gen_file(self.number_current_generation), 'w') as f:
+                f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop)) # convert 2d array to string
         else:
             # this is a continued run. load the fitness data (the first digit of every row is fitness for an individual)
             fitness = []
@@ -688,7 +710,7 @@ class swarm(object):
                         fitness.append(float(row[0]))
 
             # TODO: 文件完整性检查
-            # the last iteration is not done or the popsize is incread by user after last run of optimization
+            # in case the last iteration is not done or the popsize is incread by user after last run of optimization
             solved_popsize = len(fitness)
             if popsize > solved_popsize:
                 self.jmag_control_state = False # demand to initialize the jamg designer
@@ -745,7 +767,7 @@ class swarm(object):
 
                     # write ongoing results
                     self.write_individual_fitness(f)
-                    self.write_individual_norm_data(trial) # we write individual data after fitness is evaluated in order to make sure the two files are synchronized
+                    self.write_individual_data(trial_denorm) # we write individual data after fitness is evaluated in order to make sure the two files are synchronized
 
                 if f < fitness[j]:
                     fitness[j] = f
@@ -928,7 +950,7 @@ class swarm(object):
                     l_data.append([float(el) for el in row[1:]])
         return l_slip_freq, l_data
 
-    def write_individual_norm_data(self, trial_individual):
+    def write_individual_data(self, trial_individual):
         with open(self.get_gen_file(self.number_current_generation, ongoing=True), 'a') as f:
             f.write('\n' + ','.join('%.16f'%(y) for y in trial_individual)) # convert 1d array to string
 
@@ -2249,7 +2271,7 @@ class bearingless_induction_motor_design(object):
 
 
         #07: Some Checking
-        if abs(self.Location_RotorBarCenter2 - self.Location_RotorBarCenter) < self.Radius_of_RotorSlot*0.25:
+        if abs(self.Location_RotorBarCenter2 - self.Location_RotorBarCenter) < 0.1*(self.Radius_of_RotorSlot + self.Radius_of_RotorSlot2):
             print 'Warning: There is no need to use a drop shape rotor, because the required rotor bar height is not high.'
             self.use_drop_shape_rotor_bar = False
         else:
@@ -2459,7 +2481,7 @@ class bearingless_induction_motor_design(object):
         # if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2 + self.Qr + 1): the last +1 is for the air hug rotor
         # if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2 + self.Qr):
         if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2):
-            msg = 'Number of Parts is unexpected.\n' + im_variant.show(toString=True)
+            msg = 'Number of Parts is unexpected.\n' + self.show(toString=True)
             utility.send_notification(text=msg)
             raise Exception(msg)
 
@@ -3596,7 +3618,6 @@ class VanGogh_JMAG(VanGogh):
 #     vg_jmag = VanGogh_JMAG(None)
 #     print vg_jmag.find_center_of_a_circle_using_2_points_and_arc_angle
 
-
 class draw(object):
 
     def __init__(self, im):
@@ -3752,6 +3773,8 @@ class draw(object):
 
         # if merge == False:
 
+
+    # I add constraint only for rotate the model for static FEA in JMAG
     def constraint_fixture_circle_center(self, c):
         sketch = self.ass.GetItem(self.SketchName) # ass is global
         ref1 = c.GetCenterVertex()
@@ -3776,6 +3799,7 @@ class draw(object):
             var_list[ind]   = sketch.GetItem(vtx_name)
             var_list[ind+1] = self.doc.CreateReferenceFromItem(ref1)
             sketch.GetItem(u"Relative Fixation").SetPropertyByReference(u"TargetList", var_list[ind+1])
+
 
     # global SketchName 
     ''' Parts to Plot '''
@@ -3835,8 +3859,8 @@ class draw(object):
         # raise Exception('before trim')
 
         # trim the lines first, because there is a chance the inner circle of rotor slot can intesect l1
-        self.trim_l(l1,-5.-self.im.Radius_OuterRotor, 0.5*self.im.Width_RotorSlotOpen)
-        self.trim_l(l1,-self.im.Location_RotorBarCenter, 0.5*self.im.Width_RotorSlotOpen)
+        self.trim_l(l1,-EPS-self.im.Radius_OuterRotor, 0.5*self.im.Width_RotorSlotOpen)
+        self.trim_l(l1,-EPS-self.im.Location_RotorBarCenter, 0.5*self.im.Width_RotorSlotOpen)
 
         if self.im.use_drop_shape_rotor_bar == True:
             # the inner rotor slot for drop shape rotor suggested by Gerada2011
@@ -3999,7 +4023,7 @@ class draw(object):
 
 
 
-        # Trim Arcs
+        # Trim for Arcs
 
         # ä¸ºäº†é¿å…æ•°Arcï¼Œæˆ‘ä»¬åº”è¯\åœ¨Circle.4æ—¶æœŸå°±æŠŠCircle.4ä¸Šçš„å°ç‰‡æ®µä¼˜å…ˆå‰ªäº†ï¼
         arc4 = self.trim_c(c4, X+1e-6, Y+1e-6) # Arc.1

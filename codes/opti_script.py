@@ -64,7 +64,7 @@ def where_am_i(fea_config_dict):
     fea_config_dict['dir_interpreter']       = dir_interpreter
 
     if pc_name == 'Y730':
-        if fea_config_dict['delete_results_after_calculation'] = True # save disk space
+        fea_config_dict['delete_results_after_calculation'] = False # save disk space
         if fea_config_dict['Restart'] == False:
             fea_config_dict['OnlyTableResults'] = True  # save disk space for my PC
     # However, we need field data for iron loss calculation
@@ -116,7 +116,10 @@ reload(FEMM_Solver)
 run_list = [1,1,0,0,0] 
 # run_folder = r'run#100/' # no iron loss csv data but there are field data!
 # run_folder = r'run#101/' # 75 deg Celsius, iron loss csv data, delete field data after calculation.
-run_folder = r'run#102/' # the efficiency is added to objective function，原来没有考虑效率的那些设计必须重新评估，否则就不会进化了，都是旧的好！
+# run_folder = r'run#102/' # the efficiency is added to objective function，原来没有考虑效率的那些设计必须重新评估，否则就不会进化了，都是旧的好！
+run_folder = r'run#103/' # From this run, write denormalized pop data to disk!
+# run_list = [0,1,0,0,0] 
+# run_folder = r'run#104/' # Femm is used for breakdown torque and frequency!
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
 if fea_config_dict['flag_optimization'] == True:
@@ -142,19 +145,34 @@ logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_'+run_folde
 ''' 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG)
 ''' # 1e-1也还是太小了（第三次报错），至少0.5mm长吧 # 1e-1 is the least geometry value. a 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
 if fea_config_dict['flag_optimization'] == True:
-    de_config_dict = {  'bounds':     [ [   3, 9],   # stator_tooth_width_b_ds
-                                        [ 0.8, 4],   # air_gap_length_delta
-                                        [5e-1, 3],   # Width_RotorSlotOpen 
-                                        [ 2.5, 6],   # rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-                                        [5e-1, 3],   # Length_HeadNeckRotorSlot
-                                        [   1, 10],  # Angle_StatorSlotOpen
-                                        [5e-1, 3] ], # Width_StatorTeethHeadThickness
-                        'mut':        0.8,
-                        'crossp':     0.7,
-                        'popsize':    20,
-                        'iterations': 48 } # begin at 5
+    if False: # intuitive bounds
+        de_config_dict = {  'bounds':     [ [   3, 9],   # stator_tooth_width_b_ds
+                                            [ 0.8, 4],   # air_gap_length_delta
+                                            [5e-1, 3],   # Width_RotorSlotOpen 
+                                            [ 2.5, 6],   # rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                            [5e-1, 3],   # Length_HeadNeckRotorSlot
+                                            [   1, 10],  # Angle_StatorSlotOpen
+                                            [5e-1, 3] ], # Width_StatorTeethHeadThickness
+                            'mut':        0.8,
+                            'crossp':     0.7,
+                            'popsize':    20,
+                            'iterations': 48 } # begin at 5
+    else: # based on Pyrhonen09                         # see Tran2TSS_PS_Opti.xlsx
+        de_config_dict = {  'bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
+                                            [ 0.8,   4],   # air_gap_length_delta
+                                            [5e-1,   3],   # Width_RotorSlotOpen 
+                                            [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                            [5e-1,   3],   # Length_HeadNeckRotorSlot
+                                            [   1,  10],   # Angle_StatorSlotOpen
+                                            [5e-1,   3] ], # Width_StatorTeethHeadThickness
+                            'mut':        0.8,
+                            'crossp':     0.7,
+                            'popsize':    20,
+                            'iterations': 48 } # begin at 5
+
 else:
     de_config_dict = None
+
 
 # init the swarm
 sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)

@@ -163,6 +163,9 @@ class Pyrhonen_design(object):
         '''
         # rotor_slot_radius = (2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3 - rotor_tooth_width_b_dr*Qr) / (2*Qr+2*pi)
         # => rotor_tooth_width_b_dr = ( 2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3  - rotor_slot_radius * (2*Qr+2*pi) ) / Qr
+        # Verified in Tran2TSS_PS_Opti.xlsx.
+            # ( 2*pi*(im.Radius_OuterRotor - im.Length_HeadNeckRotorSlot)  - im.Radius_of_RotorSlot * (2*Qr+2*pi) ) / Qr
+            # = ( 2*PI()*(G4 - I4) - J4 * (2*C4+2*PI()) ) / C4
         from math import pi
         Qr = im.Qr
 

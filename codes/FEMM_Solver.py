@@ -2090,6 +2090,46 @@ class FEMM_Solver(object):
                  number_of_fraction*rotor_volume )
 
 
+    # this is for JMAG calling to seek for breakdown torque and slip
+    def greedy_search_for_breakdown_slip(self, output_file_path, initial_pop=range(1,6)):
+        # check the existence of results
+        print output_file_path
+        raise
+
+        self.flag_static_solver = False
+        self.flag_eddycurrent_solver = True
+        self.fraction = fraction
+
+        for f in os.listdir(self.dir_run_sweeping):
+            os.remove(self.dir_run_sweeping + f)
+
+        femm.openfemm(True) # bHide # False for debug
+        femm.newdocument(0) # magnetic
+        self.freq_range = freq_range
+        self.freq = freq_range[0]
+        # Alternatively, the length of the machine could be scaled by the number of segments to make this correction automatically. -David Meeker
+        self.stack_length = self.im.stack_length * fraction
+        self.probdef()
+
+        self.add_material()
+        self.vangogh.draw_model(fraction=fraction)
+        self.add_block_labels(fraction=fraction)
+
+        list_ans_file = []
+        for freq in freq_range:
+            self.freq = freq
+            temp = self.get_output_file_name(booL_dir=False)
+            list_ans_file.append(temp+'.ans')
+            self.output_file_name = self.dir_run_sweeping + temp            
+            print temp
+            if os.path.exists(self.output_file_name + '.ans'):
+                continue
+            self.probdef()        
+            femm.mi_saveas(self.output_file_name + '.fem')
+
+        self.parallel_solve(dir_run=self.dir_run_sweeping) # subprocess will wait for cmd but not the pytho script
+        self.pso(list_ans_file)
+
 
 
 
