@@ -69,68 +69,8 @@ def where_am_i(fea_config_dict):
             fea_config_dict['OnlyTableResults'] = True  # save disk space for my PC
     # However, we need field data for iron loss calculation
     fea_config_dict['OnlyTableResults'] = False 
-class Pyrhonen_design(object):
-    def __init__(self, im, bounds):
-        ''' Determine bounds for these parameters:
-            stator_tooth_width_b_ds              = design_parameters[0]*1e-3 # m                       # stator tooth width [mm]
-            air_gap_length_delta                 = design_parameters[1]*1e-3 # m                       # air gap length [mm]
-            b1                                   = design_parameters[2]*1e-3 # m                       # rotor slot opening [mm]
-            rotor_tooth_width_b_dr               = design_parameters[3]*1e-3 # m                       # rotor tooth width [mm]
-            self.Length_HeadNeckRotorSlot        = design_parameters[4]      # mm       # rotor tooth head & neck length [mm]
-            self.Angle_StatorSlotOpen            = design_parameters[5]      # mm       # stator slot opening [deg]
-            self.Width_StatorTeethHeadThickness  = design_parameters[6]      # mm       # stator tooth head length [mm]
-        '''
-        # rotor_slot_radius = (2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3 - rotor_tooth_width_b_dr*Qr) / (2*Qr+2*pi)
-        # => rotor_tooth_width_b_dr = ( 2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3  - rotor_slot_radius * (2*Qr+2*pi) ) / Qr
-        from math import pi
-        Qr = im.Qr
-
-        # unit: mm and deg
-        self.stator_tooth_width_b_ds        = im.Width_StatorTeethBody
-        self.air_gap_length_delta           = im.Length_AirGap
-        self.b1                             = im.Width_RotorSlotOpen
-        self.rotor_tooth_width_b_dr         = ( 2*pi*(im.Radius_OuterRotor - im.Length_HeadNeckRotorSlot)  - im.Radius_of_RotorSlot * (2*Qr+2*pi) ) / Qr
-        self.Length_HeadNeckRotorSlot       = im.Length_HeadNeckRotorSlot
-        self.Angle_StatorSlotOpen           = im.Angle_StatorSlotOpen
-        self.Width_StatorTeethHeadThickness = im.Width_StatorTeethHeadThickness
-
-        self.design_parameters_denorm = [   self.stator_tooth_width_b_ds,
-                                            self.air_gap_length_delta,
-                                            self.b1,
-                                            self.rotor_tooth_width_b_dr,
-                                            self.Length_HeadNeckRotorSlot,
-                                            self.Angle_StatorSlotOpen,
-                                            self.Width_StatorTeethHeadThickness]
-
-        self.show_norm(bounds, self.design_parameters_denorm)
 
 
-    def show_denorm(self, bounds, design_parameters_norm):
-        import numpy as np
-        pop = design_parameters_norm
-        min_b, max_b = np.asarray(bounds).T 
-        diff = np.fabs(min_b - max_b)
-        pop_denorm = min_b + pop * diff
-        print '[De-normalized]:',
-        print pop_denorm.tolist()
-        
-    def show_norm(self, bounds, design_parameters_denorm):
-        import numpy as np
-        min_b, max_b = np.asarray(bounds).T 
-        diff = np.fabs(min_b - max_b)
-        design_parameters_norm = (design_parameters_denorm - min_b)/diff #= pop
-        # print type(self.design_parameters_norm)
-        print '[Normalized]:',
-        print design_parameters_norm.tolist()
-        self.design_parameters_norm = design_parameters_norm
-
-        # pop = design_parameters_norm
-        # min_b, max_b = np.asarray(bounds).T 
-        # diff = np.fabs(min_b - max_b)
-        # pop_denorm = min_b + pop * diff
-        # print '[De-normalized:]---------------------------Are these two the same?'
-        # print pop_denorm.tolist()
-        # print design_parameters_denorm
 fea_config_dict = {
     ##########################
     # Sysetm Controlc
@@ -203,9 +143,9 @@ logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_'+run_folde
 ''' # 1e-1也还是太小了（第三次报错），至少0.5mm长吧 # 1e-1 is the least geometry value. a 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
 if fea_config_dict['flag_optimization'] == True:
     de_config_dict = {  'bounds':     [ [   3, 9],   # stator_tooth_width_b_ds
-                                        [ 0.5, 4],   # air_gap_length_delta
+                                        [ 0.8, 4],   # air_gap_length_delta
                                         [5e-1, 3],   # Width_RotorSlotOpen 
-                                        [ 1.5, 6],   # rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                        [ 2.5, 6],   # rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
                                         [5e-1, 3],   # Length_HeadNeckRotorSlot
                                         [   1, 10],  # Angle_StatorSlotOpen
                                         [5e-1, 3] ], # Width_StatorTeethHeadThickness
@@ -226,7 +166,7 @@ logger.info('Initial pop generated.')
 
 # add initial_design of Pyrhonen09 to the initial generation
 if True:
-    initial_design = Pyrhonen_design(sw.im, de_config_dict['bounds'])
+    initial_design = utility.Pyrhonen_design(sw.im, de_config_dict['bounds'])
     # print 'SWAP!'
     # print initial_design.design_parameters_norm.tolist()
     # print '\nInitial Population:'

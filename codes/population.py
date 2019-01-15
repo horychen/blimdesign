@@ -515,11 +515,11 @@ class swarm(object):
                 model = app.GetCurrentModel()
                 self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, time())
 
-                # if self.fea_config_dict['delete_results_after_calculation'] == False:
-                # Export Circuit Voltage
-                ref1 = app.GetDataManager().GetDataSet(u"Circuit Voltage")
-                app.GetDataManager().CreateGraphModel(ref1)
-                app.GetDataManager().GetGraphModel(u"Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+                if self.fea_config_dict['delete_results_after_calculation'] == False:
+                    # Export Circuit Voltage
+                    ref1 = app.GetDataManager().GetDataSet(u"Circuit Voltage")
+                    app.GetDataManager().CreateGraphModel(ref1)
+                    app.GetDataManager().GetGraphModel(u"Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
 
             # FEMM+JMAG
             else:
@@ -2345,6 +2345,8 @@ class bearingless_induction_motor_design(object):
                                                                 im.parameters_for_imposing_constraints_among_design_parameters[2])
         rotor_slot_height_h_sr = rotor_tooth_height_h_dr
 
+
+
         # radius of outer rotor slot
         Radius_of_RotorSlot = 1e3 * (2*pi*(im.Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3 - rotor_tooth_width_b_dr*im.Qr) / (2*im.Qr+2*pi)
         Location_RotorBarCenter = im.Radius_OuterRotor - Length_HeadNeckRotorSlot - Radius_of_RotorSlot
@@ -2457,7 +2459,7 @@ class bearingless_induction_motor_design(object):
         # if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2 + self.Qr + 1): the last +1 is for the air hug rotor
         # if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2 + self.Qr):
         if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2):
-            msg = 'Number of Parts is unexpected.'
+            msg = 'Number of Parts is unexpected.\n' + im_variant.show(toString=True)
             utility.send_notification(text=msg)
             raise Exception(msg)
 
@@ -4340,8 +4342,6 @@ class draw(object):
 
         sketch.CloseSketch()
 
-
-
 def add_M1xSteel(app, dir_parent, steel_name=u"M-19 Steel Gauge-29"):
 
     if '19' in steel_name:
@@ -4449,3 +4449,6 @@ def add_Arnon5(app, dir_parent):
     app.GetMaterialLibrary().GetUserMaterial(u"Arnon5-final").SetValue(u"LossConstantKhX", 186.6)
     app.GetMaterialLibrary().GetUserMaterial(u"Arnon5-final").SetValue(u"LossConstantKeX", 0.07324)
 
+
+if __name__ == '__main__':
+    pass

@@ -150,6 +150,68 @@ def basefreqDFT(signal, samp_freq, ax_time_domain=None, ax_freq_domain=None, bas
         ax_freq_domain.set_xlabel('per base frequency')
         ax_time_domain.set_ylabel('B [T]')
 
+class Pyrhonen_design(object):
+    def __init__(self, im, bounds):
+        ''' Determine bounds for these parameters:
+            stator_tooth_width_b_ds              = design_parameters[0]*1e-3 # m                       # stator tooth width [mm]
+            air_gap_length_delta                 = design_parameters[1]*1e-3 # m                       # air gap length [mm]
+            b1                                   = design_parameters[2]*1e-3 # m                       # rotor slot opening [mm]
+            rotor_tooth_width_b_dr               = design_parameters[3]*1e-3 # m                       # rotor tooth width [mm]
+            self.Length_HeadNeckRotorSlot        = design_parameters[4]      # mm       # rotor tooth head & neck length [mm]
+            self.Angle_StatorSlotOpen            = design_parameters[5]      # mm       # stator slot opening [deg]
+            self.Width_StatorTeethHeadThickness  = design_parameters[6]      # mm       # stator tooth head length [mm]
+        '''
+        # rotor_slot_radius = (2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3 - rotor_tooth_width_b_dr*Qr) / (2*Qr+2*pi)
+        # => rotor_tooth_width_b_dr = ( 2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3  - rotor_slot_radius * (2*Qr+2*pi) ) / Qr
+        from math import pi
+        Qr = im.Qr
+
+        # unit: mm and deg
+        self.stator_tooth_width_b_ds        = im.Width_StatorTeethBody
+        self.air_gap_length_delta           = im.Length_AirGap
+        self.b1                             = im.Width_RotorSlotOpen
+        self.rotor_tooth_width_b_dr         = ( 2*pi*(im.Radius_OuterRotor - im.Length_HeadNeckRotorSlot)  - im.Radius_of_RotorSlot * (2*Qr+2*pi) ) / Qr
+        self.Length_HeadNeckRotorSlot       = im.Length_HeadNeckRotorSlot
+        self.Angle_StatorSlotOpen           = im.Angle_StatorSlotOpen
+        self.Width_StatorTeethHeadThickness = im.Width_StatorTeethHeadThickness
+
+        self.design_parameters_denorm = [   self.stator_tooth_width_b_ds,
+                                            self.air_gap_length_delta,
+                                            self.b1,
+                                            self.rotor_tooth_width_b_dr,
+                                            self.Length_HeadNeckRotorSlot,
+                                            self.Angle_StatorSlotOpen,
+                                            self.Width_StatorTeethHeadThickness]
+
+        self.show_norm(bounds, self.design_parameters_denorm)
+
+
+    def show_denorm(self, bounds, design_parameters_norm):
+        import numpy as np
+        pop = design_parameters_norm
+        min_b, max_b = np.asarray(bounds).T 
+        diff = np.fabs(min_b - max_b)
+        pop_denorm = min_b + pop * diff
+        print '[De-normalized]:',
+        print pop_denorm.tolist()
+        
+    def show_norm(self, bounds, design_parameters_denorm):
+        import numpy as np
+        min_b, max_b = np.asarray(bounds).T 
+        diff = np.fabs(min_b - max_b)
+        design_parameters_norm = (design_parameters_denorm - min_b)/diff #= pop
+        # print type(self.design_parameters_norm)
+        print '[Normalized]:',
+        print design_parameters_norm.tolist()
+        self.design_parameters_norm = design_parameters_norm
+
+        # pop = design_parameters_norm
+        # min_b, max_b = np.asarray(bounds).T 
+        # diff = np.fabs(min_b - max_b)
+        # pop_denorm = min_b + pop * diff
+        # print '[De-normalized:]---------------------------Are these two the same?'
+        # print pop_denorm.tolist()
+        # print design_parameters_denorm
 
 
 def send_notification(text='Hello'):
