@@ -1,4 +1,4 @@
-
+# coding:u8
 import os
 import logging
 import datetime
@@ -149,3 +149,215 @@ def basefreqDFT(signal, samp_freq, ax_time_domain=None, ax_freq_domain=None, bas
         ax_freq_domain.plot(dft_freq, dft_single_sided, '*',alpha=0.4)
         ax_freq_domain.set_xlabel('per base frequency')
         ax_time_domain.set_ylabel('B [T]')
+
+
+
+def send_notification(text='Hello'):
+    subject = 'AUTO BLIM OPTIMIZATION NOTIFICATION'
+    content = 'Subject: %s\n\n%s' % (subject, text)
+    from smtplib import SMTP
+    mail = SMTP('smtp.gmail.com', 587)
+    mail.ehlo()
+    mail.starttls()
+    with open('temp.txt', 'r') as f:
+        pswd = f.read()
+    mail.login('horyontour@gmail.com', pswd)
+    mail.sendmail('horyontour@gmail.com', 'jiahao.chen@wisc.edu', content) 
+    mail.close()
+    print "Notificaiont sent."
+
+
+
+# https://dsp.stackexchange.com/questions/11513/estimate-frequency-and-peak-value-of-a-signals-fundamental
+#define N_SAMPLE ((long int)(1.0/(0.1*TS))) // Resolution 0.1 Hz = 1 / (N_SAMPLE * TS)
+class Goertzel_Data_Struct(object):
+    """docstring for Goertzel_Data_Struct"""
+    def __init__(self, id=None, ):
+        self.id = id    
+        self.bool_initialized = False
+        self.sine = None
+        self.cosine = None
+        self.coeff = None
+        self.scalingFactor = None
+        self.q = None
+        self.q2 = None
+        self.count = None
+        self.k = None #// k is the normalized target frequency 
+        self.real = None
+        self.imag = None
+        self.accumSquaredData = None
+        self.ampl = None
+        self.phase = None
+
+
+    # /************************************************
+    #  * Real time implementation to avoid the array of input double *data[]
+    #  * with Goertzel Struct to store the variables and the output values
+    #  *************************************************/
+    def goertzel_realtime(gs, targetFreq, numSamples, samplingRate, data):
+        # gs is equivalent to self
+        try:
+            len(data)
+        except:
+            pass
+        else:
+            raise Exception('This is for real time implementation of Goertzel, hence data must be a scalar rather than array-like object.')
+
+        if gs.bool_initialized == False:
+            gs.bool_initialized = True
+
+            gs.count = 0
+            gs.k = (0.5 + ((numSamples * targetFreq) / samplingRate))
+            omega = (2.0 * math.pi * gs.k) / numSamples
+            gs.sine = sin(omega)
+            gs.cosine = cos(omega)
+            gs.coeff = 2.0 * gs.cosine
+            gs.q1=0
+            gs.q2=0
+            gs.scalingFactor = 0.5 * numSamples
+            gs.accumSquaredData = 0.0
+
+        q0 = gs.coeff * gs.q1 - gs.q2 + data
+        gs.q2 = gs.q1
+        gs.q1 = q0 # // q1 is the newest output vk[N], while q2 is the last output vk[N-1].
+
+        gs.accumSquaredData += data*data
+
+        gs.count += 1
+        if gs.count>=numSamples:
+            # // calculate the real and imaginary results with scaling appropriately
+            gs.real = (gs.q1 * gs.cosine - gs.q2) / gs.scalingFactor #// inspired by the python script of sebpiq
+            gs.imag = (gs.q1 * gs.sine) / gs.scalingFactor
+
+            # // reset
+            gs.bool_initialized = False
+            return True
+        else:
+            return False
+
+    def goertzel_offline(gs, targetFreq, numSamples, samplingRate, data_list):
+        # gs is equivalent to self
+        try:
+            len(data_list) # = numSamples
+        except:
+            raise Exception('The input data_list must be array or list.') 
+
+        if gs.bool_initialized == False:
+            gs.bool_initialized = True
+
+            gs.count = 0
+            gs.k = (0.5 + ((numSamples * targetFreq) / samplingRate))
+            omega = (2.0 * math.pi * gs.k) / numSamples
+            gs.sine = sin(omega)
+            gs.cosine = cos(omega)
+            gs.coeff = 2.0 * gs.cosine
+            gs.q1=0
+            gs.q2=0
+            gs.scalingFactor = 0.5 * numSamples
+            gs.accumSquaredData = 0.0
+
+        for data in data_list:
+            q0 = gs.coeff * gs.q1 - gs.q2 + data
+            gs.q2 = gs.q1
+            gs.q1 = q0 # // q1 is the newest output vk[N], while q2 is the last output vk[N-1].
+
+            gs.accumSquaredData += data*data
+
+            gs.count += 1
+            if gs.count>=numSamples:
+
+                # // calculate the real and imaginary results with scaling appropriately
+                gs.real = (gs.q1 * gs.cosine - gs.q2) / gs.scalingFactor #// inspired by the python script of sebpiq
+                gs.imag = (gs.q1 * gs.sine) / gs.scalingFactor
+
+                # // reset
+                gs.bool_initialized = False
+                return True
+
+
+
+
+if __name__ == '__main__':
+    from pylab import *
+    gs_u = Goertzel_Data_Struct("Goertzel Struct for Voltage\n")
+    gs_i = Goertzel_Data_Struct("Goertzel Struct for Current\n")
+
+    phase = arccos(0.6) # PF=0.6
+    targetFreq = 1000.
+    TS = 1.5625e-5
+
+    if False:
+        time = arange(0./targetFreq, 100.0/targetFreq, TS)
+        voltage = 3*sin(targetFreq*2*pi*time + 30/180.*pi)
+        current = 2*sin(targetFreq*2*pi*time + 30/180.*pi - phase)
+    else:
+        time = arange(0.5/targetFreq, 1.0/targetFreq, TS)
+        voltage = 3*sin(targetFreq*2*pi*time + 30/180.*pi)
+        current = 2*sin(targetFreq*2*pi*time + 30/180.*pi - phase)
+
+    N_SAMPLE = len(voltage)
+    noise = ( 2*rand(N_SAMPLE) - 1 ) * 0.233
+    voltage += noise
+
+    # plot(voltage+0.5)
+    # plot(current+0.5)
+
+    # Check for resolution
+    end_time = N_SAMPLE * TS
+    resolution = 1./end_time
+    print resolution, targetFreq
+    if resolution > targetFreq:
+
+        print 'Data length (N_SAMPLE) too short or sampling frequency too high (1/TS too high).'
+        print 'Periodical extension is applied. This will not really increase your resolution. It is a visual trick for Fourier Analysis.'
+        voltage = voltage.tolist() + (-voltage).tolist() #[::-1]
+        current = current.tolist() + (-current).tolist() #[::-1]
+
+        voltage *= 1000
+        current *= 1000
+
+        N_SAMPLE = len(voltage)
+        end_time = N_SAMPLE * TS
+        resolution = 1./end_time
+        print resolution, targetFreq, 'Hz'
+        if resolution <= targetFreq:
+            print 'Now we are good.'
+
+
+        # 目前就写了二分之一周期的处理，只有四分之一周期的数据，可以用反对称的方法周期延拓。
+
+    print gs_u.goertzel_offline(targetFreq, N_SAMPLE, 1./TS, voltage)
+    print gs_i.goertzel_offline(targetFreq, N_SAMPLE, 1./TS, current)
+
+    gs_u.ampl = sqrt(gs_u.real*gs_u.real + gs_u.imag*gs_u.imag) 
+    gs_u.phase = arctan2(gs_u.imag, gs_u.real)
+
+    print 'N_SAMPLE=', N_SAMPLE
+    print "\n"
+    print gs_u.id
+    print "RT:\tAmplitude: %g, %g\n" % (gs_u.ampl, sqrt(2.0*gs_u.accumSquaredData/N_SAMPLE))
+    print "RT:\tre=%g, im=%g\n\tampl=%g, phase=%g\n" % (gs_u.real, gs_u.imag, gs_u.ampl, gs_u.phase*180/math.pi)
+
+    # // do the analysis
+    gs_i.ampl = sqrt(gs_i.real*gs_i.real + gs_i.imag*gs_i.imag) 
+    gs_i.phase = arctan2(gs_i.imag, gs_i.real)
+    print gs_i.id
+    print "RT:\tAmplitude: %g, %g\n" % (gs_i.ampl, sqrt(2.0*gs_i.accumSquaredData/N_SAMPLE))
+    print "RT:\tre=%g, im=%g\n\tampl=%g, phase=%g\n" % (gs_i.real, gs_i.imag, gs_i.ampl, gs_i.phase*180/math.pi)
+
+    print "------------------------"
+    print "\tPhase Difference of I (version 1): %g\n" % ((gs_i.phase-gs_u.phase)*180/math.pi), 'PF=', cos(gs_i.phase-gs_u.phase)
+
+    # // Take reference to the voltage phaser
+    Ireal = sqrt(2.0*gs_i.accumSquaredData/N_SAMPLE) * cos(gs_i.phase-gs_u.phase)
+    Iimag = sqrt(2.0*gs_i.accumSquaredData/N_SAMPLE) * sin(gs_i.phase-gs_u.phase)
+    print "\tAmplitude from accumSquaredData->%g\n" % (sqrt(2.0*gs_u.accumSquaredData/N_SAMPLE))
+    print "\tPhaser I:\tre=%g, im=%g\n" % (Ireal, Iimag)
+    print "\tPhase Difference of I (version 2): %g\n" % (arctan2(Iimag,Ireal)*180/math.pi), 'PF=', cos(arctan2(Iimag,Ireal))
+
+    plot(voltage)
+    plot(current)
+    show()
+
+    # send_notification('Test email')
+

@@ -274,13 +274,24 @@ class swarm(object):
             import designer
             self.app = designer.GetApplication() 
 
-        if False:
+        def add_steel(self):
             if 'M15' in self.fea_config_dict['Steel']:
                 add_M1xSteel(self.app, self.dir_parent, steel_name=u"M-15 Steel")
             elif 'M19' in self.fea_config_dict['Steel']:
                 add_M1xSteel(self.app, self.dir_parent)
             elif 'Arnon5' == self.fea_config_dict['Steel']:
-                add_Arnon5(self.app, self.dir_parent)
+                add_Arnon5(self.app, self.dir_parent)            
+
+        # too avoid tons of the same material in JAMG's material library
+        if not os.path.exists(self.dir_parent + '.jmag_state.txt'):
+            with open(self.dir_parent + '.jmag_state.txt', 'w') as f:
+                f.write(self.fea_config_dict['Steel'] + '\n')
+            add_steel(self)
+        else:
+            with open(self.dir_parent + '.jmag_state.txt', 'r') as f:
+                for line in f.readlines():
+                    if self.fea_config_dict['Steel'] not in line:
+                        add_steel(self)
 
     def get_gen_file(self, no_generation, ongoing=False):
         if ongoing == True:
@@ -362,46 +373,44 @@ class swarm(object):
         im = im_variant # for Tran2TSS (应该给它弄个函数调用的)
         im_variant.individual_name = im_variant.get_individual_name() 
 
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # Initialize JMAG Designer
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # every model is a new project, so as to avoid the situation of 100 models in one project (occupy RAM and slow). add individual_index to project_name
         self.jmag_control_state = False
-        self.designer_init()
-        app = self.app
-        self.project_name = self.run_folder[:-1]+'gen#%04dind#%04d' % (self.number_current_generation, individual_index)
-        if self.jmag_control_state == False: # initilize JMAG Designer
-            expected_project_file = self.dir_project_files + "%s.jproj"%(self.project_name)
-            if not os.path.exists(expected_project_file):
-                app.NewProject(u"Untitled")
-                app.SaveAs(expected_project_file)
-                logger.debug('Create JMAG project file: %s'%(expected_project_file))
-            else:
-                app.Load(expected_project_file)
-                logger.debug('Load JMAG project file: %s'%(expected_project_file))
-                logger.debug('Existing models of %d are found in %s', app.NumModels(), app.GetDefaultModelFolderPath())
+        # local scripts
+        def open_jmag():
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            # Initialize JMAG Designer
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            # every model is a new project, so as to avoid the situation of 100 models in one project (occupy RAM and slow). add individual_index to project_name
+            self.designer_init()
+            app = self.app
+            self.project_name = self.run_folder[:-1]+'gen#%04dind#%04d' % (self.number_current_generation, individual_index)
+            if self.jmag_control_state == False: # initilize JMAG Designer
+                expected_project_file = self.dir_project_files + "%s.jproj"%(self.project_name)
+                if not os.path.exists(expected_project_file):
+                    app.NewProject(u"Untitled")
+                    app.SaveAs(expected_project_file)
+                    logger.debug('Create JMAG project file: %s'%(expected_project_file))
+                else:
+                    app.Load(expected_project_file)
+                    logger.debug('Load JMAG project file: %s'%(expected_project_file))
+                    logger.debug('Existing models of %d are found in %s', app.NumModels(), app.GetDefaultModelFolderPath())
 
-                # this `if' is obselete. it is used when a project contains 100 models.
-                # if app.NumModels() <= individual_index:
-                #     logger.warn('Some models are not plotted because of bad bounds (some lower bound is too small)! individual_index=%d, NumModels()=%d. See also the fit#%04d.txt file for 99999. There will be no .png file for these individuals either.', individual_index, app.NumModels(), self.number_current_generation)
+                    # this `if' is obselete. it is used when a project contains 100 models.
+                    # if app.NumModels() <= individual_index:
+                    #     logger.warn('Some models are not plotted because of bad bounds (some lower bound is too small)! individual_index=%d, NumModels()=%d. See also the fit#%04d.txt file for 99999. There will be no .png file for these individuals either.', individual_index, app.NumModels(), self.number_current_generation)
 
-                # print app.NumStudies()
-                # print app.NumAnalysisGroups()
-                # app.SubmitAllModelsLocal() # we'd better do it one by one for easing the programing?
+                    # print app.NumStudies()
+                    # print app.NumAnalysisGroups()
+                    # app.SubmitAllModelsLocal() # we'd better do it one by one for easing the programing?
 
-        ################################################################
-        # begin from where left
-        ################################################################
-        original_study_name = im_variant.individual_name + u"Freq"
-        temp = self.check_csv_results(original_study_name)
-        if temp is None:
+            self.jmag_control_state = True # indicating that the jmag project is already created
+            return app
+        def exe_frequency():
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             # Draw the model in JMAG Designer
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             DRAW_SUCCESS = self.draw_jmag_model( individual_index, 
                                             im_variant,
                                             im_variant.individual_name)
-            self.jmag_control_state = True # indicating that the jmag project is already created
             if DRAW_SUCCESS == 0:
                 # TODO: skip this model and its evaluation
                 cost_function = 99999 # penalty
@@ -477,80 +486,108 @@ class swarm(object):
                 # self.fitness_in_physics_data # torque density, torque ripple, force density, force magnitude error, force angle error, efficiency, material cost 
             toc = time()
             logger.debug('Time spent on Eddy Current Solver is %g s.'%(toc - tic))
+            return slip_freq_breakdown_torque, breakdown_torque, breakdown_force
+        def exe_transient(slip_freq_breakdown_torque):
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            # TranFEAwi2TSS for ripples and iron loss
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            # this will be used for other duplicated studies
+            # original_study_name = study.GetName()
+            try:
+                slip_freq_breakdown_torque
+            except:
+                raise Exception('Missing eddy current study results.')
+            im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
+
+            # Transient FEA wi 2 Time Step Section
+            if self.fea_config_dict['jmag_run_list'][0] == 1:
+                # JMAG+JMAG
+                model = app.GetCurrentModel()
+                self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, time())
+
+                if self.fea_config_dict['delete_results_after_calculation'] == False:
+                    # Export Circuit Voltage
+                    ref1 = app.GetDataManager().GetDataSet(u"Circuit Voltage")
+                    app.GetDataManager().CreateGraphModel(ref1)
+                    app.GetDataManager().GetGraphModel(u"Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+            else:
+                # FEMM+JMAG
+                self.add_TranFEAwi2TSS_study()
+        def load_transeint():
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            # Load Results for Tran2TSS
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            try:
+                dm = self.read_csv_results_4_comparison__transient(tran2tss_study_name)
+                basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
+                sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=self.fea_config_dict['number_of_steps_2ndTTS']) # samples in the tail that are in steady state
+                str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
+                    self.add_plot( self.axeses,
+                                  title=tran2tss_study_name,
+                                  label='Transient FEA w/ 2 Time Step Sections',
+                                  zorder=8,
+                                  time_list=time_list,
+                                  sfv=sfv,
+                                  torque=TorCon_list,
+                                  range_ss=sfv.range_ss)
+                str_results += '\n\tbasic info:' + ''.join([str(el) for el in basic_info])
+                self.fig_main.savefig(self.dir_run + im_variant.individual_name + 'results.png', dpi=150)
+                self.pyplot_clear()
+                logger.debug(str_results)
+            except Exception, e:
+                logger.error(u'Error when loading csv results for Tran2TSS.', exc_info=True)
+                raise Exception('Error: see log file.')
+            # show()
+            return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
+
+        ################################################################
+        # Begin from where left: Frequency Study
+        ################################################################
+        original_study_name = im_variant.individual_name + u"Freq"
+        temp = self.check_csv_results(original_study_name)
+        if temp is None:
+            app = open_jmag()
+            slip_freq_breakdown_torque, breakdown_torque, breakdown_force = exe_frequency()
         else:
             slip_freq_breakdown_torque, breakdown_torque, breakdown_force = temp
-            model = app.GetCurrentModel()
             toc = time()
 
-
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # TranFEAwi2TSS for ripples and iron loss
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # this will be used for other duplicated studies
-        # original_study_name = study.GetName()
-        try:
-            slip_freq_breakdown_torque
-        except:
-            raise Exception('Missing eddy current study results.')
-        im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
-
-        # Transient FEA wi 2 Time Step Section
+        ################################################################
+        # Begin from where left: Transient Study
+        ################################################################
         tran2tss_study_name = im_variant.individual_name + 'Tran2TSS'
-        if self.fea_config_dict['jmag_run_list'][0] == 1:
-            # JMAG+JMAG
-            self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, toc)            
+        bool_skip_transient = False
+        if self.jmag_control_state == False: # means that no jmag project is loaded because the eddy current problem is already solved.
+            # check whether or not the transient problem is also solved.
+            if self.check_csv_results(tran2tss_study_name, returnBoolean=True):
+                bool_skip_transient =True
+            else:
+                app = open_jmag() # will set self.jmag_control_state to True
 
-            if self.fea_config_dict['delete_results_after_calculation'] == False:
-                # Export Circuit Voltage
-                ref1 = app.GetDataManager().GetDataSet(u"Circuit Voltage")
-                app.GetDataManager().CreateGraphModel(ref1)
-                app.GetDataManager().GetGraphModel(u"Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
-        else:
-            # FEMM+JMAG
-            self.add_TranFEAwi2TSS_study()
-
-
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # Load Results for Tran2TSS
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        try:
-            dm = self.read_csv_results_4_comparison__transient(tran2tss_study_name)
-            basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
-            sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=self.fea_config_dict['number_of_steps_2ndTTS']) # samples in the tail that are in steady state
-            str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
-                self.add_plot( self.axeses,
-                              title=tran2tss_study_name,
-                              label='Transient FEA w/ 2 Time Step Sections',
-                              zorder=8,
-                              time_list=time_list,
-                              sfv=sfv,
-                              torque=TorCon_list,
-                              range_ss=sfv.range_ss)
-            str_results += '\n\tbasic info:' + ''.join([str(el) for el in basic_info])
-            self.fig_main.savefig(self.dir_run + im_variant.individual_name + 'results.png', dpi=150)
-            self.pyplot_clear()
-            logger.debug(str_results)
-        except Exception, e:
-            logger.error(u'Error when loading csv results for Tran2TSS.', exc_info=True)
-            raise Exception('Error: see log file.')
-        # show()
+        ################################################################
+        # Load data for cost function evaluation
+        ################################################################
+        if bool_skip_transient == False:
+            exe_transient(slip_freq_breakdown_torque)
+        str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = load_transeint()
 
         # compute the fitness 
         rotor_volume = pi*(im_variant.Radius_OuterRotor*1e-3)**2 * (im_variant.stack_length*1e-3)
-        rotor_weight = rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³
+        rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³
         shaft_power  = im_variant.Omega * torque_average
         copper_loss  = 0.0 # use the last 1/4 period data to compute average copper loss of Tran2TSS rather than use that of Freq study
         iron_loss    = 0.0 # 
         total_loss   = copper_loss + iron_loss
         efficiency   = 1 #shaft_power / (total_loss + shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
+        # The weight is [1, 1, 0.1, 0.1, 0.1, 10]
         list_weighted_cost = [  30e3 / ( torque_average/rotor_volume ),
                                 1.0 / ( ss_avg_force_magnitude/rotor_weight ),
-                                normalized_torque_ripple * 20,
-                                normalized_force_error_magnitude * 20,
-                                force_error_angle / 180. * pi,
-                                1.0 / efficiency**2 ]
+                                normalized_torque_ripple         *   2, # /0.05 * 0.1
+                                normalized_force_error_magnitude *   2, # /0.05 * 0.1
+                                force_error_angle/180.*pi        * 0.1,
+                                10 / efficiency**2 ] # consistent with Yegu Kang 2018-060-case of TFE
         cost_function = sum(list_weighted_cost)
-                        # + 0.0 # efficiency
+            # this will lead to lower bound of air gap length
             # cost_function = 30e3 / ( breakdown_torque/rotor_volume ) \
             #                 + 1.0 / ( breakdown_force/rotor_weight )
         logger = logging.getLogger(__name__)
@@ -658,7 +695,7 @@ class swarm(object):
         best = pop_denorm[best_idx]
         # return min_b + pop * diff, fitness, best_idx
 
-
+        # Begin DE
         for i in range(iterations):
 
             self.number_current_generation += 1 # modification #3
@@ -769,9 +806,16 @@ class swarm(object):
         model.CloseCadLink() # this is essential if you want to create a series of models
         return True
 
-    def check_csv_results(self, study_name):
+    def check_csv_results(self, study_name, returnBoolean=False):
         if not os.path.exists(self.dir_csv_output_folder + study_name + '_torque.csv'):
-            return None
+            if returnBoolean == False:
+                return None
+            else:
+                return False
+        else:
+            if returnBoolean == True:
+                return True
+
         try:
             # check csv results 
             l_slip_freq = []
@@ -2227,8 +2271,8 @@ class bearingless_induction_motor_design(object):
         while True:
             temp = (2*pi*rotor_outer_radius_r_or_eff - Qr*new__rotor_tooth_width_b_dr)
             # 注意，这里用的是numpy的sqrt函数，根号下为负号不会像math.sqrt那样raise Exception，而是返回一个nan。
-            rotor_tooth_height_h_dr = ( -np.sqrt(temp**2 - 4*pi*new__area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
-            if np.isnan(rotor_tooth_height_h_dr) == True:
+            operand_in_sqrt = temp**2 - 4*pi*new__area_rotor_slot_Sur*Qr
+            if operand_in_sqrt < 0: # if np.isnan(rotor_tooth_height_h_dr) == True:
                 # 这里应该能自动选择一个最大的可行转子槽才行！
                 # modify rotor geometry to make this work and loop back.
 
@@ -2239,6 +2283,7 @@ class bearingless_induction_motor_design(object):
                     new__rotor_tooth_width_b_dr -= rotor_tooth_width_b_dr*0.05
                     logger.warn('Reach minimum__area_rotor_slot_Sur. Bad bound on b_dr.\n\tIn other words, b_dr=%g too wide. Try new value=%g.'%(rotor_tooth_width_b_dr, new__rotor_tooth_width_b_dr))
             else:
+                rotor_tooth_height_h_dr = ( -np.sqrt(operand_in_sqrt) + temp ) / (2*pi)
                 break
         return rotor_tooth_height_h_dr, new__rotor_tooth_width_b_dr
 
@@ -2382,7 +2427,9 @@ class bearingless_induction_motor_design(object):
         # if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2 + self.Qr + 1): the last +1 is for the air hug rotor
         # if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2 + self.Qr):
         if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2):
-            raise Exception('Number of Parts is unexpected.')
+            msg = 'Number of Parts is unexpected.'
+            utility.send_notification(text=msg)
+            raise Exception(msg)
 
         id_shaft = part_ID_list[0]
         id_rotorCore = part_ID_list[1]

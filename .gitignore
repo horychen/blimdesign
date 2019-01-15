@@ -6,6 +6,7 @@
 /pop
 /pso
 *.bat
+*.csv
 *.dmp
 *.log
 *.png
