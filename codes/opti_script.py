@@ -64,11 +64,73 @@ def where_am_i(fea_config_dict):
     fea_config_dict['dir_interpreter']       = dir_interpreter
 
     if pc_name == 'Y730':
+        if fea_config_dict['delete_results_after_calculation'] = True # save disk space
         if fea_config_dict['Restart'] == False:
             fea_config_dict['OnlyTableResults'] = True  # save disk space for my PC
     # However, we need field data for iron loss calculation
     fea_config_dict['OnlyTableResults'] = False 
+class Pyrhonen_design(object):
+    def __init__(self, im, bounds):
+        ''' Determine bounds for these parameters:
+            stator_tooth_width_b_ds              = design_parameters[0]*1e-3 # m                       # stator tooth width [mm]
+            air_gap_length_delta                 = design_parameters[1]*1e-3 # m                       # air gap length [mm]
+            b1                                   = design_parameters[2]*1e-3 # m                       # rotor slot opening [mm]
+            rotor_tooth_width_b_dr               = design_parameters[3]*1e-3 # m                       # rotor tooth width [mm]
+            self.Length_HeadNeckRotorSlot        = design_parameters[4]      # mm       # rotor tooth head & neck length [mm]
+            self.Angle_StatorSlotOpen            = design_parameters[5]      # mm       # stator slot opening [deg]
+            self.Width_StatorTeethHeadThickness  = design_parameters[6]      # mm       # stator tooth head length [mm]
+        '''
+        # rotor_slot_radius = (2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3 - rotor_tooth_width_b_dr*Qr) / (2*Qr+2*pi)
+        # => rotor_tooth_width_b_dr = ( 2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3  - rotor_slot_radius * (2*Qr+2*pi) ) / Qr
+        from math import pi
+        Qr = im.Qr
 
+        # unit: mm and deg
+        self.stator_tooth_width_b_ds        = im.Width_StatorTeethBody
+        self.air_gap_length_delta           = im.Length_AirGap
+        self.b1                             = im.Width_RotorSlotOpen
+        self.rotor_tooth_width_b_dr         = ( 2*pi*(im.Radius_OuterRotor - im.Length_HeadNeckRotorSlot)  - im.Radius_of_RotorSlot * (2*Qr+2*pi) ) / Qr
+        self.Length_HeadNeckRotorSlot       = im.Length_HeadNeckRotorSlot
+        self.Angle_StatorSlotOpen           = im.Angle_StatorSlotOpen
+        self.Width_StatorTeethHeadThickness = im.Width_StatorTeethHeadThickness
+
+        self.design_parameters_denorm = [   self.stator_tooth_width_b_ds,
+                                            self.air_gap_length_delta,
+                                            self.b1,
+                                            self.rotor_tooth_width_b_dr,
+                                            self.Length_HeadNeckRotorSlot,
+                                            self.Angle_StatorSlotOpen,
+                                            self.Width_StatorTeethHeadThickness]
+
+        self.show_norm(bounds, self.design_parameters_denorm)
+
+
+    def show_denorm(self, bounds, design_parameters_norm):
+        import numpy as np
+        pop = design_parameters_norm
+        min_b, max_b = np.asarray(bounds).T 
+        diff = np.fabs(min_b - max_b)
+        pop_denorm = min_b + pop * diff
+        print '[De-normalized]:',
+        print pop_denorm.tolist()
+        
+    def show_norm(self, bounds, design_parameters_denorm):
+        import numpy as np
+        min_b, max_b = np.asarray(bounds).T 
+        diff = np.fabs(min_b - max_b)
+        design_parameters_norm = (design_parameters_denorm - min_b)/diff #= pop
+        # print type(self.design_parameters_norm)
+        print '[Normalized]:',
+        print design_parameters_norm.tolist()
+        self.design_parameters_norm = design_parameters_norm
+
+        # pop = design_parameters_norm
+        # min_b, max_b = np.asarray(bounds).T 
+        # diff = np.fabs(min_b - max_b)
+        # pop_denorm = min_b + pop * diff
+        # print '[De-normalized:]---------------------------Are these two the same?'
+        # print pop_denorm.tolist()
+        # print design_parameters_denorm
 fea_config_dict = {
     ##########################
     # Sysetm Controlc
@@ -87,7 +149,7 @@ fea_config_dict = {
     'FrequencyRange':range(1,6), # the first generation for PSO
     'number_of_steps_2ndTTS':32, # 8*32 # steps for half period (0.5). That is, we implement two time sections, the 1st section lasts half slip period and the 2nd section lasts half fandamental period.
     'JMAG_Scheduler':False, # multi-cores run
-    'delete_results_after_calculation': False,
+    'delete_results_after_calculation': False, # check if True can we still export Terminal Voltage? 如果是True，那么就得不到Terminal Voltage了！
 
     ##########################
     # Design Specifications
@@ -113,7 +175,8 @@ reload(FEMM_Solver)
 
 run_list = [1,1,0,0,0] 
 # run_folder = r'run#100/' # no iron loss csv data but there are field data!
-run_folder = r'run#101/' # 75 deg Celsius, iron loss csv data, delete field data after calculation.
+# run_folder = r'run#101/' # 75 deg Celsius, iron loss csv data, delete field data after calculation.
+run_folder = r'run#102/' # the efficiency is added to objective function，原来没有考虑效率的那些设计必须重新评估，否则就不会进化了，都是旧的好！
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
 if fea_config_dict['flag_optimization'] == True:
@@ -161,6 +224,22 @@ sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)
 sw.generate_pop()
 logger.info('Initial pop generated.')
 
+# add initial_design of Pyrhonen09 to the initial generation
+if True:
+    initial_design = Pyrhonen_design(sw.im, de_config_dict['bounds'])
+    # print 'SWAP!'
+    # print initial_design.design_parameters_norm.tolist()
+    # print '\nInitial Population:'
+    # for index in range(len(sw.init_pop)):
+    #     # print sw.init_pop[index].tolist()
+    #     print index,
+    #     initial_design.show_denorm(de_config_dict['bounds'], sw.init_pop[index])
+    # print sw.init_pop[0].tolist()
+    sw.init_pop[0] = initial_design.design_parameters_norm
+    # print sw.init_pop[0].tolist()
+    with open(sw.get_gen_file(0), 'w') as f:
+        f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.init_pop)) # convert 2d array to string
+
 
 
 ''' 3. Initialize FEMM Solver
@@ -173,6 +252,8 @@ if fea_config_dict['jmag_run_list'][0] == 0:
 
 ''' 4. Run DE Optimization
 '''
+# write FEA config to disk
+sw.write_to_file_fea_config_dict()
 
 # run
 de_generator = sw.de()
@@ -187,7 +268,6 @@ for el in result:
     #     data = fmodel(x, ind)
     #     ax.plot(x, data, alpha=0.3)
 
-sw.write_to_file_fea_config_dict()
 
 
 # Run JCF from command linie instead of GUI

@@ -373,6 +373,7 @@ class swarm(object):
         im = im_variant # for Tran2TSS (应该给它弄个函数调用的)
         im_variant.individual_name = im_variant.get_individual_name() 
 
+        self.project_name = self.run_folder[:-1]+'gen#%04dind#%04d' % (self.number_current_generation, individual_index)
         self.jmag_control_state = False
         # local scripts
         def open_jmag():
@@ -382,7 +383,6 @@ class swarm(object):
             # every model is a new project, so as to avoid the situation of 100 models in one project (occupy RAM and slow). add individual_index to project_name
             self.designer_init()
             app = self.app
-            self.project_name = self.run_folder[:-1]+'gen#%04dind#%04d' % (self.number_current_generation, individual_index)
             if self.jmag_control_state == False: # initilize JMAG Designer
                 expected_project_file = self.dir_project_files + "%s.jproj"%(self.project_name)
                 if not os.path.exists(expected_project_file):
@@ -470,8 +470,17 @@ class swarm(object):
                 app.View().ShowModel() # 1st btn. close mesh view, and note that mesh data will be deleted if only ouput table results are selected.
 
                 # run
-                study.RunAllCases()
-                app.Save()
+                if self.fea_config_dict['JMAG_Scheduler'] == False:
+                    study.RunAllCases()
+                    app.Save()
+                else:
+                    job = study.CreateJob()
+                    job.SetValue(u"Title", study.GetName())
+                    job.SetValue(u"Queued", True)
+                    job.Submit(True)
+                    logger.debug('Submit %s to queue (Freq).'%(im_variant.individual_name))
+                    # wait and check
+                    # study.CheckForCaseResults()
 
                 # evaluation based on the csv results
                 try:
@@ -500,19 +509,22 @@ class swarm(object):
             im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
 
             # Transient FEA wi 2 Time Step Section
+            # JMAG+JMAG
             if self.fea_config_dict['jmag_run_list'][0] == 1:
-                # JMAG+JMAG
+                
                 model = app.GetCurrentModel()
                 self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, time())
 
-                if self.fea_config_dict['delete_results_after_calculation'] == False:
-                    # Export Circuit Voltage
-                    ref1 = app.GetDataManager().GetDataSet(u"Circuit Voltage")
-                    app.GetDataManager().CreateGraphModel(ref1)
-                    app.GetDataManager().GetGraphModel(u"Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+                # if self.fea_config_dict['delete_results_after_calculation'] == False:
+                # Export Circuit Voltage
+                ref1 = app.GetDataManager().GetDataSet(u"Circuit Voltage")
+                app.GetDataManager().CreateGraphModel(ref1)
+                app.GetDataManager().GetGraphModel(u"Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+
+            # FEMM+JMAG
             else:
-                # FEMM+JMAG
-                self.add_TranFEAwi2TSS_study()
+                model = app.GetCurrentModel()
+                self.add_TranFEAwi2TSS_study(im_variant, slip_freq_breakdown_torque, app, model, tran2tss_study_name, logger, time())
         def load_transeint():
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             # Load Results for Tran2TSS
@@ -584,8 +596,9 @@ class swarm(object):
                                 1.0 / ( ss_avg_force_magnitude/rotor_weight ),
                                 normalized_torque_ripple         *   2, # /0.05 * 0.1
                                 normalized_force_error_magnitude *   2, # /0.05 * 0.1
-                                force_error_angle/180.*pi        * 0.1,
-                                10 / efficiency**2 ] # consistent with Yegu Kang 2018-060-case of TFE
+                                force_error_angle * 0.2          * 0.1, # [deg] 5 deg is reported to be the base line (Yegu Kang)
+                                10 / efficiency**2,
+                                im_variant.thermal_penalty ]            # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
         cost_function = sum(list_weighted_cost)
             # this will lead to lower bound of air gap length
             # cost_function = 30e3 / ( breakdown_torque/rotor_volume ) \
@@ -2079,10 +2092,10 @@ class swarm(object):
                 logger.debug('Time spent on Tran2TSS with Iron Loss Calc. is %g s.'%(time() - toc))
             else:
                 job = study.CreateJob()
-                job.SetValue(u"Title", u"Freqcdd")
+                job.SetValue(u"Title", study.GetName())
                 job.SetValue(u"Queued", True)
                 job.Submit(False) # Fallse:CurrentCase, True:AllCases
-                logger.debug('Submit %s to queue.'%(im_variant.individual_name))
+                logger.debug('Submit %s to queue (Tran2TSS).'%(im_variant.individual_name))
                 # wait and check
                 # study.CheckForCaseResults()
             app.Save()
@@ -2092,6 +2105,9 @@ class swarm(object):
         else:
             # the results exist already?
             return 
+
+    def add_TranFEAwi2TSS_study(self, im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, toc):
+        pass
 
 class bearingless_induction_motor_design(object):
 
@@ -2177,6 +2193,7 @@ class bearingless_induction_motor_design(object):
             self.DriveW_Freq        = row[22]
 
             self.stack_length       = row[23]
+
 
             # inferred design parameters
             # self.Radius_InnerStator = self.Length_AirGap + self.Radius_OuterRotor
@@ -2268,6 +2285,7 @@ class bearingless_induction_motor_design(object):
         new__rotor_tooth_width_b_dr = rotor_tooth_width_b_dr
         new__area_rotor_slot_Sur = area_rotor_slot_Sur
         logger = logging.getLogger(__name__)
+        thermal_penalty = 0.0
         while True:
             temp = (2*pi*rotor_outer_radius_r_or_eff - Qr*new__rotor_tooth_width_b_dr)
             # 注意，这里用的是numpy的sqrt函数，根号下为负号不会像math.sqrt那样raise Exception，而是返回一个nan。
@@ -2278,14 +2296,16 @@ class bearingless_induction_motor_design(object):
 
                 new__area_rotor_slot_Sur -= area_rotor_slot_Sur*0.05 # decrease by 5% every loop
                 logger.warn('Sur=%g too large. Try new value=%g.'%(area_rotor_slot_Sur, new__area_rotor_slot_Sur))
-                # raise Exception('There is not enough space for rotor slot or the required rotor current density will not be fulfilled.')
                 if new__area_rotor_slot_Sur < minimum__area_rotor_slot_Sur: # minimum__area_rotor_slot_Sur corresponds to 8 MA/m^2 current density
-                    new__rotor_tooth_width_b_dr -= rotor_tooth_width_b_dr*0.05
+                    new__area_rotor_slot_Sur += area_rotor_slot_Sur*0.05 # don't reduce new__area_rotor_slot_Sur any further
+                    new__rotor_tooth_width_b_dr -= rotor_tooth_width_b_dr*0.05 # instead, decrease new__rotor_tooth_width_b_dr
                     logger.warn('Reach minimum__area_rotor_slot_Sur. Bad bound on b_dr.\n\tIn other words, b_dr=%g too wide. Try new value=%g.'%(rotor_tooth_width_b_dr, new__rotor_tooth_width_b_dr))
+                thermal_penalty += 0.1
+                # raise Exception('There is not enough space for rotor slot or the required rotor current density will not be fulfilled.')
             else:
                 rotor_tooth_height_h_dr = ( -np.sqrt(operand_in_sqrt) + temp ) / (2*pi)
                 break
-        return rotor_tooth_height_h_dr, new__rotor_tooth_width_b_dr
+        return rotor_tooth_height_h_dr, new__rotor_tooth_width_b_dr, thermal_penalty, new__area_rotor_slot_Sur
 
     @classmethod
     def local_design_variant(cls, im, number_current_generation, individual_index, design_parameters):
@@ -2316,7 +2336,8 @@ class bearingless_induction_motor_design(object):
         # rotor_tooth_width_b_dr imposes constraint on rotor slot height
         area_rotor_slot_Sur = im.parameters_for_imposing_constraints_among_design_parameters[1]
         rotor_outer_radius_r_or = im.Radius_OuterRotor*1e-3
-        rotor_tooth_height_h_dr, rotor_tooth_width_b_dr = cls.get_rotor_tooth_height_h_dr(  rotor_tooth_width_b_dr,
+        # overwrite rotor_tooth_width_b_dr if there is not enough space for rotor slot
+        rotor_tooth_height_h_dr, rotor_tooth_width_b_dr, thermal_penalty, new__area_rotor_slot_Sur = cls.get_rotor_tooth_height_h_dr(  rotor_tooth_width_b_dr,
                                                                 area_rotor_slot_Sur,
                                                                 rotor_outer_radius_r_or,
                                                                 im.Qr,
@@ -2384,6 +2405,15 @@ class bearingless_induction_motor_design(object):
         logger = logging.getLogger(__name__) 
         logger.info('im_variant ID %s is initialized.', self.ID)
 
+        # thermal penalty for reduced rotor slot area (copper hot) and rotor tooth width (iron hot)
+        # try:
+            # thermal_penalty
+        # except:
+            # thermal_penalty = 0.0
+        if thermal_penalty != 0:
+            with open(self.fea_config_dict['dir_parent'] + 'pop/' + self.fea_config_dict['run_folder'] + 'thermal_penalty_individuals.txt', 'a') as f:
+                f.write(self.get_individual_name() + ',%g,%g,%g\n'%(thermal_penalty, rotor_tooth_width_b_dr, new__area_rotor_slot_Sur))
+        self.thermal_penalty = thermal_penalty
         return self
 
     def whole_row_reader(self, reader):
@@ -3819,7 +3849,7 @@ class draw(object):
                 # sketch.GetItem(u"Distance From X Axis").SetProperty(u"Distance", 0)
             # Constrants to avoid moving of circle center
             # self.constraint_fixture_circle_center(c1)
-            self.constraint_fixture_circle_center(c4)
+            self.constraint_fixture_circle_center(c4) # Fixture constraint
 
 
                 # # Constraint to fix c3's center
@@ -3857,6 +3887,7 @@ class draw(object):
                 self.doc.GetSelection().Add(c4)
                 self.doc.GetSelection().Delete()
 
+                # raise Exception('Is c4 still there? If c4 is not deleted, you will get Unexpected Part Number error afterwards. So fix it here now.')
 
 
 
