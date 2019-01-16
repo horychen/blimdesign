@@ -112,14 +112,14 @@ import utility
 reload(population) # relaod for JMAG's python environment
 reload(FEMM_Solver)
 
-run_list = [1,1,0,0,0] 
+# run_list = [1,1,0,0,0] 
 # run_folder = r'run#100/' # no iron loss csv data but there are field data!
 # run_folder = r'run#101/' # 75 deg Celsius, iron loss csv data, delete field data after calculation.
 # run_folder = r'run#102/' # the efficiency is added to objective function，原来没有考虑效率的那些设计必须重新评估，否则就不会进化了，都是旧的好！
 # run_folder = r'run#103/' # From this run, write denormalized pop data to disk!
-# run_list = [0,1,0,0,0] 
-run_folder = r'run#104/' # Make sure all the gen#xxxx file uses denormalized values.
-# Femm is used for breakdown torque and frequency! 
+# run_folder = r'run#104/' # Make sure all the gen#xxxx file uses denormalized values.
+run_list = [0,1,0,0,0] 
+run_folder = r'run#105/'# Femm is used for breakdown torque and frequency! 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
 if fea_config_dict['flag_optimization'] == True:
@@ -204,7 +204,7 @@ if True:
 '''
 if fea_config_dict['jmag_run_list'][0] == 0:
     # and let jmag know about it
-    sw.solver_femm = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static
+    sw.femm_solver = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static
 
 
 

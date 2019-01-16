@@ -515,25 +515,29 @@ class swarm(object):
             # show()
             return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
 
+
         ################################################################
         # Begin from where left: Frequency Study
         ################################################################
         # Freq Study: you can choose to not use JMAG to find the breakdown slip.
         original_study_name = im_variant.individual_name + u"Freq"
+        slip_freq_breakdown_torque = None
         if self.fea_config_dict['jmag_run_list'][0] == 0:
             # FEMM # In this case, you have to set im_variant.slip_freq_breakdown_torque by FEMM Solver
             # check for existing results
-            output_file_path = self.dir_csv_output_folder + original_study_name + '_FEMM'
+            self.dir_femm_temp = self.dir_csv_output_folder + 'femm_temp/'
+            output_file_path = self.dir_femm_temp + original_study_name + '.csv'
             if os.path.exists(output_file_path):
-                data = []
                 with open(output_file_path, 'r') as f:
-                    for row in self.whole_row_reader(csv_reader(f, skipinitialspace=True)):
-                        data.append([float(el) for el in row])
-                index, breakdown_torque = utility.get_max_and_index(data[1])
-                return data[0][index], breakdown_torque, None 
+                    data = f.readlines()
+                slip_freq_breakdown_torque, breakdown_torque = float(data[0][:-1]), float(data[1][:-1])
             else:
                 # no direct returning of results, wait for it later when you need it.
-                self.femm_solver.greedy_search_for_breakdown_slip( self.dir_csv_output_folder+'femm_temp', 'FEMM_'+original_study_name )
+                self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name )
+
+                # this is the only if path that no slip_freq_breakdown_torque is assigned!
+                # this is the only if path that no slip_freq_breakdown_torque is assigned!
+                # this is the only if path that no slip_freq_breakdown_torque is assigned!
         else:
             # check for existing results
             temp = self.check_csv_results(original_study_name)
@@ -545,9 +549,6 @@ class swarm(object):
                 slip_freq_breakdown_torque, breakdown_torque, breakdown_force = temp
                 toc = time()
 
-        # print slip_freq_breakdown_torque
-        # quit()
-
         ################################################################
         # Begin from where left: Transient Study
         ################################################################
@@ -558,16 +559,21 @@ class swarm(object):
             if self.check_csv_results(tran2tss_study_name, returnBoolean=True):
                 bool_skip_transient = True # because the csv files already exist.
 
-            # yes, leave this here: jmag_control_state == False
-            if bool_skip_transient == False:
-                app = open_jmag() # will set self.jmag_control_state to True
-                model = draw_jmag()
+            # debug 1
+            # # yes, leave this here: jmag_control_state == False
+            # if bool_skip_transient == False:
+            #     app = open_jmag() # will set self.jmag_control_state to True
+            #     model = draw_jmag()
 
         if bool_skip_transient == False:
             # add or duplicate study for transient FEA 
             if self.fea_config_dict['jmag_run_list'][0] == 0:
                 # wait for femm to finish, and get your slip of breakdown
-                slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search()
+                if slip_freq_breakdown_torque is None:
+                    slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search()
+                # debug 2
+                print slip_freq_breakdown_torque, breakdown_torque
+                quit()
                 # FEMM+JMAG
                 im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
                 self.add_TranFEAwi2TSS_study(im_variant, slip_freq_breakdown_torque, app, model, tran2tss_study_name, logger, time())

@@ -837,6 +837,9 @@ class FEMM_Solver(object):
         '''[并行求解] 当初没想好，旋转转子竟然不是并行的。。。
         Keyword Arguments:
             dir_run {[type]} -- [静态场用self.dir_run，涡流场用self.dir_run_sweeping] (default: {None})
+                                Not not use space in dir_run!!!
+                                Not not use space in dir_run!!!
+                                Not not use space in dir_run!!!
             number_of_instantces {number} -- [几个？] (default: {5})
             bool_watchdog_postproc {bool} -- [有些时候我们不喜欢用看门狗，后面看了就知道] (default: {True})
         '''
@@ -1620,16 +1623,19 @@ class FEMM_Solver(object):
                         break
             sleep(1)
 
-    def wait_greedy_search(self, dir_femm_temp, study_name):
+    def wait_greedy_search(self):
+        tic = clock_time()
         while True:
-            fname = dir_femm_temp + 'femm_found.csv'
-            if os.path.exits(fname):
+            fname = self.dir_femm_temp + 'femm_found.csv'
+            if os.path.exists(fname):
                 with open(fname, 'r') as f:
                     data = f.readlines()
-                os.rename(fname, dir_femm_temp + study_name + '_femm_found.csv')
+                os.rename(fname, self.dir_femm_temp + self.study_name + '.csv')
                 break
             else:
                 sleep(1)
+                print clock_time() - tic, 's'
+                
         return float(data[0][:-1]), float(data[1][:-1]), None
 
     def get_rotor_current_function(self, i=0):
@@ -2104,6 +2110,8 @@ class FEMM_Solver(object):
 
     # this is for JMAG calling to seek for breakdown torque and slip
     def greedy_search_for_breakdown_slip(self, dir_femm_temp, study_name, fraction=2, number_of_instantces=5):
+        if not os.path.isdir(dir_femm_temp):
+            os.makedirs(dir_femm_temp)
 
         self.flag_static_solver = False
         self.flag_eddycurrent_solver = True
@@ -2120,7 +2128,10 @@ class FEMM_Solver(object):
         self.add_material()
         self.vangogh.draw_model(fraction=fraction)
         self.add_block_labels(fraction=fraction)
-        femm.mi_saveas(dir_femm_temp + 'femm_temp' + '.fem')
+        # print dir_femm_temp + 'femm_temp.fem'
+        # print dir_femm_temp + 'femm_temp.fem'
+        # print dir_femm_temp + 'femm_temp.fem'
+        femm.mi_saveas(dir_femm_temp + 'femm_temp.fem')
         femm.mi_close()
         femm.closefemm()
 
@@ -2133,10 +2144,10 @@ class FEMM_Solver(object):
         # 这说明，不仅仅要跑五个instance，
         # 而且还需要有一个总管，负责总调。
         with open('temp2.bat', 'w') as f:
-            f.write('python "%smethod_parasolve_greedy_search.py" %s %d %.16f' % (self.dir_codes, 
-                                                                                  dir_femm_temp, 
-                                                                                  number_of_instantces,
-                                                                                  self.stack_length))
+            f.write('python "%smethod_parasolve_greedy_search.py" "%s" %d %.16f' % (self.dir_codes, 
+                                                                                    dir_femm_temp, 
+                                                                                    number_of_instantces,
+                                                                                    self.stack_length))
         os.startfile('temp2.bat')
         # os.remove('temp2.bat')
 
