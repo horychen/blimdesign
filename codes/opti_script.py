@@ -119,7 +119,9 @@ reload(FEMM_Solver)
 # run_folder = r'run#103/' # From this run, write denormalized pop data to disk!
 # run_folder = r'run#104/' # Make sure all the gen#xxxx file uses denormalized values.
 run_list = [0,1,0,0,0] 
-run_folder = r'run#105/'# Femm is used for breakdown torque and frequency! 
+# run_folder = r'run#105/'# Femm is used for breakdown torque and frequency! 
+run_folder = r'run#106/'# You need to initialize femm_solver every calling of fobj
+
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
 if fea_config_dict['flag_optimization'] == True:

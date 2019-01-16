@@ -417,9 +417,6 @@ class swarm(object):
             return model
 
         def exe_frequency():
-            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-            # Eddy Current Solver for Breakdown Torque and Slip
-            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             tic = time()
             if True:
                 # Freq Sweeping for break-down Torque Slip
@@ -471,24 +468,6 @@ class swarm(object):
             logger.debug('Time spent on Eddy Current Solver is %g s.'%(toc - tic))
             return slip_freq_breakdown_torque, breakdown_torque, breakdown_force
 
-        def exe_transient(slip_freq_breakdown_torque):
-            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-            # TranFEAwi2TSS for ripples and iron loss
-            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-
-            # Transient FEA wi 2 Time Step Section
-            # JMAG+JMAG
-            # if self.fea_config_dict['jmag_run_list'][0] == 1:
-                
-            model = app.GetCurrentModel()
-            self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, time())
-
-            if self.fea_config_dict['delete_results_after_calculation'] == False:
-                # Export Circuit Voltage
-                ref1 = app.GetDataManager().GetDataSet(u"Circuit Voltage")
-                app.GetDataManager().CreateGraphModel(ref1)
-                app.GetDataManager().GetGraphModel(u"Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
-
         def load_transeint():
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             # Load Results for Tran2TSS
@@ -519,6 +498,9 @@ class swarm(object):
         ################################################################
         # Begin from where left: Frequency Study
         ################################################################
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # Eddy Current Solver for Breakdown Torque and Slip
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         # Freq Study: you can choose to not use JMAG to find the breakdown slip.
         original_study_name = im_variant.individual_name + u"Freq"
         slip_freq_breakdown_torque = None
@@ -533,6 +515,7 @@ class swarm(object):
                 slip_freq_breakdown_torque, breakdown_torque = float(data[0][:-1]), float(data[1][:-1])
             else:
                 # no direct returning of results, wait for it later when you need it.
+                self.femm_solver.__init__(im_variant, flag_read_from_jmag=False, freq=2.23)
                 self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name )
 
                 # this is the only if path that no slip_freq_breakdown_torque is assigned!
@@ -560,27 +543,41 @@ class swarm(object):
                 bool_skip_transient = True # because the csv files already exist.
 
             # debug 1
-            # # yes, leave this here: jmag_control_state == False
-            # if bool_skip_transient == False:
-            #     app = open_jmag() # will set self.jmag_control_state to True
-            #     model = draw_jmag()
+            # yes, leave this here: jmag_control_state == False
+            if bool_skip_transient == False:
+                app = open_jmag() # will set self.jmag_control_state to True
+                model = draw_jmag()
 
         if bool_skip_transient == False:
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            # TranFEAwi2TSS for ripples and iron loss
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             # add or duplicate study for transient FEA 
             if self.fea_config_dict['jmag_run_list'][0] == 0:
                 # wait for femm to finish, and get your slip of breakdown
                 if slip_freq_breakdown_torque is None:
                     slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search()
                 # debug 2
-                print slip_freq_breakdown_torque, breakdown_torque
-                quit()
+                # print slip_freq_breakdown_torque, breakdown_torque
+                # quit()
                 # FEMM+JMAG
                 im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
-                self.add_TranFEAwi2TSS_study(im_variant, slip_freq_breakdown_torque, app, model, tran2tss_study_name, logger, time())
+                study = im_variant.add_TranFEAwi2TSS_study( slip_freq_breakdown_torque, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
+                self.run_study(im_variant, app, study, time())
             else:
                 # JMAG+JMAG
+                # model = app.GetCurrentModel()
                 im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
-                exe_transient(slip_freq_breakdown_torque)
+                self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, time())
+
+            # export Voltage if field data exists.
+            if self.fea_config_dict['delete_results_after_calculation'] == False:
+                # Export Circuit Voltage
+                ref1 = app.GetDataManager().GetDataSet(u"Circuit Voltage")
+                app.GetDataManager().CreateGraphModel(ref1)
+                app.GetDataManager().GetGraphModel(u"Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+
+
 
         ################################################################
         # Load data for cost function evaluation
@@ -1976,6 +1973,7 @@ class swarm(object):
             model.DuplicateStudyWithType(original_study_name, u"Transient2D", tran2tss_study_name)
             app.SetCurrentStudy(tran2tss_study_name)
             study = app.GetCurrentStudy()
+            self.study = study
 
             # 上一步的铁磁材料的状态作为下一步的初值，挺好，但是如果每一个转子的位置转过很大的话，反而会减慢非线性迭代。
             # 我们的情况是：0.33 sec 分成了32步，每步的时间大概在0.01秒，0.01秒乘以0.5*497 Hz = 2.485 revolution...
@@ -2111,28 +2109,31 @@ class swarm(object):
             # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
             study.GetStudyProperties().SetValue(u"DirectSolverType", 1)
 
-            if self.fea_config_dict['JMAG_Scheduler'] == False:
-                # if run_list[1] == True:
-                study.RunAllCases()
-                logger.debug('Time spent on Tran2TSS with Iron Loss Calc. is %g s.'%(time() - toc))
-            else:
-                job = study.CreateJob()
-                job.SetValue(u"Title", study.GetName())
-                job.SetValue(u"Queued", True)
-                job.Submit(False) # Fallse:CurrentCase, True:AllCases
-                logger.debug('Submit %s to queue (Tran2TSS).'%(im_variant.individual_name))
-                # wait and check
-                # study.CheckForCaseResults()
-            app.Save()
-            # if the jcf file already exists, it pops a msg window
-            # study.WriteAllSolidJcf(self.dir_jcf, im_variant.model_name+study.GetName()+'Solid', True) # True : Outputs cases that do not have results 
-            # study.WriteAllMeshJcf(self.dir_jcf, im_variant.model_name+study.GetName()+'Mesh', True)
+            # run
+            self.run_study(im_variant, app, study, toc)
         else:
             # the results exist already?
             return 
+    
+    def run_study(self, im_variant, app, study, toc):
+        logger = logging.getLogger(__name__)
+        if self.fea_config_dict['JMAG_Scheduler'] == False:
+            # if run_list[1] == True:
+            study.RunAllCases()
+            logger.debug('Time spent on Tran2TSS with Iron Loss Calc. is %g s.'%(time() - toc))
+        else:
+            job = study.CreateJob()
+            job.SetValue(u"Title", study.GetName())
+            job.SetValue(u"Queued", True)
+            job.Submit(False) # Fallse:CurrentCase, True:AllCases
+            logger.debug('Submit %s to queue (Tran2TSS).'%(im_variant.individual_name))
+            # wait and check
+            # study.CheckForCaseResults()
+        app.Save()
+        # if the jcf file already exists, it pops a msg window
+        # study.WriteAllSolidJcf(self.dir_jcf, im_variant.model_name+study.GetName()+'Solid', True) # True : Outputs cases that do not have results 
+        # study.WriteAllMeshJcf(self.dir_jcf, im_variant.model_name+study.GetName()+'Mesh', True)
 
-    def add_TranFEAwi2TSS_study(self, im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, toc):
-        pass
 
 class bearingless_induction_motor_design(object):
 
@@ -3130,8 +3131,387 @@ class bearingless_induction_motor_design(object):
         else:
             return u"%s_ID%s" % (self.model_name_prefix, self.ID)
 
-    def add_TranFEAwi2TSS_study(self):
-        pass
+
+    # TranFEAwi2TSS
+    def add_TranFEAwi2TSS_study(self, slip_freq_breakdown_torque, app, model, dir_csv_output_folder, tran2tss_study_name, logger):
+        im_variant = self
+        logger.debug('Slip frequency: %g = ' % (self.the_slip))
+        self.the_slip = slip_freq_breakdown_torque / self.DriveW_Freq
+        logger.debug('Slip frequency:    = %g???' % (self.the_slip))
+        study_name = tran2tss_study_name
+
+        model.CreateStudy(u"Transient2D", study_name)
+        app.SetCurrentStudy(study_name)
+        study = model.GetStudy(study_name)
+
+        # SS-ATA
+        study.GetStudyProperties().SetValue(u"ApproximateTransientAnalysis", 1) # psuedo steady state freq is for PWM drive to use
+        study.GetStudyProperties().SetValue(u"SpecifySlip", 1)
+        study.GetStudyProperties().SetValue(u"Slip", self.the_slip)
+        study.GetStudyProperties().SetValue(u"OutputSteadyResultAs1stStep", 0)
+        # study.GetStudyProperties().SetValue(u"TimePeriodicType", 2) # This is for TP-EEC but is not effective
+
+        # misc
+        study.GetStudyProperties().SetValue(u"ConversionType", 0)
+        study.GetStudyProperties().SetValue(u"NonlinearMaxIteration", self.max_nonlinear_iteration)
+        study.GetStudyProperties().SetValue(u"ModelThickness", self.stack_length) # Stack Length
+
+        # Material
+        if 'M19' in self.fea_config_dict['Steel']:
+            study.SetMaterialByName(u"Stator Core", u"M-19 Steel Gauge-29")
+            study.GetMaterial(u"Stator Core").SetValue(u"Laminated", 1)
+            study.GetMaterial(u"Stator Core").SetValue(u"LaminationFactor", 95)
+
+            study.SetMaterialByName(u"Rotor Core", u"M-19 Steel Gauge-29")
+            study.GetMaterial(u"Rotor Core").SetValue(u"Laminated", 1)
+            study.GetMaterial(u"Rotor Core").SetValue(u"LaminationFactor", 95)
+
+        elif 'M15' in self.fea_config_dict['Steel']:
+            study.SetMaterialByName(u"Stator Core", u"M-15 Steel")
+            study.GetMaterial(u"Stator Core").SetValue(u"Laminated", 1)
+            study.GetMaterial(u"Stator Core").SetValue(u"LaminationFactor", 98)
+
+            study.SetMaterialByName(u"Rotor Core", u"M-15 Steel")
+            study.GetMaterial(u"Rotor Core").SetValue(u"Laminated", 1)
+            study.GetMaterial(u"Rotor Core").SetValue(u"LaminationFactor", 98)
+
+        elif self.fea_config_dict['Steel'] == 'Arnon5':
+            study.SetMaterialByName(u"Stator Core", u"Arnon5-final")
+            study.GetMaterial(u"Stator Core").SetValue(u"Laminated", 1)
+            study.GetMaterial(u"Stator Core").SetValue(u"LaminationFactor", 96)
+
+            study.SetMaterialByName(u"Rotor Core", u"Arnon5-final")
+            study.GetMaterial(u"Rotor Core").SetValue(u"Laminated", 1)
+            study.GetMaterial(u"Rotor Core").SetValue(u"LaminationFactor", 96)
+
+        else:
+            study.SetMaterialByName(u"Stator Core", u"DCMagnetic Type/50A1000")
+            study.GetMaterial(u"Stator Core").SetValue(u"UserConductivityType", 1)
+            study.SetMaterialByName(u"Rotor Core", u"DCMagnetic Type/50A1000")
+            study.GetMaterial(u"Rotor Core").SetValue(u"UserConductivityType", 1)
+
+        study.SetMaterialByName(u"Coil", u"Copper")
+        study.GetMaterial(u"Coil").SetValue(u"UserConductivityType", 1)
+
+        study.SetMaterialByName(u"Cage", u"Aluminium")
+        study.GetMaterial(u"Cage").SetValue(u"EddyCurrentCalculation", 1)
+        study.GetMaterial(u"Cage").SetValue(u"UserConductivityType", 1)
+        study.GetMaterial(u"Cage").SetValue(u"UserConductivityValue", self.Bar_Conductivity)
+
+        # Conditions - Motion
+        study.CreateCondition(u"RotationMotion", u"RotCon") # study.GetCondition(u"RotCon").SetXYZPoint(u"", 0, 0, 1) # megbox warning
+        study.GetCondition(u"RotCon").SetValue(u"AngularVelocity", int(self.the_speed))
+        study.GetCondition(u"RotCon").ClearParts()
+        study.GetCondition(u"RotCon").AddSet(model.GetSetList().GetSet(u"Motion_Region"), 0)
+
+        study.CreateCondition(u"Torque", u"TorCon") # study.GetCondition(u"TorCon").SetXYZPoint(u"", 0, 0, 0) # megbox warning
+        study.GetCondition(u"TorCon").SetValue(u"TargetType", 1)
+        study.GetCondition(u"TorCon").SetLinkWithType(u"LinkedMotion", u"RotCon")
+        study.GetCondition(u"TorCon").ClearParts()
+
+        study.CreateCondition(u"Force", u"ForCon")
+        study.GetCondition(u"ForCon").SetValue(u"TargetType", 1)
+        study.GetCondition(u"ForCon").SetLinkWithType(u"LinkedMotion", u"RotCon")
+        study.GetCondition(u"ForCon").ClearParts()
+
+
+        # Conditions - FEM Coils (i.e. stator winding)
+        # Circuit - Current Source
+        app.ShowCircuitGrid(True)
+        study.CreateCircuit()
+        def circuit(poles,turns,Rs,amp,freq,phase=0, x=10,y=10):
+            study.GetCircuit().CreateSubCircuit(u"Star Connection", u"Star Connection %d"%(poles), x, y) # è¿™äº›æ•°å­—æŒ‡çš„æ˜¯gridçš„ä¸ªæ•°ï¼Œç¬¬å‡ è¡Œç¬¬å‡ åˆ—çš„æ ¼ç‚¹å¤„
+            study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil1").SetValue(u"Turn", turns)
+            study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil1").SetValue(u"Resistance", Rs)
+            study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil2").SetValue(u"Turn", turns)
+            study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil2").SetValue(u"Resistance", Rs)
+            study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil3").SetValue(u"Turn", turns)
+            study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil3").SetValue(u"Resistance", Rs)
+            study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil1").SetName(u"Coil%dA"%(poles))
+            study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil2").SetName(u"Coil%dB"%(poles))
+            study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil3").SetName(u"Coil%dC"%(poles))
+            study.GetCircuit().CreateComponent(u"3PhaseCurrentSource", u"CS%d"%(poles))
+            study.GetCircuit().CreateInstance(u"CS%d"%(poles), x-4, y+1)
+            study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Amplitude", amp)
+            study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Frequency", freq) # this is not needed for freq analysis
+            study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"PhaseU", phase)
+            study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"CommutatingSequence", 0) # this is essencial for the direction of the field to be consistent with speed: UVW rather than UWV
+            study.GetCircuit().CreateComponent(u"Ground", u"Ground")
+            study.GetCircuit().CreateInstance(u"Ground", x+2, y+1)
+        circuit(self.DriveW_poles, self.DriveW_turns, Rs=self.DriveW_Rs,amp=self.DriveW_CurrentAmp,freq=self.DriveW_Freq,phase=0)
+        circuit(self.BeariW_poles, self.BeariW_turns, Rs=self.BeariW_Rs,amp=self.BeariW_CurrentAmp,freq=self.BeariW_Freq,phase=0,x=25)
+
+        # Link FEM Coils to Coil Set 
+        def link_FEMCoils_2_CoilSet(poles,l1,l2):
+            # link between FEM Coil Condition and Circuit FEM Coil
+            for ABC in [u'A',u'B',u'C']:
+                which_phase = u"%d%s-Phase"%(poles,ABC)
+                study.CreateCondition(u"FEMCoil", which_phase)
+                condition = study.GetCondition(which_phase)
+                condition.SetLink(u"Coil%d%s"%(poles,ABC))
+                condition.GetSubCondition(u"untitled").SetName(u"Coil Set 1")
+                condition.GetSubCondition(u"Coil Set 1").SetName(u"delete")
+            count = 0
+            dict_dir = {'+':1, '-':0, 'o':None}
+            # select the part to assign the FEM Coil condition
+            for ABC, UpDown in zip(l1,l2):
+                count += 1 
+                if dict_dir[UpDown] is None:
+                    # print 'Skip', ABC, UpDown
+                    continue
+                which_phase = u"%d%s-Phase"%(poles,ABC)
+                condition = study.GetCondition(which_phase)
+                condition.CreateSubCondition(u"FEMCoilData", u"Coil Set %d"%(count))
+                subcondition = condition.GetSubCondition(u"Coil Set %d"%(count))
+                subcondition.ClearParts()
+                subcondition.AddSet(model.GetSetList().GetSet(u"Coil%d%s%s %d"%(poles,ABC,UpDown,count)), 0)
+                subcondition.SetValue(u"Direction2D", dict_dir[UpDown])
+            # clean up
+            for ABC in [u'A',u'B',u'C']:
+                which_phase = u"%d%s-Phase"%(poles,ABC)
+                condition = study.GetCondition(which_phase)
+                condition.RemoveSubCondition(u"delete")
+        link_FEMCoils_2_CoilSet(self.DriveW_poles, 
+                                self.dict_coil_connection[int(self.DriveW_poles*10+1)], # 40 for 4 poles, 1 for ABD, 2 for up or down,
+                                self.dict_coil_connection[int(self.DriveW_poles*10+2)])
+        link_FEMCoils_2_CoilSet(self.BeariW_poles, 
+                                self.dict_coil_connection[int(self.BeariW_poles*10+1)], # 20 for 2 poles.
+                                self.dict_coil_connection[int(self.BeariW_poles*10+2)])
+
+
+        # Condition - Conductor (i.e. rotor winding)
+        for ind in range(int(self.Qr)):
+            natural_ind = ind + 1
+            study.CreateCondition(u"FEMConductor", u"CdctCon %d"%(natural_ind))
+            study.GetCondition(u"CdctCon %d"%(natural_ind)).GetSubCondition(u"untitled").SetName(u"Conductor Set 1")
+            study.GetCondition(u"CdctCon %d"%(natural_ind)).GetSubCondition(u"Conductor Set 1").ClearParts()
+            study.GetCondition(u"CdctCon %d"%(natural_ind)).GetSubCondition(u"Conductor Set 1").AddSet(model.GetSetList().GetSet(u"Bar %d"%(natural_ind)), 0)
+
+        # Condition - Conductor - Grouping
+        study.CreateCondition(u"GroupFEMConductor", u"CdctCon_Group")
+        for ind in range(int(self.Qr)):
+            natural_ind = ind + 1
+            study.GetCondition(u"CdctCon_Group").AddSubCondition(u"CdctCon %d"%(natural_ind), ind)
+
+        # Link Conductors to Circuit
+        if 'PS' in self.model_name_prefix: # Pole-Specific Rotor Winding
+            def place_conductor(x,y,name):
+                study.GetCircuit().CreateComponent(u"FEMConductor", name)
+                study.GetCircuit().CreateInstance(name, x, y)
+            def place_resistor(x,y,name,end_ring_resistance):
+                study.GetCircuit().CreateComponent(u"Resistor", name)
+                study.GetCircuit().CreateInstance(name, x, y)
+                study.GetCircuit().GetComponent(name).SetValue(u"Resistance", end_ring_resistance)
+
+            rotor_phase_name_list = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            X = 40; Y = 40;
+            for i in range(int(self.no_slot_per_pole)):
+                Y += -12
+                place_conductor(X,   Y, u"Conductor%s1"%(rotor_phase_name_list[i]))
+                place_conductor(X, Y-3, u"Conductor%s2"%(rotor_phase_name_list[i]))
+                place_conductor(X, Y-6, u"Conductor%s3"%(rotor_phase_name_list[i]))
+                place_conductor(X, Y-9, u"Conductor%s4"%(rotor_phase_name_list[i]))
+
+                if self.End_Ring_Resistance == 0: # setting a small value to End_Ring_Resistance is a bad idea (slow down the solver). Instead, don't model it
+                    # no end ring resistors to behave like FEMM model
+                    study.GetCircuit().CreateWire(X+2,   Y, X+2, Y-3)
+                    study.GetCircuit().CreateWire(X-2, Y-3, X-2, Y-6)
+                    study.GetCircuit().CreateWire(X+2, Y-6, X+2, Y-9)
+                    study.GetCircuit().CreateInstance(u"Ground", X-5, Y-2)
+                    study.GetCircuit().CreateWire(X-2,   Y, X-5, Y)
+                    study.GetCircuit().CreateWire(X-5,   Y, X-2, Y-9)
+                else:
+                    place_resistor(X+4,   Y, u"R_%s1"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
+                    place_resistor(X-4, Y-3, u"R_%s2"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
+                    place_resistor(X+4, Y-6, u"R_%s3"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
+                    place_resistor(X-4, Y-9, u"R_%s4"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
+        
+                    study.GetCircuit().CreateWire(X+6,   Y, X+2, Y-3)
+                    study.GetCircuit().CreateWire(X-6, Y-3, X-2, Y-6)
+                    study.GetCircuit().CreateWire(X+6, Y-6, X+2, Y-9)
+                    study.GetCircuit().CreateWire(X-6, Y-9, X-7, Y-9)
+                    study.GetCircuit().CreateWire(X-2, Y, X-7, Y)
+                    study.GetCircuit().CreateInstance(u"Ground", X-7, Y-2)
+                        #study.GetCircuit().GetInstance(u"Ground", ini_ground_no+i).RotateTo(90)
+                    study.GetCircuit().CreateWire(X-7, Y, X-6, Y-9)
+
+            for i in range(0, int(self.no_slot_per_pole)):
+                natural_i = i+1
+                study.GetCondition(u"CdctCon %d"%(natural_i)).SetLink(u"Conductor%s1"%(rotor_phase_name_list[i]))
+                study.GetCondition(u"CdctCon %d"%(natural_i+self.no_slot_per_pole)).SetLink(u"Conductor%s2"%(rotor_phase_name_list[i]))
+                study.GetCondition(u"CdctCon %d"%(natural_i+2*self.no_slot_per_pole)).SetLink(u"Conductor%s3"%(rotor_phase_name_list[i]))
+                study.GetCondition(u"CdctCon %d"%(natural_i+3*self.no_slot_per_pole)).SetLink(u"Conductor%s4"%(rotor_phase_name_list[i]))
+        else: # Cage
+            dyn_circuit = study.GetCircuit().CreateDynamicCircuit(u"Cage")
+            dyn_circuit.SetValue(u"AntiPeriodic", False)
+            dyn_circuit.SetValue(u"Bars", int(self.Qr))
+            dyn_circuit.SetValue(u"EndringResistance", self.End_Ring_Resistance)
+            dyn_circuit.SetValue(u"GroupCondition", True)
+            dyn_circuit.SetValue(u"GroupName", u"CdctCon_Group")
+            dyn_circuit.SetValue(u"UseInductance", False)
+            dyn_circuit.Submit(u"Cage1", 23, 2)
+            study.GetCircuit().CreateInstance(u"Ground", 25, 1)
+
+        # True: no mesh or field results are needed
+        study.GetStudyProperties().SetValue(u"OnlyTableResults", self.fea_config_dict['OnlyTableResults'])
+
+        # Linear Solver
+        if False:
+            # sometime nonlinear iteration is reported to fail and recommend to increase the accerlation rate of ICCG solver
+            study.GetStudyProperties().SetValue(u"IccgAccel", 1.2) 
+            study.GetStudyProperties().SetValue(u"AutoAccel", 0)
+        else:
+            # this can be said to be super fast over ICCG solver.
+            # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
+            study.GetStudyProperties().SetValue(u"DirectSolverType", 1)
+
+        # This SMP(shared memory process) is effective only if there are tons of elements. e.g., over 100,000.
+        # too many threads will in turn make them compete with each other and slow down the solve. 2 is good enough for eddy current solve. 6~8 is enough for transient solve.
+        study.GetStudyProperties().SetValue(u"UseMultiCPU", True)
+        study.GetStudyProperties().SetValue(u"MultiCPU", 2) 
+
+        # # this is for the CAD parameters to rotate the rotor. the order matters for param_no to begin at 0.
+        # if self.MODEL_ROTATE:
+        #     self.add_cad_parameters(study)
+
+
+        # 上一步的铁磁材料的状态作为下一步的初值，挺好，但是如果每一个转子的位置转过很大的话，反而会减慢非线性迭代。
+        # 我们的情况是：0.33 sec 分成了32步，每步的时间大概在0.01秒，0.01秒乘以0.5*497 Hz = 2.485 revolution...
+        # study.GetStudyProperties().SetValue(u"NonlinearSpeedup", 0) # JMAG17.1以后默认使用。现在后面密集的步长还多一点（32步），前面16步慢一点就慢一点呗！
+
+
+        # two sections of different time step
+        if True: # ECCE19
+            number_of_steps_2ndTTS = self.fea_config_dict['number_of_steps_2ndTTS'] 
+            DM = app.GetDataManager()
+            DM.CreatePointArray(u"point_array/timevsdivision", u"SectionStepTable")
+            refarray = [[0 for i in range(3)] for j in range(3)]
+            refarray[0][0] = 0
+            refarray[0][1] =    1
+            refarray[0][2] =        50
+            refarray[1][0] = 0.5/slip_freq_breakdown_torque #0.5 for 17.1.03l # 1 for 17.1.02y
+            refarray[1][1] =    16                          # 16 for 17.1.03l #32 for 17.1.02y
+            refarray[1][2] =        50
+            refarray[2][0] = refarray[1][0] + 0.5/im_variant.DriveW_Freq #0.5 for 17.1.03l 
+            refarray[2][1] =    number_of_steps_2ndTTS  # also modify range_ss! # don't forget to modify below!
+            refarray[2][2] =        50
+            DM.GetDataSet(u"SectionStepTable").SetTable(refarray)
+            number_of_total_steps = 1 + 16 + number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
+            study.GetStep().SetValue(u"Step", number_of_total_steps)
+            study.GetStep().SetValue(u"StepType", 3)
+            study.GetStep().SetTableProperty(u"Division", DM.GetDataSet(u"SectionStepTable"))
+
+        else: # IEMDC19
+            number_cycles_prolonged = 1 # 50
+            DM = app.GetDataManager()
+            DM.CreatePointArray(u"point_array/timevsdivision", u"SectionStepTable")
+            refarray = [[0 for i in range(3)] for j in range(4)]
+            refarray[0][0] = 0
+            refarray[0][1] =    1
+            refarray[0][2] =        50
+            refarray[1][0] = 1.0/slip_freq_breakdown_torque
+            refarray[1][1] =    32 
+            refarray[1][2] =        50
+            refarray[2][0] = refarray[1][0] + 1.0/im_variant.DriveW_Freq
+            refarray[2][1] =    48 # don't forget to modify below!
+            refarray[2][2] =        50
+            refarray[3][0] = refarray[2][0] + number_cycles_prolonged/im_variant.DriveW_Freq # =50*0.002 sec = 0.1 sec is needed to converge to TranRef
+            refarray[3][1] =    number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] # =50*40, every 0.002 sec takes 40 steps 
+            refarray[3][2] =        50
+            DM.GetDataSet(u"SectionStepTable").SetTable(refarray)
+            study.GetStep().SetValue(u"Step", 1 + 32 + 48 + number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle']) # [Double Check] don't forget to modify here!
+            study.GetStep().SetValue(u"StepType", 3)
+            study.GetStep().SetTableProperty(u"Division", DM.GetDataSet(u"SectionStepTable"))
+
+        # add equations
+        study.GetDesignTable().AddEquation(u"freq")
+        study.GetDesignTable().AddEquation(u"slip")
+        study.GetDesignTable().AddEquation(u"speed")
+        study.GetDesignTable().GetEquation(u"freq").SetType(0)
+        study.GetDesignTable().GetEquation(u"freq").SetExpression("%g"%((im_variant.DriveW_Freq)))
+        study.GetDesignTable().GetEquation(u"freq").SetDescription(u"Excitation Frequency")
+        study.GetDesignTable().GetEquation(u"slip").SetType(0)
+        study.GetDesignTable().GetEquation(u"slip").SetExpression("%g"%(im_variant.the_slip))
+        study.GetDesignTable().GetEquation(u"slip").SetDescription(u"Slip [1]")
+        study.GetDesignTable().GetEquation(u"speed").SetType(1)
+        study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * 30")
+        study.GetDesignTable().GetEquation(u"speed").SetDescription(u"mechanical speed of four pole")
+
+        # speed, freq, slip
+        study.GetCondition(u"RotCon").SetValue(u"AngularVelocity", u'speed')
+        app.ShowCircuitGrid(True)
+        study.GetCircuit().GetComponent(u"CS4").SetValue(u"Frequency", u"freq")
+        study.GetCircuit().GetComponent(u"CS2").SetValue(u"Frequency", u"freq")
+
+        # max_nonlinear_iteration = 50
+        # study.GetStudyProperties().SetValue(u"NonlinearMaxIteration", max_nonlinear_iteration)
+        study.GetStudyProperties().SetValue(u"ApproximateTransientAnalysis", 1) # psuedo steady state freq is for PWM drive to use
+        study.GetStudyProperties().SetValue(u"SpecifySlip", 1)
+        study.GetStudyProperties().SetValue(u"OutputSteadyResultAs1stStep", 0)
+        study.GetStudyProperties().SetValue(u"Slip", u"slip")
+
+        # # add other excitation frequencies other than 500 Hz as cases
+        # for case_no, DriveW_Freq in enumerate([50.0, slip_freq_breakdown_torque]):
+        #     slip = slip_freq_breakdown_torque / DriveW_Freq
+        #     study.GetDesignTable().AddCase()
+        #     study.GetDesignTable().SetValue(case_no+1, 0, DriveW_Freq)
+        #     study.GetDesignTable().SetValue(case_no+1, 1, slip)
+
+        # 你把Tran2TSS计算周期减半！
+        # 也要在计算铁耗的时候选择1/4或1/2的数据！（建议1/4）
+        # 然后，手动添加end step 和 start step，这样靠谱！2019-01-09：注意设置铁耗条件（iron loss condition）的Reference Start Step和End Step。
+
+        # Iron Loss Calculation Condition
+        # Stator 
+        cond = study.CreateCondition(u"Ironloss", u"IronLossConStator")
+        cond.SetValue(u"RevolutionSpeed", u"freq*60/%d"%(0.5*(im_variant.DriveW_poles)))
+        cond.ClearParts()
+        sel = cond.GetSelection()
+        sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+1e-2, 0 ,0)
+        cond.AddSelected(sel)
+        # Use FFT for hysteresis to be consistent with FEMM's results and to have a FFT plot
+        cond.SetValue(u"HysteresisLossCalcType", 1)
+        cond.SetValue(u"PresetType", 3) # 3:Custom
+        # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
+        cond.SetValue(u"StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
+        cond.SetValue(u"EndReferenceStep", number_of_total_steps)
+        cond.SetValue(u"UseStartReferenceStep", 1)
+        cond.SetValue(u"UseEndReferenceStep", 1)
+        cond.SetValue(u"Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
+        cond.SetValue(u"UseFrequencyOrder", 1)
+        cond.SetValue(u"FrequencyOrder", u"1-50") # Harmonics up to 50th orders 
+        # Check CSV reults for iron loss (You cannot check this for Freq study) # CSV and save space
+        study.GetStudyProperties().SetValue(u"CsvOutputPath", dir_csv_output_folder) # it's folder rather than file!
+        study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;LineCurrent;TerminalVoltage;JouleLoss;TotalDisplacementAngle;JouleLoss_IronLoss;IronLoss_IronLoss;HysteresisLoss_IronLoss")
+        study.GetStudyProperties().SetValue(u"DeleteResultFiles", self.fea_config_dict['delete_results_after_calculation'])
+        # Terminal Voltage/Circuit Voltage: Check for outputing CSV results 
+        study.GetCircuit().CreateTerminalLabel(u"Terminal4A", 8, -13)
+        study.GetCircuit().CreateTerminalLabel(u"Terminal4B", 8, -11)
+        study.GetCircuit().CreateTerminalLabel(u"Terminal4C", 8, -9)
+        study.GetCircuit().CreateTerminalLabel(u"Terminal2A", 23, -13)
+        study.GetCircuit().CreateTerminalLabel(u"Terminal2B", 23, -11)
+        study.GetCircuit().CreateTerminalLabel(u"Terminal2C", 23, -9)
+        # Export Stator Core's field results only for iron loss calculation (the csv file of iron loss will be clean with this setting)
+            # study.GetMaterial(u"Rotor Core").SetValue(u"OutputResult", 0) # at least one part on the rotor should be output or else a warning "the jplot file does not contains displacement results when you try to calc. iron loss on the moving part." will pop up, even though I don't add iron loss condition on the rotor.
+        study.GetMeshControl().SetValue(u"AirRegionOutputResult", 0)
+        study.GetMaterial(u"Shaft").SetValue(u"OutputResult", 0)
+        study.GetMaterial(u"Cage").SetValue(u"OutputResult", 0)
+        study.GetMaterial(u"Coil").SetValue(u"OutputResult", 0)
+        # Rotor
+            # study.CreateCondition(u"Ironloss", u"IronLossConRotor")
+            # study.GetCondition(u"IronLossConRotor").SetValue(u"BasicFrequencyType", 2)
+            # study.GetCondition(u"IronLossConRotor").SetValue(u"BasicFrequency", u"slip*freq")
+            # study.GetCondition(u"IronLossConRotor").ClearParts()
+            # sel = study.GetCondition(u"IronLossConRotor").GetSelection()
+            # sel.SelectPartByPosition(-im.Radius_Shaft-1e-2, 0 ,0)
+            # study.GetCondition(u"IronLossConRotor").AddSelected(sel)
+            # # Use FFT for hysteresis to be consistent with FEMM's results
+            # study.GetCondition(u"IronLossConRotor").SetValue(u"HysteresisLossCalcType", 1)
+            # study.GetCondition(u"IronLossConRotor").SetValue(u"PresetType", 3)
+
+        self.study_name = study_name
+        return study
+
 
     # Static FEA
     def add_cad_parameters(self, study):
