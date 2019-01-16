@@ -119,7 +119,10 @@ reload(FEMM_Solver)
 # run_folder = r'run#103/' # From this run, write denormalized pop data to disk!
 # run_folder = r'run#104/' # Make sure all the gen#xxxx file uses denormalized values.
 run_list = [0,1,0,0,0] 
-run_folder = r'run#105/'# Femm is used for breakdown torque and frequency! 
+# run_folder = r'run#105/' # Femm is used for breakdown torque and frequency! 
+# run_folder = r'run#106/' # You need to initialize femm_solver every calling of fobj
+run_folder = r'run#107/' # There is no slide mesh if you add new study for Tran2TSS
+
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
 if fea_config_dict['flag_optimization'] == True:
@@ -167,7 +170,7 @@ if fea_config_dict['flag_optimization'] == True:
                                             [5e-1,   3] ], # Width_StatorTeethHeadThickness
                             'mut':        0.8,
                             'crossp':     0.7,
-                            'popsize':    5,
+                            'popsize':    30,
                             'iterations': 48 } # begin at 5
 
 else:

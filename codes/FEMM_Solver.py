@@ -1342,7 +1342,7 @@ class FEMM_Solver(object):
         R = 0.5*(im.Location_RotorBarCenter + im.Location_RotorBarCenter2)
         angle_per_slot = 2*pi/im.Qr
         THETA_BAR = pi - angle_per_slot + EPS # add EPS for the half bar
-        print self.rotor_slot_per_pole * int(4/fraction)
+        print 'number of rotor_slot_per_pole', self.rotor_slot_per_pole * int(4/fraction)
         for i in range(self.rotor_slot_per_pole * int(4/fraction)):
             THETA_BAR += angle_per_slot
             THETA = THETA_BAR
@@ -1622,21 +1622,6 @@ class FEMM_Solver(object):
                         flag_pso_running = False
                         break
             sleep(1)
-
-    def wait_greedy_search(self):
-        tic = clock_time()
-        while True:
-            fname = self.dir_femm_temp + 'femm_found.csv'
-            if os.path.exists(fname):
-                with open(fname, 'r') as f:
-                    data = f.readlines()
-                os.rename(fname, self.dir_femm_temp + self.study_name + '.csv')
-                break
-            else:
-                sleep(1)
-                print clock_time() - tic, 's'
-                
-        return float(data[0][:-1]), float(data[1][:-1]), None
 
     def get_rotor_current_function(self, i=0):
         '''[For post-process of plotting rotor current waveform]
@@ -2150,6 +2135,21 @@ class FEMM_Solver(object):
                                                                                     self.stack_length))
         os.startfile('temp2.bat')
         # os.remove('temp2.bat')
+
+    def wait_greedy_search(self):
+        tic = clock_time()
+        while True:
+            fname = self.dir_femm_temp + 'femm_found.csv'
+            if os.path.exists(fname):
+                with open(fname, 'r') as f:
+                    data = f.readlines()
+                os.rename(fname, self.dir_femm_temp + self.study_name + '.csv')
+                break
+            else:
+                sleep(1)
+                # print clock_time() - tic, 's'
+                
+        return float(data[0][:-1]), float(data[1][:-1]), None
 
 
 # def get_magnet_loss(self):

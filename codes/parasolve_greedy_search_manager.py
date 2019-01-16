@@ -38,6 +38,7 @@ list_torque = []
 list_slipfreq = []
 
 while True:
+    # freq_step can be negative!
     freq_step  = (freq_end - freq_begin) / (number_of_instantces-1)
 
     for id_solver in range(number_of_instantces):
@@ -56,8 +57,12 @@ while True:
 
     list_solver_id = []
     ans_count = 0
+    count_sec = 0
     while True:
         sleep(1)
+        count_sec += 1
+        if count_sec > 120: # two min 
+            raise Exception('It is highly likely that exception occurs during the solving of FEMM.')
         print '\nbegin waiting for eddy current solver...'
         for id_solver in range(number_of_instantces):
 
@@ -107,7 +112,9 @@ while True:
         elif breakdown_slipfreq_1st < breakdown_torque_2nd:
             freq_begin = breakdown_slipfreq_1st
             freq_end   = breakdown_slipfreq_2nd
-            freq_step  = abs(freq_end - freq_begin) / (2 + number_of_instantces-1)
+
+            # freq_step can be negative!
+            freq_step  = (freq_end - freq_begin) / (2 + number_of_instantces-1)
             freq_begin += freq_step
             freq_end   -= freq_step
         print 'try: freq_begin=%g, freq_end=%g.' % (freq_begin, freq_end)
