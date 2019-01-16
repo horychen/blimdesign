@@ -1561,7 +1561,7 @@ class FEMM_Solver(object):
             femm.mi_saveas(self.output_file_name + '.fem')
 
         self.parallel_solve(dir_run=self.dir_run_sweeping) # subprocess will wait for cmd but not the pytho script
-        self.pso(list_ans_file)
+        self.wait(list_ans_file)
 
         # flux and current of circuit can be used for parameter identification
         if False:
@@ -1605,7 +1605,7 @@ class FEMM_Solver(object):
 
                 f.write(results_rotor + '\n')
 
-    def pso(self, list_ans_file):
+    def wait(self, list_ans_file):
         # 删掉FEMM涡流场求解完的结果！
         flag_pso_running = True
         current_index = 0
@@ -2091,21 +2091,15 @@ class FEMM_Solver(object):
 
 
     # this is for JMAG calling to seek for breakdown torque and slip
-    def greedy_search_for_breakdown_slip(self, output_file_path, initial_pop=range(1,6)):
-        # check the existence of results
-        print output_file_path
-        raise
+    def greedy_search_for_breakdown_slip(self, output_file_path, initial_pop=range(1,6), fraction=2):
 
         self.flag_static_solver = False
         self.flag_eddycurrent_solver = True
         self.fraction = fraction
 
-        for f in os.listdir(self.dir_run_sweeping):
-            os.remove(self.dir_run_sweeping + f)
-
         femm.openfemm(True) # bHide # False for debug
         femm.newdocument(0) # magnetic
-        self.freq_range = freq_range
+        self.freq_range = initial_pop # here, the only variable for an individual is frequency, so pop = list of frequencies
         self.freq = freq_range[0]
         # Alternatively, the length of the machine could be scaled by the number of segments to make this correction automatically. -David Meeker
         self.stack_length = self.im.stack_length * fraction
@@ -2127,13 +2121,34 @@ class FEMM_Solver(object):
             self.probdef()        
             femm.mi_saveas(self.output_file_name + '.fem')
 
-        self.parallel_solve(dir_run=self.dir_run_sweeping) # subprocess will wait for cmd but not the pytho script
-        self.pso(list_ans_file)
+        self.greedy_search(dir_run=self.dir_run_sweeping) # subprocess will wait for cmd but not the pytho script
+
+        str_results = ','.join()
+        with open(output_file_path, 'w') as f:
+            f.write(str_results)
+
+    def parasolve_greedy_search(self, dir_run=None, number_of_instantces=5, bool_watchdog_postproc=True):
+        '''[并行求解] 当初没想好，旋转转子竟然不是并行的。。。
+        Keyword Arguments:
+            dir_run {[type]} -- [静态场用self.dir_run，涡流场用self.dir_run_sweeping] (default: {None})
+            number_of_instantces {number} -- [几个？] (default: {5})
+            bool_watchdog_postproc {bool} -- [有些时候我们不喜欢用看门狗，后面看了就知道] (default: {True})
+        '''
+        if dir_run == None:
+           dir_run = self.dir_run
+
+        # 
+        # 在搜索的过程中，显然是需要知道结果的，这说明，不仅仅要跑五个instance，
+        # 而且还需要有一个总管instanse，负责总调，
+        # self.wait(list_ans_file)
 
 
-
-
-
+        if True: # for running script in JMAG
+            # os.system('python "%smethod_parallel_solve_4jmag.py" %s' % (self.dir_codes, dir_run))
+            with open('temp.bat', 'w') as f:
+                f.write('python "%smethod_parallel_solve_4jmag.py" %s %d' % (self.dir_codes, dir_run, number_of_instantces))
+            os.startfile('temp.bat')
+            # os.remove('temp.bat')
 
 
 # def get_magnet_loss(self):

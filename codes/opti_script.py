@@ -70,7 +70,6 @@ def where_am_i(fea_config_dict):
     # However, we need field data for iron loss calculation
     fea_config_dict['OnlyTableResults'] = False 
 
-
 fea_config_dict = {
     ##########################
     # Sysetm Controlc

@@ -168,7 +168,7 @@ class swarm(object):
                     logger.warn('Unfinished iteration is found with ongoing files in run folder. Make sure the project is not opened in JMAG, and we are going to remove the project files and ongoing files.')
                     logger.warn(u'不出意外，就从第一个个体开始迭代。但是很多时候跑到第150个个体的时候跑断了，你总不会想要把这一代都删了，重新跑吧？')
                     # os.remove(u"D:/JMAG_Files/" + run_folder[:-1] + file[:-12] + ".jproj")
-                    print 'List interrupt_pop here:', self.interrupt_pop
+                    print 'List interrupt_pop here:', self.interrupt_pop.tolist()
 
                 if 'fit' in file:
                     self.interrupt_fitness = []
@@ -419,8 +419,9 @@ class swarm(object):
             if DRAW_SUCCESS == 0:
                 # TODO: skip this model and its evaluation
                 cost_function = 99999 # penalty
-                logging.getLogger(__name__).warn('Draw Failed for %s-%s\nCost function penalty = %g.%s', self.project_name, im_variant.individual_name, self.im_variant.show(toString=True), cost_function)
-                return cost_function
+                logging.getLogger(__name__).warn('Draw Failed for %s-%s\nCost function penalty = %g.%s', self.project_name, im_variant.individual_name, cost_function, self.im_variant.show(toString=True))
+                raise Exception('Draw Failed')
+                return None
             elif DRAW_SUCCESS == -1:
                 # The model already exists
                 print 'Model Already Exists'
@@ -801,9 +802,10 @@ class swarm(object):
 
         # draw parts
         if True:
-            d = draw(im_variant) # 传递的是地址哦
+            d = TrimDrawer(im_variant) # 传递的是地址哦
         else:
             d = VanGogh_JMAG(im_variant) # 传递的是地址哦
+        self.d = d # for debug
         d.doc = doc
         d.ass = ass
         try:
@@ -2367,8 +2369,6 @@ class bearingless_induction_motor_design(object):
                                                                 im.parameters_for_imposing_constraints_among_design_parameters[2])
         rotor_slot_height_h_sr = rotor_tooth_height_h_dr
 
-
-
         # radius of outer rotor slot
         Radius_of_RotorSlot = 1e3 * (2*pi*(im.Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3 - rotor_tooth_width_b_dr*im.Qr) / (2*im.Qr+2*pi)
         Location_RotorBarCenter = im.Radius_OuterRotor - Length_HeadNeckRotorSlot - Radius_of_RotorSlot
@@ -3618,7 +3618,7 @@ class VanGogh_JMAG(VanGogh):
 #     vg_jmag = VanGogh_JMAG(None)
 #     print vg_jmag.find_center_of_a_circle_using_2_points_and_arc_angle
 
-class draw(object):
+class TrimDrawer(object):
 
     def __init__(self, im):
         self.SketchName = None
@@ -3935,6 +3935,7 @@ class draw(object):
             # else:
             #     self.trim_l(l2,0.5*self.im.Radius_of_RotorSlot-self.im.Location_RotorBarCenter, 0)
 
+        # 上面说的“导致Line.3整根消失！”的原因是直接剪在了原点(0,0)上，所以把整根线都删掉了，稍微偏一点(-0.1,0.1)操作即可
         # ä¸Šé¢è¯´çš„â€œå¯¼è‡´Line.3æ•´æ ¹æ¶ˆå¤±ï¼â€çš„åŽŸå› æ˜¯ç›´æŽ\å‰ªåœ¨äº†åŽŸç‚¹(0,0)ä¸Šï¼Œæ‰€ä»\æŠŠæ•´æ ¹çº¿éƒ½åˆ æŽ‰äº†ï¼Œç¨å¾®åä¸€ç‚¹(-0.1,0.1)æ“ä½œå³å¯
             # self.doc.GetSketchManager().SketchTrim(0,0) # BUG - delete the whole Line.3
         self.trim_l(l3,-1e-2, 1e-2)
@@ -4021,11 +4022,9 @@ class draw(object):
         l4 = self.line(0, 0, X, Y) # Line.4
 
 
-
-
         # Trim for Arcs
 
-        # ä¸ºäº†é¿å…æ•°Arcï¼Œæˆ‘ä»¬åº”è¯\åœ¨Circle.4æ—¶æœŸå°±æŠŠCircle.4ä¸Šçš„å°ç‰‡æ®µä¼˜å…ˆå‰ªäº†ï¼
+        # 为了避免数Arc，我们应该在Circle.4时期就把Circle.4上的小片段优先剪了！
         arc4 = self.trim_c(c4, X+1e-6, Y+1e-6) # Arc.1
 
         self.trim_a(arc4, 0, self.im.Radius_InnerStator + self.im.Width_StatorTeethHeadThickness)
@@ -4039,7 +4038,7 @@ class draw(object):
         Y = R*sin(THETA)
         self.trim_a(arc1, X, Y-1e-6)
 
-        # ä¸ºäº†é¿å…æ•°Arcï¼Œæˆ‘ä»¬åº”è¯\åœ¨Circle.2æ—¶æœŸå°±æŠŠCircle.2ä¸Šçš„å°ç‰‡æ®µä¼˜å…ˆå‰ªäº†ï¼
+        # 为了避免数Arc，我们应该在Circle.2时期就把Circle.2上的小片段优先剪了！
         arc2 = self.trim_c(c2,-self.im.Radius_InnerStatorYoke, 0.25*self.im.Width_StatorTeethBody)
 
         self.trim_a(arc2, 0, self.im.Radius_InnerStatorYoke)
@@ -4056,23 +4055,40 @@ class draw(object):
 
         self.trim_l(l4,-1e-6, 1e-6) # float number
 
+        # This error is caused because Y=2 is an integer!
+        # 2019-01-15 17:48:55,243 - population - ERROR - The drawing is terminated. Please check whether the specified bounds are proper.
+        # Traceback (most recent call last):
+        #   File "D:/OneDrive - UW-Madison/c/codes/population.py", line 816, in draw_jmag_model
+        #     d.plot_statorCore(u"Stator Core")
+        #   File "D:/OneDrive - UW-Madison/c/codes/population.py", line 4066, in plot_statorCore
+        #     l5_start_vertex = sketch.CreateVertex(X, Y)
+        #   File "<string>", line 43, in CreateVertex
+        # ValueError: Error calling the remote method
+
+        # Similaryly, this error is caused because self.l5_start_vertex_y=2 is an integer!
+        # 2019-01-15 19:00:33,286 - population - ERROR - The drawing is terminated. Please check whether the specified bounds are proper.
+        # Traceback (most recent call last):
+        #   File "D:/OneDrive - UW-Madison/c/codes/population.py", line 818, in draw_jmag_model
+        #     d.plot_statorCore(u"Stator Core")
+        #   File "D:/OneDrive - UW-Madison/c/codes/population.py", line 4106, in plot_statorCore
+        #     raise e
+        # ValueError: Error calling the remote method
+
 
 
         # we forget to plot the neck of stator tooth
-        l2_end_vertex = l2.GetEndVertex()
-        X = l2_end_vertex.GetX()
-        Y = l2_end_vertex.GetY()
-            # l5_start_vertex = sketch.CreateVertex(X - self.im.Width_StatorTeethNeck, Y) # legacy 2
-        l5_start_vertex = sketch.CreateVertex(X, Y) 
-        self.l5_start_vertex_x = l5_start_vertex.GetX()
-        self.l5_start_vertex_y = l5_start_vertex.GetY()
+        self.l5_start_vertex_x = l2.GetEndVertex().GetX()        # used later for plot_coil()
+        self.l5_start_vertex_y = float(l2.GetEndVertex().GetY()) # used later for plot_coil()                
+        X = arc4.GetStartVertex().GetX()
+        Y = arc4.GetStartVertex().GetY()
+        try:
+            l5 = self.line( self.l5_start_vertex_x, self.l5_start_vertex_y, X, Y) # Line.5
+        except Exception, e:
+            print l2.GetEndVertex().GetX(), l2.GetEndVertex().GetY(), arc4.GetStartVertex().GetX(), arc4.GetStartVertex().GetY()
+            logger = logging.getLogger(__name__)
+            logger.error(u'Draw Line.5 for Stator Core Failed, because integer cannot be passed as paramters to JMAG remote mathod. It is wierd, but just follow the rule.', exc_info=True)
+            raise e
 
-        arc4_start_vertex = arc4.GetStartVertex()
-        X = arc4_start_vertex.GetX()
-        Y = arc4_start_vertex.GetY()
-        l5_end_vertex = sketch.CreateVertex(X, Y) 
-
-        l5 = self.line(self.l5_start_vertex_x, self.l5_start_vertex_y, l5_end_vertex.GetX(), l5_end_vertex.GetY()) # Line.5
 
         self.doc.GetSelection().Clear()
         self.doc.GetSelection().Add(sketch.GetItem(arc4.GetName())) # arc4 corresponds to u"Arc".
@@ -4199,8 +4215,8 @@ class draw(object):
         sketch = self.create_sketch(SketchName, u"#EC9787")
 
 
-        # æ–¹æ¡ˆä¸€ ç”»ä¸­çº¿ï¼Œç„¶åŽé•œåƒåˆ°å¯¹é¢ï¼Œå¾—åˆ°å¦å¤–ä¸¤ä¸ªç‚¹ï¼
-        # æ–¹æ¡ˆäºŒ ä¸ºä»€ä¹ˆä¸ç›´æŽ\ç”»åœ†ç„¶åŽTrimå“¦ï¼
+        # 方案一 画中线，然后镜像到对面，得到另外两个点！
+        # 方案二 为什么不直接画圆然后Trim哦！
         if 1:
             self.im.Radius_InnerStator = self.im.Length_AirGap + self.im.Radius_OuterRotor
             # sketch.CreateVertex(0, 0)
