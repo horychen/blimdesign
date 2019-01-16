@@ -18,25 +18,6 @@ model_name_prefix = 'Tran2TSS_PS_Opti'
 loc_txt_file = '../pop/%s.txt'%(model_name_prefix)
 open(loc_txt_file, 'w').close()
 
-# decorater used to block function printing to the console
-def blockPrinting(func):
-    def func_wrapper(*args, **kwargs):
-        # block all printing to the console
-        sys.stdout = open(os.devnull, 'w')
-        # call the method in question
-        func(*args, **kwargs)
-        # enable all printing to the console
-        sys.stdout = sys.__stdout__
-
-    return func_wrapper
-
-# Disable
-def blockPrint():
-    sys.stdout = open(os.devnull, 'w')
-
-# Restore
-def enablePrint():
-    sys.stdout = sys.__stdout__
 
 # @blockPrinting
 def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_density_B_ds, rotor_current_density_Jr):

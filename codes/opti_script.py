@@ -86,7 +86,7 @@ fea_config_dict = {
     # Optimization
     ##########################
     # 'FrequencyRange':range(1,6), # the first generation for PSO
-    'number_of_steps_2ndTTS':32, # 8*32 # steps for half period (0.5). That is, we implement two time sections, the 1st section lasts half slip period and the 2nd section lasts half fandamental period.
+    'number_of_steps_2ndTTS':32, # use a multiples of 4! # 8*32 # steps for half period (0.5). That is, we implement two time sections, the 1st section lasts half slip period and the 2nd section lasts half fandamental period.
     'JMAG_Scheduler':False, # multi-cores run
     'delete_results_after_calculation': False, # check if True can we still export Terminal Voltage? 如果是True，那么就得不到Terminal Voltage了！
 
@@ -121,7 +121,8 @@ reload(FEMM_Solver)
 run_list = [0,1,0,0,0] 
 # run_folder = r'run#105/' # Femm is used for breakdown torque and frequency! 
 # run_folder = r'run#106/' # You need to initialize femm_solver every calling of fobj
-run_folder = r'run#107/' # There is no slide mesh if you add new study for Tran2TSS
+# run_folder = r'run#107/' # There is no slide mesh if you add new study for Tran2TSS
+run_folder = r'run#108/' # Efficiency is added. femm_found.fem feature is added.
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list

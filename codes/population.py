@@ -61,8 +61,25 @@ class data_manager(object):
         self.ForConY_list = []
         self.ForConAbs_list = []
 
+        self.loss_list = None
+
     def unpack(self):
         return self.basic_info, self.time_list, self.TorCon_list, self.ForConX_list, self.ForConY_list, self.ForConAbs_list
+
+    @property
+    def loss_list(self):
+        return self.loss_list
+
+    @property
+    def terminal_voltage(self, which='4C'): # 2A 2B 2C 4A 4B 4C
+        return self.Current_dict['Terminal%s [Case 1]'%(which)]
+    
+    @property
+    def power_factor(self):
+        self.Current_dict['Coil4C']
+        self.terminal_voltage
+        raise Exception('under contruction')
+        # utility....
 
 class swarm(object):
 
@@ -463,7 +480,7 @@ class swarm(object):
             # Load Results for Tran2TSS
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             try:
-                dm = self.read_csv_results_4_comparison__transient(tran2tss_study_name)
+                dm = self.read_csv_results_4_optimization(tran2tss_study_name)                
                 basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
                 sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=self.fea_config_dict['number_of_steps_2ndTTS']) # samples in the tail that are in steady state
                 str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
@@ -475,24 +492,26 @@ class swarm(object):
                                   sfv=sfv,
                                   torque=TorCon_list,
                                   range_ss=sfv.range_ss)
-                str_results += '\n\tbasic info:' + ''.join([str(el) for el in basic_info])
+                str_results += '\n\tbasic info:' +  ''.join(  [str(el) for el in basic_info])
+                str_results += '\n\tloss info:'  + ','.join(['%g'%(el) for el in dm.loss_list]) # dm.loss_list = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
+                str_results += '\n\tPF:'
                 self.fig_main.savefig(self.dir_run + im_variant.individual_name + 'results.png', dpi=150)
                 self.pyplot_clear()
             except Exception, e:
                 logger.error(u'Error when loading csv results for Tran2TSS.', exc_info=True)
                 raise Exception('Error: see log file.')
             # show()
-            return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
+            return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.loss_list
 
         ################################################################
         # Begin from where left: Frequency Study
         ################################################################
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # Eddy Current Solver for Breakdown Torque and Slip
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         # Freq Study: you can choose to not use JMAG to find the breakdown slip.
         original_study_name = im_variant.individual_name + u"Freq"
         slip_freq_breakdown_torque = None
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # Eddy Current Solver for Breakdown Torque and Slip
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         if self.fea_config_dict['jmag_run_list'][0] == 0:
             # FEMM # In this case, you have to set im_variant.slip_freq_breakdown_torque by FEMM Solver
             # check for existing results
@@ -576,16 +595,29 @@ class swarm(object):
         ################################################################
         # Load data for cost function evaluation
         ################################################################
-        str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = load_transeint()
+        str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, loss_list = load_transeint()
 
         # compute the fitness 
         rotor_volume = pi*(im_variant.Radius_OuterRotor*1e-3)**2 * (im_variant.stack_length*1e-3)
         rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³
         shaft_power  = im_variant.Omega * torque_average
-        copper_loss  = 0.0 # use the last 1/4 period data to compute average copper loss of Tran2TSS rather than use that of Freq study
-        iron_loss    = 0.0 # 
+        if loss_list is None:        
+            copper_loss  = 0.0
+            iron_loss    = 0.0
+        else:
+            if True:
+                # by JMAG only
+                copper_loss  = loss_list[0] + loss_list[1] 
+                iron_loss    = loss_list[2] 
+            else:
+                # by JMAG for iron loss and FEMM for 
+                copper_loss  = loss_list[5] + loss_list[6] # [3] and [4] are eddy and hysteresis loss
+                iron_loss    = loss_list[2] 
+            # some factor to account for rotor iron loss?
+            # iron_loss *= 1
+
         total_loss   = copper_loss + iron_loss
-        efficiency   = 1 #shaft_power / (total_loss + shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
+        efficiency   = shaft_power / (total_loss + shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
         # The weight is [1, 1, 0.1, 0.1, 0.1, 10]
         list_weighted_cost = [  30e3 / ( torque_average/rotor_volume ),
                                 1.0 / ( ss_avg_force_magnitude/rotor_weight ),
@@ -1927,10 +1959,27 @@ class swarm(object):
                 count +=1
                 if count>8:
                     if count==9:
-                        stator_copper_loss = float(row[8]) # Coil
+                        stator_copper_loss = float(row[8]) # Coil # it is the same over time, this value does not account for end coil
 
                     rotor_copper_loss_list.append(float(row[7])) # Cage
+        
+        # use the last 1/4 period data to compute average copper loss of Tran2TSS rather than use that of Freq study
+        effective_part = rotor_copper_loss_list[:int(0.25*self.fea_config_dict['number_of_steps_2ndTTS'])]
+        rotor_copper_loss = sum(effective_part) / len(effective_part)
 
+        if self.fea_config_dict['jmag_run_list'][0] == 0:
+            # utility.blockPrint()
+            try:
+                # convert rotor current results (complex number) into its amplitude
+                self.femm_solver.list_rotor_current_amp = [abs(el[0]+1j*el[1]) for el in self.femm_solver.vals_results_rotor_current]
+                # settings not necessarily be consistent with Pyrhonen09's design: , STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1., TEMPERATURE_OF_COIL=75
+                s, r = self.femm_solver.get_copper_loss(self.femm_solver.stator_slot_area, self.femm_solver.rotor_slot_area)
+            except Exception as e:
+                # if it is interrupted, you have to read from file to recover: vals_results_rotor_current, stator_slot_area, rotor_slot_area
+                raise e
+            # utility.enablePrint()
+        else:
+            s, r = None, None
 
         dm = data_manager()
         dm.basic_info     = basic_info
@@ -1941,9 +1990,9 @@ class swarm(object):
         dm.ForConAbs_list = ForConAbs_list
         dm.Current_dict   = Current_dict
         dm.key_list       = key_list
-        dm.stator_loss    = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss, ]
-
-        return dm        
+        dm.loss_list      = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
+        dm.femm_loss_list = [s, r]
+        return dm
 
     # IEMDC19
     def read_csv_results_4_comparison__transient(self, study_name, path_prefix=None):
@@ -3382,6 +3431,9 @@ class bearingless_induction_motor_design(object):
             study.GetMaterial(u"Rotor Core").SetValue(u"LaminationFactor", 96)
 
         else:
+            msg = 'Warning: default material is used: DCMagnetic Type/50A1000.'
+            print msg
+            logging.getLogger(__name__).warn(msg)
             study.SetMaterialByName(u"Stator Core", u"DCMagnetic Type/50A1000")
             study.GetMaterial(u"Stator Core").SetValue(u"UserConductivityType", 1)
             study.SetMaterialByName(u"Rotor Core", u"DCMagnetic Type/50A1000")

@@ -3,6 +3,7 @@ import os
 import logging
 import datetime
 import operator
+
 def get_max_and_index(the_list):
     return max(enumerate(the_list), key=operator.itemgetter(1))
 
@@ -55,6 +56,26 @@ def logger_init(): # This will lead to duplicated logging output
     # add the handlers to the logger
     logger.addHandler(handler)
     return logger
+
+# decorater used to block function printing to the console
+def blockPrinting(func):
+    def func_wrapper(*args, **kwargs):
+        # block all printing to the console
+        sys.stdout = open(os.devnull, 'w')
+        # call the method in question
+        func(*args, **kwargs)
+        # enable all printing to the console
+        sys.stdout = sys.__stdout__
+
+    return func_wrapper
+
+# Disable
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore
+def enablePrint():
+    sys.stdout = sys.__stdout__
 
 import math
 def to_precision(x,p=4):

@@ -1793,7 +1793,7 @@ class FEMM_Solver(object):
 
         temp = self.get_iron_loss()
         print 'iron loss', temp
-        temp = self.get_copper_loss()
+        temp = self.get_copper_loss(self.stator_slot_area, self.rotor_slot_area)
         print 'copper loss', temp
 
         # np.savetxt(f, np.c_[self.stator_Bx_data])
@@ -1843,12 +1843,16 @@ class FEMM_Solver(object):
 
         femm.mo_close()
 
-    def get_copper_loss(self, SLOT_FILL_FACTOR=0.5, TEMPERATURE_OF_COIL=75): 
-        # 100 25 % temperature increase, degrees C
-        # Here, by conductor it means the parallel branch (=1) is considered, and number_of_coil_per_slot = 8 (and will always be 8, see example below).
-        # Just for example, if parallel branch is 2, number_of_coil_per_slot will still be 8, even though we cut the motor in half and count there will be 16 wire cross-sections,
-        # because the reduction in resistance due to parallel branch will be considered into the variable resistance_per_coil.
-        # Remember that the number_of_coil_per_slot (in series) is limited by the high back EMF rather than slot area.
+    def get_copper_loss(self, stator_slot_area, rotor_slot_area, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75): 
+        # make sure these two values 
+        # space_factor_kCu = SLOT_FILL_FACTOR in Pyrhonen09 design
+        # space_factor_kAl = 1 in Pyrhonen09 design
+        # as well as temperature
+        #   TEMPERATURE_OF_COIL: temperature increase, degrees C
+        #   Here, by conductor it means the parallel branch (=1) is considered, and number_of_coil_per_slot = 8 (and will always be 8, see example below).
+        #   Just for example, if parallel branch is 2, number_of_coil_per_slot will still be 8, even though we cut the motor in half and count there will be 16 wire cross-sections,
+        #   because the reduction in resistance due to parallel branch will be considered into the variable resistance_per_coil.
+        #   Remember that the number_of_coil_per_slot (in series) is limited by the high back EMF rather than slot area.
         im = self.im
         
         rho_Copper = (3.76*TEMPERATURE_OF_COIL+873)*1e-9/55.
@@ -1857,7 +1861,7 @@ class FEMM_Solver(object):
         coil_pitch_slot_count = im.Qs / im.DriveW_poles # 整距！        
         length_endArcConductor = coil_pitch_slot_count/im.Qs * (0.5*(im.Radius_OuterRotor + im.Length_AirGap + im.Radius_InnerStatorYoke)) * 2*pi # [mm] arc length = pi * diameter  
         length_conductor = (im.stack_length + length_endArcConductor) * 1e-3 # mm to m  ## imagine: two conductors + two end conducotors = one loop (in and out)
-        area_conductor   = (self.stator_slot_area) * SLOT_FILL_FACTOR / im.DriveW_turns # TODO: 这里绝缘用槽满率算进去了，但是没有考虑圆形导体之间的空隙？槽满率就是空隙，这里没有考虑绝缘的面积占用。
+        area_conductor   = (stator_slot_area) * STATOR_SLOT_FILL_FACTOR / im.DriveW_turns # TODO: 这里绝缘用槽满率算进去了，但是没有考虑圆形导体之间的空隙？槽满率就是空隙，这里没有考虑绝缘的面积占用。
         number_parallel_branch = 1
         resistance_per_conductor = rho_Copper * length_conductor / (area_conductor * number_parallel_branch)
         current_rms_value = im.DriveW_CurrentAmp / 1.4142135623730951 * (1./0.975) # 97.5 of stator current is for drive winding
@@ -1870,7 +1874,7 @@ class FEMM_Solver(object):
         bar_pitch_slot_count = im.Qr / im.DriveW_poles # 整距！
         length_endArcBar = bar_pitch_slot_count/im.Qr * (im.Radius_OuterRotor - im.Radius_of_RotorSlot) * 2*pi
         length_bar = (im.stack_length + length_endArcBar) * 1e-3 # mm to m
-        area_bar   = self.rotor_slot_area
+        area_bar   = rotor_slot_area * ROTOR_SLOT_FILL_FACTOR 
         resistance_per_bar = rho_Copper * length_bar / area_bar
         try:
             self.list_rotor_current_amp
@@ -1884,8 +1888,8 @@ class FEMM_Solver(object):
             current_rms_value = amp / 1.4142135623730951
             rotor_copper_loss += resistance_per_bar * current_rms_value**2 * im.DriveW_turns # pole-specific rotor winding
             print 'rotor_copper_loss', rotor_copper_loss
-        print 'stator slot area', self.stator_slot_area, 'm^2'
-        print 'rotor slot area', self.rotor_slot_area, 'm^2'
+        print 'stator slot area', stator_slot_area, 'm^2'
+        print 'rotor slot area', rotor_slot_area, 'm^2'
 
         return stator_copper_loss, rotor_copper_loss
 
@@ -2178,6 +2182,10 @@ class FEMM_Solver(object):
                 femm.opendocument(fname[:-4]+'.ans')
                 vals_results_rotor_current, stator_slot_area, rotor_slot_area = femm_integrate_4_current(self.dir_run_sweeping + list_ans_file[index], self.fraction, dir_output=self.dir_femm_temp, returnData=True)
                 femm.closefemm()
+                
+                # leave the fem file for ease of reproduction
+                # os.remove(fname[:-4]+'.fem')
+                os.remove(fname[:-4]+'.ans')
 
                 new_fname = self.dir_femm_temp + self.study_name + '.csv'
                 os.rename(fname, new_fname)
@@ -2188,10 +2196,10 @@ class FEMM_Solver(object):
                         str_results += "%g %g\n" % (el.real, el.imag)
                     f.write(str_results)
 
-                # # also save for loss evaluation query # this is not good for restart, just recover your data from csv files
-                # self.vals_results_rotor_current = vals_results_rotor_current
-                # self.stator_slot_area = stator_slot_area
-                # self.rotor_slot_area = rotor_slot_area
+                # also save for loss evaluation query # this is not good for restart, just recover your data from csv files
+                self.vals_results_rotor_current = vals_results_rotor_current
+                self.stator_slot_area = stator_slot_area
+                self.rotor_slot_area = rotor_slot_area
                 break
             else:
                 sleep(1)

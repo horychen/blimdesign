@@ -1,6 +1,6 @@
 # coding:u8
 # parasolve_greedy_search_manager
-
+from __future__ import division
 import os
 import sys
 import femm
@@ -13,29 +13,36 @@ def savetofile(id_solver, freq, stack_length):
                     stack_length, 18, 1) # The acsolver parameter (default: 0) specifies which solver is to be used for AC problems: 0 for successive approximation, 1 for Newton.
     femm.mi_saveas(dir_femm_temp+'femm_temp_%d.fem'%(id_solver))
 
-def remove_files(number_of_instantces, dir_femm_temp, suffix='.txt', id_solver_femm_found=None)
+def remove_files(number_of_instantces, dir_femm_temp, suffix='.txt', id_solver_femm_found=None):
     for id_solver in range(number_of_instantces):
         fname = dir_femm_temp + "femm_temp_%d"%(id_solver) + suffix
 
         if id_solver == id_solver_femm_found:
             os.rename(fname, dir_femm_temp + "femm_found" + suffix)
             continue
-            
+
         os.remove(fname)
 
+DEBUG_MODE = False
 
-number_of_instantces = int(sys.argv[1])
-dir_femm_temp        = sys.argv[2]
-stack_length         = float(sys.argv[3])
+if DEBUG_MODE == False:
 
-# print dir_femm_temp
-# os.system('pause')
-# quit()
+    number_of_instantces = int(sys.argv[1])
+    dir_femm_temp        = sys.argv[2]
+    stack_length         = float(sys.argv[3])
+    VAREPSILON = 0.25
+else:
 
-#debug 
-# number_of_instantces = 5
-# dir_femm_temp        = "D:/OneDrive - UW-Madison/c/csv_opti/run#105/femm_temp/"
-# stack_length         = 186.4005899999999940
+    # print dir_femm_temp
+    # os.system('pause')
+    # quit()
+
+    #debug 
+    number_of_instantces = 5
+    dir_femm_temp        = "D:/OneDrive - UW-Madison/c/csv_opti/run#108/femm_temp/" # modify as expected
+    stack_length         = 186.4005899999999940
+    VAREPSILON = 0.02
+
 
 femm.openfemm(True)
 femm.opendocument(dir_femm_temp + 'femm_temp.fem')
@@ -108,10 +115,10 @@ while True:
     index_2nd, breakdown_torque_2nd = max(enumerate(list_torque_copy), key=operator.itemgetter(1))
     breakdown_slipfreq_2nd = list_slipfreq[index_2nd]
 
-    print 'max slip freq error=', 0.5*(breakdown_slipfreq_1st - breakdown_slipfreq_2nd), 'Hz'
+    print 'max slip freq error=', 0.5*(breakdown_slipfreq_1st - breakdown_slipfreq_2nd), 'Hz', ', EPS=%g'%(VAREPSILON)
 
     # find the two slip freq close enough then break.5
-    if abs(breakdown_slipfreq_1st - breakdown_slipfreq_2nd) < 0.25: # Hz
+    if abs(breakdown_slipfreq_1st - breakdown_slipfreq_2nd) < VAREPSILON: # Hz
         print 'Found it.', breakdown_slipfreq_1st, 'Hz', breakdown_torque_1st, 'Nm'
         remove_files(number_of_instantces, dir_femm_temp, suffix='.fem', id_solver_femm_found=list_solver_id[index_1st])
         remove_files(number_of_instantces, dir_femm_temp, suffix='.ans', id_solver_femm_found=list_solver_id[index_1st])
@@ -135,7 +142,7 @@ while True:
             # femm.mo_close()
 
         with open(dir_femm_temp + 'femm_found.csv', 'w') as f:
-            f.write('%g\n%g\n%g\n%g\n'%(breakdown_slipfreq_1st, breakdown_torque_1st, Qs_stator_slot_area, Qr_rotor_slot_area))
+            f.write('%g\n%g\n'%(breakdown_slipfreq_1st, breakdown_torque_1st)) #, Qs_stator_slot_area, Qr_rotor_slot_area))
         break
 
 
@@ -164,5 +171,7 @@ os.remove(dir_femm_temp + "femm_temp.fem")
 
 femm.mi_close()
 femm.closefemm()
-os.system('pause')
+
+if DEBUG_MODE == True:
+    os.system('pause')
 
