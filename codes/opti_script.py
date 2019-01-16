@@ -181,30 +181,25 @@ else:
 sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)
 # sw.show(which='all')
 
+# Now with this feature, you can see actually sometimes jmag fails to draw because of PC system level interference, rather than bug in my codes.
+# # debug for shitty design that failed to draw
+# shitty_design = population.bearingless_induction_motor_design.reproduce_the_problematic_design(r'D:\OneDrive - UW-Madison\c\codes/'+'shitty_design.txt')
+# shitty_design.show()
+# sw.run(shitty_design)
+# raise
+
 # generate the initial generation
 sw.generate_pop()
 logger.info('Initial pop generated.')
 
 # add initial_design of Pyrhonen09 to the initial generation
-if True:
-    initial_design = utility.Pyrhonen_design(sw.im, de_config_dict['bounds'])
-    # print 'SWAP!'
-    # print initial_design.design_parameters_norm.tolist()
-    # print '\nInitial Population:'
-    # for index in range(len(sw.init_pop)):
-    #     # print sw.init_pop[index].tolist()
-    #     print index,
-    #     initial_design.show_denorm(de_config_dict['bounds'], sw.init_pop[index])
-    # print sw.init_pop[0].tolist()
-    sw.init_pop_denorm[0] = initial_design.design_parameters_denorm
-    # print sw.init_pop[0].tolist()
-    with open(sw.get_gen_file(0), 'w') as f:
-        f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.init_pop_denorm)) # convert 2d array to string
-    logger.info('Initial design from Pyrhonen09 is added to the first generation of pop.')
+utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
 
 
-''' 3. Initialize FEMM Solver
-'''
+
+
+''' 3. Initialize FEMM Solver (is required)
+''' 
 if fea_config_dict['jmag_run_list'][0] == 0:
     # and let jmag know about it
     sw.femm_solver = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static

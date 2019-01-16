@@ -215,6 +215,23 @@ class Pyrhonen_design(object):
         # print pop_denorm.tolist()
         # print design_parameters_denorm
 
+def add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger):
+    initial_design = Pyrhonen_design(sw.im, de_config_dict['bounds'])
+    # print 'SWAP!'
+    # print initial_design.design_parameters_norm.tolist()
+    # print '\nInitial Population:'
+    # for index in range(len(sw.init_pop)):
+    #     # print sw.init_pop[index].tolist()
+    #     print index,
+    #     initial_design.show_denorm(de_config_dict['bounds'], sw.init_pop[index])
+    # print sw.init_pop[0].tolist()
+    sw.init_pop_denorm[0] = initial_design.design_parameters_denorm
+    # print sw.init_pop[0].tolist()
+    with open(sw.get_gen_file(0), 'w') as f:
+        f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.init_pop_denorm)) # convert 2d array to string
+    logger.info('Initial design from Pyrhonen09 is added to the first generation of pop.')
+
+
 
 def send_notification(text='Hello'):
     subject = 'AUTO BLIM OPTIMIZATION NOTIFICATION'

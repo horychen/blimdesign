@@ -1000,7 +1000,7 @@ class swarm(object):
 
         return bool_temp
 
-    def run(self, im, run_list=[0,1,0,0,0]): 
+    def run(self, im, run_list=[1,1,0,0,0]): 
         ''' run_list: toggle solver for Freq, Tran2TSS, Freq-FFVRC, TranRef, Static'''
 
         # Settings 
@@ -2345,7 +2345,7 @@ class bearingless_induction_motor_design(object):
         if self.fea_config_dict['flag_optimization'] == False: # or else it becomes annoying
             print '[Update %s]'%(self.ID), self.slip_freq_breakdown_torque, self.the_slip, self.the_speed, self.Omega, self.DriveW_Freq, self.BeariW_Freq
 
-    def __init__(self, row, fea_config_dict, model_name_prefix='PS'):
+    def __init__(self, row=None, fea_config_dict=None, model_name_prefix='PS'):
 
         # introspection (settings that may differ for initial design and variant designs)
         self.bool_initial_design = True
@@ -2399,7 +2399,8 @@ class bearingless_induction_motor_design(object):
             except IndexError, e:
                 logger.error(u'The initial design file you provided is not for the puporse of optimization.', exc_info=True)
         else:
-            print 'What are you feeding me?'
+            # this is called from shitty_design re-producer.
+            return None # __init__ is required to return None. You cannot (or at least shouldn't) return something else.
 
         #03 Mechanical Parameters
         self.update_mechanical_parameters(slip_freq=2.75) #, syn_freq=500.)
@@ -2464,8 +2465,6 @@ class bearingless_induction_motor_design(object):
             for v in [-1, +1]:
                     self.RSH.append( (pm * self.Qr*(1-self.the_slip)/(0.5*self.DriveW_poles) + v)*self.DriveW_Freq )
         # print self.Qr, ', '.join("%g" % (rsh/self.DriveW_Freq) for rsh in self.RSH), '\n'
-
-
 
     @staticmethod
     def get_stator_yoke_diameter_Dsyi(stator_tooth_width_b_ds, area_stator_slot_Sus, stator_inner_radius_r_is, Qs, Width_StatorTeethHeadThickness, Width_StatorTeethNeck):
@@ -2611,6 +2610,33 @@ class bearingless_induction_motor_design(object):
             with open(self.fea_config_dict['dir_parent'] + 'pop/' + self.fea_config_dict['run_folder'] + 'thermal_penalty_individuals.txt', 'a') as f:
                 f.write(self.get_individual_name() + ',%g,%g,%g\n'%(thermal_penalty, rotor_tooth_width_b_dr, new__area_rotor_slot_Sur))
         self.thermal_penalty = thermal_penalty
+        return self
+
+    @classmethod
+    def reproduce_the_problematic_design(cls, path_to_shitty_design_file):
+        self = cls()
+        with open(path_to_shitty_design_file, 'r') as f:
+            buf = f.readlines()
+            while True:
+                title = buf.pop(0) # pop out the first item
+                if 'Bearingless' in title: # Have we removed the title line?
+                    break
+            while True:
+                # the last line does not end in ', \n', so remove it first
+                last_line = buf.pop()
+                if len(last_line) > 1:
+                    exec('self.' + last_line[8:])
+                    break
+
+        for ind, line in enumerate(buf):
+            index_equal_symbol = line.find('=') 
+            # the member variable that is a string is problematic
+            if 'ID' in line[:index_equal_symbol] or 'name' in line[:index_equal_symbol]: # 在等号之前出现了ID或者name，说明这个变量很可能是字符串！
+                index_comma_symbol = line.find(',')
+                line = line[:index_equal_symbol+2] + '"' + line[index_equal_symbol+2:index_comma_symbol] + '"' + line[index_comma_symbol:]
+
+            # the leading 8 char are space, while the ending 3 char are ', \n'
+            exec('self.' + line[8:-3]) 
         return self
 
     def whole_row_reader(self, reader):
