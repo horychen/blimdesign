@@ -1318,47 +1318,76 @@ class FEMM_Solver(object):
         # if self.im.slip_freq_breakdown_torque != float(slip_freq_breakdown_torque):
         #     raise Exception('[DEBUG] JMAG disagrees with FEMM (!= 3 Hz).')
 
-        # get corresponding rotor current conditions for later static FEA
-        femm.opendocument(self.dir_run_sweeping + list_ans_file[index])
-        vals_results_rotor_current = self.femm_integrate_4_current(self.fraction)
-        femm.mo_close() 
+        # write rotor currents to file
+        femm_integrate_4_current(self.dir_run_sweeping + list_ans_file[index], self.fraction)
 
-        with open(self.dir_run_sweeping + "femm_rotor_current_conditions.txt", "w") as stream:
-            str_results = ''
-            for el in vals_results_rotor_current:
-                stream.write("%g %g \n" % (el.real, el.imag))
-
-        print 'done. append to eddycurrent_results.txt.'
         femm.closefemm()
 
-    def femm_integrate_4_current(self, fraction):
+    def femm_integrate_4_current(self, fname, fraction, dir_output=None, returnData=False):
         '''Make sure femm is opened
         Returns:
             [type] -- [list of complex number of rotor currents from FEMM]
         '''
-        # physical amount of Cage
-        im = self.im
-        vals_results_rotor_current = []
-        R = 0.5*(im.Location_RotorBarCenter + im.Location_RotorBarCenter2)
-        angle_per_slot = 2*pi/im.Qr
-        THETA_BAR = pi - angle_per_slot + EPS # add EPS for the half bar
-        print 'number of rotor_slot_per_pole', self.rotor_slot_per_pole * int(4/fraction)
-        for i in range(self.rotor_slot_per_pole * int(4/fraction)):
+
+        # get corresponding rotor current conditions for later static FEA
+        femm.opendocument(fname)
+
+        if True:
+            # physical amount of Cage
+            im = self.im
+            vals_results_rotor_current = []
+            R = 0.5*(im.Location_RotorBarCenter + im.Location_RotorBarCenter2)
+            angle_per_slot = 2*pi/im.Qr
+            THETA_BAR = pi - angle_per_slot + EPS # add EPS for the half bar
+            print 'number of rotor_slot_per_pole', self.rotor_slot_per_pole * int(4/fraction)
+            for i in range(self.rotor_slot_per_pole * int(4/fraction)):
+                THETA_BAR += angle_per_slot
+                THETA = THETA_BAR
+                X = R*cos(THETA); Y = R*sin(THETA)
+                femm.mo_selectblock(X, Y) # or you can select circuit rA rB ...
+                vals_results_rotor_current.append(femm.mo_blockintegral(7)) # integrate for current
+                femm.mo_clearblock()
+            # the other half bar of rA
             THETA_BAR += angle_per_slot
-            THETA = THETA_BAR
+            THETA = THETA_BAR - 2*EPS
             X = R*cos(THETA); Y = R*sin(THETA)
-            femm.mo_selectblock(X, Y) # or you can select circuit rA rB ...
+            femm.mo_selectblock(X, Y)
             vals_results_rotor_current.append(femm.mo_blockintegral(7)) # integrate for current
             femm.mo_clearblock()
-        # the other half bar of rA
-        THETA_BAR += angle_per_slot
-        THETA = THETA_BAR - 2*EPS
-        X = R*cos(THETA); Y = R*sin(THETA)
-        femm.mo_selectblock(X, Y)
-        vals_results_rotor_current.append(femm.mo_blockintegral(7)) # integrate for current
-        femm.mo_clearblock()
-        return [-el for el in vals_results_rotor_current[self.rotor_slot_per_pole:2*self.rotor_slot_per_pole]] # 用第四象限的转子电流，因为第三象限的被切了一半，麻烦！
-        # vals_results_rotor_current[self.rotor_slot_per_pole:2*self.rotor_slot_per_pole]这里用的都是第四象限的转子电流了，我们后面默认用的是第三象限的转子电流，即rA1 rB1 ...，所以要反相一下
+
+            ################################################################
+            # Also collect slot area information for loss evaluation in JMAG optimization 
+            ################################################################
+            if True:
+                # get stator slot area for copper loss calculation
+                femm.mo_groupselectblock(11)
+                stator_slot_area = femm.mo_blockintegral(5) / im.Qs # unit: m^2 (verified by GUI operation)
+                femm.mo_clearblock()
+
+                # get rotor slot area for copper loss calculation
+                femm.mo_groupselectblock(101)
+                rotor_slot_area = femm.mo_blockintegral(5) / im.Qr
+                femm.mo_clearblock()
+
+            femm.mo_close()         
+            # return [-el for el in vals_results_rotor_current[self.rotor_slot_per_pole:2*self.rotor_slot_per_pole]] # 用第四象限的转子电流，因为第三象限的被切了一半，麻烦！
+            # vals_results_rotor_current[self.rotor_slot_per_pole:2*self.rotor_slot_per_pole]这里用的都是第四象限的转子电流了，我们后面默认用的是第三象限的转子电流，即rA1 rB1 ...，所以要反相一下(-el)
+            vals_results_rotor_current = [-el for el in vals_results_rotor_current[self.rotor_slot_per_pole:2*self.rotor_slot_per_pole]]
+        # vals_results_rotor_current = self.femm_integrate_4_current(self.fraction)
+
+        if dir_output is None:
+            dir_output = self.dir_run_sweeping
+
+        if returnData == False: # no return then write to file
+            with open(dir_output + "femm_rotor_current_conditions.txt", "w") as stream:
+                str_results = ''
+                for el in vals_results_rotor_current:
+                    stream.write("%g %g \n" % (el.real, el.imag))
+            print 'done. append to eddycurrent_results.txt.'
+            return None
+        else:
+            return vals_results_rotor_current, stator_slot_area, rotor_slot_area
+
 
     def show_results_static(self, bool_plot=True):
         # recall that for static FEA, you call show_results once when half .ans files are generated from watchdog
@@ -2136,20 +2165,41 @@ class FEMM_Solver(object):
         os.startfile('temp2.bat')
         # os.remove('temp2.bat')
 
-    def wait_greedy_search(self):
-        tic = clock_time()
+    def wait_greedy_search(self, tic):
         while True:
             fname = self.dir_femm_temp + 'femm_found.csv'
             if os.path.exists(fname):
                 with open(fname, 'r') as f:
                     data = f.readlines()
-                os.rename(fname, self.dir_femm_temp + self.study_name + '.csv')
+                    freq = float(data[0][:-1])
+                    torque = float(data[1][:-1])
+
+                femm.openfemm(True)
+                femm.opendocument(fname[:-4]+'.ans')
+                vals_results_rotor_current, stator_slot_area, rotor_slot_area = femm_integrate_4_current(self.dir_run_sweeping + list_ans_file[index], self.fraction, dir_output=self.dir_femm_temp, returnData=True)
+                femm.closefemm()
+
+                new_fname = self.dir_femm_temp + self.study_name + '.csv'
+                os.rename(fname, new_fname)
+                with open(new_fname, 'w') as f:
+                    str_results = "%g\n%g\n" % (freq, torque)
+                    str_results = "%g\n%g\n" % (stator_slot_area, rotor_slot_area)
+                    for el in vals_results_rotor_current:
+                        str_results += "%g %g\n" % (el.real, el.imag)
+                    f.write(str_results)
+
+                # # also save for loss evaluation query # this is not good for restart, just recover your data from csv files
+                # self.vals_results_rotor_current = vals_results_rotor_current
+                # self.stator_slot_area = stator_slot_area
+                # self.rotor_slot_area = rotor_slot_area
                 break
             else:
                 sleep(1)
                 # print clock_time() - tic, 's'
-                
-        return float(data[0][:-1]), float(data[1][:-1]), None
+        toc = clock_time()
+        logger = logging.getLogger(__name__)
+        logger.debug('Time spent on femm frequency search is %g s.', toc-tic)
+        return freq, torque, None
 
 
 # def get_magnet_loss(self):

@@ -23,7 +23,10 @@ class VanGogh(object):
 
         elif self.child_index == FEMM: # for easy selecting of objects
             self.draw_stator(fraction)
-            self.draw_rotor(fraction)
+            try:
+                self.draw_rotor(fraction)
+            except Exception as e:
+                raise e
  
     def draw_stator(self, fraction):
         im = self.im
@@ -148,17 +151,25 @@ class VanGogh(object):
         P2_angle = P3_angle = Rotor_Sector_Angle
         k = -tan(P2_angle)
         l_sector = LineString([(0,0), (-im.Radius_OuterStatorYoke, -im.Radius_OuterStatorYoke*k)])
-        P2 = self.get_node_at_intersection(c,l_sector)
-        print P2
-        P2 = ( -im.Radius_Shaft*cos(Rotor_Sector_Angle), im.Radius_Shaft*sin(Rotor_Sector_Angle) )
-        print P2
+        try:
+                # two ways to get P2
+                # P2 = self.get_node_at_intersection(c,l_sector)
+                # print P2
+            P2 = ( -im.Radius_Shaft*cos(Rotor_Sector_Angle), im.Radius_Shaft*sin(Rotor_Sector_Angle) )
+                # print P2
+        except Exception as e:
+            raise e # IOError: [Errno 9] Bad file descriptor??? it is possible that the .fem file is scaned by anti-virus software?
 
         # P3
-        c = self.create_circle(origin, im.Radius_OuterRotor)
-        P3 = self.get_node_at_intersection(c,l_sector)
-        print P3
-        P3 = ( -im.Radius_OuterRotor*cos(Rotor_Sector_Angle), im.Radius_OuterRotor*sin(Rotor_Sector_Angle) )
-        print P3
+        try:
+            c = self.create_circle(origin, im.Radius_OuterRotor)
+                # two ways to get P3
+                # P3 = self.get_node_at_intersection(c,l_sector)
+                # print P3
+            P3 = ( -im.Radius_OuterRotor*cos(Rotor_Sector_Angle), im.Radius_OuterRotor*sin(Rotor_Sector_Angle) )
+                # print P3
+        except Exception as e:
+            raise e # IOError: [Errno 9] Bad file descriptor??? it is possible that the .fem file is scaned by anti-virus software?
 
         # P4
         l = LineString([(-im.Location_RotorBarCenter, 0.5*im.Width_RotorSlotOpen), (-im.Radius_OuterRotor, 0.5*im.Width_RotorSlotOpen)])

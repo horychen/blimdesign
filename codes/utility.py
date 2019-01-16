@@ -346,7 +346,7 @@ if __name__ == '__main__':
 
     for generation in range(5):
         print '----------gen#%d'%(generation)
-        generation_file_path = r'D:\OneDrive - UW-Madison\c\pop\run#101/' + 'gen#%04d.txt'%(generation)
+        generation_file_path = r'D:\OneDrive - UW-Madison\c\pop\run#107/' + 'gen#%04d.txt'%(generation)
         print generation_file_path
         if os.path.exists( generation_file_path ):
             with open(generation_file_path, 'r') as f:

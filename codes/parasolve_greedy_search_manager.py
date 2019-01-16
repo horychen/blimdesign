@@ -13,6 +13,16 @@ def savetofile(id_solver, freq, stack_length):
                     stack_length, 18, 1) # The acsolver parameter (default: 0) specifies which solver is to be used for AC problems: 0 for successive approximation, 1 for Newton.
     femm.mi_saveas(dir_femm_temp+'femm_temp_%d.fem'%(id_solver))
 
+def remove_files(number_of_instantces, dir_femm_temp, suffix='.txt', id_solver_femm_found=None)
+    for id_solver in range(number_of_instantces):
+        fname = dir_femm_temp + "femm_temp_%d"%(id_solver) + suffix
+
+        if id_solver == id_solver_femm_found:
+            os.rename(fname, dir_femm_temp + "femm_found" + suffix)
+            continue
+            
+        os.remove(fname)
+
 
 number_of_instantces = int(sys.argv[1])
 dir_femm_temp        = sys.argv[2]
@@ -56,13 +66,13 @@ while True:
         proc.wait() 
 
     list_solver_id = []
-    ans_count = 0
     count_sec = 0
     while True:
         sleep(1)
         count_sec += 1
         if count_sec > 120: # two min 
             raise Exception('It is highly likely that exception occurs during the solving of FEMM.')
+        
         print '\nbegin waiting for eddy current solver...'
         for id_solver in range(number_of_instantces):
 
@@ -84,26 +94,56 @@ while True:
         if len(list_solver_id) >= number_of_instantces:
             break
 
+    print list_solver_id
     print list_slipfreq
     print list_torque
 
+    # find the max
     list_torque_copy = list_torque[::]
-    index, breakdown_torque_1st = max(enumerate(list_torque_copy), key=operator.itemgetter(1))
-    breakdown_slipfreq_1st = list_slipfreq[index]
+    index_1st, breakdown_torque_1st = max(enumerate(list_torque_copy), key=operator.itemgetter(1))
+    breakdown_slipfreq_1st = list_slipfreq[index_1st]
 
-    list_torque_copy[index] = -999999
-    index, breakdown_torque_2nd = max(enumerate(list_torque_copy), key=operator.itemgetter(1))
-    breakdown_slipfreq_2nd = list_slipfreq[index]
+    # find the 2nd max
+    list_torque_copy[index_1st] = -999999
+    index_2nd, breakdown_torque_2nd = max(enumerate(list_torque_copy), key=operator.itemgetter(1))
+    breakdown_slipfreq_2nd = list_slipfreq[index_2nd]
 
-    print 'slipfreq_error=', breakdown_slipfreq_1st - breakdown_slipfreq_2nd, 'Hz'
-    # find the two slip freq close enough then break.
-    if abs(breakdown_slipfreq_1st - breakdown_slipfreq_2nd) < 0.2: # Hz
+    print 'max slip freq error=', 0.5*(breakdown_slipfreq_1st - breakdown_slipfreq_2nd), 'Hz'
+
+    # find the two slip freq close enough then break.5
+    if abs(breakdown_slipfreq_1st - breakdown_slipfreq_2nd) < 0.25: # Hz
         print 'Found it.', breakdown_slipfreq_1st, 'Hz', breakdown_torque_1st, 'Nm'
+        remove_files(number_of_instantces, dir_femm_temp, suffix='.fem', id_solver_femm_found=list_solver_id[index_1st])
+        remove_files(number_of_instantces, dir_femm_temp, suffix='.ans', id_solver_femm_found=list_solver_id[index_1st])
+
+            # we have breakdown data, but we may like to know more about the corresponding rotor current as well as rotor slot size
+            # however, why not leave this task to FEMM_Solver because you need geometry 
+            # fname = dir_femm_temp + "femm_temp_%d.ans"%(list_solver_id[index_1st])
+            # femm.mi_close()
+            # femm.opendocument(fname)
+
+            # # get stator slot area for copper loss calculation
+            # femm.mo_groupselectblock(11)
+            # Qs_stator_slot_area = femm.mo_blockintegral(5) # / self.im.Qs # unit: m^2 (verified by GUI operation)
+            # femm.mo_clearblock()
+
+            # # get rotor slot area for copper loss calculation
+            # femm.mo_groupselectblock(101)
+            # Qr_rotor_slot_area = femm.mo_blockintegral(5) # / self.im.Qr
+            # femm.mo_clearblock()
+
+            # femm.mo_close()
+
         with open(dir_femm_temp + 'femm_found.csv', 'w') as f:
-            f.write('%g\n%g\n'%(breakdown_slipfreq_1st, breakdown_torque_1st))
+            f.write('%g\n%g\n%g\n%g\n'%(breakdown_slipfreq_1st, breakdown_torque_1st, Qs_stator_slot_area, Qr_rotor_slot_area))
         break
+
+
     else:
         print 'not yet'
+        remove_files(number_of_instantces, dir_femm_temp, suffix='.fem')
+        remove_files(number_of_instantces, dir_femm_temp, suffix='.ans')
+
         # not found yet, try new frequencies.
         if breakdown_slipfreq_1st > breakdown_torque_2nd:
             freq_begin = breakdown_slipfreq_1st + 1.
@@ -119,10 +159,10 @@ while True:
             freq_end   -= freq_step
         print 'try: freq_begin=%g, freq_end=%g.' % (freq_begin, freq_end)
 
-
-for id_solver in range(number_of_instantces):
-    os.remove(dir_femm_temp + "femm_temp_%d.txt"%(id_solver))
+remove_files(number_of_instantces, dir_femm_temp, suffix='.txt')
 os.remove(dir_femm_temp + "femm_temp.fem")
+
 femm.mi_close()
 femm.closefemm()
-# os.system('pause')
+os.system('pause')
+

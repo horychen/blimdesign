@@ -14,6 +14,7 @@ from time import time
 
 EPS = 1e-2
 
+# For a better solution for print, see https://stackoverflow.com/questions/4230855/why-am-i-getting-ioerror-9-bad-file-descriptor-error-while-making-print-st/4230866
 # decorater used to block function printing to the console
 import sys
 def blockPrinting(func):
@@ -360,7 +361,7 @@ class swarm(object):
         return results, torque_average, normalized_torque_ripple, sfv.ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
 
 
-    @blockPrinting
+    # @blockPrinting
     def fobj(self, individual_index, individual):
         # based on the individual data, create design variant of the initial design of Pyrhonen09
         logger = logging.getLogger(__name__)
@@ -483,7 +484,6 @@ class swarm(object):
             # show()
             return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
 
-
         ################################################################
         # Begin from where left: Frequency Study
         ################################################################
@@ -503,7 +503,9 @@ class swarm(object):
                     data = f.readlines()
                 slip_freq_breakdown_torque, breakdown_torque = float(data[0][:-1]), float(data[1][:-1])
             else:
+
                 # no direct returning of results, wait for it later when you need it.
+                femm_tic = time()
                 self.femm_solver.__init__(im_variant, flag_read_from_jmag=False, freq=2.23)
                 self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name )
 
@@ -520,6 +522,8 @@ class swarm(object):
             else:
                 slip_freq_breakdown_torque, breakdown_torque, breakdown_force = temp
                 toc = time()
+
+
 
         ################################################################
         # Begin from where left: Transient Study
@@ -545,7 +549,7 @@ class swarm(object):
             if self.fea_config_dict['jmag_run_list'][0] == 0:
                 # wait for femm to finish, and get your slip of breakdown
                 if slip_freq_breakdown_torque is None:
-                    slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search()
+                    slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
                 # debug 2
                 # print slip_freq_breakdown_torque, breakdown_torque
                 # quit()
@@ -668,10 +672,14 @@ class swarm(object):
             self.jmag_control_state = False # demand to initialize the jamg designer
             fitness = np.asarray( [fobj(index, individual) for index, individual in enumerate(pop_denorm)] ) # modification #2
 
+            print 'DEBUG fitness:', fitness.tolist()
             # write fitness results to file for the initial pop
-            with open(fitness_file, 'w') as f:
-                f.write('\n'.join('%.16f'%(x) for x in fitness)) 
-                # TODO: also write self.fitness_in_physics_data
+            try:
+                with open(fitness_file, 'w') as f:
+                    f.write('\n'.join('%.16f'%(x) for x in fitness)) 
+                    # TODO: also write self.fitness_in_physics_data
+            except Exception as e:
+                raise e # fitness
 
             # print 'Write gen#9999.txt'
             # with open(self.get_gen_file(self.number_current_generation+9999), 'w') as f:
@@ -692,14 +700,18 @@ class swarm(object):
             if popsize > solved_popsize:
                 self.jmag_control_state = False # demand to initialize the jamg designer
                 fitness_part2 = np.asarray( [fobj(index+solved_popsize, individual) for index, individual in enumerate(pop_denorm[solved_popsize:])] ) # modification #2
-
-                # write fitness_part2 results to file 
-                with open(fitness_file, 'a') as f:
-                    f.write('\n')
-                    f.write('\n'.join('%.16f'%(x) for x in fitness_part2)) 
-                    # TODO: also write self.fitness_in_physics_data
-                fitness += fitness_part2.tolist()
-                # print fitness
+                
+                print 'DEBUG fitness_part2:', fitness_part2.tolist()
+                try:
+                    # write fitness_part2 results to file 
+                    with open(fitness_file, 'a') as f:
+                        f.write('\n')
+                        f.write('\n'.join('%.16f'%(x) for x in fitness_part2)) 
+                        # TODO: also write self.fitness_in_physics_data
+                    fitness += fitness_part2.tolist()
+                    # print fitness
+                except Exception as e:
+                    raise e
 
         # make sure fitness is an array
         fitness = np.asarray(fitness)
@@ -717,7 +729,7 @@ class swarm(object):
             self.jmag_control_state = False
 
             for j in range(popsize): # j is the index of individual
-                logger.debug('individual #%d', j) 
+                logger.debug('de individual #%d', j) 
 
                 idxs = [idx for idx in range(popsize) if idx != j]
                 # print 'idxs', idxs
@@ -739,6 +751,7 @@ class swarm(object):
                     trial = np.where(cross_points, mutant, pop[j])
                     trial_denorm = min_b + trial * diff
 
+                    # quit()
                     # get fitness value for the trial individual 
                     f = fobj(j, trial_denorm)
 
@@ -756,8 +769,8 @@ class swarm(object):
             # one generation is finished
             self.rename_onging_files(self.number_current_generation)
 
-            # yield best, fitness[best_idx] # de verion 1
-            yield min_b + pop * diff, fitness, best_idx # de verion 2
+            yield best, fitness[best_idx] # de verion 1
+            # yield min_b + pop * diff, fitness, best_idx # de verion 2
 
         # TODO: 跑完一轮优化以后，必须把de_config_dict和当前的代数存在文件里，否则gen文件里面存的normalized data就没有物理意义了。
 
@@ -1793,8 +1806,146 @@ class swarm(object):
             fig_main.savefig('FEA_Model_Comparisons.png', dpi=150)
             fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 BlessIMDesign\p2019_iemdc_bearingless_induction full paper\images\FEA_Model_Comparisons.png', dpi=150)
 
+    # ECCE19
+    def read_csv_results_4_optimization(self, study_name, path_prefix=None):
+        if path_prefix == None:
+            path_prefix = self.dir_csv_output_folder
+        # print 'look into:', path_prefix
+
+        # Torque
+        basic_info = []
+        time_list = []
+        TorCon_list = []
+        with open(path_prefix + study_name + '_torque.csv', 'r') as f:
+            read_iterator = csv_reader(f, skipinitialspace=True)
+            count = 0
+            for row in self.whole_row_reader(read_iterator):
+                count +=1
+                if count<=8:
+                    try:
+                        float(row[1])
+                    except:
+                        continue
+                    else:
+                        basic_info.append((row[0], float(row[1])))
+                else:
+                    time_list.append(float(row[0]))
+                    TorCon_list.append(float(row[1]))
+
+        # Force
+        basic_info = []
+        # time_list = []
+        ForConX_list = []
+        ForConY_list = []
+        with open(path_prefix + study_name + '_force.csv', 'r') as f:
+            read_iterator = csv_reader(f, skipinitialspace=True)
+            count = 0
+            for row in self.whole_row_reader(read_iterator):
+                count +=1
+                if count<=8:
+                    try:
+                        float(row[1])
+                    except:
+                        continue
+                    else:
+                        basic_info.append((row[0], float(row[1])))
+                else:
+                    # time_list.append(float(row[0]))
+                    ForConX_list.append(float(row[1]))
+                    ForConY_list.append(float(row[2]))
+        ForConAbs_list = np.sqrt(np.array(ForConX_list)**2 + np.array(ForConY_list)**2 )
+
+        # Current
+        key_list = []
+        Current_dict = {}
+        with open(path_prefix + study_name + '_circuit_current.csv', 'r') as f:
+            read_iterator = csv_reader(f, skipinitialspace=True)
+            count = 0
+            for row in self.whole_row_reader(read_iterator):
+                count +=1
+                if count<=8:
+                    if 'Time' in row[0]: # Time(s)
+                        for key in row:
+                            key_list.append(key)
+                            Current_dict[key] = []
+                    else:
+                        continue
+                else:
+                    for ind, val in enumerate(row):
+                        Current_dict[key_list[ind]].append(float(val))
+
+        # Terminal Voltage 
+        if self.fea_config_dict['delete_results_after_calculation'] == False:
+            # file name is by individual_name like ID32-2-4_EXPORT_CIRCUIT_VOLTAGE.csv rather than ID32-2-4Tran2TSS_circuit_current.csv
+            with open(path_prefix + study_name[:-8] + "_EXPORT_CIRCUIT_VOLTAGE.csv", 'r') as f:
+                read_iterator = csv_reader(f, skipinitialspace=True)
+                count = 0
+                for row in self.whole_row_reader(read_iterator):
+                    count +=1
+                    if count==1: # Time | Terminal1 | Terminal2 | ... | Termial6
+                        if 'Time' in row[0]: # Time, s
+                            for key in row:
+                                key_list.append(key)
+                                Current_dict[key] = []
+                        else:
+                            raise Exception('Problem with csv file for terminal voltage.')
+                    else:
+                        for ind, val in enumerate(row):
+                            Current_dict[key_list[ind]].append(float(val))
+
+        # Loss
+        # Iron Loss
+        with open(path_prefix + study_name + '_iron_loss_loss.csv', 'r') as f:
+            read_iterator = csv_reader(f, skipinitialspace=True)
+            count = 0
+            for row in self.whole_row_reader(read_iterator):
+                count +=1
+                if count>8:
+                    stator_iron_loss = float(row[3]) # Stator Core
+                    break
+        with open(path_prefix + study_name + '_joule_loss_loss.csv', 'r') as f:
+            read_iterator = csv_reader(f, skipinitialspace=True)
+            count = 0
+            for row in self.whole_row_reader(read_iterator):
+                count +=1
+                if count>8:
+                    stator_eddycurrent_loss = float(row[3]) # Stator Core
+                    break
+        with open(path_prefix + study_name + '_hysteresis_loss_loss.csv', 'r') as f:
+            read_iterator = csv_reader(f, skipinitialspace=True)
+            count = 0
+            for row in self.whole_row_reader(read_iterator):
+                count +=1
+                if count>8:
+                    stator_hysteresis_loss = float(row[3]) # Stator Core
+                    break
+        # Copper Loss
+        with open(path_prefix + study_name + '_joule_loss.csv', 'r') as f:
+            read_iterator = csv_reader(f, skipinitialspace=True)
+            count = 0
+            for row in self.whole_row_reader(read_iterator):
+                count +=1
+                if count>8:
+                    if count==9:
+                        stator_copper_loss = float(row[8]) # Coil
+
+                    rotor_copper_loss_list.append(float(row[7])) # Cage
 
 
+        dm = data_manager()
+        dm.basic_info     = basic_info
+        dm.time_list      = time_list
+        dm.TorCon_list    = TorCon_list
+        dm.ForConX_list   = ForConX_list
+        dm.ForConY_list   = ForConY_list
+        dm.ForConAbs_list = ForConAbs_list
+        dm.Current_dict   = Current_dict
+        dm.key_list       = key_list
+        dm.stator_loss    = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss, ]
+
+        return dm        
+
+    # IEMDC19
     def read_csv_results_4_comparison__transient(self, study_name, path_prefix=None):
         if path_prefix == None:
             path_prefix = self.dir_csv_output_folder
@@ -3155,9 +3306,9 @@ class bearingless_induction_motor_design(object):
     # TranFEAwi2TSS
     def add_TranFEAwi2TSS_study(self, slip_freq_breakdown_torque, app, model, dir_csv_output_folder, tran2tss_study_name, logger):
         im_variant = self
-        logger.debug('Slip frequency: %g = ' % (self.the_slip))
+        # logger.debug('Slip frequency: %g = ' % (self.the_slip))
         self.the_slip = slip_freq_breakdown_torque / self.DriveW_Freq
-        logger.debug('Slip frequency:    = %g???' % (self.the_slip))
+        # logger.debug('Slip frequency:    = %g???' % (self.the_slip))
         study_name = tran2tss_study_name
 
         model.CreateStudy(u"Transient2D", study_name)

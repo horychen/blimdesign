@@ -56,8 +56,9 @@ toc = time()
 print 'id_solver=%d:'% (id_solver), toc - tic, 's'
 femm.closefemm()
 
-os.remove(fem_file_path)
-os.remove(fem_file_path[:-4]+'.ans')
+# removing files is left for manager to decide
+    # os.remove(fem_file_path)
+    # os.remove(fem_file_path[:-4]+'.ans')
 
 with open(dir_femm_temp + "femm_temp_%d.txt"%(id_solver), 'w') as handle_torque:
     # write results to a data file (write to partial files to avoid compete between parallel instances)
