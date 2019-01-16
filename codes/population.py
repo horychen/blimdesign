@@ -154,21 +154,21 @@ class swarm(object):
                 if 'gen' in file:
                     print file
 
-                    self.interrupt_pop = []
+                    self.interrupt_pop_denorm = []
                     with open(self.dir_run + file, 'r') as f:
                         read_iterator = csv_reader(f, skipinitialspace=True)
                         for row in self.whole_row_reader(read_iterator):
                             if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
-                                self.interrupt_pop.append([float(el) for el in row])
+                                self.interrupt_pop_denorm.append([float(el) for el in row])
 
-                    self.interrupt_pop = np.asarray(self.interrupt_pop)
-                    self.index_interrupt_beginning = len(self.interrupt_pop)
+                    self.interrupt_pop_denorm = np.asarray(self.interrupt_pop_denorm)
+                    self.index_interrupt_beginning = len(self.interrupt_pop_denorm)
 
                     logger = logging.getLogger(__name__)
-                    logger.warn('Unfinished iteration is found with ongoing files in run folder. Make sure the project is not opened in JMAG, and we are going to remove the project files and ongoing files.')
-                    logger.warn(u'不出意外，就从第一个个体开始迭代。但是很多时候跑到第150个个体的时候跑断了，你总不会想要把这一代都删了，重新跑吧？')
+                    logger.warn('Unfinished iteration is found with ongoing files in run folder.') # Make sure the project is not opened in JMAG, and we are going to remove the project files and ongoing files.')
+                    # logger.warn(u'不出意外，就从第一个个体开始迭代。但是很多时候跑到第150个个体的时候跑断了，你总不会想要把这一代都删了，重新跑吧？')
                     # os.remove(u"D:/JMAG_Files/" + run_folder[:-1] + file[:-12] + ".jproj")
-                    print 'List interrupt_pop here:', self.interrupt_pop.tolist()
+                    print 'List interrupt_pop_denorm here:', self.interrupt_pop_denorm.tolist()
 
                 if 'fit' in file:
                     self.interrupt_fitness = []
@@ -178,9 +178,9 @@ class swarm(object):
                             if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
                                 self.interrupt_fitness.append(float(row[0])) # not neccessary to be an array. a list is enough
                     print 'List interrupt_fitness here:', self.interrupt_fitness
-                    # interrupt_pop and interrupt_fitness will be directly used in de.
+                    # interrupt_pop (yes) and interrupt_fitness will be directly used in de.
                     
-        # search for generation files
+        # search for complete generation files
         generations = [file[4:8] for file in os.listdir(self.dir_run) if 'gen' in file and not 'ongoing' in file]
         popsize = self.de_config_dict['popsize']
         # the least popsize is 4
@@ -190,25 +190,29 @@ class swarm(object):
             raise Exception('Specify a popsize larger than 3.')
         bounds = self.de_config_dict['bounds']
         dimensions = len(bounds)
+        min_b, max_b = np.asarray(bounds).T 
+        diff = np.fabs(min_b - max_b)
+        if self.index_interrupt_beginning != 0:
+                  # pop_denorm = min_b + pop * diff =>
+            self.interrupt_pop = (self.interrupt_pop_denorm - min_b) / diff
+
         # check for number of generations
         if len(generations) == 0:
             logger = logging.getLogger(__name__)
             logger.debug('There is no swarm yet. Generate the initial random swarm...')
             
             # generate the initial random swarm from the initial design
-            try:
-                if self.de_config_dict == None:
-                    raise Exception('unexpected de_config_dict')
-                self.init_pop = np.random.rand(popsize, dimensions) # normalized design parameters between 0 and 1
-            except KeyError, e:
+            if self.de_config_dict == None:
                 logger.error(u'ちゃんとキーを設定して下さい。', exc_info=True)
+                raise Exception('unexpected de_config_dict')
+            self.init_pop = np.random.rand(popsize, dimensions) # normalized design parameters between 0 and 1
+            self.init_pop_denorm = min_b + self.init_pop * diff
 
             # and save to file named gen#0000.txt
             self.number_current_generation = 0
-            with open(self.get_gen_file(self.number_current_generation), 'w') as f:
-                f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop)) # convert 2d array to string
+            self.write_population_data(self.init_pop_denorm)
             logger = logging.getLogger(__name__)
-            logger.debug('Initial Pop is saved as %s', self.dir_run + 'gen#0000.txt')
+            logger.debug('Initial pop (de-normalized) is saved as %s', self.dir_run + 'gen#0000.txt')
         else:
             # get the latest generation of swarm data
             self.number_current_generation = max([int(el) for el in generations])
@@ -217,45 +221,21 @@ class swarm(object):
             logger.debug('The latest generation is gen#%d', self.number_current_generation)
 
             # restore the existing swarm from file             
-            self.init_pop = []
+            self.init_pop_denorm = []
             with open(self.get_gen_file(self.number_current_generation), 'r') as f:
                 read_iterator = csv_reader(f, skipinitialspace=True)
                 for row in self.whole_row_reader(read_iterator):
                     if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
-                        self.init_pop.append([float(el) for el in row])
-            # for el in self.init_pop:
-            #     print 
-            #     for e in el:
-            #         print e,
-
-            # This is useless unless you know the old bounds. In fact, modify the bounds will change all the individuals' design parameters since they are normalized values.
-            # # make sure to be consistent with new bounds (maybe)
-            # min_b, max_b = np.asarray(bounds).T 
-            # diff = np.fabs(min_b - max_b)
-            # self.init_pop_denorm = min_b + self.init_pop * diff
-            # for index, individual in enumerate(self.init_pop_denorm):
-            #     count = 0
-            #     for design_parameter, bound in zip(individual, bounds):
-            #         if design_parameter < bound[0]:
-            #             self.init_pop_denorm[index][count] = bound[0]
-            #         elif design_parameter > bound[1]:
-            #             self.init_pop_denorm[index][count] = bound[1]
-            #         count += 1
-            # self.init_pop = (self.init_pop_denorm - min_b)/diff #= pop
-            # # print '--------------------------------------'
-            # # for el in self.init_pop:
-            # #     print 
-            # #     for e in el:
-            # #         print e,
-
+                        self.init_pop_denorm.append([float(el) for el in row])
+            self.init_pop = (self.init_pop_denorm - min_b) / diff
 
             # TODO: 文件完整性检查
             solved_popsize = len(self.init_pop)
             if popsize > solved_popsize:
+                print 'popsize is changed from last run.'
                 self.init_pop += np.random.rand(popsize-solved_popsize, dimensions).tolist() # normalized design parameters between 0 and 1
-                with open(self.get_gen_file(self.number_current_generation), 'a') as f:
-                    f.write('\n')
-                    f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop[solved_popsize:])) # convert 2d array to string
+                self.init_pop_denorm = min_b + self.init_pop * diff
+                self.append_population_data(self.init_pop_denorm[solved_popsize:])
                 # print self.init_pop
 
         # pop: make sure the data type is array
@@ -420,7 +400,7 @@ class swarm(object):
                 # TODO: skip this model and its evaluation
                 cost_function = 99999 # penalty
                 logging.getLogger(__name__).warn('Draw Failed for %s-%s\nCost function penalty = %g.%s', self.project_name, im_variant.individual_name, cost_function, self.im_variant.show(toString=True))
-                raise Exception('Draw Failed')
+                raise Exception('Draw Failed: Are you working on the PC? Sometime you by mistake operate in the JMAG Geometry Editor, then it fails to draw.')
                 return None
             elif DRAW_SUCCESS == -1:
                 # The model already exists
@@ -553,7 +533,7 @@ class swarm(object):
                 return data[0][index], breakdown_torque, None 
             else:
                 # no direct returning of results, wait for it later when you need it.
-                self.femm_solver.greedy_search_for_breakdown_slip( output_file_path, initial_pop=self.fea_config_dict['FrequencyRange'] )
+                self.femm_solver.greedy_search_for_breakdown_slip( self.dir_csv_output_folder+'femm_temp', 'FEMM_'+original_study_name )
         else:
             # check for existing results
             temp = self.check_csv_results(original_study_name)
@@ -564,6 +544,9 @@ class swarm(object):
             else:
                 slip_freq_breakdown_torque, breakdown_torque, breakdown_force = temp
                 toc = time()
+
+        # print slip_freq_breakdown_torque
+        # quit()
 
         ################################################################
         # Begin from where left: Transient Study
@@ -584,7 +567,7 @@ class swarm(object):
             # add or duplicate study for transient FEA 
             if self.fea_config_dict['jmag_run_list'][0] == 0:
                 # wait for femm to finish, and get your slip of breakdown
-                slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait()
+                slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search()
                 # FEMM+JMAG
                 im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
                 self.add_TranFEAwi2TSS_study(im_variant, slip_freq_breakdown_torque, app, model, tran2tss_study_name, logger, time())
@@ -619,10 +602,6 @@ class swarm(object):
             # cost_function = 30e3 / ( breakdown_torque/rotor_volume ) \
             #                 + 1.0 / ( breakdown_force/rotor_weight )
 
-
-
-        
-
         with open(self.dir_run + 'swarm_data.txt', 'a') as f:
             f.write('\n-------\n%s-%s\n%d,%d,%g\n%s\n%s\n' % (
                         self.project_name, im_variant.individual_name, 
@@ -634,23 +613,25 @@ class swarm(object):
         # raise Exception(u'确认能继续跑！')
         return cost_function
 
-    def fobj_test(self):
+    def fobj_test(self, individual_index, individual):
 
         def fmodel(x, w):
-            return w[0] + w[1]*x + w[2] * x**2 + w[3] * x**3 + w[4] * x**4 + w[5] * x**5
-        def rmse(w):
+            return w[0] + w[1]*x + w[2] * x**2 + w[3] * x**3 + w[4] * x**4 + w[5] * x**5 + w[6] * x**6
+        def rmse(y, w):
             y_pred = fmodel(x, w)
             return np.sqrt(sum((y - y_pred)**2) / len(y))
 
-        x = np.linspace(0, 10, 500)
-        y = np.cos(x) + np.random.normal(0, 0.2, 500)
+        x = np.linspace(0, 6.28, 50)
+        y = fmodel(x, w=[6.7835811431545334,3.4553640006363757,1.8923682935241657,4.8613288149896521,2.5115072727086849,8.7631152293525041,0.9288093932933665])
 
-        plt.scatter(x, y)
-        plt.plot(x, np.cos(x), label='cos(x)')
-        plt.legend()
-        plt.show()
+        return rmse(y, individual)
+        # plt.scatter(x, y)
+        # plt.plot(x, np.cos(x), label='cos(x)')
+        # plt.legend()
+        # plt.show()
 
     def de(self):
+        fobj = self.fobj
         if self.bool_first_time_call_de == True:
             self.bool_first_time_call_de = False
 
@@ -692,17 +673,19 @@ class swarm(object):
             logger.debug('Generating fitness data for the initial population: %s', fitness_file)
 
             self.jmag_control_state = False # demand to initialize the jamg designer
-            fitness = np.asarray( [self.fobj(index, individual) for index, individual in enumerate(pop_denorm)] ) # modification #2
+            fitness = np.asarray( [fobj(index, individual) for index, individual in enumerate(pop_denorm)] ) # modification #2
 
             # write fitness results to file for the initial pop
             with open(fitness_file, 'w') as f:
                 f.write('\n'.join('%.16f'%(x) for x in fitness)) 
                 # TODO: also write self.fitness_in_physics_data
-            # over-write the file for normalized initial generation of population with de-normalized data
-            with open(self.get_gen_file(self.number_current_generation), 'w') as f:
-                f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop)) # convert 2d array to string
+
+            # print 'Write gen#9999.txt'
+            # with open(self.get_gen_file(self.number_current_generation+9999), 'w') as f:
+            #     f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop_denorm)) # convert 2d array to string
+            # self.write_population_data(pop_denorm)
         else:
-            # this is a continued run. load the fitness data (the first digit of every row is fitness for an individual)
+            # this is a continued run. load the latest complete fitness data (the first digit of every row is fitness for an individual)
             fitness = []
             with open(fitness_file, 'r') as f: 
                 read_iterator = csv_reader(f, skipinitialspace=True)
@@ -715,7 +698,7 @@ class swarm(object):
             solved_popsize = len(fitness)
             if popsize > solved_popsize:
                 self.jmag_control_state = False # demand to initialize the jamg designer
-                fitness_part2 = np.asarray( [self.fobj(index+solved_popsize, individual) for index, individual in enumerate(pop_denorm[solved_popsize:])] ) # modification #2
+                fitness_part2 = np.asarray( [fobj(index+solved_popsize, individual) for index, individual in enumerate(pop_denorm[solved_popsize:])] ) # modification #2
 
                 # write fitness_part2 results to file 
                 with open(fitness_file, 'a') as f:
@@ -764,7 +747,7 @@ class swarm(object):
                     trial_denorm = min_b + trial * diff
 
                     # get fitness value for the trial individual 
-                    f = self.fobj(j, trial_denorm)
+                    f = fobj(j, trial_denorm)
 
                     # write ongoing results
                     self.write_individual_fitness(f)
@@ -951,6 +934,18 @@ class swarm(object):
                     l_slip_freq.append(float(row[0]))
                     l_data.append([float(el) for el in row[1:]])
         return l_slip_freq, l_data
+
+    def write_population_data(self, pop):
+        with open(self.get_gen_file(self.number_current_generation), 'w') as f:
+            f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop)) # convert 2d array to string
+
+    def append_population_data(self, pop):
+        with open(self.get_gen_file(self.number_current_generation), 'a') as f:
+            f.write('\n')
+            f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop)) # convert 2d array to string
+
+    def read_population_data(self):
+        pass
 
     def write_individual_data(self, trial_individual):
         with open(self.get_gen_file(self.number_current_generation, ongoing=True), 'a') as f:
@@ -3656,12 +3651,13 @@ class TrimDrawer(object):
         return self.sketch.CreateLine(x1,y1,x2,y2)
 
     def trim_l(self, who,x,y):
-        SketchName = self.SketchName
+        # SketchName = self.SketchName
         self.doc.GetSelection().Clear()
         ref1 = self.sketch.GetItem(who.GetName())
         self.doc.GetSelection().Add(ref1)
         self.doc.GetSketchManager().SketchTrim(x,y)
-        # l1 trim å®Œä»\åŽè¿˜æ˜¯l1ï¼Œé™¤éžä½ åˆ‡ä¸­é—´ï¼Œè¿™æ ·ä¼šå¤šç”Ÿæˆä¸€ä¸ªLineï¼Œä½ è‡ªå·±æ•æ‰ä¸€ä¸‹å§
+        # l1 trim 完以后还是l1，除非你切中间，这样会多生成一个Line，你自己捕捉一下吧
+
 
     def trim_c(self, who,x,y):
         SketchName = self.SketchName
@@ -3999,13 +3995,13 @@ class TrimDrawer(object):
         sketch = self.create_sketch(SketchName, u"#E8B5CE")
 
         self.im.Radius_InnerStator = self.im.Length_AirGap + self.im.Radius_OuterRotor
-        sketch.CreateVertex(0, 0)
-        c1=self.circle(0, 0, self.im.Radius_InnerStator)
-        c2=self.circle(0, 0, self.im.Radius_InnerStatorYoke)
-        c3=self.circle(0, 0, self.im.Radius_OuterStatorYoke)
-        c4=self.circle(0, 0, self.im.Radius_InnerStator + self.im.Width_StatorTeethHeadThickness)
+        sketch.CreateVertex(0., 0.)
+        c1=self.circle(0., 0., self.im.Radius_InnerStator)
+        c2=self.circle(0., 0., self.im.Radius_InnerStatorYoke)
+        c3=self.circle(0., 0., self.im.Radius_OuterStatorYoke)
+        c4=self.circle(0., 0., self.im.Radius_InnerStator + self.im.Width_StatorTeethHeadThickness)
 
-        l1=self.line(-self.im.Radius_OuterStatorYoke, 0, 0, 0)
+        l1=self.line(-self.im.Radius_OuterStatorYoke, 0., 0., 0.)
         l2=self.line(-0.5*(self.im.Radius_OuterStatorYoke+self.im.Radius_InnerStatorYoke), 0.5*self.im.Width_StatorTeethBody, \
                 -(self.im.Radius_InnerStator + (self.im.Width_StatorTeethHeadThickness+self.im.Width_StatorTeethNeck)), 0.5*self.im.Width_StatorTeethBody) # legacy 1. NEW: add neck here. Approximation is adopted: the accurate results should be (self.im.Width_StatorTeethHeadThickness+self.im.Width_StatorTeethNeck) * cos(6 deg) or so. 6 deg = 360/24/2 - 3/2
 
@@ -4013,13 +4009,13 @@ class TrimDrawer(object):
         THETA = (180-0.5*360/self.im.Qs)/180.*pi
         X = R*cos(THETA)
         Y = R*sin(THETA)
-        l3 = StatorCore_Line_3 = self.line(0, 0, X, Y) # Line.3
+        l3 = StatorCore_Line_3 = self.line(0., 0., X, Y) # Line.3
 
         R = self.im.Radius_InnerStator + self.im.Width_StatorTeethHeadThickness
-        THETA = (180-(0.5*360/self.im.Qs-0.5*self.im.Angle_StatorSlotOpen))/180.*pi # BUG is found here, 3 is instead used for Angle_StatorSlotOpen
+        THETA = (180.-(0.5*360./self.im.Qs-0.5*self.im.Angle_StatorSlotOpen))/180.*pi # BUG is found here, 3 is instead used for Angle_StatorSlotOpen
         X = R*cos(THETA)
         Y = R*sin(THETA)
-        l4 = self.line(0, 0, X, Y) # Line.4
+        l4 = self.line(0., 0., X, Y) # Line.4
 
 
         # Trim for Arcs
@@ -4027,13 +4023,13 @@ class TrimDrawer(object):
         # 为了避免数Arc，我们应该在Circle.4时期就把Circle.4上的小片段优先剪了！
         arc4 = self.trim_c(c4, X+1e-6, Y+1e-6) # Arc.1
 
-        self.trim_a(arc4, 0, self.im.Radius_InnerStator + self.im.Width_StatorTeethHeadThickness)
+        self.trim_a(arc4, 0., self.im.Radius_InnerStator + self.im.Width_StatorTeethHeadThickness)
         self.trim_a(arc4, -(self.im.Radius_InnerStator + self.im.Width_StatorTeethHeadThickness), 1e-6)
 
-        arc1 = self.trim_c(c1, 0, self.im.Radius_InnerStator) # self.trim_c(c1,0, self.im.Radius_InnerStator)
+        arc1 = self.trim_c(c1, 0., self.im.Radius_InnerStator) # self.trim_c(c1,0, self.im.Radius_InnerStator)
 
         R = self.im.Radius_InnerStator
-        THETA = (180-0.5*360/self.im.Qs)/180.*pi
+        THETA = (180-0.5*360./self.im.Qs)/180.*pi
         X = R*cos(THETA)
         Y = R*sin(THETA)
         self.trim_a(arc1, X, Y-1e-6)
@@ -4041,11 +4037,11 @@ class TrimDrawer(object):
         # 为了避免数Arc，我们应该在Circle.2时期就把Circle.2上的小片段优先剪了！
         arc2 = self.trim_c(c2,-self.im.Radius_InnerStatorYoke, 0.25*self.im.Width_StatorTeethBody)
 
-        self.trim_a(arc2, 0, self.im.Radius_InnerStatorYoke)
+        self.trim_a(arc2, 0., self.im.Radius_InnerStatorYoke)
 
-        self.trim_c(c3,0, self.im.Radius_OuterStatorYoke)
+        self.trim_c(c3,0., self.im.Radius_OuterStatorYoke)
 
-        self.trim_l(l1,-0.1, 0)
+        self.trim_l(l1,-0.1, 0.)
 
 
         self.trim_l(l2,1e-6 -0.5*(self.im.Radius_OuterStatorYoke+self.im.Radius_InnerStatorYoke), 0.5*self.im.Width_StatorTeethBody)
@@ -4073,8 +4069,6 @@ class TrimDrawer(object):
         #   File "D:/OneDrive - UW-Madison/c/codes/population.py", line 4106, in plot_statorCore
         #     raise e
         # ValueError: Error calling the remote method
-
-
 
         # we forget to plot the neck of stator tooth
         self.l5_start_vertex_x = l2.GetEndVertex().GetX()        # used later for plot_coil()
@@ -4122,11 +4116,11 @@ class TrimDrawer(object):
         SketchName = self.SketchName
         sketch = self.create_sketch(SketchName, u"#8D9440")
 
-        c3=self.circle(-self.im.Location_RotorBarCenter, 0, self.im.Radius_of_RotorSlot)
+        c3=self.circle(-self.im.Location_RotorBarCenter, 0., self.im.Radius_of_RotorSlot)
 
         if self.im.use_drop_shape_rotor_bar == True:
             # the inner rotor slot for drop shape rotor suggested by Gerada2011
-            c4=self.circle(-self.im.Location_RotorBarCenter2, 0, self.im.Radius_of_RotorSlot2) # Circle.4
+            c4=self.circle(-self.im.Location_RotorBarCenter2, 0., self.im.Radius_of_RotorSlot2) # Circle.4
             # Constraint to fix c4's center
             ref1 = c4.GetCenterVertex()
             ref2 = self.doc.CreateReferenceFromItem(ref1)

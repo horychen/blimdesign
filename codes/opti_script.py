@@ -85,7 +85,7 @@ fea_config_dict = {
     ##########################
     # Optimization
     ##########################
-    'FrequencyRange':range(1,6), # the first generation for PSO
+    # 'FrequencyRange':range(1,6), # the first generation for PSO
     'number_of_steps_2ndTTS':32, # 8*32 # steps for half period (0.5). That is, we implement two time sections, the 1st section lasts half slip period and the 2nd section lasts half fandamental period.
     'JMAG_Scheduler':False, # multi-cores run
     'delete_results_after_calculation': False, # check if True can we still export Terminal Voltage? 如果是True，那么就得不到Terminal Voltage了！
@@ -116,9 +116,10 @@ run_list = [1,1,0,0,0]
 # run_folder = r'run#100/' # no iron loss csv data but there are field data!
 # run_folder = r'run#101/' # 75 deg Celsius, iron loss csv data, delete field data after calculation.
 # run_folder = r'run#102/' # the efficiency is added to objective function，原来没有考虑效率的那些设计必须重新评估，否则就不会进化了，都是旧的好！
-run_folder = r'run#103/' # From this run, write denormalized pop data to disk!
+# run_folder = r'run#103/' # From this run, write denormalized pop data to disk!
 # run_list = [0,1,0,0,0] 
-# run_folder = r'run#104/' # Femm is used for breakdown torque and frequency!
+run_folder = r'run#104/' # Make sure all the gen#xxxx file uses denormalized values.
+# Femm is used for breakdown torque and frequency! 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
 if fea_config_dict['flag_optimization'] == True:
@@ -166,7 +167,7 @@ if fea_config_dict['flag_optimization'] == True:
                                             [5e-1,   3] ], # Width_StatorTeethHeadThickness
                             'mut':        0.8,
                             'crossp':     0.7,
-                            'popsize':    20,
+                            'popsize':    5,
                             'iterations': 48 } # begin at 5
 
 else:
@@ -192,11 +193,11 @@ if True:
     #     print index,
     #     initial_design.show_denorm(de_config_dict['bounds'], sw.init_pop[index])
     # print sw.init_pop[0].tolist()
-    sw.init_pop[0] = initial_design.design_parameters_norm
+    sw.init_pop_denorm[0] = initial_design.design_parameters_denorm
     # print sw.init_pop[0].tolist()
     with open(sw.get_gen_file(0), 'w') as f:
-        f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.init_pop)) # convert 2d array to string
-
+        f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.init_pop_denorm)) # convert 2d array to string
+    logger.info('Initial design from Pyrhonen09 is added to the first generation of pop.')
 
 
 ''' 3. Initialize FEMM Solver
@@ -215,17 +216,21 @@ sw.write_to_file_fea_config_dict()
 # run
 de_generator = sw.de()
 result = list(de_generator)
+logger.info('Done.')
+print result
 
-# de version 2 is called by this
-for el in result:
-    pop, fit, idx = el
-    logger.info('some information')
-    print 'pop:' + pop + 'fit & index:' %(fit, idx)
-    # for ind in pop:
-    #     data = fmodel(x, ind)
-    #     ax.plot(x, data, alpha=0.3)
+# print result
 
-
+# # de version 2 is called by this
+# for el in result:
+#     pop, fit, idx = el
+#     print '---------------------------'
+#     print 'pop:', pop
+#     print 'fit:', fit
+#     print 'idx:', idx
+#     # for ind in pop:
+#     #     data = fmodel(x, ind)
+#     #     ax.plot(x, data, alpha=0.3)
 
 # Run JCF from command linie instead of GUI
 # if not sw.has_results(im_initial, study_type='Tran2TSS'):

@@ -1620,6 +1620,18 @@ class FEMM_Solver(object):
                         break
             sleep(1)
 
+    def wait_greedy_search(self, dir_femm_temp, study_name):
+        while True:
+            fname = dir_femm_temp + 'femm_found.csv'
+            if os.path.exits(fname):
+                with open(fname, 'r') as f:
+                    data = f.readlines()
+                os.rename(fname, dir_femm_temp + study_name + '_femm_found.csv')
+                break
+            else:
+                sleep(1)
+        return float(data[0][:-1]), float(data[1][:-1]), None
+
     def get_rotor_current_function(self, i=0):
         '''[For post-process of plotting rotor current waveform]
         
@@ -2091,7 +2103,7 @@ class FEMM_Solver(object):
 
 
     # this is for JMAG calling to seek for breakdown torque and slip
-    def greedy_search_for_breakdown_slip(self, output_file_path, initial_pop=range(1,6), fraction=2):
+    def greedy_search_for_breakdown_slip(self, dir_femm_temp, study_name, fraction=2, number_of_instantces=5):
 
         self.flag_static_solver = False
         self.flag_eddycurrent_solver = True
@@ -2099,8 +2111,8 @@ class FEMM_Solver(object):
 
         femm.openfemm(True) # bHide # False for debug
         femm.newdocument(0) # magnetic
-        self.freq_range = initial_pop # here, the only variable for an individual is frequency, so pop = list of frequencies
-        self.freq = freq_range[0]
+        
+        self.freq = 1
         # Alternatively, the length of the machine could be scaled by the number of segments to make this correction automatically. -David Meeker
         self.stack_length = self.im.stack_length * fraction
         self.probdef()
@@ -2108,47 +2120,25 @@ class FEMM_Solver(object):
         self.add_material()
         self.vangogh.draw_model(fraction=fraction)
         self.add_block_labels(fraction=fraction)
+        femm.mi_saveas(dir_femm_temp + 'femm_temp' + '.fem')
+        femm.mi_close()
+        femm.closefemm()
 
-        list_ans_file = []
-        for freq in freq_range:
-            self.freq = freq
-            temp = self.get_output_file_name(booL_dir=False)
-            list_ans_file.append(temp+'.ans')
-            self.output_file_name = self.dir_run_sweeping + temp            
-            print temp
-            if os.path.exists(self.output_file_name + '.ans'):
-                continue
-            self.probdef()        
-            femm.mi_saveas(self.output_file_name + '.fem')
-
-        self.greedy_search(dir_run=self.dir_run_sweeping) # subprocess will wait for cmd but not the pytho script
-
-        str_results = ','.join()
-        with open(output_file_path, 'w') as f:
-            f.write(str_results)
-
-    def parasolve_greedy_search(self, dir_run=None, number_of_instantces=5, bool_watchdog_postproc=True):
-        '''[并行求解] 当初没想好，旋转转子竟然不是并行的。。。
-        Keyword Arguments:
-            dir_run {[type]} -- [静态场用self.dir_run，涡流场用self.dir_run_sweeping] (default: {None})
-            number_of_instantces {number} -- [几个？] (default: {5})
-            bool_watchdog_postproc {bool} -- [有些时候我们不喜欢用看门狗，后面看了就知道] (default: {True})
-        '''
-        if dir_run == None:
-           dir_run = self.dir_run
-
-        # 
-        # 在搜索的过程中，显然是需要知道结果的，这说明，不仅仅要跑五个instance，
-        # 而且还需要有一个总管instanse，负责总调，
-        # self.wait(list_ans_file)
+        # save for wait_greedy_search()
+        self.dir_femm_temp = dir_femm_temp
+        self.study_name = study_name
 
 
-        if True: # for running script in JMAG
-            # os.system('python "%smethod_parallel_solve_4jmag.py" %s' % (self.dir_codes, dir_run))
-            with open('temp.bat', 'w') as f:
-                f.write('python "%smethod_parallel_solve_4jmag.py" %s %d' % (self.dir_codes, dir_run, number_of_instantces))
-            os.startfile('temp.bat')
-            # os.remove('temp.bat')
+        # 在搜索的过程中，显然是需要知道结果的，
+        # 这说明，不仅仅要跑五个instance，
+        # 而且还需要有一个总管，负责总调。
+        with open('temp2.bat', 'w') as f:
+            f.write('python "%smethod_parasolve_greedy_search.py" %s %d %.16f' % (self.dir_codes, 
+                                                                                  dir_femm_temp, 
+                                                                                  number_of_instantces,
+                                                                                  self.stack_length))
+        os.startfile('temp2.bat')
+        # os.remove('temp2.bat')
 
 
 # def get_magnet_loss(self):

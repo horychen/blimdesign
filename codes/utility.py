@@ -202,11 +202,10 @@ class Pyrhonen_design(object):
         import numpy as np
         min_b, max_b = np.asarray(bounds).T 
         diff = np.fabs(min_b - max_b)
-        design_parameters_norm = (design_parameters_denorm - min_b)/diff #= pop
+        self.design_parameters_norm = (design_parameters_denorm - min_b)/diff #= pop
         # print type(self.design_parameters_norm)
         print '[Normalized]:',
-        print design_parameters_norm.tolist()
-        self.design_parameters_norm = design_parameters_norm
+        print self.design_parameters_norm.tolist()
 
         # pop = design_parameters_norm
         # min_b, max_b = np.asarray(bounds).T 
