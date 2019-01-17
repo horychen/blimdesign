@@ -26,7 +26,7 @@ def get_slipfreq_torque():
 
 id_solver = int(sys.argv[1])
 dir_femm_temp = sys.argv[2][1:-1]
-print 'ParaSolve', id_solver
+print 'ParaSolve', id_solver,
 
 
 femm.openfemm(True) # bHide

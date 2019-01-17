@@ -1319,7 +1319,7 @@ class FEMM_Solver(object):
         #     raise Exception('[DEBUG] JMAG disagrees with FEMM (!= 3 Hz).')
 
         # write rotor currents to file
-        femm_integrate_4_current(self.dir_run_sweeping + list_ans_file[index], self.fraction)
+        self.femm_integrate_4_current(self.dir_run_sweeping + list_ans_file[index], self.fraction)
 
         femm.closefemm()
 
@@ -1339,7 +1339,7 @@ class FEMM_Solver(object):
             R = 0.5*(im.Location_RotorBarCenter + im.Location_RotorBarCenter2)
             angle_per_slot = 2*pi/im.Qr
             THETA_BAR = pi - angle_per_slot + EPS # add EPS for the half bar
-            print 'number of rotor_slot_per_pole', self.rotor_slot_per_pole * int(4/fraction)
+            print 'number of rotor_slot per partial model', self.rotor_slot_per_pole * int(4/fraction)
             for i in range(self.rotor_slot_per_pole * int(4/fraction)):
                 THETA_BAR += angle_per_slot
                 THETA = THETA_BAR
@@ -1361,12 +1361,12 @@ class FEMM_Solver(object):
             if True:
                 # get stator slot area for copper loss calculation
                 femm.mo_groupselectblock(11)
-                stator_slot_area = femm.mo_blockintegral(5) / im.Qs # unit: m^2 (verified by GUI operation)
+                stator_slot_area = femm.mo_blockintegral(5) / (im.Qs/fraction) # unit: m^2 (verified by GUI operation)
                 femm.mo_clearblock()
 
                 # get rotor slot area for copper loss calculation
                 femm.mo_groupselectblock(101)
-                rotor_slot_area = femm.mo_blockintegral(5) / im.Qr
+                rotor_slot_area = femm.mo_blockintegral(5) / (im.Qs/fraction)
                 femm.mo_clearblock()
 
             femm.mo_close()         
@@ -1695,7 +1695,7 @@ class FEMM_Solver(object):
                         femm.opendocument(self.dir_run + current_ans_file)
 
                         # get slot area for copper loss calculation
-                        femm.mo_groupselectblock(11)
+                        femm.mo_groupselectblock(11) # fraction is 1 
                         self.stator_slot_area = femm.mo_blockintegral(5) / self.im.Qs # unit: m^2 (verified by GUI operation)
                         femm.mo_clearblock()
 
@@ -2180,26 +2180,28 @@ class FEMM_Solver(object):
 
                 femm.openfemm(True)
                 femm.opendocument(fname[:-4]+'.ans')
-                vals_results_rotor_current, stator_slot_area, rotor_slot_area = femm_integrate_4_current(self.dir_run_sweeping + list_ans_file[index], self.fraction, dir_output=self.dir_femm_temp, returnData=True)
+                vals_results_rotor_current, stator_slot_area, rotor_slot_area = \
+                    self.femm_integrate_4_current(fname[:-4]+'.ans', self.fraction, dir_output=self.dir_femm_temp, returnData=True)
                 femm.closefemm()
                 
-                # leave the fem file for ease of reproduction
-                # os.remove(fname[:-4]+'.fem')
-                os.remove(fname[:-4]+'.ans')
-
                 new_fname = self.dir_femm_temp + self.study_name + '.csv'
                 os.rename(fname, new_fname)
                 with open(new_fname, 'w') as f:
                     str_results = "%g\n%g\n" % (freq, torque)
-                    str_results = "%g\n%g\n" % (stator_slot_area, rotor_slot_area)
+                    str_results += "%g\n%g\n" % (stator_slot_area, rotor_slot_area)
                     for el in vals_results_rotor_current:
-                        str_results += "%g %g\n" % (el.real, el.imag)
+                        str_results += "%g,%g\n" % (el.real, el.imag)
                     f.write(str_results)
 
                 # also save for loss evaluation query # this is not good for restart, just recover your data from csv files
                 self.vals_results_rotor_current = vals_results_rotor_current
                 self.stator_slot_area = stator_slot_area
                 self.rotor_slot_area = rotor_slot_area
+
+                # leave the fem file for ease of reproduction
+                # os.remove(fname[:-4]+'.fem')
+                os.remove(fname[:-4]+'.ans')
+                os.rename(fname[:-4]+'.fem', new_fname[:-4]+'.fem')
                 break
             else:
                 sleep(1)

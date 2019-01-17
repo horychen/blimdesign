@@ -57,6 +57,8 @@ def logger_init(): # This will lead to duplicated logging output
     logger.addHandler(handler)
     return logger
 
+import sys
+# For a better solution for print, see https://stackoverflow.com/questions/4230855/why-am-i-getting-ioerror-9-bad-file-descriptor-error-while-making-print-st/4230866
 # decorater used to block function printing to the console
 def blockPrinting(func):
     def func_wrapper(*args, **kwargs):
@@ -68,11 +70,9 @@ def blockPrinting(func):
         sys.stdout = sys.__stdout__
 
     return func_wrapper
-
 # Disable
 def blockPrint():
     sys.stdout = open(os.devnull, 'w')
-
 # Restore
 def enablePrint():
     sys.stdout = sys.__stdout__
@@ -337,12 +337,10 @@ class Goertzel_Data_Struct(object):
         else:
             return False
 
-    def goertzel_offline(gs, targetFreq, numSamples, samplingRate, data_list):
+    def goertzel_offline(gs, targetFreq, samplingRate, data_list):
         # gs is equivalent to self
-        try:
-            len(data_list) # = numSamples
-        except:
-            raise Exception('The input data_list must be array or list.') 
+
+        numSamples = len(data_list)
 
         if gs.bool_initialized == False:
             gs.bool_initialized = True
@@ -350,8 +348,8 @@ class Goertzel_Data_Struct(object):
             gs.count = 0
             gs.k = (0.5 + ((numSamples * targetFreq) / samplingRate))
             omega = (2.0 * math.pi * gs.k) / numSamples
-            gs.sine = sin(omega)
-            gs.cosine = cos(omega)
+            gs.sine = math.sin(omega)
+            gs.cosine = math.cos(omega)
             gs.coeff = 2.0 * gs.cosine
             gs.q1=0
             gs.q2=0
@@ -375,21 +373,56 @@ class Goertzel_Data_Struct(object):
                 # // reset
                 gs.bool_initialized = False
                 return True
+        print data_list
+        print gs.count
+        print numSamples
+        return None
 
+
+def compute_power_factor_from_half_period(voltage, current, mytime, targetFreq=1e3, numPeriodicalExtension=1000): # 目标频率默认是1000Hz
+
+    gs_u = Goertzel_Data_Struct("Goertzel Struct for Voltage\n")
+    gs_i = Goertzel_Data_Struct("Goertzel Struct for Current\n")
+
+    TS = mytime[-1] - mytime[-2]
+
+    if type(voltage)!=type([]):
+        voltage = voltage.tolist() + (-voltage).tolist()
+        current = current.tolist() + (-current).tolist()
+    else:
+        voltage = voltage + [-el for el in voltage]
+        current = current + [-el for el in current]
+
+    voltage *= numPeriodicalExtension
+    current *= numPeriodicalExtension
+
+    N_SAMPLE = len(voltage)
+    gs_u.goertzel_offline(targetFreq, 1./TS, voltage)
+    gs_i.goertzel_offline(targetFreq, 1./TS, current)
+
+    gs_u.ampl = math.sqrt(gs_u.real*gs_u.real + gs_u.imag*gs_u.imag) 
+    gs_u.phase = math.atan2(gs_u.imag, gs_u.real)
+
+    gs_i.ampl = math.sqrt(gs_i.real*gs_i.real + gs_i.imag*gs_i.imag) 
+    gs_i.phase = math.atan2(gs_i.imag, gs_i.real)
+
+    phase_difference_in_deg = ((gs_i.phase-gs_u.phase)/math.pi*180)
+    power_factor = math.cos(gs_i.phase-gs_u.phase)
+    return power_factor
+    
 
 
 
 if __name__ == '__main__':
-    # from pylab import *
 
-    for generation in range(5):
-        print '----------gen#%d'%(generation)
-        generation_file_path = r'D:\OneDrive - UW-Madison\c\pop\run#107/' + 'gen#%04d.txt'%(generation)
-        print generation_file_path
-        if os.path.exists( generation_file_path ):
-            with open(generation_file_path, 'r') as f:
-                for el in f.readlines():
-                    print el[:-1]
+    # for generation in range(5):
+    #     print '----------gen#%d'%(generation)
+    #     generation_file_path = r'D:\OneDrive - UW-Madison\c\pop\run#107/' + 'gen#%04d.txt'%(generation)
+    #     print generation_file_path
+    #     if os.path.exists( generation_file_path ):
+    #         with open(generation_file_path, 'r') as f:
+    #             for el in f.readlines():
+    #                 print el[:-1]
 
     # read voltage and current to see the power factor!
     # read voltage and current to see the power factor!
@@ -399,7 +432,8 @@ if __name__ == '__main__':
     # 绘制损耗图形。
     # 绘制损耗图形。
 
-    if False:
+    if True:
+        from pylab import *
         gs_u = Goertzel_Data_Struct("Goertzel Struct for Voltage\n")
         gs_i = Goertzel_Data_Struct("Goertzel Struct for Current\n")
 
@@ -407,11 +441,11 @@ if __name__ == '__main__':
         targetFreq = 1000.
         TS = 1.5625e-5
 
-        if False:
+        if False: # long signal
             time = arange(0./targetFreq, 100.0/targetFreq, TS)
             voltage = 3*sin(targetFreq*2*pi*time + 30/180.*pi)
             current = 2*sin(targetFreq*2*pi*time + 30/180.*pi - phase)
-        else:
+        else: # half period
             time = arange(0.5/targetFreq, 1.0/targetFreq, TS)
             voltage = 3*sin(targetFreq*2*pi*time + 30/180.*pi)
             current = 2*sin(targetFreq*2*pi*time + 30/180.*pi - phase)
@@ -419,6 +453,10 @@ if __name__ == '__main__':
         N_SAMPLE = len(voltage)
         noise = ( 2*rand(N_SAMPLE) - 1 ) * 0.233
         voltage += noise
+
+        # test
+        print 'PF=', compute_power_factor_from_half_period(voltage, current, time, targetFreq=1e3)
+        quit()
 
         # plot(voltage+0.5)
         # plot(current+0.5)
@@ -429,10 +467,11 @@ if __name__ == '__main__':
         print resolution, targetFreq
         if resolution > targetFreq:
 
-            print 'Data length (N_SAMPLE) too short or sampling frequency too high (1/TS too high).'
-            print 'Periodical extension is applied. This will not really increase your resolution. It is a visual trick for Fourier Analysis.'
-            voltage = voltage.tolist() + (-voltage).tolist() #[::-1]
-            current = current.tolist() + (-current).tolist() #[::-1]
+            if True: # for half period signal
+                print 'Data length (N_SAMPLE) too short or sampling frequency too high (1/TS too high).'
+                print 'Periodical extension is applied. This will not really increase your resolution. It is a visual trick for Fourier Analysis.'
+                voltage = voltage.tolist() + (-voltage).tolist() #[::-1]
+                current = current.tolist() + (-current).tolist() #[::-1]
 
             voltage *= 1000
             current *= 1000
@@ -447,8 +486,8 @@ if __name__ == '__main__':
 
             # 目前就写了二分之一周期的处理，只有四分之一周期的数据，可以用反对称的方法周期延拓。
 
-        print gs_u.goertzel_offline(targetFreq, N_SAMPLE, 1./TS, voltage)
-        print gs_i.goertzel_offline(targetFreq, N_SAMPLE, 1./TS, current)
+        print gs_u.goertzel_offline(targetFreq, 1./TS, voltage)
+        print gs_i.goertzel_offline(targetFreq, 1./TS, current)
 
         gs_u.ampl = sqrt(gs_u.real*gs_u.real + gs_u.imag*gs_u.imag) 
         gs_u.phase = arctan2(gs_u.imag, gs_u.real)
@@ -483,5 +522,3 @@ if __name__ == '__main__':
 
         # it works!
         # send_notification('Test email')
-
-

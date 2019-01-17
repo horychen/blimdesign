@@ -5,11 +5,6 @@
 ''' 1. General Information & Packages Loading
 '''
 import os
-# Debug
-# if os.path.exists('d:/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz'):
-#     os.system('bash -c "rm -r /mnt/d/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz"')
-# if os.path.exists('d:/OneDrive - UW-Madison/c/pop/Tran2TSS_PS_Opti.txt'):
-#     os.system('bash -c "mv /mnt/d/OneDrive\ -\ UW-Madison/c/pop/Tran2TSS_PS_Opti.txt /mnt/d/OneDrive\ -\ UW-Madison/c/pop/initial_design.txt"')
 def where_am_i(fea_config_dict):
     dir_interpreter = os.path.abspath('')
     print dir_interpreter
@@ -122,7 +117,8 @@ run_list = [0,1,0,0,0]
 # run_folder = r'run#105/' # Femm is used for breakdown torque and frequency! 
 # run_folder = r'run#106/' # You need to initialize femm_solver every calling of fobj
 # run_folder = r'run#107/' # There is no slide mesh if you add new study for Tran2TSS
-run_folder = r'run#108/' # Efficiency is added. femm_found.fem feature is added.
+# run_folder = r'run#108/' # Efficiency is added. femm_found.fem feature is added.
+run_folder = r'run#109/' # test the effectiveness of de algorithm
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -144,6 +140,15 @@ fea_config_dict['femm_deg_per_step'] = 0.25 * (360/4) / utility.lcm(24/4., fea_c
 print 'femm_deg_per_step is', fea_config_dict['femm_deg_per_step'], 'deg (Qs=24, p=2)'
 
 logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_'+run_folder[:-1])
+
+
+
+# Debug
+# if os.path.exists('d:/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz'):
+#     os.system('bash -c "rm -r /mnt/d/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz"')
+# if os.path.exists('d:/OneDrive - UW-Madison/c/pop/Tran2TSS_PS_Opti.txt'):
+#     os.system('bash -c "mv /mnt/d/OneDrive\ -\ UW-Madison/c/pop/Tran2TSS_PS_Opti.txt /mnt/d/OneDrive\ -\ UW-Madison/c/pop/initial_design.txt"')
+
 
 
 ''' 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG)
@@ -171,8 +176,8 @@ if fea_config_dict['flag_optimization'] == True:
                                             [5e-1,   3] ], # Width_StatorTeethHeadThickness
                             'mut':        0.8,
                             'crossp':     0.7,
-                            'popsize':    30,
-                            'iterations': 48 } # begin at 5
+                            'popsize':    100,
+                            'iterations': 148 } # begin at 5
 
 else:
     de_config_dict = None
@@ -216,7 +221,8 @@ sw.write_to_file_fea_config_dict()
 de_generator = sw.de()
 result = list(de_generator)
 logger.info('Done.')
-print result
+for el in result:
+    print el[0].tolist(), el[1]
 
 # print result
 

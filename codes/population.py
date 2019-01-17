@@ -10,23 +10,9 @@ from pylab import plot, legend, grid, figure, subplots, array, mpl, show
 import utility
 from VanGogh import VanGogh
 
-from time import time
+from time import time as clock_time
 
 EPS = 1e-2
-
-# For a better solution for print, see https://stackoverflow.com/questions/4230855/why-am-i-getting-ioerror-9-bad-file-descriptor-error-while-making-print-st/4230866
-# decorater used to block function printing to the console
-import sys
-def blockPrinting(func):
-    def func_wrapper(*args, **kwargs):
-        # block all printing to the console
-        sys.stdout = open(os.devnull, 'w')
-        # call the method in question
-        func(*args, **kwargs)
-        # enable all printing to the console
-        sys.stdout = sys.__stdout__
-
-    return func_wrapper
 
 class suspension_force_vector(object):
     """docstring for suspension_force_vector"""
@@ -61,25 +47,37 @@ class data_manager(object):
         self.ForConY_list = []
         self.ForConAbs_list = []
 
-        self.loss_list = None
+        self.jmag_loss_list = None
+        self.femm_loss_list = None
 
     def unpack(self):
         return self.basic_info, self.time_list, self.TorCon_list, self.ForConX_list, self.ForConY_list, self.ForConAbs_list
 
-    @property
-    def loss_list(self):
-        return self.loss_list
-
-    @property
     def terminal_voltage(self, which='4C'): # 2A 2B 2C 4A 4B 4C
         return self.Current_dict['Terminal%s [Case 1]'%(which)]
-    
-    @property
-    def power_factor(self):
-        self.Current_dict['Coil4C']
-        self.terminal_voltage
-        raise Exception('under contruction')
-        # utility....
+        # 端点电压是相电压吗？应该是，我们在中性点设置了地电位
+
+    def circuit_current(self, which='4C'): # 2A 2B 2C 4A 4B 4C
+        return self.Current_dict['Coil%s'%(which)]
+
+    def power_factor(self, number_of_steps_2ndTTS, targetFreq=1e3, numPeriodicalExtension=1000):
+        # for key, val in self.Current_dict.iteritems():
+        #     if 'Terminal' in key:
+        #         print key, val
+        # quit()
+
+        # 4C
+        mytime  = self.Current_dict['Time(s)'][-number_of_steps_2ndTTS:]
+        voltage =      self.terminal_voltage()[-number_of_steps_2ndTTS:]
+        current =       self.circuit_current()[-number_of_steps_2ndTTS:]
+        # from pylab import *
+        # print len(mytime), len(voltage), len(current)
+        # figure()
+        # plot(mytime, voltage)
+        # plot(mytime, current)
+        # show()
+        power_factor = utility.compute_power_factor_from_half_period(voltage, current, mytime, targetFreq=targetFreq, numPeriodicalExtension=numPeriodicalExtension)
+        return power_factor
 
 class swarm(object):
 
@@ -251,13 +249,16 @@ class swarm(object):
             logger = logging.getLogger(__name__)
             logger.debug('The latest generation is gen#%d', self.number_current_generation)
 
-            # restore the existing swarm from file             
-            self.init_pop_denorm = []
-            with open(self.get_gen_file(self.number_current_generation), 'r') as f:
-                read_iterator = csv_reader(f, skipinitialspace=True)
-                for row in self.whole_row_reader(read_iterator):
-                    if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
-                        self.init_pop_denorm.append([float(el) for el in row])
+            # restore the living pop from file liv#xxxx.txt
+            self.init_pop_denorm = self.read_living_pop(self.number_current_generation)
+                # 在2019年1月16日以前，每次断了以后，就丢失了真正活着的那组pop，真正的做法是，从第零代开始，根据fit和gen数据当前代重构活着的那组pop，但是这样太麻烦了，我决定加一个文件叫liv#xxx.txt。
+                # 下面这个，直接取上一代gen#xxxx.txt的那组pop来作为当前代，显然是错的，因为我们是从fobj返回以后直接写入文件的，不管它是更好的还是更差了。
+                # 也就是说，只有当number_current_generation=0的时候，这才是对的。
+                # with open(self.get_gen_file(self.number_current_generation), 'r') as f:
+                #     read_iterator = csv_reader(f, skipinitialspace=True)
+                #     for row in self.whole_row_reader(read_iterator):
+                #         if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
+                #             self.init_pop_denorm.append([float(el) for el in row])
             self.init_pop = (np.array(self.init_pop_denorm) - min_b) / diff
 
             # TODO: 文件完整性检查
@@ -460,7 +461,7 @@ class swarm(object):
                     study = model.GetStudy(0)
 
                 self.mesh_study(im_variant, app, model, study)
-                self.run_study(im_variant, app, study, time())
+                self.run_study(im_variant, app, study, clock_time())
 
                 # evaluation based on the csv results
                 try:
@@ -480,7 +481,7 @@ class swarm(object):
             # Load Results for Tran2TSS
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             try:
-                dm = self.read_csv_results_4_optimization(tran2tss_study_name)                
+                dm = self.read_csv_results_4_optimization(tran2tss_study_name)
                 basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
                 sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=self.fea_config_dict['number_of_steps_2ndTTS']) # samples in the tail that are in steady state
                 str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
@@ -492,16 +493,26 @@ class swarm(object):
                                   sfv=sfv,
                                   torque=TorCon_list,
                                   range_ss=sfv.range_ss)
-                str_results += '\n\tbasic info:' +  ''.join(  [str(el) for el in basic_info])
-                str_results += '\n\tloss info:'  + ','.join(['%g'%(el) for el in dm.loss_list]) # dm.loss_list = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
-                str_results += '\n\tPF:'
+                str_results += '\n\tbasic info:' +   ''.join(  [str(el) for el in basic_info])
+
+                if dm.jmag_loss_list is None:
+                    raise Exception('Loss data is not loaded?')
+                else:
+                    str_results += '\n\tjmag loss info:'  + ', '.join(['%g'%(el) for el in dm.jmag_loss_list]) # dm.jmag_loss_list = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
+
+                if self.fea_config_dict['jmag_run_list'][0] == 0:
+                    str_results += '\n\tfemm loss info:'  + ', '.join(['%g'%(el) for el in dm.femm_loss_list])
+
+                if self.fea_config_dict['delete_results_after_calculation'] == False:
+                    str_results += '\n\tPF: %g' % (dm.power_factor(self.fea_config_dict['number_of_steps_2ndTTS'], targetFreq=im_variant.DriveW_Freq))
+
                 self.fig_main.savefig(self.dir_run + im_variant.individual_name + 'results.png', dpi=150)
                 self.pyplot_clear()
             except Exception, e:
                 logger.error(u'Error when loading csv results for Tran2TSS.', exc_info=True)
                 raise Exception('Error: see log file.')
             # show()
-            return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.loss_list
+            return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list
 
         ################################################################
         # Begin from where left: Frequency Study
@@ -520,11 +531,24 @@ class swarm(object):
             if os.path.exists(output_file_path):
                 with open(output_file_path, 'r') as f:
                     data = f.readlines()
-                slip_freq_breakdown_torque, breakdown_torque = float(data[0][:-1]), float(data[1][:-1])
+
+                    slip_freq_breakdown_torque                  = float(data[0][:-1])
+                    breakdown_torque                            = float(data[1][:-1])
+
+                    self.femm_solver.stator_slot_area           = float(data[2][:-1])
+                    self.femm_solver.rotor_slot_area            = float(data[3][:-1])
+
+                    self.femm_solver.vals_results_rotor_current = []
+                    for row in data[4:]:
+                        index = row.find(',')
+                        self.femm_solver.vals_results_rotor_current.append(float(row[:index]) + 1j*float(row[index+1:-1]))
+                    # self.femm_solver.list_rotor_current_amp = [abs(el) for el in vals_results_rotor_current]
+                    # print 'debug,'
+                    # print self.femm_solver.vals_results_rotor_current
             else:
 
                 # no direct returning of results, wait for it later when you need it.
-                femm_tic = time()
+                femm_tic = clock_time()
                 self.femm_solver.__init__(im_variant, flag_read_from_jmag=False, freq=2.23)
                 self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name )
 
@@ -540,7 +564,7 @@ class swarm(object):
                 slip_freq_breakdown_torque, breakdown_torque, breakdown_force = exe_frequency()
             else:
                 slip_freq_breakdown_torque, breakdown_torque, breakdown_force = temp
-                toc = time()
+                toc = clock_time()
 
 
 
@@ -576,12 +600,12 @@ class swarm(object):
                 im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
                 study = im_variant.add_TranFEAwi2TSS_study( slip_freq_breakdown_torque, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
                 self.mesh_study(im_variant, app, model, study)
-                self.run_study(im_variant, app, study, time())
+                self.run_study(im_variant, app, study, clock_time())
             else:
                 # JMAG+JMAG
                 # model = app.GetCurrentModel()
                 im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
-                self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, time())
+                self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, clock_time())
 
             # export Voltage if field data exists.
             if self.fea_config_dict['delete_results_after_calculation'] == False:
@@ -595,35 +619,38 @@ class swarm(object):
         ################################################################
         # Load data for cost function evaluation
         ################################################################
-        str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, loss_list = load_transeint()
+        str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list = load_transeint()
 
         # compute the fitness 
         rotor_volume = pi*(im_variant.Radius_OuterRotor*1e-3)**2 * (im_variant.stack_length*1e-3)
         rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³
         shaft_power  = im_variant.Omega * torque_average
-        if loss_list is None:        
+        if jmag_loss_list is None:        
             copper_loss  = 0.0
             iron_loss    = 0.0
         else:
-            if True:
+            if False:
                 # by JMAG only
-                copper_loss  = loss_list[0] + loss_list[1] 
-                iron_loss    = loss_list[2] 
+                copper_loss  = jmag_loss_list[0] + jmag_loss_list[1] 
+                iron_loss    = jmag_loss_list[2] 
             else:
-                # by JMAG for iron loss and FEMM for 
-                copper_loss  = loss_list[5] + loss_list[6] # [3] and [4] are eddy and hysteresis loss
-                iron_loss    = loss_list[2] 
+                # by JMAG for iron loss and FEMM for copper loss
+                copper_loss  = femm_loss_list[0] + femm_loss_list[1]
+                iron_loss    = jmag_loss_list[2] 
             # some factor to account for rotor iron loss?
             # iron_loss *= 1
 
         total_loss   = copper_loss + iron_loss
         efficiency   = shaft_power / (total_loss + shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
-        # The weight is [1, 1, 0.1, 0.1, 0.1, 10]
+        str_results  += '\n\teta: %g' % (efficiency)
+
+        # The weight is [TpRV=30e3, FpRW=1, Trip=50%, FEmag=50%, FEang=50deg, eta=sqrt(10)=3.16]
+        # which means the FEang must be up to 50deg so so be the same level as TpRV=30e3 or FpRW=1 or eta=316%
         list_weighted_cost = [  30e3 / ( torque_average/rotor_volume ),
                                 1.0 / ( ss_avg_force_magnitude/rotor_weight ),
-                                normalized_torque_ripple         *   2, # /0.05 * 0.1
-                                normalized_force_error_magnitude *   2, # /0.05 * 0.1
-                                force_error_angle * 0.2          * 0.1, # [deg] 5 deg is reported to be the base line (Yegu Kang)
+                                normalized_torque_ripple         *   2, #       / 0.05 * 0.1
+                                normalized_force_error_magnitude *   2, #       / 0.05 * 0.1
+                                force_error_angle * 0.2          * 0.1, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang)
                                 10 / efficiency**2,
                                 im_variant.thermal_penalty ]            # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
         cost_function = sum(list_weighted_cost)
@@ -646,12 +673,19 @@ class swarm(object):
 
         def fmodel(x, w):
             return w[0] + w[1]*x + w[2] * x**2 + w[3] * x**3 + w[4] * x**4 + w[5] * x**5 + w[6] * x**6
-        def rmse(y, w):
-            y_pred = fmodel(x, w)
+        def rmse(y, individual):
+            y_pred = fmodel(x, individual)
             return np.sqrt(sum((y - y_pred)**2) / len(y))
 
-        x = np.linspace(0, 6.28, 50)
-        y = fmodel(x, w=[6.7835811431545334,3.4553640006363757,1.8923682935241657,4.8613288149896521,2.5115072727086849,8.7631152293525041,0.9288093932933665])
+        try:
+            self.weights
+        except:
+            self.weights = [0.5*sum(el) for el in self.bounds]
+            print self.bounds
+            print self.weights
+    
+        x = np.linspace(0, 6.28, 50) 
+        y = fmodel(x, w=self.weights)
 
         return rmse(y, individual)
         # plt.scatter(x, y)
@@ -661,6 +695,7 @@ class swarm(object):
 
     def de(self):
         fobj = self.fobj
+        fobj = self.fobj_test
         if self.bool_first_time_call_de == True:
             self.bool_first_time_call_de = False
 
@@ -680,6 +715,8 @@ class swarm(object):
         iterations -= self.number_current_generation # make this iterations the total number of iterations seen from the user
         logger = logging.getLogger(__name__)
         logger.debug('DE Configuration:\n\t' + '\n\t'.join('%.4f,%.4f'%tuple(el) for el in bounds) + '\n\t%.4f, %.4f, %d, %d' % (mut,crossp,popsize,iterations))
+
+        self.bounds = np.array(bounds) # for debug purpose in fobj_test
 
         # mut \in  [0.5, 2.0]
         if mut < 0.5 or mut > 2.0:
@@ -713,10 +750,9 @@ class swarm(object):
             except Exception as e:
                 raise e # fitness
 
-            # print 'Write gen#9999.txt'
-            # with open(self.get_gen_file(self.number_current_generation+9999), 'w') as f:
-            #     f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop_denorm)) # convert 2d array to string
-            # self.write_population_data(pop_denorm)
+            print 'Write the 1st generation (gen#%4d) of living pop to file.' % (self.number_current_generation)
+            for pop_j_denorm in pop_denorm:
+                self.write_living_individual(pop_j_denorm)
         else:
             # this is a continued run. load the latest complete fitness data (the first digit of every row is fitness for an individual)
             fitness = []
@@ -790,13 +826,16 @@ class swarm(object):
                     # write ongoing results
                     self.write_individual_fitness(f)
                     self.write_individual_data(trial_denorm) # we write individual data after fitness is evaluated in order to make sure the two files are synchronized
-
+                                                             # this means that the pop data file on disk does not necessarily correspondes to the current generation of pop.
                 if f < fitness[j]:
                     fitness[j] = f
                     pop[j] = trial # greedy selection
                     if f < fitness[best_idx]:
                         best_idx = j
                         best = trial_denorm
+
+                pop_j_denorm = min_b + pop[j] * diff
+                self.write_living_individual(pop_j_denorm)
 
             # one generation is finished
             self.rename_onging_files(self.number_current_generation)
@@ -805,6 +844,40 @@ class swarm(object):
             # yield min_b + pop * diff, fitness, best_idx # de verion 2
 
         # TODO: 跑完一轮优化以后，必须把de_config_dict和当前的代数存在文件里，否则gen文件里面存的normalized data就没有物理意义了。
+
+    def write_living_individual(self, pop_j_denorm):
+        fname = self.dir_run + 'liv#%04d.txt'%(int(self.number_current_generation))
+        with open(fname, 'a') as f:
+            f.write('\n' + ','.join('%.16f'%(y) for y in pop_j_denorm)) # convert 1d array to string
+
+    def read_living_pop(self, no_current_generation):
+        fname = self.dir_run + 'liv#%04d.txt'%(no_current_generation)
+        living_pop_denorm = []
+        with open(fname, 'r') as f:
+            for row in self.whole_row_reader(csv_reader(f, skipinitialspace=True)):
+                if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
+                    living_pop_denorm.append([float(el) for el in row])
+        return living_pop_denorm
+
+    def write_population_data(self, pop):
+        with open(self.get_gen_file(self.number_current_generation), 'w') as f:
+            f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop)) # convert 2d array to string
+
+    def append_population_data(self, pop): # for increased popsize from last run
+        with open(self.get_gen_file(self.number_current_generation), 'a') as f:
+            f.write('\n')
+            f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop)) # convert 2d array to string
+
+    def write_individual_data(self, trial_individual):
+        with open(self.get_gen_file(self.number_current_generation, ongoing=True), 'a') as f:
+            f.write('\n' + ','.join('%.16f'%(y) for y in trial_individual)) # convert 1d array to string
+
+    def write_individual_fitness(self, fitness_scalar):
+        with open(self.get_fit_file(self.number_current_generation, ongoing=True), 'a') as f:
+            f.write('\n%.16f'%(fitness_scalar))
+            # TODO: also write self.fitness_in_physics_data
+
+
 
     def draw_jmag_model(self, individual_index, im_variant, model_name):
 
@@ -973,26 +1046,7 @@ class swarm(object):
                     l_data.append([float(el) for el in row[1:]])
         return l_slip_freq, l_data
 
-    def write_population_data(self, pop):
-        with open(self.get_gen_file(self.number_current_generation), 'w') as f:
-            f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop)) # convert 2d array to string
 
-    def append_population_data(self, pop):
-        with open(self.get_gen_file(self.number_current_generation), 'a') as f:
-            f.write('\n')
-            f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop)) # convert 2d array to string
-
-    def read_population_data(self):
-        pass
-
-    def write_individual_data(self, trial_individual):
-        with open(self.get_gen_file(self.number_current_generation, ongoing=True), 'a') as f:
-            f.write('\n' + ','.join('%.16f'%(y) for y in trial_individual)) # convert 1d array to string
-
-    def write_individual_fitness(self, fitness_scalar):
-        with open(self.get_fit_file(self.number_current_generation, ongoing=True), 'a') as f:
-            f.write('\n%.16f'%(fitness_scalar))
-            # TODO: also write self.fitness_in_physics_data
 
     def logging_1d_array_for_debug(self, a, a_name):
         # self.logging_1d_array_for_debug(trial)
@@ -1907,6 +1961,7 @@ class swarm(object):
                         Current_dict[key_list[ind]].append(float(val))
 
         # Terminal Voltage 
+        new_key_list = []
         if self.fea_config_dict['delete_results_after_calculation'] == False:
             # file name is by individual_name like ID32-2-4_EXPORT_CIRCUIT_VOLTAGE.csv rather than ID32-2-4Tran2TSS_circuit_current.csv
             with open(path_prefix + study_name[:-8] + "_EXPORT_CIRCUIT_VOLTAGE.csv", 'r') as f:
@@ -1917,13 +1972,14 @@ class swarm(object):
                     if count==1: # Time | Terminal1 | Terminal2 | ... | Termial6
                         if 'Time' in row[0]: # Time, s
                             for key in row:
-                                key_list.append(key)
+                                new_key_list.append(key) # Yes, you have to use a new key list, because the ind below bgeins at 0.
                                 Current_dict[key] = []
                         else:
                             raise Exception('Problem with csv file for terminal voltage.')
                     else:
                         for ind, val in enumerate(row):
-                            Current_dict[key_list[ind]].append(float(val))
+                            Current_dict[new_key_list[ind]].append(float(val))
+        key_list += new_key_list
 
         # Loss
         # Iron Loss
@@ -1952,6 +2008,7 @@ class swarm(object):
                     stator_hysteresis_loss = float(row[3]) # Stator Core
                     break
         # Copper Loss
+        rotor_copper_loss_list = []
         with open(path_prefix + study_name + '_joule_loss.csv', 'r') as f:
             read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
@@ -1964,20 +2021,19 @@ class swarm(object):
                     rotor_copper_loss_list.append(float(row[7])) # Cage
         
         # use the last 1/4 period data to compute average copper loss of Tran2TSS rather than use that of Freq study
-        effective_part = rotor_copper_loss_list[:int(0.25*self.fea_config_dict['number_of_steps_2ndTTS'])]
+        effective_part = rotor_copper_loss_list[:int(0.5*self.fea_config_dict['number_of_steps_2ndTTS'])] # number_of_steps_2ndTTS = steps for half peirod
         rotor_copper_loss = sum(effective_part) / len(effective_part)
 
         if self.fea_config_dict['jmag_run_list'][0] == 0:
-            # utility.blockPrint()
+            utility.blockPrint()
             try:
                 # convert rotor current results (complex number) into its amplitude
-                self.femm_solver.list_rotor_current_amp = [abs(el[0]+1j*el[1]) for el in self.femm_solver.vals_results_rotor_current]
+                self.femm_solver.list_rotor_current_amp = [abs(el) for el in self.femm_solver.vals_results_rotor_current] # el is complex number
                 # settings not necessarily be consistent with Pyrhonen09's design: , STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1., TEMPERATURE_OF_COIL=75
                 s, r = self.femm_solver.get_copper_loss(self.femm_solver.stator_slot_area, self.femm_solver.rotor_slot_area)
             except Exception as e:
-                # if it is interrupted, you have to read from file to recover: vals_results_rotor_current, stator_slot_area, rotor_slot_area
                 raise e
-            # utility.enablePrint()
+            utility.enablePrint()
         else:
             s, r = None, None
 
@@ -1990,7 +2046,7 @@ class swarm(object):
         dm.ForConAbs_list = ForConAbs_list
         dm.Current_dict   = Current_dict
         dm.key_list       = key_list
-        dm.loss_list      = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
+        dm.jmag_loss_list    = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
         dm.femm_loss_list = [s, r]
         return dm
 
@@ -2301,7 +2357,7 @@ class swarm(object):
 
             # it is duplicated study, so no need to set up mesh 
             # run
-            self.run_study(im_variant, app, study, time())
+            self.run_study(im_variant, app, study, clock_time())
         else:
             # the results exist already?
             return 
@@ -2311,7 +2367,7 @@ class swarm(object):
         if self.fea_config_dict['JMAG_Scheduler'] == False:
             # if run_list[1] == True:
             study.RunAllCases()
-            logger.debug('Time spent on %s is %g s.'%(study.GetName() , time() - toc))
+            logger.debug('Time spent on %s is %g s.'%(study.GetName() , clock_time() - toc))
         else:
             job = study.CreateJob()
             job.SetValue(u"Title", study.GetName())

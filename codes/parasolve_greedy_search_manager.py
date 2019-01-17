@@ -13,30 +13,29 @@ def savetofile(id_solver, freq, stack_length):
                     stack_length, 18, 1) # The acsolver parameter (default: 0) specifies which solver is to be used for AC problems: 0 for successive approximation, 1 for Newton.
     femm.mi_saveas(dir_femm_temp+'femm_temp_%d.fem'%(id_solver))
 
-def remove_files(number_of_instantces, dir_femm_temp, suffix='.txt', id_solver_femm_found=None):
-    for id_solver in range(number_of_instantces):
+def remove_files(list_solver_id, dir_femm_temp, suffix='.txt', id_solver_femm_found=None):
+    for id_solver in list_solver_id:
         fname = dir_femm_temp + "femm_temp_%d"%(id_solver) + suffix
 
         if id_solver == id_solver_femm_found:
-            os.rename(fname, dir_femm_temp + "femm_found" + suffix)
+            found_file_name = dir_femm_temp + "femm_found" + suffix
+            if os.path.exists(found_file_name):
+                os.remove(found_file_name)
+            os.rename(fname, found_file_name)
             continue
 
         os.remove(fname)
 
 DEBUG_MODE = False
+# if __name__ == '__main__':
+#     DEBUG_MODE = True
 
 if DEBUG_MODE == False:
-
     number_of_instantces = int(sys.argv[1])
     dir_femm_temp        = sys.argv[2]
     stack_length         = float(sys.argv[3])
-    VAREPSILON = 0.25
+    VAREPSILON = 0.25 # difference between 1st and 2nd max torque slip frequencies
 else:
-
-    # print dir_femm_temp
-    # os.system('pause')
-    # quit()
-
     #debug 
     number_of_instantces = 5
     dir_femm_temp        = "D:/OneDrive - UW-Madison/c/csv_opti/run#108/femm_temp/" # modify as expected
@@ -51,28 +50,33 @@ femm.opendocument(dir_femm_temp + 'femm_temp.fem')
 freq_begin = 1. # hz
 freq_end   = freq_begin + number_of_instantces - 1. # 5 Hz
 
-list_torque = []
-list_slipfreq = []
-
+list_torque    = []
+list_slipfreq  = []
+list_solver_id = [] 
+list_done_id   = []
 while True:
     # freq_step can be negative!
     freq_step  = (freq_end - freq_begin) / (number_of_instantces-1)
 
-    for id_solver in range(number_of_instantces):
-        savetofile(id_solver, freq_begin + id_solver*freq_step, stack_length)
+    count_done = len(list_done_id)
+    if count_done % 5 == 0:
+        list_solver_id = range(0, count_done+number_of_instantces, 1)
 
-    procs = []
     # parasolve
-    for i in range(number_of_instantces):
+    procs = []
+    print 'list_solver_id=', list_solver_id
+    print 'list_solver_id[-number_of_instantces:]=', list_solver_id[-number_of_instantces:]
+    for i, id_solver in enumerate(list_solver_id[-number_of_instantces:]):
+        savetofile(id_solver, freq_begin + i*freq_step, stack_length)
+
         proc = subprocess.Popen([sys.executable, 'parasolve_greedy_search.py', 
-                                 str(i), '"'+dir_femm_temp+'"'], bufsize=-1)
+                                 str(id_solver), '"'+dir_femm_temp+'"'], bufsize=-1)
         procs.append(proc)
 
-    # 等了也是白等，一运行返回了
+    # This wait is working if you run this scirpt from sublime text
     for proc in procs:
         proc.wait() 
 
-    list_solver_id = []
     count_sec = 0
     while True:
         sleep(1)
@@ -81,26 +85,29 @@ while True:
             raise Exception('It is highly likely that exception occurs during the solving of FEMM.')
         
         print '\nbegin waiting for eddy current solver...'
-        for id_solver in range(number_of_instantces):
+        for id_solver in list_solver_id[-number_of_instantces:]:
 
-            if id_solver in list_solver_id:
+            if id_solver in list_done_id:
                 continue
 
             fname = dir_femm_temp + "femm_temp_%d.txt"%(id_solver)
+            # print fname
             if os.path.exists(fname):
                 with open(fname, 'r') as f:
                     data = f.readlines()
-                    if data == []:
-                        sleep(0.1)
-                        data = f.readlines()
-                        if data == []:
-                            raise Exception('What takes you so long to write two float numbers?')
+                    # if data == []:
+                    #     sleep(0.1)
+                    #     data = f.readlines()
+                    #     if data == []:
+                    #         raise Exception('What takes you so long to write two float numbers?')
                     list_slipfreq.append( float(data[0][:-1]) )
                     list_torque.append(   float(data[1][:-1]) )
-                list_solver_id.append(id_solver)
-        if len(list_solver_id) >= number_of_instantces:
+                list_done_id.append(id_solver)
+
+        if len(list_done_id) >= number_of_instantces:
             break
 
+    print '-----------------------'
     print list_solver_id
     print list_slipfreq
     print list_torque
@@ -115,31 +122,16 @@ while True:
     index_2nd, breakdown_torque_2nd = max(enumerate(list_torque_copy), key=operator.itemgetter(1))
     breakdown_slipfreq_2nd = list_slipfreq[index_2nd]
 
-    print 'max slip freq error=', 0.5*(breakdown_slipfreq_1st - breakdown_slipfreq_2nd), 'Hz', ', EPS=%g'%(VAREPSILON)
+    print 'max slip freq error=', 0.5*(breakdown_slipfreq_1st - breakdown_slipfreq_2nd), 'Hz', ', 2*EPS=%g'%(VAREPSILON)
 
     # find the two slip freq close enough then break.5
     if abs(breakdown_slipfreq_1st - breakdown_slipfreq_2nd) < VAREPSILON: # Hz
         print 'Found it.', breakdown_slipfreq_1st, 'Hz', breakdown_torque_1st, 'Nm'
-        remove_files(number_of_instantces, dir_femm_temp, suffix='.fem', id_solver_femm_found=list_solver_id[index_1st])
-        remove_files(number_of_instantces, dir_femm_temp, suffix='.ans', id_solver_femm_found=list_solver_id[index_1st])
+        the_index = list_solver_id[index_1st]
+        remove_files(list_solver_id, dir_femm_temp, suffix='.fem', id_solver_femm_found=the_index)
+        remove_files(list_solver_id, dir_femm_temp, suffix='.ans', id_solver_femm_found=the_index)
 
-            # we have breakdown data, but we may like to know more about the corresponding rotor current as well as rotor slot size
-            # however, why not leave this task to FEMM_Solver because you need geometry 
-            # fname = dir_femm_temp + "femm_temp_%d.ans"%(list_solver_id[index_1st])
-            # femm.mi_close()
-            # femm.opendocument(fname)
 
-            # # get stator slot area for copper loss calculation
-            # femm.mo_groupselectblock(11)
-            # Qs_stator_slot_area = femm.mo_blockintegral(5) # / self.im.Qs # unit: m^2 (verified by GUI operation)
-            # femm.mo_clearblock()
-
-            # # get rotor slot area for copper loss calculation
-            # femm.mo_groupselectblock(101)
-            # Qr_rotor_slot_area = femm.mo_blockintegral(5) # / self.im.Qr
-            # femm.mo_clearblock()
-
-            # femm.mo_close()
 
         with open(dir_femm_temp + 'femm_found.csv', 'w') as f:
             f.write('%g\n%g\n'%(breakdown_slipfreq_1st, breakdown_torque_1st)) #, Qs_stator_slot_area, Qr_rotor_slot_area))
@@ -148,8 +140,6 @@ while True:
 
     else:
         print 'not yet'
-        remove_files(number_of_instantces, dir_femm_temp, suffix='.fem')
-        remove_files(number_of_instantces, dir_femm_temp, suffix='.ans')
 
         # not found yet, try new frequencies.
         if breakdown_slipfreq_1st > breakdown_torque_2nd:
@@ -166,7 +156,7 @@ while True:
             freq_end   -= freq_step
         print 'try: freq_begin=%g, freq_end=%g.' % (freq_begin, freq_end)
 
-remove_files(number_of_instantces, dir_femm_temp, suffix='.txt')
+remove_files(list_solver_id, dir_femm_temp, suffix='.txt')
 os.remove(dir_femm_temp + "femm_temp.fem")
 
 femm.mi_close()
