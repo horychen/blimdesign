@@ -185,6 +185,8 @@ else:
     de_config_dict = None
 
 
+
+
 # init the swarm
 sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)
 # sw.show(which='all')
@@ -196,48 +198,58 @@ sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)
 # sw.run(shitty_design)
 # raise
 
-# generate the initial generation
-sw.generate_pop()
-logger.info('Initial pop generated.')
+while True:
 
-# add initial_design of Pyrhonen09 to the initial generation
-utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
+    # if optimization_flat == True:
+    # generate the initial generation
+    sw.generate_pop()
+    logger.info('Initial pop generated.')
 
-
-
-
-''' 3. Initialize FEMM Solver (is required)
-''' 
-if fea_config_dict['jmag_run_list'][0] == 0:
-    # and let jmag know about it
-    sw.femm_solver = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static
+    # add initial_design of Pyrhonen09 to the initial generation
+    utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
 
 
 
-''' 4. Run DE Optimization
-'''
-# write FEA config to disk
-sw.write_to_file_fea_config_dict()
 
-# run
-de_generator = sw.de()
-result = list(de_generator)
-logger.info('Done.')
-for el in result:
-    print el[0].tolist(), el[1]
+    ''' 3. Initialize FEMM Solver (is required)
+    ''' 
+    if fea_config_dict['jmag_run_list'][0] == 0:
+        # and let jmag know about it
+        sw.femm_solver = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static
 
-# print result
 
-# # de version 2 is called by this
-# for el in result:
-#     pop, fit, idx = el
-#     print '---------------------------'
-#     print 'pop:', pop
-#     print 'fit:', fit
-#     print 'idx:', idx
-#     # for ind in pop:
-#     #     data = fmodel(x, ind)
-#     #     ax.plot(x, data, alpha=0.3)
+
+    ''' 4. Run DE Optimization
+    '''
+    # write FEA config to disk
+    sw.write_to_file_fea_config_dict()
+
+    de_generator = sw.de()
+    try: 
+        # run
+        # result = list(de_generator)
+        for result in de_generator:
+            print result
+
+    except Exception as e:
+        print 'See log file for the error msg.'
+        logger = logging.getLogger(__name__)
+        logger.error(u'Optimization aborted.', exc_info=True)
+        # notification via email
+        utility.send_notification(u'Optimization aborted.')
+    
+        msg = 'Pop status report\n------------------------\n'
+        msg += '\n'.join('%.16f'%(x) for x in sw.fitness) + '\n'
+        msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)    
+        logger.debug(msg)
+
+        sw.bool_auto_recovered_run = True
+
+    else:
+        logger.info('Done.')
+        utility.send_notification('Done.')
+
+
 
 # Run JCF from command linie instead of GUI
 # if not sw.has_results(im_initial, study_type='Tran2TSS'):
@@ -258,3 +270,14 @@ StaticJMAG:
 StaticFEMM: 15 sec one eddy current solve
             7 sec one static solve
 '''
+
+# # de version 2 is called by this
+# for el in result:
+#     pop, fit, idx = el
+#     print '---------------------------'
+#     print 'pop:', pop
+#     print 'fit:', fit
+#     print 'idx:', idx
+#     # for ind in pop:
+#     #     data = fmodel(x, ind)
+#     #     ax.plot(x, data, alpha=0.3)

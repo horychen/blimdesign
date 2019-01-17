@@ -2179,7 +2179,6 @@ class FEMM_Solver(object):
                     torque = float(data[1][:-1])
 
                 femm.openfemm(True)
-                femm.opendocument(fname[:-4]+'.ans')
                 vals_results_rotor_current, stator_slot_area, rotor_slot_area = \
                     self.femm_integrate_4_current(fname[:-4]+'.ans', self.fraction, dir_output=self.dir_femm_temp, returnData=True)
                 femm.closefemm()

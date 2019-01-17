@@ -200,6 +200,8 @@ class swarm(object):
                     print 'List interrupt_pop_denorm here:', self.interrupt_pop_denorm.tolist()
 
                 if 'fit' in file:
+                    print file
+
                     self.interrupt_fitness = []
                     with open(self.dir_run + file, 'r') as f: 
                         read_iterator = csv_reader(f, skipinitialspace=True)
@@ -209,8 +211,10 @@ class swarm(object):
                     print 'List interrupt_fitness here:', self.interrupt_fitness
                     # interrupt_pop (yes) and interrupt_fitness will be directly used in de.
                     
-        # search for complete generation files
+        # search for completed generation files
         generations = [file[4:8] for file in os.listdir(self.dir_run) if 'gen' in file and not 'ongoing' in file]
+
+        # initialize for de-normalization
         popsize = self.de_config_dict['popsize']
         # the least popsize is 4
         if popsize<=3:
@@ -231,9 +235,6 @@ class swarm(object):
             logger.debug('There is no swarm yet. Generate the initial random swarm...')
             
             # generate the initial random swarm from the initial design
-            if self.de_config_dict == None:
-                logger.error(u'ちゃんとキーを設定して下さい。', exc_info=True)
-                raise Exception('unexpected de_config_dict')
             self.init_pop = np.random.rand(popsize, dimensions) # normalized design parameters between 0 and 1
             self.init_pop_denorm = min_b + self.init_pop * diff
 
@@ -731,6 +732,9 @@ class swarm(object):
         #  [ 5  5  5  5]]
         diff = np.fabs(min_b - max_b)
         pop_denorm = min_b + pop * diff
+
+        # for restarter or auto-recovered run
+        self.pop_denorm = pop_denorm
         
         # 判断：如果是第一次，那就需要对现有pop进行生成fitness；如果续上一次的运行，则读入fitness。
         fitness_file = self.get_fit_file(self.number_current_generation)
@@ -741,7 +745,6 @@ class swarm(object):
 
             self.jmag_control_state = False # demand to initialize the jamg designer
             fitness = np.asarray( [fobj(index, individual) for index, individual in enumerate(pop_denorm)] ) # modification #2
-
         else:
             # this is a continued run. load the latest complete fitness data (the first digit of every row is fitness for an individual)
             fitness = []
@@ -770,6 +773,20 @@ class swarm(object):
                     # print fitness
                 except Exception as e:
                     raise e
+
+        if sw.bool_auto_recovered_run == True:
+            sw.bool_auto_recovered_run = False
+            print '---------------------'
+            print pop_denorm 
+            print self.pop_denorm
+            print '---------------------'
+            print fitness 
+            print self.fitness
+            os.system('pause') 
+            # pop_denorm = self.pop_denorm
+            # fitness = self.fitness
+            quit()
+
         # write fitness results to file for the initial pop
         with open(fitness_file, 'w') as f:
             f.write('\n'.join('%.16f'%(x) for x in fitness)) 
@@ -788,7 +805,7 @@ class swarm(object):
 
             self.number_current_generation += 1 # modification #3
             logger = logging.getLogger(__name__)
-            logger.debug('iteration #%d for this run. total iteration %d.', i, self.number_current_generation) 
+            logger.debug('Iteration i=%d for this run. Total iteration %d.', i, self.number_current_generation) 
             # demand to initialize the jamg designer because number_current_generation has changed and a new jmag project is required.
             self.jmag_control_state = False
 
@@ -830,8 +847,11 @@ class swarm(object):
                         best_idx = j
                         best = trial_denorm
 
-                pop_j_denorm = min_b + pop[j] * diff
-                self.write_living_individual(pop_j_denorm)
+                # for restart or auto-recovered run
+                pop_j_denorm       = min_b + pop[j] * diff
+                self.pop_denorm[j] = pop_j_denorm
+                self.fitness[j]    = fitness[j]
+                self.write_living_individual(self.pop_j_denorm)
 
             # one generation is finished
             self.rename_onging_files(self.number_current_generation)
