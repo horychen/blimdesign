@@ -118,7 +118,8 @@ run_list = [0,1,0,0,0]
 # run_folder = r'run#106/' # You need to initialize femm_solver every calling of fobj
 # run_folder = r'run#107/' # There is no slide mesh if you add new study for Tran2TSS
 # run_folder = r'run#108/' # Efficiency is added. femm_found.fem feature is added.
-run_folder = r'run#109/' # test the effectiveness of de algorithm
+# run_folder = r'run#109/' # test the effectiveness of de algorithm
+run_folder = r'run#110/' # Truly recovable!
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -155,17 +156,18 @@ logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_'+run_folde
 ''' # 1e-1也还是太小了（第三次报错），至少0.5mm长吧 # 1e-1 is the least geometry value. a 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
 if fea_config_dict['flag_optimization'] == True:
     if False: # intuitive bounds
-        de_config_dict = {  'bounds':     [ [   3, 9],   # stator_tooth_width_b_ds
-                                            [ 0.8, 4],   # air_gap_length_delta
-                                            [5e-1, 3],   # Width_RotorSlotOpen 
-                                            [ 2.5, 6],   # rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-                                            [5e-1, 3],   # Length_HeadNeckRotorSlot
-                                            [   1, 10],  # Angle_StatorSlotOpen
-                                            [5e-1, 3] ], # Width_StatorTeethHeadThickness
-                            'mut':        0.8,
-                            'crossp':     0.7,
-                            'popsize':    20,
-                            'iterations': 48 } # begin at 5
+        pass
+        # de_config_dict = {  'bounds':     [ [   3, 9],   # stator_tooth_width_b_ds
+        #                                     [ 0.8, 4],   # air_gap_length_delta
+        #                                     [5e-1, 3],   # Width_RotorSlotOpen 
+        #                                     [ 2.5, 6],   # rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+        #                                     [5e-1, 3],   # Length_HeadNeckRotorSlot
+        #                                     [   1, 10],  # Angle_StatorSlotOpen
+        #                                     [5e-1, 3] ], # Width_StatorTeethHeadThickness
+        #                     'mut':        0.8,
+        #                     'crossp':     0.7,
+        #                     'popsize':    20,
+        #                     'iterations': 48 } # begin at 5
     else: # based on Pyrhonen09                         # see Tran2TSS_PS_Opti.xlsx
         de_config_dict = {  'bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
                                             [ 0.8,   4],   # air_gap_length_delta
@@ -176,8 +178,8 @@ if fea_config_dict['flag_optimization'] == True:
                                             [5e-1,   3] ], # Width_StatorTeethHeadThickness
                             'mut':        0.8,
                             'crossp':     0.7,
-                            'popsize':    100,
-                            'iterations': 148 } # begin at 5
+                            'popsize':    50, # 100,
+                            'iterations': 48 } # 148
 
 else:
     de_config_dict = None

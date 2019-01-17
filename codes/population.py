@@ -264,7 +264,7 @@ class swarm(object):
             # TODO: 文件完整性检查
             solved_popsize = len(self.init_pop)
             if popsize > solved_popsize:
-                print 'popsize is changed from last run.'
+                logger.warn('The popsize is changed from last run. From %d to %d' % (solved_popsize, popsize))
                 self.init_pop = self.init_pop.tolist()
                 self.init_pop += np.random.rand(popsize-solved_popsize, dimensions).tolist() # normalized design parameters between 0 and 1
                 self.init_pop_denorm = min_b + self.init_pop * diff
@@ -695,7 +695,8 @@ class swarm(object):
 
     def de(self):
         fobj = self.fobj
-        fobj = self.fobj_test
+        # fobj = self.fobj_test
+
         if self.bool_first_time_call_de == True:
             self.bool_first_time_call_de = False
 
@@ -741,18 +742,6 @@ class swarm(object):
             self.jmag_control_state = False # demand to initialize the jamg designer
             fitness = np.asarray( [fobj(index, individual) for index, individual in enumerate(pop_denorm)] ) # modification #2
 
-            print 'DEBUG fitness:', fitness.tolist()
-            # write fitness results to file for the initial pop
-            try:
-                with open(fitness_file, 'w') as f:
-                    f.write('\n'.join('%.16f'%(x) for x in fitness)) 
-                    # TODO: also write self.fitness_in_physics_data
-            except Exception as e:
-                raise e # fitness
-
-            print 'Write the 1st generation (gen#%4d) of living pop to file.' % (self.number_current_generation)
-            for pop_j_denorm in pop_denorm:
-                self.write_living_individual(pop_j_denorm)
         else:
             # this is a continued run. load the latest complete fitness data (the first digit of every row is fitness for an individual)
             fitness = []
@@ -766,6 +755,7 @@ class swarm(object):
             # in case the last iteration is not done or the popsize is incread by user after last run of optimization
             solved_popsize = len(fitness)
             if popsize > solved_popsize:
+                logger.debug('Popsize changed. New fitness for the newly come individuals should be generated.')
                 self.jmag_control_state = False # demand to initialize the jamg designer
                 fitness_part2 = np.asarray( [fobj(index+solved_popsize, individual) for index, individual in enumerate(pop_denorm[solved_popsize:])] ) # modification #2
                 
@@ -780,6 +770,12 @@ class swarm(object):
                     # print fitness
                 except Exception as e:
                     raise e
+        # write fitness results to file for the initial pop
+        with open(fitness_file, 'w') as f:
+            f.write('\n'.join('%.16f'%(x) for x in fitness)) 
+        logger.debug('Write the 1st generation (gen#%4d) of living pop and its fitness to file.' % (self.number_current_generation))
+        for pop_j_denorm in pop_denorm:
+            self.write_living_individual(pop_j_denorm)
 
         # make sure fitness is an array
         fitness = np.asarray(fitness)
@@ -850,13 +846,43 @@ class swarm(object):
         with open(fname, 'a') as f:
             f.write('\n' + ','.join('%.16f'%(y) for y in pop_j_denorm)) # convert 1d array to string
 
-    def read_living_pop(self, no_current_generation):
-        fname = self.dir_run + 'liv#%04d.txt'%(no_current_generation)
-        living_pop_denorm = []
+    def myreader(self, fname):
+        pop = []
         with open(fname, 'r') as f:
             for row in self.whole_row_reader(csv_reader(f, skipinitialspace=True)):
                 if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
-                    living_pop_denorm.append([float(el) for el in row])
+                    pop.append([float(el) for el in row])
+        return pop
+
+    def read_living_pop(self, no_current_generation):
+        logger = logging.getLogger(__name__)
+        if no_current_generation == 0:
+            return self.myreader(self.get_gen_file(no_current_generation))
+        else:
+            fname_lastgen = self.get_gen_file(no_current_generation-1)
+            fname_liv = self.dir_run + 'liv#%04d.txt'%(no_current_generation)
+            logger.debug('fname_lastgen=%s'% fname_lastgen)
+            logger.debug('fname_liv=%s'% fname_liv)
+        last_generation_pop = self.myreader(fname_lastgen)
+        living_pop_denorm = self.myreader(fname_liv)
+
+        msg = 'gen#%d\n'%(no_current_generation)
+        msg += 'last-gen:------\n\t' + '\n\t'.join([str(el) for el in last_generation_pop]) + '\n'
+        msg += 'living:------\n\t' + '\n\t'.join([str(el) for el in living_pop_denorm]) + '\n'
+
+        size_last =  len(last_generation_pop)
+        size_living = len(living_pop_denorm)
+        if size_living < size_last:
+            msg += 'Append\n\t' + '\n\t'.join([str(el) for el in last_generation_pop[-(size_last - size_living):]]) + '\n'
+            living_pop_denorm += last_generation_pop[-(size_last - size_living):]
+
+        msg += 'combined:------\n\t' + '\n\t'.join([str(el) for el in living_pop_denorm]) + '\n'
+
+        logger.debug(msg)
+
+        if len(living_pop_denorm) != len(last_generation_pop):
+            raise Exception('living and last gen do not match')
+
         return living_pop_denorm
 
     def write_population_data(self, pop):
