@@ -399,38 +399,38 @@ class swarm(object):
     @staticmethod
     def add_plot(axeses, title=None, label=None, zorder=None, time_list=None, sfv=None, torque=None, range_ss=None, alpha=0.7):
 
-        results = '%s' % (title)
+        info = '%s' % (title)
         torque_average = sum(torque[-range_ss:])/len(torque[-range_ss:])
-        results += '\nAverage Torque: %g Nm' % (torque_average)
+        info += '\nAverage Torque: %g Nm' % (torque_average)
         # torque error = torque - avg. torque
         torque_error = np.array(torque) - torque_average
         ss_max_torque_error = max(torque_error[-range_ss:]), min(torque_error[-range_ss:])
         # we use peak value to compute error rather than use peak-to-peak value
         normalized_torque_ripple   = 0.5*(ss_max_torque_error[0] - ss_max_torque_error[1]) / torque_average
-        results += '\nNormalized Torque Ripple: %g %%' % (normalized_torque_ripple*100)
+        info += '\nNormalized Torque Ripple: %g %%' % (normalized_torque_ripple*100)
 
-        results += '\nAverage Force Mag: %g N'% (sfv.ss_avg_force_magnitude)
+        info += '\nAverage Force Mag: %g N'% (sfv.ss_avg_force_magnitude)
         # we use peak value to compute error rather than use peak-to-peak value
         normalized_force_error_magnitude = 0.5*(sfv.ss_max_force_err_abs[0]-sfv.ss_max_force_err_abs[1])/sfv.ss_avg_force_magnitude
-        results += '\nNormalized Force Error Mag: %g%%, (+)%g%% (-)%g%%' % (normalized_force_error_magnitude*100,
+        info += '\nNormalized Force Error Mag: %g%%, (+)%g%% (-)%g%%' % (normalized_force_error_magnitude*100,
                                                                       sfv.ss_max_force_err_abs[0]/sfv.ss_avg_force_magnitude*100,
                                                                       sfv.ss_max_force_err_abs[1]/sfv.ss_avg_force_magnitude*100)
         # we use peak value to compute error rather than use peak-to-peak value
         force_error_angle= 0.5*(sfv.ss_max_force_err_ang[0]-sfv.ss_max_force_err_ang[1])
-        results += '\nMaximum Force Error Angle: %g [deg], (+)%g deg (-)%g deg' % (force_error_angle,
+        info += '\nMaximum Force Error Angle: %g [deg], (+)%g deg (-)%g deg' % (force_error_angle,
                                                                      sfv.ss_max_force_err_ang[0],
                                                                      sfv.ss_max_force_err_ang[1])
-        results += '\nExtra Info:'
-        results += '\n\tAverage Force Vecotr: (%g, %g) N' % (sfv.ss_avg_force_vector[0], sfv.ss_avg_force_vector[1])
-        results += '\n\tTorque Ripple (Peak-to-Peak) %g Nm'% ( max(torque[-range_ss:]) - min(torque[-range_ss:]))
-        results += '\n\tForce Mag Ripple (Peak-to-Peak) %g N'% (sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1])
+        info += '\nExtra Info:'
+        info += '\n\tAverage Force Vecotr: (%g, %g) N' % (sfv.ss_avg_force_vector[0], sfv.ss_avg_force_vector[1])
+        info += '\n\tTorque Ripple (Peak-to-Peak) %g Nm'% ( max(torque[-range_ss:]) - min(torque[-range_ss:]))
+        info += '\n\tForce Mag Ripple (Peak-to-Peak) %g N'% (sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1])
 
         ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
         ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs, alpha=alpha, label=label, zorder=zorder)
         ax = axeses[1][0]; ax.plot(time_list, 100*sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
         ax = axeses[1][1]; ax.plot(time_list, np.arctan2(sfv.force_y, sfv.force_x)/pi*180. - sfv.ss_avg_force_angle, label=label, alpha=alpha, zorder=zorder)
 
-        return results, torque_average, normalized_torque_ripple, sfv.ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
+        return info, torque_average, normalized_torque_ripple, sfv.ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
 
 
     # @blockPrinting
@@ -558,14 +558,16 @@ class swarm(object):
                     str_results += '\n\tfemm loss info:'  + ', '.join(['%g'%(el) for el in dm.femm_loss_list])
 
                 if self.fea_config_dict['delete_results_after_calculation'] == False:
-                    str_results += '\n\tPF: %g' % (dm.power_factor(self.fea_config_dict['number_of_steps_2ndTTS'], targetFreq=im_variant.DriveW_Freq))
+                    power_factor = dm.power_factor(self.fea_config_dict['number_of_steps_2ndTTS'], targetFreq=im_variant.DriveW_Freq)
+                    str_results += '\n\tPF: %g' % (power_factor)
 
                 self.fig_main.savefig(self.dir_run + im_variant.individual_name + 'results.png', dpi=150)
                 self.pyplot_clear()
             except Exception, e:
                 logger.error(u'Error when loading csv results for Tran2TSS.', exc_info=True)
             # show()
-            return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list
+
+            return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list, power_factor
 
         ################################################################
         # Begin from where left: Frequency Study
@@ -672,13 +674,13 @@ class swarm(object):
         ################################################################
         # Load data for cost function evaluation
         ################################################################
-        str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list = load_transeint()
+        str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor= load_transeint()
 
         # compute the fitness 
         rotor_volume = pi*(im_variant.Radius_OuterRotor*1e-3)**2 * (im_variant.stack_length*1e-3)
         rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
         shaft_power  = im_variant.Omega * torque_average # make sure update_mechanical_parameters is called so that Omega corresponds to slip_freq_breakdown_torque
-        if jmag_loss_list is None:        
+        if jmag_loss_list is None:
             copper_loss  = 0.0
             iron_loss    = 0.0
         else:
@@ -709,10 +711,16 @@ class swarm(object):
                                 im_variant.thermal_penalty ] # thermal penalty is evaluated when drawing the model according to the parameters' constraints (if the rotor current and rotor slot size requirement does not suffice)
         cost_function = sum(list_weighted_cost)
 
+        # write design evaluation data to file
+        machine_results = [power_factor, efficiency, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle]
+        machine_results.extend(jmag_loss_list)
+        machine_results.extend(femm_loss_list)
+        str_machine_results = ','.join('%g'%(el) for el in machine_results)
         with open(self.dir_run + 'swarm_data.txt', 'a') as f:
-            f.write('\n-------\n%s-%s\n%d,%d,%g\n%s\n%s\n' % (
+            f.write('\n-------\n%s-%s\n%d,%d,%g\n%s\n%s\n%s\n' % (
                         self.project_name, im_variant.individual_name, 
                         self.number_current_generation, individual_index, cost_function, 
+                        str_machine_results,
                         ','.join(['%g'%(el) for el in list_weighted_cost]),
                         ','.join(['%g'%(el) for el in individual]) ) + str_results)
 
@@ -782,6 +790,7 @@ class swarm(object):
         #  [ 5  5  5  5]]
         diff = np.fabs(min_b - max_b)
         pop_denorm = min_b + pop * diff
+        print 'gen#0000 with initail design as the first individual:'
         for el in pop_denorm:
             print el.tolist()
 

@@ -120,9 +120,9 @@ run_list = [0,1,0,0,0]
 # run_folder = r'run#108/' # Efficiency is added. femm_found.fem feature is added.
 # run_folder = r'run#109/' # test the effectiveness of de algorithm
 # run_folder = r'run#110/' # Truly recovable!
-run_folder = r'run#111/' # new living pop and its fitness and its id
+# run_folder = r'run#111/' # new living pop and its fitness and its id
 # run_folder = r'run#112/' # test shitty design
-run_folder = r'run#113/' 
+run_folder = r'run#113/' # never lose any design data again, you can generate initial pop from the IM design database!
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
