@@ -417,50 +417,6 @@ def compute_power_factor_from_half_period(voltage, current, mytime, targetFreq=1
     
 
 
-class SwarmDataAnalyzer(object):
-    """docstring for SwarmDataAnalyzer"""
-    def __init__(self, dir_run=None, run_integer=None):
-        if run_integer is not None:
-            dir_run = r'D:\OneDrive - UW-Madison\c\pop\run#%d/'%(run_integer)
-
-        with open(dir_run+'swarm_data.txt', 'r') as f:
-            self.buf = f.readlines()[1:]
-            self.buf_length = len(self.buf)
-
-        self.number_of_designs = self.buf_length / 21
-
-        logger = logging.getLogger(__name__)
-        logger.debug('self.buf_length %% 21 = %d, / 21 = %d' % (self.buf_length % 21, self.number_of_designs))
-
-    def desig_display_generator(self):
-        for i in range(self.number_of_designs):
-            yield ''.join(self.buf[i*21:(1+i)*21])
-
-    def design_parameters_generator(self):
-        for i in range(self.number_of_designs):
-            yield [float(el) for el in self.buf[i*21:(1+i)*21][5].split(',')]
-
-    def list_generations(self):
-
-        the_dict = {}
-        for i in range(self.number_of_designs):
-            the_row = [float(el) for el in self.buf[i*21:(1+i)*21][2].split(',')]        
-            the_dict[int(the_row[0])] = (the_row[1], the_row[2])
-            # the_row[0] # generation
-            # the_row[1] # individual
-            # the_row[2] # cost_function
-        return the_dict #每代只留下最后一个个体的结果，因为字典不能重复key
-
-    def find_individual(self, generation_index, individual_index):
-        # for i in range(self.number_of_designs):
-        for i in range(self.number_of_designs)[::-1]:
-            # print i
-            the_row = [int(el) for el in self.buf[i*21:(1+i)*21][2].split(',')[:2]]
-            if the_row[0] == generation_index:
-                if the_row[1] == individual_index:
-                    # found it, return the design parameters and cost_function
-                    return [float(el) for el in self.buf[i*21:(1+i)*21][5].split(',')], float(self.buf[i*21:(1+i)*21][2].split(',')[2])
-        return None, None
 
 
 def max_indices_2(arr, k):
@@ -481,27 +437,159 @@ def max_indices_2(arr, k):
         arr_[idx] = -np.inf
     return max_idxs
 
-def max_indices(arr, k):
-    indices = np.argsort(-arr)[-k:]
-    items   = arr[indices]
+def min_indices(arr, k):
+    if type(arr) == type([]):
+        arr = np.array(arr)
+    indices = np.argsort(arr)[:k]
+    items   = arr[indices] # arr and indices must be np.array
     return indices, items
 
-def min_indices(arr, k):
-    return max_indices(-arr)
+def max_indices(arr, k):
+    if type(arr) == type([]):
+        arr = np.array(arr)
+    arr_copy = arr[::]
+    indices = np.argsort(-arr)[:k]
+    items   = arr_copy[indices]
+    return indices, items
 
+
+class SwarmDataAnalyzer(object):
+    """docstring for SwarmDataAnalyzer"""
+    def __init__(self, dir_run=None, run_integer=None):
+        if run_integer is not None:
+            dir_run = r'D:\OneDrive - UW-Madison\c\pop\run#%d/'%(run_integer)
+
+        with open(dir_run+'swarm_data.txt', 'r') as f:
+            self.buf = f.readlines()[1:]
+            self.buf_length = len(self.buf)
+
+        self.number_of_designs = self.buf_length / 21
+
+        logger = logging.getLogger(__name__)
+        logger.debug('self.buf_length %% 21 = %d, / 21 = %d' % (self.buf_length % 21, self.number_of_designs))
+
+    def design_display_generator(self):
+        for i in range(self.number_of_designs):
+            yield ''.join(self.buf[i*21:(1+i)*21])
+
+    def design_parameters_generator(self):
+        for i in range(self.number_of_designs):
+            yield [float(el) for el in self.buf[i*21:(1+i)*21][5].split(',')]
+
+    def list_generations(self):
+
+        the_dict = {}
+        for i in range(self.number_of_designs):
+            the_row = [float(el) for el in self.buf[i*21:(1+i)*21][2].split(',')]        
+            the_dict[int(the_row[0])] = (the_row[1], the_row[2])
+            # the_row[0] # generation
+            # the_row[1] # individual
+            # the_row[2] # cost_function
+        return the_dict #每代只留下最后一个个体的结果，因为字典不能重复key
+
+    def lsit_cost_function(self):
+        l = []
+        for i in range(self.number_of_designs):
+            l.append( float( self.buf[i*21:(1+i)*21][2].split(',')[2] ) )
+        return l
+
+    def find_individual(self, generation_index, individual_index):
+        # for i in range(self.number_of_designs):
+        for i in range(self.number_of_designs)[::-1]:
+            # print i
+            the_row = [int(el) for el in self.buf[i*21:(1+i)*21][2].split(',')[:2]]
+            if the_row[0] == generation_index:
+                if the_row[1] == individual_index:
+                    # found it, return the design parameters and cost_function
+                    return [float(el) for el in self.buf[i*21:(1+i)*21][5].split(',')], float(self.buf[i*21:(1+i)*21][2].split(',')[2])
+        return None, None
+
+    def get_best_generation(self, popsize=50, generator=None):
+
+        if generator is None:
+            generator = swda.design_parameters_generator()
+
+        cost = swda.lsit_cost_function()
+        indices, items = min_indices(cost, popsize)
+
+        gen_best = []
+        for index, design in enumerate(generator):
+            if index in indices:
+                gen_best.append(design)
+        return gen_best
+
+de_config_dict = {  'bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
+                                    [ 0.8,   4],   # air_gap_length_delta
+                                    [5e-1,   3],   # Width_RotorSlotOpen 
+                                    [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                    [5e-1,   3],   # Length_HeadNeckRotorSlot
+                                    [   1,  10],   # Angle_StatorSlotOpen
+                                    [5e-1,   3] ], # Width_StatorTeethHeadThickness
+                    'mut':        0.8,
+                    'crossp':     0.7,
+                    'popsize':    50, # 50, # 100,
+                    'iterations': 2*48 } # 148
+bounds = de_config_dict['bounds']
+dimensions = len(bounds)
+min_b, max_b = np.asarray(bounds).T 
+diff = np.fabs(min_b - max_b)
+# pop_denorm = min_b + pop * diff
+# pop[j] = (pop_denorm[j] - min_b) / diff
+
+import itertools
 if __name__ == '__main__':
-
     swda = SwarmDataAnalyzer(run_integer=113)
 
-    
+
+    # Pareto Optimal Front
+    gen_best = swda.get_best_generation()
+    with open('d:/gen#0000.txt', 'w') as f:
+        f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in gen_best)) # convert 2d array to string            
+
+    design_parameters_norm = (gen_best - min_b) / diff
+    for el in design_parameters_norm:
+        print ','.join('%.4f'%(_) for _ in el.tolist())
+    print 'airgap length\n', [el[1] for el in gen_best]
+
+    # for design in swda.get_best_generation(generator=swda.design_display_generator()):
+    #     print ''.join(design),
+    quit()
+
+    cost = swda.lsit_cost_function()
+    indices, items = min_indices(cost, 50)
+    print indices
+    print items
+
+    stop = max(indices)
+    start = min(indices)
+    print start, stop
+
+    gene = swda.design_parameters_generator()
+    gen_best = []
+    for index, design in enumerate(gene):
+        if index in indices:
+            gen_best.append(design)
+    print 'there are', index, 'designs'
+
+    # print  len(list(gene))
+    # for index in indices:
+    #     start = index
+    # print next(itertools.islice(gene, start, None)) 
+
+
+    quit()
+    # print min_indices([3,5,7,4,2], 5)
+    # print max_indices([3,5,7,4,2], 5)
+    # quit()
+
+
 
     print ''.join(swda.buf[:21]),
-    quit()
 
     print swda.find_individual(14, 0)
 
 
-    for design in swda.desig_display_generator():
+    for design in swda.design_display_generator():
         print design,
         break
 
@@ -509,7 +597,7 @@ if __name__ == '__main__':
         print design
         break
 
-    print swda.list_generations()
+    print 
 
     # for generation in range(5):
     #     print '----------gen#%d'%(generation)

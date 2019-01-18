@@ -704,6 +704,8 @@ class swarm(object):
             # some factor to account for rotor iron loss?
             # iron_loss *= 1
 
+        # 这样计算效率，输出转矩大的，铁耗大一倍也没关系了，总之就是气隙变得最小。。。要不就不要用气隙这个变量了吧？
+
         total_loss   = copper_loss + iron_loss
         efficiency   = shaft_power / (total_loss + shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
         str_results  += '\n\teta: %g' % (efficiency)
