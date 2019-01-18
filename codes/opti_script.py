@@ -69,7 +69,21 @@ def where_am_i(fea_config_dict):
             fea_config_dict['OnlyTableResults'] = True  # save disk space for my PC
     # However, we need field data for iron loss calculation
     fea_config_dict['OnlyTableResults'] = False 
-
+class Pyrhonen_design(object):
+    def __init__(self, im, bounds):
+        ''' Determine bounds for these parameters:
+            stator_tooth_width_b_ds              = design_parameters[0]*1e-3 # m                       # stator tooth width [mm]
+            air_gap_length_delta                 = design_parameters[1]*1e-3 # m                       # air gap length [mm]
+            b1                                   = design_parameters[2]*1e-3 # m                       # rotor slot opening [mm]
+            rotor_tooth_width_b_dr               = design_parameters[3]*1e-3 # m                       # rotor tooth width [mm]
+            self.Length_HeadNeckRotorSlot        = design_parameters[4]      # mm       # rotor tooth head & neck length [mm]
+            self.Angle_StatorSlotOpen            = design_parameters[5]      # mm       # stator slot opening [deg]
+            self.Width_StatorTeethHeadThickness  = design_parameters[6]      # mm       # stator tooth head length [mm]
+        '''
+        # rotor_slot_radius = (2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3 - rotor_tooth_width_b_dr*Qr) / (2*Qr+2*pi)
+        # => rotor_tooth_width_b_dr = ( 2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3  - rotor_slot_radius * (2*Qr+2*pi) ) / Qr
+        from math import pi
+        Qr = im.Qr
 
 fea_config_dict = {
     ##########################

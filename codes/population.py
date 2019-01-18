@@ -2407,15 +2407,6 @@ class bearingless_induction_motor_design(object):
         logger = logging.getLogger(__name__) 
         logger.info('im_variant ID %s is initialized.', self.ID)
 
-        # thermal penalty for reduced rotor slot area (copper hot) and rotor tooth width (iron hot)
-        # try:
-            # thermal_penalty
-        # except:
-            # thermal_penalty = 0.0
-        if thermal_penalty != 0:
-            with open(self.fea_config_dict['dir_parent'] + 'pop/' + self.fea_config_dict['run_folder'] + 'thermal_penalty_individuals.txt', 'a') as f:
-                f.write(self.get_individual_name() + ',%g,%g,%g\n'%(thermal_penalty, rotor_tooth_width_b_dr, new__area_rotor_slot_Sur))
-        self.thermal_penalty = thermal_penalty
         return self
 
     def whole_row_reader(self, reader):
