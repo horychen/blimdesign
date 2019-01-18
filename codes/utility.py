@@ -419,15 +419,68 @@ def compute_power_factor_from_half_period(voltage, current, mytime, targetFreq=1
 
 class SwarmDataAnalyzer(object):
     """docstring for SwarmDataAnalyzer"""
-    def __init__(self, run_integer):
-        dir_run = r'D:\OneDrive - UW-Madison\c\pop\run#%d/'%(run_integer)
+    def __init__(self, dir_run=None, run_integer=None):
+        if run_integer is not None:
+            dir_run = r'D:\OneDrive - UW-Madison\c\pop\run#%d/'%(run_integer)
+
         with open(dir_run+'swarm_data.txt', 'r') as f:
-            self.buf = f.read()
+            self.buf = f.readlines()[1:]
+            self.buf_length = len(self.buf)
 
-        self.buf.find('-------')
+        self.number_of_designs = self.buf_length / 21
 
+        logger = logging.getLogger(__name__)
+        logger.debug('self.buf_length %% 21 = %d, / 21 = %d' % (self.buf_length % 21, self.number_of_designs))
+
+    def desig_display_generator(self):
+        for i in range(self.number_of_designs):
+            yield ''.join(self.buf[i*21:(1+i)*21])
+
+    def design_parameters_generator(self):
+        for i in range(self.number_of_designs):
+            yield [float(el) for el in self.buf[i*21:(1+i)*21][5].split(',')]
+
+    def list_generations(self):
+
+        the_dict = {}
+        for i in range(self.number_of_designs):
+            the_row = [float(el) for el in self.buf[i*21:(1+i)*21][2].split(',')]        
+            the_dict[int(the_row[0])] = (the_row[1], the_row[2])
+            # the_row[0] # generation
+            # the_row[1] # individual
+            # the_row[2] # cost_function
+        return the_dict #每代只留下最后一个个体的结果，因为字典不能重复key
+
+    def find_individual(self, generation_index, individual_index):
+        # for i in range(self.number_of_designs):
+        for i in range(self.number_of_designs)[::-1]:
+            # print i
+            the_row = [int(el) for el in self.buf[i*21:(1+i)*21][2].split(',')[:2]]
+            if the_row[0] == generation_index:
+                if the_row[1] == individual_index:
+                    # found it, return the design parameters and cost_function
+                    return [float(el) for el in self.buf[i*21:(1+i)*21][5].split(',')], float(self.buf[i*21:(1+i)*21][2].split(',')[2])
+        return None, None
 
 if __name__ == '__main__':
+
+    swda = SwarmDataAnalyzer(run_integer=113)
+
+    print swda.find_individual(14, 0)
+    quit()
+
+    # print ''.join(self.buf[1:1+21])
+    print self.buf[:21]
+
+    for design in swda.desig_display_generator():
+        print design,
+        break
+
+    for design in swda.design_parameters_generator():
+        print design
+        break
+
+    print swda.list_generations()
 
     # for generation in range(5):
     #     print '----------gen#%d'%(generation)
@@ -446,7 +499,7 @@ if __name__ == '__main__':
     # 绘制损耗图形。
     # 绘制损耗图形。
 
-    if True:
+    if False:
         from pylab import *
         gs_u = Goertzel_Data_Struct("Goertzel Struct for Voltage\n")
         gs_i = Goertzel_Data_Struct("Goertzel Struct for Current\n")

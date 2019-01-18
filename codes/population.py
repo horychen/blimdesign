@@ -270,6 +270,10 @@ class swarm(object):
             # number_current_generation begins at 0
             self.number_current_generation = max([int(el) for el in generations])
 
+            # add a database using the swarm_data.txt file
+            self.database = utility.SwarmDataAnalyzer(dir_run=self.dir_run)
+            self.database.the_generation_that_i_am_worried_about = self.number_current_generation+1
+
             if len(generations) == 1:
                 self.init_pop_denorm = self.pop_reader(self.get_gen_file(self.number_current_generation)) # gen#0000
                 self.init_fitness = None
@@ -433,7 +437,7 @@ class swarm(object):
         return info, torque_average, normalized_torque_ripple, sfv.ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
 
 
-    # @blockPrinting
+    # @u。blockPrinting
     def fobj(self, individual_index, individual):
         # based on the individual data, create design variant of the initial design of Pyrhonen09
         logger = logging.getLogger(__name__)
@@ -711,6 +715,20 @@ class swarm(object):
                                 im_variant.thermal_penalty ] # thermal penalty is evaluated when drawing the model according to the parameters' constraints (if the rotor current and rotor slot size requirement does not suffice)
         cost_function = sum(list_weighted_cost)
 
+
+
+        # before writing, do a double check that individual (design_parameters) corresponds to the evaluation results
+        if self.number_current_generation == self.database.the_generation_that_i_am_worried_about:
+            design_parameters_database, cost_function_database = self.database.find_individual(self.number_current_generation, individual_index)
+            if design_parameters_database is not None:
+                if abs(sum(np.array(design_parameters_database) - np.array(individual)))>1e-4 or abs(cost_function_database-cost_function)>1e-4:
+                    print design_parameters_database, individual
+                    print cost_function_database, cost_function
+                    raise Exception('Wrong individual. Unmatch database data.')
+                logger.debug('Locate the design in the database. worried gen#=%d'%(self.database.the_generation_that_i_am_worried_about))
+            else:
+                logger.debug('Cannot find the design in the database. worried gen#=%d'%(self.database.the_generation_that_i_am_worried_about))
+
         # write design evaluation data to file
         machine_results = [power_factor, efficiency, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle]
         machine_results.extend(jmag_loss_list)
@@ -790,9 +808,10 @@ class swarm(object):
         #  [ 5  5  5  5]]
         diff = np.fabs(min_b - max_b)
         pop_denorm = min_b + pop * diff
-        print 'gen#0000 with initail design as the first individual:'
-        for el in pop_denorm:
-            print el.tolist()
+        if self.number_current_generation == 0:
+            print 'gen#0000 with initail design as the first individual:'
+            for el in pop_denorm:
+                print el.tolist()
 
 
 
@@ -1044,6 +1063,7 @@ class swarm(object):
             raise Exception('living and last gen do not match')
 
         logger.debug(msg)
+        print 'last_living_fitness=', last_living_fitness
         return last_living_pop_denorm, last_living_fitness
 
     def write_population_data(self, pop, fname=None):

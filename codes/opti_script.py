@@ -181,9 +181,8 @@ if fea_config_dict['flag_optimization'] == True:
                                             [5e-1,   3] ], # Width_StatorTeethHeadThickness
                             'mut':        0.8,
                             'crossp':     0.7,
-                            'popsize':    5, # 50, # 100,
-                            'iterations': 48 } # 148
-
+                            'popsize':    50, # 50, # 100,
+                            'iterations': 2*48 } # 148
 else:
     de_config_dict = None
 
@@ -205,8 +204,8 @@ if False:
 
 
 
-# while True:
-if True:
+while True:
+# if True:
 
     # if optimization_flat == True:
     # generate the initial generation
@@ -231,8 +230,8 @@ if True:
     # write FEA config to disk
     sw.write_to_file_fea_config_dict()
 
-    de_generator = sw.de()
     try: 
+        de_generator = sw.de()
         # run
         # result = list(de_generator)
         for result in de_generator:
@@ -240,18 +239,20 @@ if True:
 
     except Exception as e:
         print 'See log file for the error msg.'
-
         logger.error(u'Optimization aborted.', exc_info=True)
-        # notification via email
-        # utility.send_notification(u'Optimization aborted.')
-    
-        # msg = 'Pop status report\n------------------------\n'
-        # msg += '\n'.join('%.16f'%(x) for x in sw.fitness) + '\n'
-        # msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)    
-        # logger.debug(msg)
 
-        # sw.bool_auto_recovered_run = True
+        try:
+            # notification via email
+            utility.send_notification(u'Optimization aborted.')
+        
+            # msg = 'Pop status report\n------------------------\n'
+            # msg += '\n'.join('%.16f'%(x) for x in sw.fitness) + '\n'
+            # msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)    
+            # logger.debug(msg)
 
+            # sw.bool_auto_recovered_run = True
+        except:
+            pass
     else:
         logger.info('Done.')
         utility.send_notification('Done.')
