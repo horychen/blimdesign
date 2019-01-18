@@ -2,7 +2,7 @@
 # execfile(r'D:\Users\horyc\OneDrive - UW-Madison\ec_rotate.py') # , {'__name__': 'load'})
 from __future__ import division
 from math import cos, sin, pi
-from csv import reader as csv_reader
+import csv
 import logging
 import numpy as np  # for de
 import os
@@ -89,8 +89,7 @@ class swarm(object):
         # load initial design using the obsolete class bearingless_induction_motor_design
         self.im_list = []
         with open(self.initial_design_file, 'r') as f: 
-            read_iterator = csv_reader(f, skipinitialspace=True)
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 im = bearingless_induction_motor_design([row[0]]+[float(el) for el in row[1:]], fea_config_dict, model_name_prefix=fea_config_dict['model_name_prefix'])
                 self.im_list.append(im)
         for im in self.im_list:
@@ -132,7 +131,10 @@ class swarm(object):
 
         # dict of optimization
         self.de_config_dict = de_config_dict
-        self.bool_first_time_call_de = True
+
+        # swarm state control
+        self.bool_first_time_call_de = True  # no use
+        self.bool_auto_recovered_run = False # auto-recovered run
 
         # post-process feature
         self.fig_main, self.axeses = subplots(2, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
@@ -180,37 +182,55 @@ class swarm(object):
                 # remove gen and fit files
                 # os.remove(self.dir_run + file) 
 
-                if 'gen' in file:
-                    print file
-
-                    self.interrupt_pop_denorm = []
+                if 'gen#' in file:
+                    print file,
+                    self.ongoing_pop_denorm = []
                     with open(self.dir_run + file, 'r') as f:
-                        read_iterator = csv_reader(f, skipinitialspace=True)
-                        for row in self.whole_row_reader(read_iterator):
+                        for row in self.csv_row_reader(f):
                             if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
-                                self.interrupt_pop_denorm.append([float(el) for el in row])
+                                self.ongoing_pop_denorm.append([float(el) for el in row])
 
-                    self.interrupt_pop_denorm = np.asarray(self.interrupt_pop_denorm)
-                    self.index_interrupt_beginning = len(self.interrupt_pop_denorm)
+                    self.ongoing_pop_denorm = np.asarray(self.ongoing_pop_denorm)
 
                     logger = logging.getLogger(__name__)
                     logger.warn('Unfinished iteration is found with ongoing files in run folder.') # Make sure the project is not opened in JMAG, and we are going to remove the project files and ongoing files.')
                     # logger.warn(u'不出意外，就从第一个个体开始迭代。但是很多时候跑到第150个个体的时候跑断了，你总不会想要把这一代都删了，重新跑吧？')
                     # os.remove(u"D:/JMAG_Files/" + run_folder[:-1] + file[:-12] + ".jproj")
-                    print 'List interrupt_pop_denorm here:', self.interrupt_pop_denorm.tolist()
+                    print 'List ongoing_pop_denorm here:', self.ongoing_pop_denorm.tolist()
 
-                if 'fit' in file:
-                    print file
-
-                    self.interrupt_fitness = []
+                if 'fit#' in file:
+                    print file,
+                    self.ongoing_fitness = []
                     with open(self.dir_run + file, 'r') as f: 
-                        read_iterator = csv_reader(f, skipinitialspace=True)
-                        for row in self.whole_row_reader(read_iterator):
+                        for row in self.csv_row_reader(f):
                             if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
-                                self.interrupt_fitness.append(float(row[0])) # not neccessary to be an array. a list is enough
-                    print 'List interrupt_fitness here:', self.interrupt_fitness
-                    # interrupt_pop (yes) and interrupt_fitness will be directly used in de.
+                                self.ongoing_fitness.append(float(row[0])) # not neccessary to be an array. a list is enough
+                    print 'List ongoing_fitness here:', self.ongoing_fitness
+                    # ongoing_pop (yes) and ongoing_fitness will be directly used in de.
+
+                if 'liv#' in file:
+                    print file,
+                    self.ongoing_living_pop_denorm = []
+                    with open(self.dir_run + file, 'r') as f: 
+                        for row in self.csv_row_reader(f):
+                            if len(row)>0: 
+                                self.ongoing_living_pop_denorm.append([float(el) for el in row])
+                    print 'List ongoing_living_pop_denorm here:', self.ongoing_living_pop_denorm
+
+                    file = file[:3] + '_fit' + file[3:8] + '.txt' # liv_fit#xxxx.txt has always no tag '-ongoing'.
+                    print file,
+                    self.ongoing_living_fitness = []
+                    with open(self.dir_run + file, 'r') as f: 
+                        for row in self.csv_row_reader(f):
+                            if len(row)>0: 
+                                self.ongoing_living_fitness.append(float(row[0]))
+                    print 'List ongoing_living_fitness here:', self.ongoing_living_fitness
                     
+                    # decide at which j the fobj will called in de()
+                    self.index_interrupt_beginning = len(self.ongoing_living_pop_denorm)
+                    if len(self.ongoing_living_pop_denorm) != len(self.ongoing_pop_denorm):
+                        raise Exception('It seemed that Swarm failed to write living pop after writing the generation pop. Manually delete the extra lines in your gen# and fit# files to be consistent with liv# file.')
+
         # search for completed generation files
         generations = [file[4:8] for file in os.listdir(self.dir_run) if 'gen' in file and not 'ongoing' in file]
 
@@ -227,7 +247,8 @@ class swarm(object):
         diff = np.fabs(min_b - max_b)
         if self.index_interrupt_beginning != 0:
                   # pop_denorm = min_b + pop * diff =>
-            self.interrupt_pop = (self.interrupt_pop_denorm - min_b) / diff
+            self.ongoing_pop = (self.ongoing_pop_denorm - min_b) / diff
+
 
         # check for number of generations
         if len(generations) == 0:
@@ -237,40 +258,60 @@ class swarm(object):
             # generate the initial random swarm from the initial design
             self.init_pop = np.random.rand(popsize, dimensions) # normalized design parameters between 0 and 1
             self.init_pop_denorm = min_b + self.init_pop * diff
+            self.init_fitness = None
 
             # and save to file named gen#0000.txt
             self.number_current_generation = 0
             self.write_population_data(self.init_pop_denorm)
             logger = logging.getLogger(__name__)
             logger.debug('Initial pop (de-normalized) is saved as %s', self.dir_run + 'gen#0000.txt')
+
         else:
-            # get the latest generation of swarm data
+            # number_current_generation begins at 0
             self.number_current_generation = max([int(el) for el in generations])
 
-            logger = logging.getLogger(__name__)
-            logger.debug('The latest generation is gen#%d', self.number_current_generation)
+            if len(generations) == 1:
+                self.init_pop_denorm = self.pop_reader(self.get_gen_file(self.number_current_generation)) # gen#0000
+                self.init_fitness = None
 
-            # restore the living pop from file liv#xxxx.txt
-            self.init_pop_denorm = self.read_living_pop(self.number_current_generation)
-                # 在2019年1月16日以前，每次断了以后，就丢失了真正活着的那组pop，真正的做法是，从第零代开始，根据fit和gen数据当前代重构活着的那组pop，但是这样太麻烦了，我决定加一个文件叫liv#xxx.txt。
-                # 下面这个，直接取上一代gen#xxxx.txt的那组pop来作为当前代，显然是错的，因为我们是从fobj返回以后直接写入文件的，不管它是更好的还是更差了。
-                # 也就是说，只有当number_current_generation=0的时候，这才是对的。
-                # with open(self.get_gen_file(self.number_current_generation), 'r') as f:
-                #     read_iterator = csv_reader(f, skipinitialspace=True)
-                #     for row in self.whole_row_reader(read_iterator):
-                #         if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
-                #             self.init_pop_denorm.append([float(el) for el in row])
+                logger = logging.getLogger(__name__)
+                logger.debug('The initial pop (i.e., gen#%s) is found in run folder. Use it.', generations[0])
+            else:
+
+                # get the latest generation of swarm data and 
+                # restore the living pop from file liv#xxxx.txt
+                # then combine then if the size of living pop is smaller than that of last-gen
+                self.init_pop_denorm, self.init_fitness = self.read_completed_living_pop(self.number_current_generation) # this is completed
+                                      # also read fitness of last completed living pop as init_fitness 
+
+                logger = logging.getLogger(__name__)
+                logger.debug('The latest finished generation is gen#%d', self.number_current_generation)
+                logger.debug('Read in living_pop as init_pop with a size of %d.' % (len(self.init_pop_denorm)))
+
+            # normalize for init_pop
             self.init_pop = (np.array(self.init_pop_denorm) - min_b) / diff
 
-            # TODO: 文件完整性检查
+            # 检查popsize是否变大了 # TODO: 文件完整性检查
             solved_popsize = len(self.init_pop)
             if popsize > solved_popsize:
                 logger.warn('The popsize is changed from last run. From %d to %d' % (solved_popsize, popsize))
+                logger.debug('init_pop before:\n' + '\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop))
+
+                # append new random designs 
                 self.init_pop = self.init_pop.tolist()
                 self.init_pop += np.random.rand(popsize-solved_popsize, dimensions).tolist() # normalized design parameters between 0 and 1
-                self.init_pop_denorm = min_b + self.init_pop * diff
-                self.append_population_data(self.init_pop_denorm[solved_popsize:])
-                # print self.init_pop
+                self.init_pop_denorm = min_b + np.array(self.init_pop) * diff
+
+                logger.debug('init_pop after:\n' + '\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop))
+
+                # and save to file named gen#xxxx.txt as well as liv#xxxx.txt
+                # because those just born are in the meantime living!
+                # we will over-write to file later along with fitness data
+                # self.append_population_data(self.init_pop_denorm[solved_popsize:])
+                # logger.debug('init_pop before:\n' + '\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop))
+            elif popsize < solved_popsize:
+                raise Exception('Reducing popsize during a run---feature is not supported.')
+
 
         # pop: make sure the data type is array
         self.init_pop = np.asarray(self.init_pop)
@@ -322,15 +363,27 @@ class swarm(object):
         else:
             return self.dir_run + 'fit#%04d.txt'%(int(no_generation))
 
+    def get_liv_file(self, no_generation, ongoing=False):
+        if ongoing == True:
+            return self.dir_run + 'liv#%04d-ongoing.txt'%(int(no_generation))
+        else:
+            return self.dir_run + 'liv#%04d.txt'%(int(no_generation))
+
     def rename_onging_files(self, no_generation):
         os.rename(  self.dir_run + 'fit#%04d-ongoing.txt'%(int(no_generation)),
                     self.dir_run + 'fit#%04d.txt'%(int(no_generation)))
         os.rename(  self.dir_run + 'gen#%04d-ongoing.txt'%(int(no_generation)),
                     self.dir_run + 'gen#%04d.txt'%(int(no_generation)))
+        os.rename(  self.dir_run + 'liv#%04d-ongoing.txt'%(int(no_generation)),
+                    self.dir_run + 'liv#%04d.txt'%(int(no_generation)))
 
     def whole_row_reader(self, reader):
         for row in reader:
             yield row[:]
+
+    def csv_row_reader(self, handle):
+        read_iterator = csv.reader(handle, skipinitialspace=True)
+        return self.whole_row_reader(read_iterator)
 
     def show(self, which=0, toString=False):
         out_string = ''
@@ -388,7 +441,7 @@ class swarm(object):
         self.im = None # to avoid to use this reference by mistake
         im_variant = bearingless_induction_motor_design.local_design_variant(mylatch, \
                         self.number_current_generation, individual_index, individual) # due to compatability issues: a new child class is used instead
-        self.im_variant = im_variant # for command line access debug purpose
+        self.im_variant = im_variant # for write im_variant.ID to file corresponding to the living individual # also for command line access debug purpose
         im = im_variant # for Tran2TSS (应该给它弄个函数调用的)
         im_variant.individual_name = im_variant.get_individual_name() 
 
@@ -453,28 +506,28 @@ class swarm(object):
             return model
 
         def exe_frequency():
-            if True:
-                # Freq Sweeping for break-down Torque Slip
-                if model.NumStudies() == 0:
-                    study = im_variant.add_study(app, model, self.dir_csv_output_folder, choose_study_type='frequency')
-                else:
-                    # there is already a study. then get the first study.
-                    study = model.GetStudy(0)
+            # Freq Sweeping for break-down Torque Slip
+            if model.NumStudies() == 0:
+                study = im_variant.add_study(app, model, self.dir_csv_output_folder, choose_study_type='frequency')
+            else:
+                # there is already a study. then get the first study.
+                study = model.GetStudy(0)
 
-                self.mesh_study(im_variant, app, model, study)
-                self.run_study(im_variant, app, study, clock_time())
+            self.mesh_study(im_variant, app, model, study)
+            self.run_study(im_variant, app, study, clock_time())
 
-                # evaluation based on the csv results
-                try:
-                    slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.check_csv_results(study.GetName())
-                except IOError, e:
-                    msg = 'CJH: The solver did not exit with results, so reading the csv files reports an IO error. It is highly possible that some lower bound is too small.'
-                    logger.error(msg + self.im_variant.show(toString=True))
-                    print msg
-                    # raise e
-                    breakdown_torque = 0
-                    breakdown_force = 0
-                # self.fitness_in_physics_data # torque density, torque ripple, force density, force magnitude error, force angle error, efficiency, material cost 
+            # evaluation based on the csv results
+            try:
+                slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.check_csv_results(study.GetName())
+            except IOError, e:
+                msg = 'CJH: The solver did not exit with results, so reading the csv files reports an IO error. It is highly possible that some lower bound is too small.'
+                logger.error(msg + self.im_variant.show(toString=True))
+                print msg
+                # raise e
+                breakdown_torque = 0
+                breakdown_force = 0
+
+            # self.fitness_in_physics_data # torque density, torque ripple, force density, force magnitude error, force angle error, efficiency, material cost 
             return slip_freq_breakdown_torque, breakdown_torque, breakdown_force
 
         def load_transeint():
@@ -511,7 +564,6 @@ class swarm(object):
                 self.pyplot_clear()
             except Exception, e:
                 logger.error(u'Error when loading csv results for Tran2TSS.', exc_info=True)
-                raise Exception('Error: see log file.')
             # show()
             return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list
 
@@ -574,29 +626,30 @@ class swarm(object):
         ################################################################
         tran2tss_study_name = im_variant.individual_name + 'Tran2TSS'
         bool_skip_transient = False
-        if self.jmag_control_state == False: # means that no jmag project is loaded because the eddy current problem is already solved.
-            # check whether or not the transient problem is also solved.
-            if self.check_csv_results(tran2tss_study_name, returnBoolean=True):
-                bool_skip_transient = True # because the csv files already exist.
 
-            # debug 1
-            # yes, leave this here: jmag_control_state == False
-            if bool_skip_transient == False:
+        # check whether or not the transient problem is already solved.
+        if not self.check_csv_results(tran2tss_study_name, returnBoolean=True):
+
+            # no results? no jmag? then make sure jmag is opened
+            if self.jmag_control_state == False: # means that no jmag project is loaded because the eddy current problem is already solved.
+
                 app = open_jmag() # will set self.jmag_control_state to True
                 model = draw_jmag()
 
-        if bool_skip_transient == False:
+
+            # no results?
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             # TranFEAwi2TSS for ripples and iron loss
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-            # add or duplicate study for transient FEA 
+            # add or duplicate study for transient FEA denpending on jmag_run_list
             if self.fea_config_dict['jmag_run_list'][0] == 0:
-                # wait for femm to finish, and get your slip of breakdown
                 if slip_freq_breakdown_torque is None:
+                    # wait for femm to finish, and get your slip of breakdown
                     slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
-                # debug 2
-                # print slip_freq_breakdown_torque, breakdown_torque
-                # quit()
+                else:
+                    # femm already has results and has assign value to slip_freq_breakdown_torque
+                    pass
+
                 # FEMM+JMAG
                 im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
                 study = im_variant.add_TranFEAwi2TSS_study( slip_freq_breakdown_torque, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
@@ -604,7 +657,6 @@ class swarm(object):
                 self.run_study(im_variant, app, study, clock_time())
             else:
                 # JMAG+JMAG
-                # model = app.GetCurrentModel()
                 im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
                 self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, clock_time())
 
@@ -624,8 +676,8 @@ class swarm(object):
 
         # compute the fitness 
         rotor_volume = pi*(im_variant.Radius_OuterRotor*1e-3)**2 * (im_variant.stack_length*1e-3)
-        rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³
-        shaft_power  = im_variant.Omega * torque_average
+        rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
+        shaft_power  = im_variant.Omega * torque_average # make sure update_mechanical_parameters is called so that Omega corresponds to slip_freq_breakdown_torque
         if jmag_loss_list is None:        
             copper_loss  = 0.0
             iron_loss    = 0.0
@@ -638,6 +690,7 @@ class swarm(object):
                 # by JMAG for iron loss and FEMM for copper loss
                 copper_loss  = femm_loss_list[0] + femm_loss_list[1]
                 iron_loss    = jmag_loss_list[2] 
+
             # some factor to account for rotor iron loss?
             # iron_loss *= 1
 
@@ -651,13 +704,10 @@ class swarm(object):
                                 1.0 / ( ss_avg_force_magnitude/rotor_weight ),
                                 normalized_torque_ripple         *   2, #       / 0.05 * 0.1
                                 normalized_force_error_magnitude *   2, #       / 0.05 * 0.1
-                                force_error_angle * 0.2          * 0.1, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang)
+                                force_error_angle * 0.2          * 0.1, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
                                 10 / efficiency**2,
-                                im_variant.thermal_penalty ]            # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
+                                im_variant.thermal_penalty ] # thermal penalty is evaluated when drawing the model according to the parameters' constraints (if the rotor current and rotor slot size requirement does not suffice)
         cost_function = sum(list_weighted_cost)
-            # this will lead to lower bound of air gap length
-            # cost_function = 30e3 / ( breakdown_torque/rotor_volume ) \
-            #                 + 1.0 / ( breakdown_force/rotor_weight )
 
         with open(self.dir_run + 'swarm_data.txt', 'a') as f:
             f.write('\n-------\n%s-%s\n%d,%d,%g\n%s\n%s\n' % (
@@ -667,7 +717,6 @@ class swarm(object):
                         ','.join(['%g'%(el) for el in individual]) ) + str_results)
 
         self.im = mylatch
-        # raise Exception(u'确认能继续跑！')
         return cost_function
 
     def fobj_test(self, individual_index, individual):
@@ -716,10 +765,11 @@ class swarm(object):
         iterations = self.de_config_dict['iterations']
         iterations -= self.number_current_generation # make this iterations the total number of iterations seen from the user
         logger = logging.getLogger(__name__)
-        logger.debug('DE Configuration:\n\t' + '\n\t'.join('%.4f,%.4f'%tuple(el) for el in bounds) + '\n\t%.4f, %.4f, %d, %d' % (mut,crossp,popsize,iterations))
-
+        logger.debug('DE Configuration:\n\t' + '\n\t'.join('%.4f,%.4f'%tuple(el) for el in bounds) + '\tmut=%.4f, crossp=%.4f, popsize=%d, iterations=%d' % (mut,crossp,popsize,iterations) \
+                     +'''\n\t# stator_tooth_width_b_ds\n\t# air_gap_length_delta\n\t# Width_RotorSlotOpen \n\t# rotor_tooth_width_b_dr \n\t# Length_HeadNeckRotorSlot\n\t# Angle_StatorSlotOpen\n\t# Width_StatorTeethHeadThickness''')
+        
         self.bounds = np.array(bounds) # for debug purpose in fobj_test
-
+        
         # mut \in  [0.5, 2.0]
         if mut < 0.5 or mut > 2.0:
             logger = logging.getLogger(__name__)
@@ -732,50 +782,69 @@ class swarm(object):
         #  [ 5  5  5  5]]
         diff = np.fabs(min_b - max_b)
         pop_denorm = min_b + pop * diff
+        for el in pop_denorm:
+            print el.tolist()
 
-        # for restarter or auto-recovered run
-        self.pop_denorm = pop_denorm
-        
+
+
         # 判断：如果是第一次，那就需要对现有pop进行生成fitness；如果续上一次的运行，则读入fitness。
-        fitness_file = self.get_fit_file(self.number_current_generation)
-        if not os.path.exists(fitness_file):
-            # there is no fitness file yet. run evaluation for the initial pop            
-            logger = logging.getLogger(__name__)
-            logger.debug('Generating fitness data for the initial population: %s', fitness_file)
-
-            self.jmag_control_state = False # demand to initialize the jamg designer
-            fitness = np.asarray( [fobj(index, individual) for index, individual in enumerate(pop_denorm)] ) # modification #2
-        else:
-            # this is a continued run. load the latest complete fitness data (the first digit of every row is fitness for an individual)
-            fitness = []
-            with open(fitness_file, 'r') as f: 
-                read_iterator = csv_reader(f, skipinitialspace=True)
-                for row in self.whole_row_reader(read_iterator):
-                    if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
-                        fitness.append(float(row[0]))
-
-            # TODO: 文件完整性检查
-            # in case the last iteration is not done or the popsize is incread by user after last run of optimization
-            solved_popsize = len(fitness)
-            if popsize > solved_popsize:
-                logger.debug('Popsize changed. New fitness for the newly come individuals should be generated.')
+        if self.init_fitness is None:
+            if self.number_current_generation == 0:
+                # there is no fitness file yet. run evaluation for the initial pop            
                 self.jmag_control_state = False # demand to initialize the jamg designer
-                fitness_part2 = np.asarray( [fobj(index+solved_popsize, individual) for index, individual in enumerate(pop_denorm[solved_popsize:])] ) # modification #2
-                
-                print 'DEBUG fitness_part2:', fitness_part2.tolist()
-                try:
-                    # write fitness_part2 results to file 
-                    with open(fitness_file, 'a') as f:
-                        f.write('\n')
-                        f.write('\n'.join('%.16f'%(x) for x in fitness_part2)) 
-                        # TODO: also write self.fitness_in_physics_data
-                    fitness += fitness_part2.tolist()
-                    # print fitness
-                except Exception as e:
-                    raise e
+                fitness = np.asarray( [fobj(index, individual) for index, individual in enumerate(pop_denorm)] ) # modification #2
 
-        if sw.bool_auto_recovered_run == True:
-            sw.bool_auto_recovered_run = False
+                logger = logging.getLogger(__name__)
+                logger.debug('Generating fitness data for the initial population: %s', self.get_fit_file(self.number_current_generation))
+
+                # write fit#0000 (fitness results to file for the initial pop)
+                with open(self.get_fit_file(self.number_current_generation), 'w') as f:
+                    f.write('\n'.join('%.16f'%(x) for x in fitness)) 
+                # write liv_fit#0000 
+                with open(self.dir_run+'liv_fit#%04d.txt'%(self.number_current_generation), 'w') as f:
+                    f.write('\n'.join('%.16f'%(x) for x in fitness)) 
+                # write liv#0000 (liv_id#0000 is trivial so not needed)
+                self.write_population_data(pop_denorm, fname=self.get_liv_file(self.number_current_generation))
+                logger.debug('Copy the 1st generation (gen#%4d) as living pop and its fitness to file.' % (self.number_current_generation))            
+        else:
+            # this is a continued run. load the last completed living pop's fitness data
+            fitness = self.init_fitness
+
+            if len(self.init_pop) > len(self.init_fitness):
+                # 检查popsize是否变大了 # TODO: 文件完整性检查
+                # in case the last iteration is not done or the popsize is incread by user after last run of optimization
+                solved_popsize = len(self.init_fitness)
+                print 'popsize=', popsize
+                print 'solved_popsize=', solved_popsize
+                if popsize > solved_popsize:
+                    logger.debug('Popsize changed. New fitness for the newly come individuals should be generated...')
+                    fitness_part2 = np.asarray( [fobj(index+solved_popsize, individual) for index, individual in enumerate(pop_denorm[solved_popsize:])] ) # modification #2
+                    
+                    print 'DEBUG fitness_part1:\n', fitness
+                    print 'DEBUG fitness_part2:\n', fitness_part2.tolist()
+                    fitness += fitness_part2.tolist()
+
+                    # write gen#xxxx
+                    self.write_population_data(pop_denorm)
+                    # write fit#xxxx
+                    with open(self.get_fit_file(self.number_current_generation), 'w') as f:
+                        f.write('\n'.join('%.16f'%(x) for x in fitness)) 
+                    # write liv_fit#xxxx
+                    with open(self.dir_run+'liv_fit#%04d.txt'%(self.number_current_generation), 'w') as f:
+                        f.write('\n'.join('%.16f'%(x) for x in fitness)) 
+                    # write liv#xxxx (those just born are also living)
+                    self.write_population_data(pop_denorm, fname=self.get_liv_file(self.number_current_generation))
+                    logger.debug('At (gen#%4d) popsize changed to %d. Newly come data are written to liv_fit#, liv#, gen#, fit#' % (self.number_current_generation, popsize))
+        # # debug
+        # print '---------------------'
+        # print fitness
+        # print pop_denorm
+        # quit()
+
+        # auto-recovered run
+        if self.bool_auto_recovered_run == True: 
+            logger.debug('Auto-recovering the optimization...')
+            self.bool_auto_recovered_run = False
             print '---------------------'
             print pop_denorm 
             print self.pop_denorm
@@ -787,47 +856,81 @@ class swarm(object):
             # fitness = self.fitness
             quit()
 
-        # write fitness results to file for the initial pop
-        with open(fitness_file, 'w') as f:
-            f.write('\n'.join('%.16f'%(x) for x in fitness)) 
-        logger.debug('Write the 1st generation (gen#%4d) of living pop and its fitness to file.' % (self.number_current_generation))
-        for pop_j_denorm in pop_denorm:
-            self.write_living_individual(pop_j_denorm)
-
         # make sure fitness is an array
         fitness = np.asarray(fitness)
         best_idx = np.argmin(fitness)
         best = pop_denorm[best_idx]
-        # return min_b + pop * diff, fitness, best_idx
+            # return min_b + pop * diff, fitness, best_idx
 
-        # Begin DE
+        # for restarter or auto-recovered run
+        self.pop_denorm = pop_denorm
+        self.fitness    = fitness
+
+        # # for easily identifying where the living pop is born
+        # self.pop_id = [] # init
+        # try:
+        #     if self.popid == []:
+        #         if self.im_variant is not None: 
+        #             self.pop_id = [self.im_variant.ID[:-self.im_variant.ID[::-1].find('-')]+str(i) for i in range(popsize)]
+        #             for el in self.pop_id:
+        #                 print self.popid
+        #                 self.write_living_individual_id(el)
+        # except:
+        #     pass
+
+
+        # Begin DE with pop, fitness of a completed generation
         for i in range(iterations):
 
             self.number_current_generation += 1 # modification #3
             logger = logging.getLogger(__name__)
-            logger.debug('Iteration i=%d for this run. Total iteration %d.', i, self.number_current_generation) 
+            logger.debug('Iteration i=%d for this execution of the script, but it is the %d DE iteration for this run %s.', i, self.number_current_generation, self.run_folder)
             # demand to initialize the jamg designer because number_current_generation has changed and a new jmag project is required.
             self.jmag_control_state = False
 
             for j in range(popsize): # j is the index of individual
-                logger.debug('de individual #%d', j) 
-
-                idxs = [idx for idx in range(popsize) if idx != j]
-                # print 'idxs', idxs
-                a, b, c = pop[np.random.choice(idxs, 3, replace = False)] # we select three other vectors that are not the current best one, let’s call them a, b and c
-                mutant = np.clip(a + mut * (b - c), 0, 1)
-
-                cross_points = np.random.rand(dimensions) < crossp
-                if not np.any(cross_points): # 如果运气不好，全都不更新也不行，至少找一个位置赋值为True。
-                    cross_points[np.random.randint(0, dimensions)] = True
 
                 # get trial individual
                 if i==0 and j < self.index_interrupt_beginning:
+                    logger.debug('Skip individual gen#%04dind#%04d' % (self.number_current_generation, j)) 
+
+                    # check for debugging purpose only
+                    # 我们在调用 read_completed_living_pop() 的时候，init_pop（也就是这里的pop）的前半部分，是活着的living_pop，而后半部分则是用gen#xxx.txt文件中对应的位置去补充的。
                     # legacy ongoing is found during an interrupted run, so the the first iteration should continue from legacy results.
-                    trial = self.interrupt_pop[j]
+                    trial = self.ongoing_pop[j] 
                     trial_denorm = min_b + trial * diff
-                    f = self.interrupt_fitness[j]
+                    f = self.ongoing_fitness[j]
+
+                    if f < self.ongoing_living_fitness[j]:
+                        print f, self.ongoing_living_fitness[j]
+                        logger.debug('%g < %g' % (f, self.ongoing_living_fitness[j]) )
+                        raise Exception('pop fit < liv fit?')
+                    else:
+                        # the living fitness must be smaller or the same to f
+                        print '--------------'
+                        print trial_denorm.tolist(), f, 'larger?'
+                        print pop_denorm[j].tolist(), self.ongoing_living_fitness[j], 'smaller?'
+                        pop_denorm[j] = self.ongoing_living_pop_denorm[j] # read from liv-ongoing#xxxx.txt
+                        pop[j] = (pop_denorm[j] - min_b) / diff
+                        print pop_denorm[j].tolist()
+
                 else:
+                    logger.debug('Build individual #%d' % (j)) 
+
+                    # # debug compare this individual to log file's line "last-liv(?):------"
+                    # print 'Build individual #%d' % (j) 
+                    # print (min_b + pop[j] * diff).tolist()
+                    # quit()
+
+                    idxs = [idx for idx in range(popsize) if idx != j]
+                    # print 'idxs', idxs
+                    a, b, c = pop[np.random.choice(idxs, 3, replace = False)] # we select three other vectors that are not the current best one, let’s call them a, b and c
+                    mutant = np.clip(a + mut * (b - c), 0, 1)
+
+                    cross_points = np.random.rand(dimensions) < crossp
+                    if not np.any(cross_points): # 如果运气不好，全都不更新也不行，至少找一个位置赋值为True。
+                        cross_points[np.random.randint(0, dimensions)] = True
+
                     # normal run
                     trial = np.where(cross_points, mutant, pop[j])
                     trial_denorm = min_b + trial * diff
@@ -837,21 +940,31 @@ class swarm(object):
                     f = fobj(j, trial_denorm)
 
                     # write ongoing results
-                    self.write_individual_fitness(f)
                     self.write_individual_data(trial_denorm) # we write individual data after fitness is evaluated in order to make sure the two files are synchronized
                                                              # this means that the pop data file on disk does not necessarily correspondes to the current generation of pop.
-                if f < fitness[j]:
-                    fitness[j] = f
-                    pop[j] = trial # greedy selection
-                    if f < fitness[best_idx]:
-                        best_idx = j
-                        best = trial_denorm
+                    self.write_individual_fitness(f)
 
-                # for restart or auto-recovered run
-                pop_j_denorm       = min_b + pop[j] * diff
-                self.pop_denorm[j] = pop_j_denorm
-                self.fitness[j]    = fitness[j]
-                self.write_living_individual(self.pop_j_denorm)
+                    if f < fitness[j]: # then update the pop
+                        fitness[j] = f
+                        pop[j] = trial # greedy selection (see de_implementation.py)
+
+                        if f < fitness[best_idx]:
+                            best_idx = j
+                            best = trial_denorm
+
+                        # try:
+                        #     # for easily identifying where the living pop is born
+                        #     if self.im_variant is not None:
+                        #         self.write_living_individual_id(self.pop_id[j]+'->'+self.im_variant.ID)
+                        # except:
+                        #     pass
+
+                    # for restart or auto-recovered run
+                    self.pop_denorm[j] = min_b + pop[j] * diff
+                    self.fitness[j]    = fitness[j]
+                    self.write_living_individual_data(self.pop_denorm[j])
+                    self.write_living_individual_fitness(fitness[j])
+                    # quit()
 
             # one generation is finished
             self.rename_onging_files(self.number_current_generation)
@@ -861,53 +974,76 @@ class swarm(object):
 
         # TODO: 跑完一轮优化以后，必须把de_config_dict和当前的代数存在文件里，否则gen文件里面存的normalized data就没有物理意义了。
 
-    def write_living_individual(self, pop_j_denorm):
-        fname = self.dir_run + 'liv#%04d.txt'%(int(self.number_current_generation))
-        with open(fname, 'a') as f:
+    def write_living_individual_data(self, pop_j_denorm):
+        with open(self.get_liv_file(self.number_current_generation, ongoing=True), 'a') as f:
             f.write('\n' + ','.join('%.16f'%(y) for y in pop_j_denorm)) # convert 1d array to string
 
-    def myreader(self, fname):
+    def write_living_individual_fitness(self, fitness_j):
+        with open(self.dir_run + 'liv_fit#%04d.txt'%(self.number_current_generation), 'a') as f:
+            f.write('\n%.16f'%(fitness_j))
+
+    def write_living_individual_id(self, str_id):
+        with open(self.dir_run + 'liv_id#%04d.txt'%(self.number_current_generation), 'a') as f:
+            f.write(str_id+'\n')
+
+    def pop_reader(self, fname):
         pop = []
         with open(fname, 'r') as f:
-            for row in self.whole_row_reader(csv_reader(f, skipinitialspace=True)):
+            for row in self.csv_row_reader(f):
                 if len(row)>0: # there could be empty row, since we use append mode and write down f.write('\n')
                     pop.append([float(el) for el in row])
         return pop
 
-    def read_living_pop(self, no_current_generation):
+    def read_completed_living_pop(self, no_current_generation):
         logger = logging.getLogger(__name__)
         if no_current_generation == 0:
-            return self.myreader(self.get_gen_file(no_current_generation))
+            raise Exception('This is reached unexpectedly. However, this function returns right results.')
+            return self.pop_reader(self.get_gen_file(no_current_generation))
         else:
-            fname_lastgen = self.get_gen_file(no_current_generation-1)
-            fname_liv = self.dir_run + 'liv#%04d.txt'%(no_current_generation)
-            logger.debug('fname_lastgen=%s'% fname_lastgen)
-            logger.debug('fname_liv=%s'% fname_liv)
-        last_generation_pop = self.myreader(fname_lastgen)
-        living_pop_denorm = self.myreader(fname_liv)
+            fname_last_gen = self.get_gen_file(no_current_generation)
+            fname_last_liv = self.dir_run + 'liv#%04d.txt'%(no_current_generation)
+            fname_last_liv_fit = self.dir_run + 'liv_fit#%04d.txt'%(no_current_generation)
 
-        msg = 'gen#%d\n'%(no_current_generation)
-        msg += 'last-gen:------\n\t' + '\n\t'.join([str(el) for el in last_generation_pop]) + '\n'
-        msg += 'living:------\n\t' + '\n\t'.join([str(el) for el in living_pop_denorm]) + '\n'
+            logger.debug('fname_last_gen=%s'% fname_last_gen)
+            logger.debug('fname_last_liv=%s'% fname_last_liv)
+            logger.debug('fname_last_liv_fit=%s'% fname_last_liv_fit)
 
-        size_last =  len(last_generation_pop)
-        size_living = len(living_pop_denorm)
+        last_generation_pop_denorm = self.pop_reader(fname_last_gen)
+        last_living_pop_denorm     = self.pop_reader(fname_last_liv)
+        last_living_fitness        = []
+        with open(fname_last_liv_fit, 'r') as f: 
+            for row in self.csv_row_reader(f):
+                if len(row)>0: 
+                    last_living_fitness.append(float(row[0]))
+
+        size_last =  len(last_generation_pop_denorm)
+        size_living = len(last_living_pop_denorm)
+
+        msg = 'Read in living pop of gen#%d\n'%(no_current_generation)
+        msg += 'last-gen(%d):------\n\t'%(size_last)   + '\n\t'.join([str(el) for el in last_generation_pop_denorm]) + '\n'
+        msg += 'last-liv(%d):------\n\t'%(size_living) + '\n\t'.join([str(el) for el in last_living_pop_denorm]) + '\n'
+
+        msg += 'ongoing-gen:------\n\t' + '\n\t'.join([str(el) for el in self.ongoing_pop_denorm.tolist()]) + '\n'
+        msg += 'ongoing-liv:------\n\t' + '\n\t'.join([str(el) for el in self.ongoing_living_pop_denorm]) + '\n'
+
         if size_living < size_last:
-            msg += 'Append\n\t' + '\n\t'.join([str(el) for el in last_generation_pop[-(size_last - size_living):]]) + '\n'
-            living_pop_denorm += last_generation_pop[-(size_last - size_living):]
-
-        msg += 'combined:------\n\t' + '\n\t'.join([str(el) for el in living_pop_denorm]) + '\n'
-
-        logger.debug(msg)
-
-        if len(living_pop_denorm) != len(last_generation_pop):
+            raise Exception('size_living < size_last')
+            #     msg += 'Append\n\t' + '\n\t'.join([str(el) for el in last_generation_pop_denorm[-(size_last - size_living):]]) + '\n'
+            #     last_living_pop_denorm += last_generation_pop_denorm[-(size_last - size_living):]
+            # msg += 'combined:------\n\t' + '\n\t'.join([str(el) for el in last_living_pop_denorm]) + '\n'
+        if len(last_living_pop_denorm) != len(last_generation_pop_denorm):
             raise Exception('living and last gen do not match')
 
-        return living_pop_denorm
+        logger.debug(msg)
+        return last_living_pop_denorm, last_living_fitness
 
-    def write_population_data(self, pop):
-        with open(self.get_gen_file(self.number_current_generation), 'w') as f:
-            f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop)) # convert 2d array to string
+    def write_population_data(self, pop, fname=None):
+        if fname is None:
+            with open(self.get_gen_file(self.number_current_generation), 'w') as f:
+                f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop)) # convert 2d array to string
+        else:
+            with open(fname, 'w') as f:
+                f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop)) # convert 2d array to string            
 
     def append_population_data(self, pop): # for increased popsize from last run
         with open(self.get_gen_file(self.number_current_generation), 'a') as f:
@@ -921,7 +1057,6 @@ class swarm(object):
     def write_individual_fitness(self, fitness_scalar):
         with open(self.get_fit_file(self.number_current_generation, ongoing=True), 'a') as f:
             f.write('\n%.16f'%(fitness_scalar))
-            # TODO: also write self.fitness_in_physics_data
 
 
 
@@ -1002,8 +1137,7 @@ class swarm(object):
 
             self.fitness_in_physics_data = []
             with open(self.dir_csv_output_folder + study_name + '_torque.csv', 'r') as f: 
-                read_iterator = csv_reader(f, skipinitialspace=True)
-                for ind, row in enumerate(self.whole_row_reader(read_iterator)):
+                for ind, row in enumerate(self.csv_row_reader(f)):
                     if ind >= 5:
                         try:
                             float(row[0])
@@ -1013,8 +1147,7 @@ class swarm(object):
                         l_TorCon.append(float(row[1]))
 
             with open(self.dir_csv_output_folder + study_name + '_force.csv', 'r') as f: 
-                read_iterator = csv_reader(f, skipinitialspace=True)
-                for ind, row in enumerate(self.whole_row_reader(read_iterator)):
+                for ind, row in enumerate(self.csv_row_reader(f)):
                     if ind >= 5:
                         try:
                             float(row[0])
@@ -1083,8 +1216,7 @@ class swarm(object):
         l_slip_freq = [] # or other x-axis variable such as time and angle.
         l_data    = []
         with open(file_location, 'r') as f: 
-            read_iterator = csv_reader(f, skipinitialspace=True)
-            for ind, row in enumerate(self.whole_row_reader(read_iterator)):
+            for ind, row in enumerate(self.csv_row_reader(f)):
                 if ind >= 5:
                     # print file_location
                     # print row
@@ -1516,8 +1648,7 @@ class swarm(object):
         dict_circuit_current_complex = {}
         
         with open(self.im.get_csv('circuit_current'), 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 try: 
                     float(row[0])
                 except:
@@ -1949,9 +2080,8 @@ class swarm(object):
         time_list = []
         TorCon_list = []
         with open(path_prefix + study_name + '_torque.csv', 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 count +=1
                 if count<=8:
                     try:
@@ -1970,9 +2100,8 @@ class swarm(object):
         ForConX_list = []
         ForConY_list = []
         with open(path_prefix + study_name + '_force.csv', 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 count +=1
                 if count<=8:
                     try:
@@ -1991,9 +2120,8 @@ class swarm(object):
         key_list = []
         Current_dict = {}
         with open(path_prefix + study_name + '_circuit_current.csv', 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 count +=1
                 if count<=8:
                     if 'Time' in row[0]: # Time(s)
@@ -2011,9 +2139,8 @@ class swarm(object):
         if self.fea_config_dict['delete_results_after_calculation'] == False:
             # file name is by individual_name like ID32-2-4_EXPORT_CIRCUIT_VOLTAGE.csv rather than ID32-2-4Tran2TSS_circuit_current.csv
             with open(path_prefix + study_name[:-8] + "_EXPORT_CIRCUIT_VOLTAGE.csv", 'r') as f:
-                read_iterator = csv_reader(f, skipinitialspace=True)
                 count = 0
-                for row in self.whole_row_reader(read_iterator):
+                for row in self.csv_row_reader(f):
                     count +=1
                     if count==1: # Time | Terminal1 | Terminal2 | ... | Termial6
                         if 'Time' in row[0]: # Time, s
@@ -2030,25 +2157,22 @@ class swarm(object):
         # Loss
         # Iron Loss
         with open(path_prefix + study_name + '_iron_loss_loss.csv', 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 count +=1
                 if count>8:
                     stator_iron_loss = float(row[3]) # Stator Core
                     break
         with open(path_prefix + study_name + '_joule_loss_loss.csv', 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 count +=1
                 if count>8:
                     stator_eddycurrent_loss = float(row[3]) # Stator Core
                     break
         with open(path_prefix + study_name + '_hysteresis_loss_loss.csv', 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 count +=1
                 if count>8:
                     stator_hysteresis_loss = float(row[3]) # Stator Core
@@ -2056,9 +2180,8 @@ class swarm(object):
         # Copper Loss
         rotor_copper_loss_list = []
         with open(path_prefix + study_name + '_joule_loss.csv', 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 count +=1
                 if count>8:
                     if count==9:
@@ -2107,9 +2230,8 @@ class swarm(object):
         time_list = []
         TorCon_list = []
         with open(path_prefix + study_name + '_torque.csv', 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 count +=1
                 if count<=8:
                     try:
@@ -2128,9 +2250,8 @@ class swarm(object):
         ForConX_list = []
         ForConY_list = []
         with open(path_prefix + study_name + '_force.csv', 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 count +=1
                 if count<=8:
                     try:
@@ -2149,9 +2270,8 @@ class swarm(object):
         key_list = []
         Current_dict = {}
         with open(path_prefix + study_name + '_circuit_current.csv', 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 count +=1
                 if count<=8:
                     if 'Time' in row[0]:
@@ -2180,9 +2300,8 @@ class swarm(object):
         # Torque
         TorCon_list = []
         with open(path_prefix + study_name + '_torque.csv', 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 count +=1
                 if count<=5:
                     continue
@@ -2193,9 +2312,8 @@ class swarm(object):
         ForConX_list = []
         ForConY_list = []
         with open(path_prefix + study_name + '_force.csv', 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
             count = 0
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 count +=1
                 if count<=5:
                     continue
@@ -3933,8 +4051,7 @@ class bearingless_induction_motor_design(object):
         # read from eddy current results
         dict_circuit_current_complex = {}
         with open(eddy_current_circuit_current_csv_file, 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 try: 
                     float(row[0])
                 except:
@@ -4007,8 +4124,7 @@ class bearingless_induction_motor_design(object):
         # read from eddy current results
         dict_circuit_current_complex = {}
         with open(eddy_current_circuit_current_csv_file, 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 try: 
                     float(row[0])
                 except:
@@ -4090,8 +4206,7 @@ class bearingless_induction_motor_design(object):
         # read from eddy current results
         dict_circuit_current_complex = {}
         with open(eddy_current_circuit_current_csv_file, 'r') as f:
-            read_iterator = csv_reader(f, skipinitialspace=True)
-            for row in self.whole_row_reader(read_iterator):
+            for row in self.csv_row_reader(f):
                 try: 
                     float(row[0])
                 except:

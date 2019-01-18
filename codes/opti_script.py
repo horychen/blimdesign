@@ -119,7 +119,10 @@ run_list = [0,1,0,0,0]
 # run_folder = r'run#107/' # There is no slide mesh if you add new study for Tran2TSS
 # run_folder = r'run#108/' # Efficiency is added. femm_found.fem feature is added.
 # run_folder = r'run#109/' # test the effectiveness of de algorithm
-run_folder = r'run#110/' # Truly recovable!
+# run_folder = r'run#110/' # Truly recovable!
+run_folder = r'run#111/' # new living pop and its fitness and its id
+# run_folder = r'run#112/' # test shitty design
+run_folder = r'run#113/' 
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -178,7 +181,7 @@ if fea_config_dict['flag_optimization'] == True:
                                             [5e-1,   3] ], # Width_StatorTeethHeadThickness
                             'mut':        0.8,
                             'crossp':     0.7,
-                            'popsize':    50, # 100,
+                            'popsize':    5, # 50, # 100,
                             'iterations': 48 } # 148
 
 else:
@@ -191,19 +194,23 @@ else:
 sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)
 # sw.show(which='all')
 
-# Now with this feature, you can see actually sometimes jmag fails to draw because of PC system level interference, rather than bug in my codes.
-# # debug for shitty design that failed to draw
-# shitty_design = population.bearingless_induction_motor_design.reproduce_the_problematic_design(r'D:\OneDrive - UW-Madison\c\codes/'+'shitty_design.txt')
-# shitty_design.show()
-# sw.run(shitty_design)
-# raise
 
-while True:
+if False:
+    # Now with this redraw from im.show(toString=True) feature, you can see actually sometimes jmag fails to draw because of PC system level interference, rather than bug in my codes.
+    # debug for shitty design that failed to draw
+    shitty_design = population.bearingless_induction_motor_design.reproduce_the_problematic_design(r'D:\OneDrive - UW-Madison\c\codes/'+'shitty_design.txt')
+    shitty_design.show()
+    sw.run(shitty_design)
+    raise
+
+
+
+# while True:
+if True:
 
     # if optimization_flat == True:
     # generate the initial generation
     sw.generate_pop()
-    logger.info('Initial pop generated.')
 
     # add initial_design of Pyrhonen09 to the initial generation
     utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
@@ -233,17 +240,17 @@ while True:
 
     except Exception as e:
         print 'See log file for the error msg.'
-        logger = logging.getLogger(__name__)
+
         logger.error(u'Optimization aborted.', exc_info=True)
         # notification via email
-        utility.send_notification(u'Optimization aborted.')
+        # utility.send_notification(u'Optimization aborted.')
     
-        msg = 'Pop status report\n------------------------\n'
-        msg += '\n'.join('%.16f'%(x) for x in sw.fitness) + '\n'
-        msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)    
-        logger.debug(msg)
+        # msg = 'Pop status report\n------------------------\n'
+        # msg += '\n'.join('%.16f'%(x) for x in sw.fitness) + '\n'
+        # msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)    
+        # logger.debug(msg)
 
-        sw.bool_auto_recovered_run = True
+        # sw.bool_auto_recovered_run = True
 
     else:
         logger.info('Done.')

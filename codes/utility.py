@@ -57,6 +57,8 @@ def logger_init(): # This will lead to duplicated logging output
     logger.addHandler(handler)
     return logger
 
+
+
 import sys
 # For a better solution for print, see https://stackoverflow.com/questions/4230855/why-am-i-getting-ioerror-9-bad-file-descriptor-error-while-making-print-st/4230866
 # decorater used to block function printing to the console
@@ -76,6 +78,8 @@ def blockPrint():
 # Restore
 def enablePrint():
     sys.stdout = sys.__stdout__
+
+
 
 import math
 def to_precision(x,p=4):
@@ -137,6 +141,8 @@ def to_precision(x,p=4):
         out.append(m)
 
     return "".join(out)
+
+
 
 import numpy as np
 def singleSidedDFT(signal, samp_freq):
@@ -250,14 +256,14 @@ def add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger):
     # print sw.init_pop[0].tolist()
     with open(sw.get_gen_file(0), 'w') as f:
         f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.init_pop_denorm)) # convert 2d array to string
-    logger.info('Initial design from Pyrhonen09 is added to the first generation of pop.')
+    logger.info('Initial design from Pyrhonen09 is added to the first generation of pop (i.e., gen#0000ind#0000).')
 
 
 
+from smtplib import SMTP
 def send_notification(text='Hello'):
     subject = 'AUTO BLIM OPTIMIZATION NOTIFICATION'
     content = 'Subject: %s\n\n%s' % (subject, text)
-    from smtplib import SMTP
     mail = SMTP('smtp.gmail.com', 587)
     mail.ehlo()
     mail.starttls()
@@ -378,7 +384,6 @@ class Goertzel_Data_Struct(object):
         print numSamples
         return None
 
-
 def compute_power_factor_from_half_period(voltage, current, mytime, targetFreq=1e3, numPeriodicalExtension=1000): # 目标频率默认是1000Hz
 
     gs_u = Goertzel_Data_Struct("Goertzel Struct for Voltage\n")
@@ -411,6 +416,15 @@ def compute_power_factor_from_half_period(voltage, current, mytime, targetFreq=1
     return power_factor
     
 
+
+class SwarmDataAnalyzer(object):
+    """docstring for SwarmDataAnalyzer"""
+    def __init__(self, run_integer):
+        dir_run = r'D:\OneDrive - UW-Madison\c\pop\run#%d/'%(run_integer)
+        with open(dir_run+'swarm_data.txt', 'r') as f:
+            self.buf = f.read()
+
+        self.buf.find('-------')
 
 
 if __name__ == '__main__':
@@ -522,3 +536,4 @@ if __name__ == '__main__':
 
         # it works!
         # send_notification('Test email')
+

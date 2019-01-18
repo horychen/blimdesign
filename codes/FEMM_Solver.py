@@ -1339,7 +1339,7 @@ class FEMM_Solver(object):
             R = 0.5*(im.Location_RotorBarCenter + im.Location_RotorBarCenter2)
             angle_per_slot = 2*pi/im.Qr
             THETA_BAR = pi - angle_per_slot + EPS # add EPS for the half bar
-            print 'number of rotor_slot per partial model', self.rotor_slot_per_pole * int(4/fraction)
+            # print 'number of rotor_slot per partial model', self.rotor_slot_per_pole * int(4/fraction)
             for i in range(self.rotor_slot_per_pole * int(4/fraction)):
                 THETA_BAR += angle_per_slot
                 THETA = THETA_BAR
@@ -2130,6 +2130,12 @@ class FEMM_Solver(object):
     def greedy_search_for_breakdown_slip(self, dir_femm_temp, study_name, fraction=2, number_of_instantces=5):
         if not os.path.isdir(dir_femm_temp):
             os.makedirs(dir_femm_temp)
+
+        # wait_greedy_search detect femm_found.csv files to confirm the complete state of this greedy_search
+        for suffix in ['.ans', '.csv', '.fem']:
+            fname = dir_femm_temp+'femm_found'+suffix
+            if os.path.exists(fname):
+                os.remove(fname)
 
         self.flag_static_solver = False
         self.flag_eddycurrent_solver = True
