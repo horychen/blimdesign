@@ -206,6 +206,17 @@ class FEMM_Solver(object):
         SERIES_CONNECTED = 1
         PARALLEL_CONNECTED = 0
 
+        if True: # Coarse mesh
+            MESH_SIZE_ALUMINUM = 2 * 6    # 3
+            MESH_SIZE_STEEL    = 2 * 6    # 4
+            MESH_SIZE_AIR      = 2 * 0.75 # 0.5 
+            MESH_SIZE_COPPER   = 2 * 10   # 8
+        else:
+            MESH_SIZE_ALUMINUM = 3
+            MESH_SIZE_STEEL    = 4
+            MESH_SIZE_AIR      = 0.5 
+            MESH_SIZE_COPPER   = 8
+
         def block_label(group_no, material_name, p, meshsize_if_no_automesh, incircuit='<None>', turns=0, automesh=True, magdir=0):
             femm.mi_addblocklabel(p[0],p[1])
             femm.mi_selectlabel(p[0],p[1])
@@ -214,7 +225,7 @@ class FEMM_Solver(object):
 
         # air region @225deg
         X = Y = -(im.Radius_OuterRotor+0.5*im.Length_AirGap) / 1.4142135623730951
-        block_label(9, 'Air', (X, Y), 0.5, automesh=self.bool_automesh)
+        block_label(9, 'Air', (X, Y), MESH_SIZE_AIR, automesh=self.bool_automesh)
 
         # # Air Gap Boundary for Rotor Motion #2
         # block_label(9, '<No Mesh>',   (0, im.Radius_OuterRotor+0.5*im.Length_AirGap), 5, automesh=self.bool_automesh)
@@ -235,9 +246,9 @@ class FEMM_Solver(object):
         elif self.im.fea_config_dict['Steel'] == 'Arnon5':
             steel_name = 'Arnon5-final'
         X = Y = -(im.Radius_Shaft+EPS*10) / 1.4142135623730951
-        block_label(100, steel_name, (X, Y), 4, automesh=self.bool_automesh)
+        block_label(100, steel_name, (X, Y), MESH_SIZE_STEEL, automesh=self.bool_automesh)
         X = Y = -(0.5*(im.Radius_InnerStatorYoke+im.Radius_OuterStatorYoke)) / 1.4142135623730951
-        block_label(10, steel_name, (X, Y), 4, automesh=self.bool_automesh)
+        block_label(10, steel_name, (X, Y), MESH_SIZE_STEEL, automesh=self.bool_automesh)
 
         # Circuit Configuration
         if fraction == 1:
@@ -260,19 +271,19 @@ class FEMM_Solver(object):
 
                 THETA = THETA_BAR
                 X = R*cos(THETA); Y = R*sin(THETA)
-                block_label(101, 'Aluminum', (X, Y), 3, automesh=self.bool_automesh, incircuit=circuit_name, turns=1)
+                block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit=circuit_name, turns=1)
 
                 THETA = THETA_BAR + angle_per_slot*self.rotor_slot_per_pole
                 X = R*cos(THETA); Y = R*sin(THETA)
-                block_label(101, 'Aluminum', (X, Y), 3, automesh=self.bool_automesh, incircuit=circuit_name, turns=-1)
+                block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit=circuit_name, turns=-1)
 
                 THETA = THETA_BAR + angle_per_slot*2*self.rotor_slot_per_pole
                 X = R*cos(THETA); Y = R*sin(THETA)
-                block_label(101, 'Aluminum', (X, Y), 3, automesh=self.bool_automesh, incircuit=circuit_name, turns=1)
+                block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit=circuit_name, turns=1)
 
                 THETA = THETA_BAR + angle_per_slot*3*self.rotor_slot_per_pole
                 X = R*cos(THETA); Y = R*sin(THETA)
-                block_label(101, 'Aluminum', (X, Y), 3, automesh=self.bool_automesh, incircuit=circuit_name, turns=-1)
+                block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit=circuit_name, turns=-1)
         elif fraction == 4 or fraction == 2:
             # poly-four-bar-Cage + no bearing current <=> pole specific winding 
             R = 0.5*(im.Location_RotorBarCenter + im.Location_RotorBarCenter2)
@@ -288,18 +299,18 @@ class FEMM_Solver(object):
 
                 THETA = THETA_BAR
                 X = R*cos(THETA); Y = R*sin(THETA)
-                block_label(101, 'Aluminum', (X, Y), 3, automesh=self.bool_automesh, incircuit=circuit_name, turns=1) # rA+ ~ rH+
+                block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit=circuit_name, turns=1) # rA+ ~ rH+
 
                 if fraction == 2:
                     THETA = THETA_BAR + angle_per_slot*self.rotor_slot_per_pole
                     X = R*cos(THETA); Y = R*sin(THETA)
-                    block_label(101, 'Aluminum', (X, Y), 3, automesh=self.bool_automesh, incircuit=circuit_name, turns=-1) # rA- However, this turns=-1 is not effective for PARALLEL_CONNECTED circuit
+                    block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit=circuit_name, turns=-1) # rA- However, this turns=-1 is not effective for PARALLEL_CONNECTED circuit
 
             # the other half bar 
             # THETA_BAR += angle_per_slot
             THETA = THETA + angle_per_slot - 2*EPS
             X = R*cos(THETA); Y = R*sin(THETA)
-            block_label(101, 'Aluminum', (X, Y), 3, automesh=self.bool_automesh, incircuit='r%s'%(self.rotor_phase_name_list[0]), turns=-1) # However, this turns=-1 is not effective for PARALLEL_CONNECTED circuit
+            block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit='r%s'%(self.rotor_phase_name_list[0]), turns=-1) # However, this turns=-1 is not effective for PARALLEL_CONNECTED circuit
 
         # Stator Winding
         if self.flag_static_solver == True: #self.freq == 0: # static 
@@ -341,7 +352,7 @@ class FEMM_Solver(object):
             if fraction == 2:
                 if not (count > im.Qs*0.5+EPS): 
                     continue
-            block_label(11, 'Copper', (X, Y), 8, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.DriveW_turns*dict_dir[up_or_down])
+            block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.DriveW_turns*dict_dir[up_or_down])
 
         # bearing winding's blocks
         if fraction == 1:
@@ -353,7 +364,7 @@ class FEMM_Solver(object):
 
                 # if self.im.fea_config_dict['DPNV'] == True: 
                 # else： # separate winding (e.g., Chiba's)
-                block_label(11, 'Copper', (X, Y), 8, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns*dict_dir[up_or_down])
+                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns*dict_dir[up_or_down])
 
         elif fraction == 4 or fraction == 2:
             # 危险！FEMM默认把没有设置incircuit的导体都在无限远短接在一起——也就是说，你可能把定子悬浮绕组也短接到鼠笼上去了！
@@ -371,7 +382,7 @@ class FEMM_Solver(object):
                 elif fraction == 2:
                     if not (count > im.Qs*0.5+EPS): 
                         continue
-                block_label(11, 'Copper', (X, Y), 8, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns*dict_dir[up_or_down])
+                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns*dict_dir[up_or_down])
 
         # Boundary Conditions 
         # femm.mi_makeABC() # open boundary

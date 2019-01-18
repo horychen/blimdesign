@@ -462,15 +462,44 @@ class SwarmDataAnalyzer(object):
                     return [float(el) for el in self.buf[i*21:(1+i)*21][5].split(',')], float(self.buf[i*21:(1+i)*21][2].split(',')[2])
         return None, None
 
+
+def max_indices_2(arr, k):
+    '''
+    Returns the indices of the k first largest elements of arr
+    (in descending order in values)
+    '''
+    assert k <= arr.size, 'k should be smaller or equal to the array size'
+    arr_ = arr.astype(float)  # make a copy of arr
+    max_idxs = []
+    for _ in range(k):
+        max_element = np.max(arr_)
+        if np.isinf(max_element):
+            break
+        else:
+            idx = np.where(arr_ == max_element)
+        max_idxs.append(idx)
+        arr_[idx] = -np.inf
+    return max_idxs
+
+def max_indices(arr, k):
+    indices = np.argsort(-arr)[-k:]
+    items   = arr[indices]
+    return indices, items
+
+def min_indices(arr, k):
+    return max_indices(-arr)
+
 if __name__ == '__main__':
 
     swda = SwarmDataAnalyzer(run_integer=113)
 
-    print swda.find_individual(14, 0)
+    
+
+    print ''.join(swda.buf[:21]),
     quit()
 
-    # print ''.join(self.buf[1:1+21])
-    print self.buf[:21]
+    print swda.find_individual(14, 0)
+
 
     for design in swda.desig_display_generator():
         print design,

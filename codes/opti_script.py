@@ -123,7 +123,9 @@ run_list = [0,1,0,0,0]
 # run_folder = r'run#110/' # Truly recovable!
 # run_folder = r'run#111/' # new living pop and its fitness and its id
 # run_folder = r'run#112/' # test shitty design
-run_folder = r'run#113/' # never lose any design data again, you can generate initial pop from the IM design database!
+# run_folder = r'run#113/' # never lose any design data again, you can generate initial pop from the IM design database!
+
+run_folder = r'run#114/' # femm-mesh-size-sensitivity study
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -205,8 +207,16 @@ if False:
 
 
 
-while True:
-# if True:
+''' 3. Initialize FEMM Solver (is required)
+''' 
+if fea_config_dict['jmag_run_list'][0] == 0:
+    # and let jmag know about it
+    sw.femm_solver = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static
+
+
+
+# while True:
+if True:
 
     # if optimization_flat == True:
     # generate the initial generation
@@ -214,16 +224,6 @@ while True:
 
     # # add initial_design of Pyrhonen09 to the initial generation
     # utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
-
-
-
-
-    ''' 3. Initialize FEMM Solver (is required)
-    ''' 
-    if fea_config_dict['jmag_run_list'][0] == 0:
-        # and let jmag know about it
-        sw.femm_solver = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static
-
 
 
     ''' 4. Run DE Optimization
@@ -237,11 +237,12 @@ while True:
         # result = list(de_generator)
         for result in de_generator:
             print result
-
     except Exception as e:
         print 'See log file for the error msg.'
         logger.error(u'Optimization aborted.', exc_info=True)
 
+
+        quit()
         try:
             # reload for changed codes
             reload(population) # relaod for JMAG's python environment

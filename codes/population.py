@@ -271,8 +271,11 @@ class swarm(object):
             self.number_current_generation = max([int(el) for el in generations])
 
             # add a database using the swarm_data.txt file
-            self.database = utility.SwarmDataAnalyzer(dir_run=self.dir_run)
-            self.database.the_generation_that_i_am_worried_about = self.number_current_generation+1
+            if os.path.exists(self.dir_run+'swarm_data.txt'):
+                self.database = utility.SwarmDataAnalyzer(dir_run=self.dir_run)
+                self.database.the_generation_that_i_am_worried_about = self.number_current_generation+1
+            else: 
+                self.database = None
 
             if len(generations) == 1:
                 self.init_pop_denorm = self.pop_reader(self.get_gen_file(self.number_current_generation)) # gen#0000
@@ -719,7 +722,7 @@ class swarm(object):
 
 
         # before writing, do a double check that individual (design_parameters) corresponds to the evaluation results
-        if self.number_current_generation == self.database.the_generation_that_i_am_worried_about:
+        if self.database is not None and self.number_current_generation == self.database.the_generation_that_i_am_worried_about:
             design_parameters_database, cost_function_database = self.database.find_individual(self.number_current_generation, individual_index)
             if design_parameters_database is not None:
                 if abs(sum(np.array(design_parameters_database) - np.array(individual)))>1e-4 or abs(cost_function_database-cost_function)>1e-4:

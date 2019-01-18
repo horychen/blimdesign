@@ -38,7 +38,7 @@ if DEBUG_MODE == False:
 else:
     #debug 
     number_of_instantces = 5
-    dir_femm_temp        = "D:/OneDrive - UW-Madison/c/csv_opti/run#108/femm_temp/" # modify as expected
+    dir_femm_temp        = "D:/OneDrive - UW-Madison/c/csv_opti/run#114/femm_temp/" # modify as expected
     stack_length         = 186.4005899999999940
     VAREPSILON = 0.02
 
