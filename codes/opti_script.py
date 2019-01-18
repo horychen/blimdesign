@@ -211,8 +211,8 @@ while True:
     # generate the initial generation
     sw.generate_pop()
 
-    # add initial_design of Pyrhonen09 to the initial generation
-    utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
+    # # add initial_design of Pyrhonen09 to the initial generation
+    # utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
 
 
 
