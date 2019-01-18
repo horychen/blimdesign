@@ -576,6 +576,9 @@ class swarm(object):
         ################################################################
         # Begin from where left: Frequency Study
         ################################################################
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # Eddy Current Solver for Breakdown Torque and Slip
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         # Freq Study: you can choose to not use JMAG to find the breakdown slip.
         original_study_name = im_variant.individual_name + u"Freq"
         slip_freq_breakdown_torque = None
@@ -663,6 +666,7 @@ class swarm(object):
                 self.run_study(im_variant, app, study, clock_time())
             else:
                 # JMAG+JMAG
+                # model = app.GetCurrentModel()
                 im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
                 self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, clock_time())
 
