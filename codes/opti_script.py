@@ -106,6 +106,7 @@ import FEMM_Solver
 import utility
 reload(population) # relaod for JMAG's python environment
 reload(FEMM_Solver)
+reload(utility)
 
 # run_list = [1,1,0,0,0] 
 # run_folder = r'run#100/' # no iron loss csv data but there are field data!
@@ -211,8 +212,8 @@ while True:
     # generate the initial generation
     sw.generate_pop()
 
-    # add initial_design of Pyrhonen09 to the initial generation
-    utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
+    # # add initial_design of Pyrhonen09 to the initial generation
+    # utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
 
 
 
@@ -242,6 +243,11 @@ while True:
         logger.error(u'Optimization aborted.', exc_info=True)
 
         try:
+            # reload for changed codes
+            reload(population) # relaod for JMAG's python environment
+            reload(FEMM_Solver)
+            reload(utility)
+
             # notification via email
             utility.send_notification(u'Optimization aborted.')
         

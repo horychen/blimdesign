@@ -576,9 +576,6 @@ class swarm(object):
         ################################################################
         # Begin from where left: Frequency Study
         ################################################################
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # Eddy Current Solver for Breakdown Torque and Slip
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         # Freq Study: you can choose to not use JMAG to find the breakdown slip.
         original_study_name = im_variant.individual_name + u"Freq"
         slip_freq_breakdown_torque = None
