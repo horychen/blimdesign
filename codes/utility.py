@@ -538,6 +538,8 @@ diff = np.fabs(min_b - max_b)
 
 import itertools
 if __name__ == '__main__':
+    getLogger('')
+    quit()
     swda = SwarmDataAnalyzer(run_integer=113)
 
 

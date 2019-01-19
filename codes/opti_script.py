@@ -1,6 +1,5 @@
 # coding:utf-8
-#execfile('D:/OneDrive - UW-Madison/c/codes/opti_script.py')
-#execfile(r'K:\jchen782\JMAG\c\codes/opti_script.py')
+#execfile(r'I:\jchen782\c\codes/opti_script.py')
 
 ''' 1. General Information & Packages Loading
 '''
@@ -8,32 +7,14 @@ import os
 def where_am_i(fea_config_dict):
     dir_interpreter = os.path.abspath('')
     print dir_interpreter
-    if os.path.exists('D:/'):
-        print 'you are on Legion Y730'
-        dir_parent = 'D:/OneDrive - UW-Madison/c/'
-        dir_codes = dir_parent + 'codes/'
-        dir_lib = dir_parent + 'codes/'
-        # dir_initial_design = dir_parent + 'pop/'
-        # dir_csv_output_folder = dir_parent + 'csv_opti/'
-        dir_femm_files = 'D:/femm42/' # .ans files are too large to store on OneDrive anymore
-        dir_project_files = 'D:/JMAG_Files/'
-        pc_name = 'Y730'
-    elif os.path.exists('I:/'):
+    if os.path.exists('I:/'):
         print 'you are on Severson02'
-        dir_parent = 'I:/jchen782/JMAG/c/'
+        dir_parent = 'I:/jchen782/c/'
         dir_codes = dir_parent + 'codes/'
         dir_lib = dir_parent + 'codes/'
         dir_femm_files = 'I:/jchen782/FEMM/'
         dir_project_files = 'I:/jchen782/JMAG/'
         pc_name = 'Seversion02'
-    elif os.path.exists('K:/'):
-        print 'you are on Severson01'
-        dir_parent = 'K:/jchen782/JMAG/c/'
-        dir_codes = dir_parent + 'codes/'
-        dir_lib = dir_parent + 'codes/'
-        dir_femm_files = 'K:/jchen782/FEMM/'
-        dir_project_files = 'K:/jchen782/JMAG/'
-        pc_name = 'Seversion01'
     # elif 'chen' in 'dir_interpreter':
     #     print 'you are on T440p'
     #     dir_parent = 'C:/Users/Hory Chen/OneDrive - UW-Madison/'
@@ -108,6 +89,7 @@ reload(population) # relaod for JMAG's python environment
 reload(FEMM_Solver)
 reload(utility)
 
+
 # run_list = [1,1,0,0,0] 
 # run_folder = r'run#100/' # no iron loss csv data but there are field data!
 # run_folder = r'run#101/' # 75 deg Celsius, iron loss csv data, delete field data after calculation.
@@ -124,8 +106,9 @@ run_list = [0,1,0,0,0]
 # run_folder = r'run#111/' # new living pop and its fitness and its id
 # run_folder = r'run#112/' # test shitty design
 # run_folder = r'run#113/' # never lose any design data again, you can generate initial pop from the IM design database!
+# run_folder = r'run#114/' # femm-mesh-size-sensitivity study
+run_folder = r'run#300/' # Severson02 fobj_test
 
-run_folder = r'run#114/' # femm-mesh-size-sensitivity study
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -156,6 +139,13 @@ logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_'+run_folde
 # if os.path.exists('d:/OneDrive - UW-Madison/c/pop/Tran2TSS_PS_Opti.txt'):
 #     os.system('bash -c "mv /mnt/d/OneDrive\ -\ UW-Madison/c/pop/Tran2TSS_PS_Opti.txt /mnt/d/OneDrive\ -\ UW-Madison/c/pop/initial_design.txt"')
 
+# run113_avg_design = [6.8479078 , 1.09645166 ,1.17879276 ,4.2090446 , 2.06942032, 5.6651908, 1.65094426]
+# from numpy import array
+# upper_bounds = array(run113_avg_design)*1.1
+# lower_bounds = array(run113_avg_design)*0.9
+# print upper_bounds
+# print lower_bounds
+# quit()
 
 
 ''' 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG)
@@ -175,21 +165,19 @@ if fea_config_dict['flag_optimization'] == True:
         #                     'popsize':    20,
         #                     'iterations': 48 } # begin at 5
     else: # based on Pyrhonen09                         # see Tran2TSS_PS_Opti.xlsx
-        de_config_dict = {  'bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
-                                            [ 0.8,   4],   # air_gap_length_delta
-                                            [5e-1,   3],   # Width_RotorSlotOpen 
-                                            [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-                                            [5e-1,   3],   # Length_HeadNeckRotorSlot
-                                            [   1,  10],   # Angle_StatorSlotOpen
-                                            [5e-1,   3] ], # Width_StatorTeethHeadThickness
+        de_config_dict = {  'bounds':     [ [6.16311702,  7.53269858],#--# stator_tooth_width_b_ds
+                                            [0.98680649,  1.20609683],   # air_gap_length_delta
+                                            [1.06091348,  1.29667204],   # Width_RotorSlotOpen 
+                                            [3.78814014,  4.62994906],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                            [1.86247829,  2.27636235],   # Length_HeadNeckRotorSlot
+                                            [5.09867172,  6.23170988],   # Angle_StatorSlotOpen
+                                            [1.48584983,  1.81603869] ], # Width_StatorTeethHeadThickness
                             'mut':        0.8,
                             'crossp':     0.7,
                             'popsize':    50, # 50, # 100,
                             'iterations': 2*48 } # 148
 else:
     de_config_dict = None
-
-
 
 
 # init the swarm
