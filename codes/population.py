@@ -572,6 +572,7 @@ class swarm(object):
                 self.pyplot_clear()
             except Exception, e:
                 logger.error(u'Error when loading csv results for Tran2TSS.', exc_info=True)
+                raise e
             # show()
 
             return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list, power_factor
@@ -714,10 +715,10 @@ class swarm(object):
         # which means the FEang must be up to 50deg so so be the same level as TpRV=30e3 or FpRW=1 or eta=316%
         list_weighted_cost = [  30e3 / ( torque_average/rotor_volume ),
                                 1.0 / ( ss_avg_force_magnitude/rotor_weight ),
-                                normalized_torque_ripple         *   2, #       / 0.05 * 0.1
-                                normalized_force_error_magnitude *   2, #       / 0.05 * 0.1
-                                force_error_angle * 0.2          * 0.1, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
-                                10 / efficiency**2,
+                                normalized_torque_ripple         *   20, #       / 0.05 * 0.1
+                                normalized_force_error_magnitude *   20, #       / 0.05 * 0.1
+                                force_error_angle * 0.2          *    1, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
+                                10 / efficiency**6,
                                 im_variant.thermal_penalty ] # thermal penalty is evaluated when drawing the model according to the parameters' constraints (if the rotor current and rotor slot size requirement does not suffice)
         cost_function = sum(list_weighted_cost)
 
