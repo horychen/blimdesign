@@ -63,7 +63,7 @@ def where_am_i(fea_config_dict):
         if fea_config_dict['Restart'] == False:
             fea_config_dict['OnlyTableResults'] = True  # save disk space for my PC
     # However, we need field data for iron loss calculation
-    fea_config_dict['OnlyTableResults'] = False 
+    fea_config_dict['OnlyTableResults'] = False
 
 fea_config_dict = {
     ##########################
@@ -91,12 +91,12 @@ fea_config_dict = {
     'DPNV': True,
     'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
 
-    'Steel': 'M19Gauge29', 
+    'Steel': 'M19Gauge29',
     # 'Steel': 'M15',
-    # 'Steel': 'Arnon5', 
+    # 'Steel': 'Arnon5',
                                 # If you modify the temperature here, you should update the initial design (the im.DriveW_Rs should be updated and it used in JMAG FEM Coil)
     'Bar_Conductivity':1/((3.76*75+873)*1e-9/55.), # 1/((3.76*100+873)*1e-9/55.) for Copper, where temperature is 25 or 100 deg Celsius.
-    # 'Bar_Conductivity':40e6, # 40e6 for Aluminium; 
+    # 'Bar_Conductivity':40e6, # 40e6 for Aluminium;
 }
 where_am_i(fea_config_dict)
 from sys import path as sys_path
@@ -108,14 +108,14 @@ reload(population) # relaod for JMAG's python environment
 reload(FEMM_Solver)
 reload(utility)
 
-# run_list = [1,1,0,0,0] 
+# run_list = [1,1,0,0,0]
 # run_folder = r'run#100/' # no iron loss csv data but there are field data!
 # run_folder = r'run#101/' # 75 deg Celsius, iron loss csv data, delete field data after calculation.
 # run_folder = r'run#102/' # the efficiency is added to objective function，原来没有考虑效率的那些设计必须重新评估，否则就不会进化了，都是旧的好！
 # run_folder = r'run#103/' # From this run, write denormalized pop data to disk!
 # run_folder = r'run#104/' # Make sure all the gen#xxxx file uses denormalized values.
-run_list = [0,1,0,0,0] 
-# run_folder = r'run#105/' # Femm is used for breakdown torque and frequency! 
+run_list = [0,1,0,0,0]
+# run_folder = r'run#105/' # Femm is used for breakdown torque and frequency!
 # run_folder = r'run#106/' # You need to initialize femm_solver every calling of fobj
 # run_folder = r'run#107/' # There is no slide mesh if you add new study for Tran2TSS
 # run_folder = r'run#108/' # Efficiency is added. femm_found.fem feature is added.
@@ -124,8 +124,8 @@ run_list = [0,1,0,0,0]
 # run_folder = r'run#111/' # new living pop and its fitness and its id
 # run_folder = r'run#112/' # test shitty design
 # run_folder = r'run#113/' # never lose any design data again, you can generate initial pop from the IM design database!
-
-run_folder = r'run#114/' # femm-mesh-size-sensitivity study
+# run_folder = r'run#114/' # femm-mesh-size-sensitivity study
+run_folder = r'run#115/' # serverson01-run
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -165,7 +165,7 @@ if fea_config_dict['flag_optimization'] == True:
         pass
         # de_config_dict = {  'bounds':     [ [   3, 9],   # stator_tooth_width_b_ds
         #                                     [ 0.8, 4],   # air_gap_length_delta
-        #                                     [5e-1, 3],   # Width_RotorSlotOpen 
+        #                                     [5e-1, 3],   # Width_RotorSlotOpen
         #                                     [ 2.5, 6],   # rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
         #                                     [5e-1, 3],   # Length_HeadNeckRotorSlot
         #                                     [   1, 10],  # Angle_StatorSlotOpen
@@ -177,7 +177,7 @@ if fea_config_dict['flag_optimization'] == True:
     else: # based on Pyrhonen09                         # see Tran2TSS_PS_Opti.xlsx
         de_config_dict = {  'bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
                                             [ 0.8,   4],   # air_gap_length_delta
-                                            [5e-1,   3],   # Width_RotorSlotOpen 
+                                            [5e-1,   3],   # Width_RotorSlotOpen
                                             [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
                                             [5e-1,   3],   # Length_HeadNeckRotorSlot
                                             [   1,  10],   # Angle_StatorSlotOpen
@@ -208,7 +208,7 @@ if False:
 
 
 ''' 3. Initialize FEMM Solver (is required)
-''' 
+'''
 if fea_config_dict['jmag_run_list'][0] == 0:
     # and let jmag know about it
     sw.femm_solver = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static
@@ -231,7 +231,7 @@ if True:
     # write FEA config to disk
     sw.write_to_file_fea_config_dict()
 
-    try: 
+    try:
         de_generator = sw.de()
         # run
         # result = list(de_generator)
@@ -251,10 +251,10 @@ if True:
 
             # notification via email
             utility.send_notification(u'Optimization aborted.')
-        
+
             # msg = 'Pop status report\n------------------------\n'
             # msg += '\n'.join('%.16f'%(x) for x in sw.fitness) + '\n'
-            # msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)    
+            # msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)
             # logger.debug(msg)
 
             # sw.bool_auto_recovered_run = True
@@ -281,7 +281,7 @@ Freq: 2:16 (13 Steps)
 Tran2TSS: 3:38 (81 Steps)
 Freq-FFVRC: 1:33 (10 Steps)
 TranRef: 1:49:02 (3354 Steps) -> 3:18:19 if no MultiCPU
-StaticJMAG: 
+StaticJMAG:
 StaticFEMM: 15 sec one eddy current solve
             7 sec one static solve
 '''
