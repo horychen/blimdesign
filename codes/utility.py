@@ -547,9 +547,19 @@ if __name__ == '__main__':
         f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in gen_best)) # convert 2d array to string            
 
     design_parameters_norm = (gen_best - min_b) / diff
+
+
     for el in design_parameters_norm:
         print ','.join('%.4f'%(_) for _ in el.tolist())
     print 'airgap length\n', [el[1] for el in gen_best]
+
+    print 'Average value of design parameters'
+    avg_design_parameters = []
+    for el in design_parameters_norm.T:
+        avg_design_parameters.append(sum(el)/len(el))
+    print avg_design_parameters
+    avg_design_parameters_denorm = min_b + avg_design_parameters * diff
+    print avg_design_parameters_denorm
 
     # for design in swda.get_best_generation(generator=swda.design_display_generator()):
     #     print ''.join(design),

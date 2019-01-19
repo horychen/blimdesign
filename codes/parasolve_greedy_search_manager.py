@@ -108,7 +108,7 @@ while True:
             break
 
     print '-----------------------'
-    print list_solver_id
+    # print list_solver_id
     print list_slipfreq
     print list_torque
 
@@ -116,11 +116,13 @@ while True:
     list_torque_copy = list_torque[::]
     index_1st, breakdown_torque_1st = max(enumerate(list_torque_copy), key=operator.itemgetter(1))
     breakdown_slipfreq_1st = list_slipfreq[index_1st]
+    print 'Max is', index_1st, breakdown_torque_1st
 
     # find the 2nd max
     list_torque_copy[index_1st] = -999999
     index_2nd, breakdown_torque_2nd = max(enumerate(list_torque_copy), key=operator.itemgetter(1))
     breakdown_slipfreq_2nd = list_slipfreq[index_2nd]
+    print '2nd max is', index_2nd, breakdown_torque_2nd
 
     print 'max slip freq error=', 0.5*(breakdown_slipfreq_1st - breakdown_slipfreq_2nd), 'Hz', ', 2*EPS=%g'%(VAREPSILON)
 
@@ -142,11 +144,15 @@ while True:
         print 'not yet'
 
         # not found yet, try new frequencies.
-        if breakdown_slipfreq_1st > breakdown_torque_2nd:
-            freq_begin = breakdown_slipfreq_1st + 1.
-            freq_end   = freq_begin + number_of_instantces - 1.
+        if breakdown_slipfreq_1st > breakdown_slipfreq_2nd:
+            if breakdown_slipfreq_1st == list_slipfreq[-1]:
+                freq_begin = breakdown_slipfreq_1st + 1.
+                freq_end   = freq_begin + number_of_instantces - 1.
+            else:
+                freq_begin = breakdown_slipfreq_1st
+                freq_end   = breakdown_slipfreq_2nd
 
-        elif breakdown_slipfreq_1st < breakdown_torque_2nd:
+        elif breakdown_slipfreq_1st < breakdown_slipfreq_2nd:
             freq_begin = breakdown_slipfreq_1st
             freq_end   = breakdown_slipfreq_2nd
 

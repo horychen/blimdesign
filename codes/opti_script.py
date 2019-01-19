@@ -20,7 +20,7 @@ def where_am_i(fea_config_dict):
         pc_name = 'Y730'
     elif os.path.exists('I:/'):
         print 'you are on Severson02'
-        dir_parent = 'I:/jchen782/JMAG/c/'
+        dir_parent = 'I:/jchen782/c/'
         dir_codes = dir_parent + 'codes/'
         dir_lib = dir_parent + 'codes/'
         dir_femm_files = 'I:/jchen782/FEMM/'
@@ -28,7 +28,7 @@ def where_am_i(fea_config_dict):
         pc_name = 'Seversion02'
     elif os.path.exists('K:/'):
         print 'you are on Severson01'
-        dir_parent = 'K:/jchen782/JMAG/c/'
+        dir_parent = 'K:/jchen782/c/'
         dir_codes = dir_parent + 'codes/'
         dir_lib = dir_parent + 'codes/'
         dir_femm_files = 'K:/jchen782/FEMM/'

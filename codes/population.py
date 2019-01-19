@@ -270,13 +270,6 @@ class swarm(object):
             # number_current_generation begins at 0
             self.number_current_generation = max([int(el) for el in generations])
 
-            # add a database using the swarm_data.txt file
-            if os.path.exists(self.dir_run+'swarm_data.txt'):
-                self.database = utility.SwarmDataAnalyzer(dir_run=self.dir_run)
-                self.database.the_generation_that_i_am_worried_about = self.number_current_generation+1
-            else: 
-                self.database = None
-
             if len(generations) == 1:
                 self.init_pop_denorm = self.pop_reader(self.get_gen_file(self.number_current_generation)) # gen#0000
                 self.init_fitness = None
@@ -319,6 +312,12 @@ class swarm(object):
             elif popsize < solved_popsize:
                 raise Exception('Reducing popsize during a run---feature is not supported.')
 
+        # add a database using the swarm_data.txt file
+        if os.path.exists(self.dir_run+'swarm_data.txt'):
+            self.database = utility.SwarmDataAnalyzer(dir_run=self.dir_run)
+            self.database.the_generation_that_i_am_worried_about = self.number_current_generation+1
+        else: 
+            self.database = None
 
         # pop: make sure the data type is array
         self.init_pop = np.asarray(self.init_pop)
@@ -572,6 +571,7 @@ class swarm(object):
                 self.pyplot_clear()
             except Exception, e:
                 logger.error(u'Error when loading csv results for Tran2TSS.', exc_info=True)
+                raise e
             # show()
 
             return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list, power_factor
@@ -704,7 +704,7 @@ class swarm(object):
             # some factor to account for rotor iron loss?
             # iron_loss *= 1
 
-        # 这样计算效率，输出转矩大的，铁耗大一倍也没关系了，总之就是气隙变得最小。。。要不就不要用气隙这个变量了吧？
+        # 这样计算效率，输出转矩大的，铁耗大一倍也没关系了，总之就是气隙变得最小。。。要不就不要优化气隙了。。。
 
         total_loss   = copper_loss + iron_loss
         efficiency   = shaft_power / (total_loss + shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
