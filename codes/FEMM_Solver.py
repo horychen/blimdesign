@@ -206,7 +206,7 @@ class FEMM_Solver(object):
         SERIES_CONNECTED = 1
         PARALLEL_CONNECTED = 0
 
-        if True: # Coarse mesh
+        if self.im.fea_config_dict['FEMM_Coarse_Mesh']==True: # Coarse mesh
             MESH_SIZE_ALUMINUM = 2 * 6    # 3
             MESH_SIZE_STEEL    = 2 * 6    # 4
             MESH_SIZE_AIR      = 2 * 0.75 # 0.5 

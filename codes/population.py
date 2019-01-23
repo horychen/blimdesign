@@ -257,6 +257,26 @@ class swarm(object):
             
             # generate the initial random swarm from the initial design
             self.init_pop = np.random.rand(popsize, dimensions) # normalized design parameters between 0 and 1
+            # # 敏感性检查：以基本设计为准，检查不同的参数取极值时的电机性能变化！这是最简单有效的办法。七个设计参数，那么就有14种极值设计。
+            if self.fea_config_dict['run_folder'] == r'run#115/':
+                # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
+                initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
+                initial_design = (initial_design_denorm - min_b) / diff
+                print initial_design_denorm.tolist()
+                print initial_design.tolist()
+                base_design = initial_design.tolist()
+                print base_design, '\n-------------'
+                numver_of_variants = 5
+                self.init_pop = []
+                for i in range(len(base_design)): # 7 design parameters
+                    for j in range(numver_of_variants+1): # 5 variants interval
+                        # copy list
+                        design_variant = base_design[::]
+                        design_variant[i] = j * 1./numver_of_variants
+                        self.init_pop.append(design_variant)
+                for ind, el in enumerate(self.init_pop):
+                    print ind, el
+                # quit()
             self.init_pop_denorm = min_b + self.init_pop * diff
             self.init_fitness = None
 
@@ -717,7 +737,7 @@ class swarm(object):
                                 normalized_torque_ripple         *   2, #       / 0.05 * 0.1
                                 normalized_force_error_magnitude *   2, #       / 0.05 * 0.1
                                 force_error_angle * 0.2          * 0.1, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
-                                10 / efficiency**2,
+                                2*total_loss/2500., #10 / efficiency**2,
                                 im_variant.thermal_penalty ] # thermal penalty is evaluated when drawing the model according to the parameters' constraints (if the rotor current and rotor slot size requirement does not suffice)
         cost_function = sum(list_weighted_cost)
 
@@ -941,12 +961,20 @@ class swarm(object):
                         raise Exception('pop fit < liv fit?')
                     else:
                         # the living fitness must be smaller or the same to f
-                        print '--------------'
-                        print trial_denorm.tolist(), f, 'larger?'
-                        print pop_denorm[j].tolist(), self.ongoing_living_fitness[j], 'smaller?'
+                        # print '--------------'
+                        # print trial_denorm.tolist(), f, 'larger?'
+                        # print pop_denorm[j].tolist(), self.ongoing_living_fitness[j], 'smaller?'
                         pop_denorm[j] = self.ongoing_living_pop_denorm[j] # read from liv-ongoing#xxxx.txt
                         pop[j] = (pop_denorm[j] - min_b) / diff
-                        print pop_denorm[j].tolist()
+                        # print pop_denorm[j].tolist()
+                        # These tolist will cause unexpected IO exception 
+                        # 2019-01-19 00:14:59,193 - root - ERROR - Optimization aborted.
+                        # Traceback (most recent call last):
+                        #   File "K:\jchen782\c\codes/opti_script.py", line 221, in <module>
+                        #     for result in de_generator:
+                        #   File "K:/jchen782/c/codes/population.py", line 958, in de
+                        #     print pop_denorm[j].tolist()
+                        # IOError: [Errno 9] Bad file descriptor
 
                 else:
                     logger.debug('Build individual #%d' % (j)) 
@@ -1484,17 +1512,17 @@ class swarm(object):
             cond.AddSelected(sel)
             # Rotor
             study.CreateCondition(u"Ironloss", u"IronLossConRotor")
-            study.GetCondition(u"IronLossConRotor").SetValue(u"BasicFrequencyType", 2)
-            study.GetCondition(u"IronLossConRotor").SetValue(u"BasicFrequency", u"slip*freq")
-            study.GetCondition(u"IronLossConRotor").ClearParts()
-            sel = study.GetCondition(u"IronLossConRotor").GetSelection()
+            cond.SetValue(u"BasicFrequencyType", 2)
+            cond.SetValue(u"BasicFrequency", u"slip*freq")
+            cond.ClearParts()
+            sel = cond.GetSelection()
             sel.SelectPartByPosition(-im.Radius_Shaft-1e-2, 0 ,0)
-            study.GetCondition(u"IronLossConRotor").AddSelected(sel)
+            cond.AddSelected(sel)
             # Use FFT for hysteresis to be consistent with FEMM's results
             cond.SetValue(u"HysteresisLossCalcType", 1)
             cond.SetValue(u"PresetType", 3)
-            study.GetCondition(u"IronLossConRotor").SetValue(u"HysteresisLossCalcType", 1)
-            study.GetCondition(u"IronLossConRotor").SetValue(u"PresetType", 3)
+            cond.SetValue(u"HysteresisLossCalcType", 1)
+            cond.SetValue(u"PresetType", 3)
 
 
             # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
@@ -2541,15 +2569,15 @@ class swarm(object):
             study.GetMaterial(u"Coil").SetValue(u"OutputResult", 0)
             # Rotor
                 # study.CreateCondition(u"Ironloss", u"IronLossConRotor")
-                # study.GetCondition(u"IronLossConRotor").SetValue(u"BasicFrequencyType", 2)
-                # study.GetCondition(u"IronLossConRotor").SetValue(u"BasicFrequency", u"slip*freq")
-                # study.GetCondition(u"IronLossConRotor").ClearParts()
-                # sel = study.GetCondition(u"IronLossConRotor").GetSelection()
+                # cond.SetValue(u"BasicFrequencyType", 2)
+                # cond.SetValue(u"BasicFrequency", u"slip*freq")
+                # cond.ClearParts()
+                # sel = cond.GetSelection()
                 # sel.SelectPartByPosition(-im.Radius_Shaft-1e-2, 0 ,0)
-                # study.GetCondition(u"IronLossConRotor").AddSelected(sel)
+                # cond.AddSelected(sel)
                 # # Use FFT for hysteresis to be consistent with FEMM's results
-                # study.GetCondition(u"IronLossConRotor").SetValue(u"HysteresisLossCalcType", 1)
-                # study.GetCondition(u"IronLossConRotor").SetValue(u"PresetType", 3)
+                # cond.SetValue(u"HysteresisLossCalcType", 1)
+                # cond.SetValue(u"PresetType", 3)
 
             # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
             study.GetStudyProperties().SetValue(u"DirectSolverType", 1)
@@ -3967,23 +3995,24 @@ class bearingless_induction_motor_design(object):
 
         # Iron Loss Calculation Condition
         # Stator 
-        cond = study.CreateCondition(u"Ironloss", u"IronLossConStator")
-        cond.SetValue(u"RevolutionSpeed", u"freq*60/%d"%(0.5*(im_variant.DriveW_poles)))
-        cond.ClearParts()
-        sel = cond.GetSelection()
-        sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+1e-2, 0 ,0)
-        cond.AddSelected(sel)
-        # Use FFT for hysteresis to be consistent with FEMM's results and to have a FFT plot
-        cond.SetValue(u"HysteresisLossCalcType", 1)
-        cond.SetValue(u"PresetType", 3) # 3:Custom
-        # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
-        cond.SetValue(u"StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
-        cond.SetValue(u"EndReferenceStep", number_of_total_steps)
-        cond.SetValue(u"UseStartReferenceStep", 1)
-        cond.SetValue(u"UseEndReferenceStep", 1)
-        cond.SetValue(u"Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
-        cond.SetValue(u"UseFrequencyOrder", 1)
-        cond.SetValue(u"FrequencyOrder", u"1-50") # Harmonics up to 50th orders 
+        if True:
+            cond = study.CreateCondition(u"Ironloss", u"IronLossConStator")
+            cond.SetValue(u"RevolutionSpeed", u"freq*60/%d"%(0.5*(im_variant.DriveW_poles)))
+            cond.ClearParts()
+            sel = cond.GetSelection()
+            sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+1e-2, 0 ,0)
+            cond.AddSelected(sel)
+            # Use FFT for hysteresis to be consistent with FEMM's results and to have a FFT plot
+            cond.SetValue(u"HysteresisLossCalcType", 1)
+            cond.SetValue(u"PresetType", 3) # 3:Custom
+            # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
+            cond.SetValue(u"StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
+            cond.SetValue(u"EndReferenceStep", number_of_total_steps)
+            cond.SetValue(u"UseStartReferenceStep", 1)
+            cond.SetValue(u"UseEndReferenceStep", 1)
+            cond.SetValue(u"Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
+            cond.SetValue(u"UseFrequencyOrder", 1)
+            cond.SetValue(u"FrequencyOrder", u"1-50") # Harmonics up to 50th orders 
         # Check CSV reults for iron loss (You cannot check this for Freq study) # CSV and save space
         study.GetStudyProperties().SetValue(u"CsvOutputPath", dir_csv_output_folder) # it's folder rather than file!
         study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;LineCurrent;TerminalVoltage;JouleLoss;TotalDisplacementAngle;JouleLoss_IronLoss;IronLoss_IronLoss;HysteresisLoss_IronLoss")
@@ -4002,17 +4031,26 @@ class bearingless_induction_motor_design(object):
         study.GetMaterial(u"Cage").SetValue(u"OutputResult", 0)
         study.GetMaterial(u"Coil").SetValue(u"OutputResult", 0)
         # Rotor
-            # study.CreateCondition(u"Ironloss", u"IronLossConRotor")
-            # study.GetCondition(u"IronLossConRotor").SetValue(u"BasicFrequencyType", 2)
-            # study.GetCondition(u"IronLossConRotor").SetValue(u"BasicFrequency", u"slip*freq")
-            # study.GetCondition(u"IronLossConRotor").ClearParts()
-            # sel = study.GetCondition(u"IronLossConRotor").GetSelection()
-            # sel.SelectPartByPosition(-im.Radius_Shaft-1e-2, 0 ,0)
-            # study.GetCondition(u"IronLossConRotor").AddSelected(sel)
-            # # Use FFT for hysteresis to be consistent with FEMM's results
-            # study.GetCondition(u"IronLossConRotor").SetValue(u"HysteresisLossCalcType", 1)
-            # study.GetCondition(u"IronLossConRotor").SetValue(u"PresetType", 3)
-
+        if True:
+            cond = study.CreateCondition(u"Ironloss", u"IronLossConRotor")
+            cond.SetValue(u"BasicFrequencyType", 2)
+            cond.SetValue(u"BasicFrequency", u"freq")
+                # cond.SetValue(u"BasicFrequency", u"slip*freq") # this require the signal length to be at least 1/4 of slip period, that's too long!
+            cond.ClearParts()
+            sel = cond.GetSelection()
+            sel.SelectPartByPosition(-im.Radius_Shaft-1e-2, 0 ,0)
+            cond.AddSelected(sel)
+            # Use FFT for hysteresis to be consistent with FEMM's results
+            cond.SetValue(u"HysteresisLossCalcType", 1)
+            cond.SetValue(u"PresetType", 3)
+            # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
+            cond.SetValue(u"StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
+            cond.SetValue(u"EndReferenceStep", number_of_total_steps)
+            cond.SetValue(u"UseStartReferenceStep", 1)
+            cond.SetValue(u"UseEndReferenceStep", 1)
+            cond.SetValue(u"Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
+            cond.SetValue(u"UseFrequencyOrder", 1)
+            cond.SetValue(u"FrequencyOrder", u"1-50") # Harmonics up to 50th orders 
         self.study_name = study_name
         return study
 

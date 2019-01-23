@@ -511,6 +511,7 @@ class SwarmDataAnalyzer(object):
 
         cost = swda.lsit_cost_function()
         indices, items = min_indices(cost, popsize)
+        print indices, items
 
         gen_best = []
         for index, design in enumerate(generator):
@@ -538,7 +539,9 @@ diff = np.fabs(min_b - max_b)
 
 import itertools
 if __name__ == '__main__':
-    swda = SwarmDataAnalyzer(run_integer=113)
+
+    # swda = SwarmDataAnalyzer(run_integer=113)
+    swda = SwarmDataAnalyzer(run_integer=200)
 
 
     # Pareto Optimal Front
