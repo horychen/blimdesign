@@ -519,17 +519,42 @@ class SwarmDataAnalyzer(object):
                 gen_best.append(design)
         return gen_best
 
-de_config_dict = {  'bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
-                                    [ 0.8,   4],   # air_gap_length_delta
+    def get_list_objective_function(self):
+        for i in range(self.number_of_designs):
+            individual = self.buf[i*21:(1+i)*21]
+            yield     [float(el) for el in individual[3].split(',')] #\
+                    # + [float(el) for el in individual[17][16:].split(',')] \
+                    # + [float(el) for el in individual[18][16:].split(',')]
+
+    def get_certain_objective_function(self, which):
+        for i in range(self.number_of_designs):
+            individual = self.buf[i*21:(1+i)*21]
+            yield [float(el) for el in individual[3].split(',')][which]
+
+# run 115
+de_config_dict = {  'bounds':     [ [ 4.9,   9],#--# stator_tooth_width_b_ds
+                                    [ 0.8,   3],   # air_gap_length_delta
                                     [5e-1,   3],   # Width_RotorSlotOpen 
-                                    [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                    [ 2.7,   5],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
                                     [5e-1,   3],   # Length_HeadNeckRotorSlot
                                     [   1,  10],   # Angle_StatorSlotOpen
                                     [5e-1,   3] ], # Width_StatorTeethHeadThickness
                     'mut':        0.8,
                     'crossp':     0.7,
-                    'popsize':    50, # 50, # 100,
-                    'iterations': 2*48 } # 148
+                    'popsize':    42, # 50, # 100,
+                    'iterations': 1 } # 148
+# run 114 and 200
+# de_config_dict = {  'bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
+#                                     [ 0.8,   4],   # air_gap_length_delta
+#                                     [5e-1,   3],   # Width_RotorSlotOpen 
+#                                     [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+#                                     [5e-1,   3],   # Length_HeadNeckRotorSlot
+#                                     [   1,  10],   # Angle_StatorSlotOpen
+#                                     [5e-1,   3] ], # Width_StatorTeethHeadThickness
+#                     'mut':        0.8,
+#                     'crossp':     0.7,
+#                     'popsize':    50, # 50, # 100,
+#                     'iterations': 2*48 } # 148
 bounds = de_config_dict['bounds']
 dimensions = len(bounds)
 min_b, max_b = np.asarray(bounds).T 
@@ -539,12 +564,171 @@ diff = np.fabs(min_b - max_b)
 
 import itertools
 if __name__ == '__main__':
+    from pylab import *
+    import seaborn as sns
+    # style.use('seaborn-poster') #sets the size of the charts
+    # style.use('grayscale')
+    # ax = sns.barplot(y= "Deaths", x = "Causes", data = deaths_pd, palette=("Blues_d"))
+    # sns.set_context("poster")
+
+    def autolabel(rects, xpos='center'):
+        """
+        Attach a text label above each bar in *rects*, displaying its height.
+
+        *xpos* indicates which side to place the text w.r.t. the center of
+        the bar. It can be one of the following {'center', 'right', 'left'}.
+        """
+
+        xpos = xpos.lower()  # normalize the case of the parameter
+        ha = {'center': 'center', 'right': 'left', 'left': 'right'}
+        offset = {'center': 0.5, 'right': 0.57, 'left': 0.43}  # x_txt = x + w*off
+
+        for rect in rects:
+            height = rect.get_height()
+            ax.text(rect.get_x() + rect.get_width()*offset[xpos], 1.01*height,
+                    '%.2f'%(height), ha=ha[xpos], va='bottom', rotation=90)
+
 
     # swda = SwarmDataAnalyzer(run_integer=113)
-    swda = SwarmDataAnalyzer(run_integer=200)
+    # swda = SwarmDataAnalyzer(run_integer=200)
 
+    # swda = SwarmDataAnalyzer(run_integer=115)
+    # number_of_variant = 5 + 1
 
-    # Pareto Optimal Front
+    swda = SwarmDataAnalyzer(run_integer=116)
+    number_of_variant = 20 + 1
+
+    fi, axeses = subplots(4, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+    ax_list = []
+    for i in range(4):
+        ax_list.extend(axeses[i].tolist())
+
+    obj_list = ['stator_tooth_width_b_ds',
+    'air_gap_length_delta',
+    'Width_RotorSlotOpen ',
+    'rotor_tooth_width_b_dr',
+    'Length_HeadNeckRotorSlot',
+    'Angle_StatorSlotOpen',
+    'Width_StatorTeethHeadThickness']
+    # [power_factor, efficiency, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle]
+    y_label_list = ['PF', r'$\eta$ [100%]', r'$T_{em} [N]$', r'$T_{rip}$ [100%]', r'$|F|$ [N]', r'$E_m$ [100%]', r'$E_a$ [deg]', r'$P_{Cu,s}$', r'$P_{Cu,r}$', r'$P_{Fe}$ [W]', r'$P_{eddy}$', r'$P_{hyst}$', r'$P_{Cu,s}$', r'$P_{Cu,r}$']
+    # print next(swda.get_list_objective_function())
+    data_max = []
+    data_min = []
+    for ind, i in enumerate(range(7)+[9]):
+    # for i in range(14):
+        print '\n-----------', y_label_list[i]
+        l = list(swda.get_certain_objective_function(i))
+
+        # y = l[:len(l)/2] # 115
+        y = l # 116
+
+        data_max.append([])
+        data_min.append([])
+        for j in range(len(y)/number_of_variant): # iterate design parameters
+            y_vs_design_parameter = y[j*number_of_variant:(j+1)*number_of_variant]
+
+            # if j == 6:
+            ax_list[ind].plot(y_vs_design_parameter, label=str(j), alpha=0.5)
+            print '\t', j, obj_list[j], '\t\t', max(y_vs_design_parameter) - min(y_vs_design_parameter)
+
+            data_max[ind].append(max(y_vs_design_parameter))
+            data_min[ind].append(min(y_vs_design_parameter))
+
+        if i==1:
+            ax_list[ind].legend()
+        ax_list[ind].grid()
+        ax_list[ind].set_ylabel(y_label_list[i])
+
+    for ind, el in enumerate(data_max):
+        print ind, el
+    # print data_min
+
+    rotor_weight = 50
+    required_torque = 16
+
+    data_max = array(data_max)
+    data_max[0]                     # PF
+    data_max[1]                     # eta
+    data_max[2] /= required_torque  # 100%
+    data_max[3] /= 0.1              # 100%
+    data_max[4] /= rotor_weight     # 100% = FRW
+    data_max[5] /= 0.1              # 100%
+    data_max[6] /= 5                # deg
+    data_max[7] /= 2500             # W
+    y_max_vs_design_parameter_0 = [el[0] for el in data_max]
+    y_max_vs_design_parameter_1 = [el[1] for el in data_max]
+    y_max_vs_design_parameter_2 = [el[2] for el in data_max]
+    y_max_vs_design_parameter_3 = [el[3] for el in data_max]
+    y_max_vs_design_parameter_4 = [el[4] for el in data_max]
+    y_max_vs_design_parameter_5 = [el[5] for el in data_max]
+    y_max_vs_design_parameter_6 = [el[6] for el in data_max]
+
+    data_min = array(data_min)
+    data_min[0]                     # PF
+    data_min[1]                     # eta
+    data_min[2] /= required_torque  # 100%
+    data_min[3] /= 0.1              # 100%
+    data_min[4] /= rotor_weight     # 100% = FRW
+    data_min[5] /= 0.1              # 100%
+    data_min[6] /= 5                # deg
+    data_min[7] /= 2500             # W
+    y_min_vs_design_parameter_0 = [el[0] for el in data_min]
+    y_min_vs_design_parameter_1 = [el[1] for el in data_min]
+    y_min_vs_design_parameter_2 = [el[2] for el in data_min]
+    y_min_vs_design_parameter_3 = [el[3] for el in data_min]
+    y_min_vs_design_parameter_4 = [el[4] for el in data_min]
+    y_min_vs_design_parameter_5 = [el[5] for el in data_min]
+    y_min_vs_design_parameter_6 = [el[6] for el in data_min]
+
+    count = np.arange(len(y_max_vs_design_parameter_0))  # the x locations for the groups
+    width = 0.8  # the width of the bars
+
+    fig, ax = plt.subplots()                                                                                        #  #1034A
+    rects1 = ax.bar(count - 3*width/8, y_min_vs_design_parameter_0, width/8, alpha=0.5, label=r'$b_{\rm tooth,s}$', color='#1D2951') # https://digitalsynopsis.com/design/beautiful-color-palettes-combinations-schemes/
+    rects2 = ax.bar(count - 2*width/8, y_min_vs_design_parameter_1, width/8, alpha=0.5, label=r'$\delta$',          color='#0E4D92')
+    rects3 = ax.bar(count - 1*width/8, y_min_vs_design_parameter_2, width/8, alpha=0.5, label=r'$w_{\rm open,r}$',  color='#000080')
+    rects4 = ax.bar(count - 0*width/8, y_min_vs_design_parameter_3, width/8, alpha=0.5, label=r'$b_{\rm tooth,r}$', color='#03396c')
+    rects5 = ax.bar(count + 1*width/8, y_min_vs_design_parameter_4, width/8, alpha=0.5, label=r'$h_{head,s}$',      color='#005b96')
+    rects6 = ax.bar(count + 2*width/8, y_min_vs_design_parameter_5, width/8, alpha=0.5, label=r'$w_{\rm open,s}$',  color='#6497b1')
+    rects7 = ax.bar(count + 3*width/8, y_min_vs_design_parameter_6, width/8, alpha=0.5, label=r'$h_{head,r}$',      color='#b3cde0') 
+    autolabel(rects1)
+    autolabel(rects2)
+    autolabel(rects3)
+    autolabel(rects4)
+    autolabel(rects5)
+    autolabel(rects6)
+    autolabel(rects7)
+
+    rects1 = ax.bar(count - 3*width/8, y_max_vs_design_parameter_0, width/8, bottom=y_min_vs_design_parameter_0, alpha=1.0, label=r'$b_{\rm tooth,s}$', color='#1D2951') 
+    rects2 = ax.bar(count - 2*width/8, y_max_vs_design_parameter_1, width/8, bottom=y_min_vs_design_parameter_1, alpha=1.0, label=r'$\delta$',          color='#0E4D92')
+    rects3 = ax.bar(count - 1*width/8, y_max_vs_design_parameter_2, width/8, bottom=y_min_vs_design_parameter_2, alpha=1.0, label=r'$w_{\rm open,r}$',  color='#000080')
+    rects4 = ax.bar(count - 0*width/8, y_max_vs_design_parameter_3, width/8, bottom=y_min_vs_design_parameter_3, alpha=1.0, label=r'$b_{\rm tooth,r}$', color='#03396c')
+    rects5 = ax.bar(count + 1*width/8, y_max_vs_design_parameter_4, width/8, bottom=y_min_vs_design_parameter_4, alpha=1.0, label=r'$h_{head,s}$',      color='#005b96')
+    rects6 = ax.bar(count + 2*width/8, y_max_vs_design_parameter_5, width/8, bottom=y_min_vs_design_parameter_5, alpha=1.0, label=r'$w_{\rm open,s}$',  color='#6497b1')
+    rects7 = ax.bar(count + 3*width/8, y_max_vs_design_parameter_6, width/8, bottom=y_min_vs_design_parameter_6, alpha=1.0, label=r'$h_{head,r}$',      color='#b3cde0') 
+    autolabel(rects1)
+    autolabel(rects2)
+    autolabel(rects3)
+    autolabel(rects4)
+    autolabel(rects5)
+    autolabel(rects6)
+    autolabel(rects7)
+
+    # Add some text for labels, title and custom x-axis tick labels, etc.
+    ax.set_ylabel('Normalized Objective Functions [%]')
+    # ax.set_title('Scores by group and gender')
+    ax.set_xticks(count)
+    ax.set_xticklabels(('PF', r'$\eta$ [100%]', r'$T_{em} [N]$', r'$T_{rip}$ [100%]', r'$|F|$ [N]', r'$E_m$ [100%]', r'$E_a$ [deg]', r'$P_{Fe}$ [W]'))
+    ax.legend()
+
+    fig.tight_layout()
+
+    show()
+
+    quit()
+
+    # Pseudo Pareto Optimal Front
     gen_best = swda.get_best_generation()
     with open('d:/gen#0000.txt', 'w') as f:
         f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in gen_best)) # convert 2d array to string            

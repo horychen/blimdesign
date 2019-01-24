@@ -277,6 +277,25 @@ class swarm(object):
                 for ind, el in enumerate(self.init_pop):
                     print ind, el
                 # quit()
+            if self.fea_config_dict['run_folder'] == r'run#116/' or self.fea_config_dict['run_folder'] == r'run#117/':
+                # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
+                initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
+                initial_design = (initial_design_denorm - min_b) / diff
+                print initial_design_denorm.tolist()
+                print initial_design.tolist()
+                base_design = initial_design.tolist()
+                print base_design, '\n-------------'
+                numver_of_variants = 20
+                self.init_pop = []
+                for i in range(len(base_design)): # 7 design parameters
+                    for j in range(numver_of_variants+1): # 5 variants interval
+                        # copy list
+                        design_variant = base_design[::]
+                        design_variant[i] = j * 1./numver_of_variants
+                        self.init_pop.append(design_variant)
+                for ind, el in enumerate(self.init_pop):
+                    print ind, el
+                # quit()
             self.init_pop_denorm = min_b + self.init_pop * diff
             self.init_fitness = None
 
@@ -4038,7 +4057,7 @@ class bearingless_induction_motor_design(object):
                 # cond.SetValue(u"BasicFrequency", u"slip*freq") # this require the signal length to be at least 1/4 of slip period, that's too long!
             cond.ClearParts()
             sel = cond.GetSelection()
-            sel.SelectPartByPosition(-im.Radius_Shaft-1e-2, 0 ,0)
+            sel.SelectPartByPosition(-im_variant.Radius_Shaft-1e-2, 0 ,0)
             cond.AddSelected(sel)
             # Use FFT for hysteresis to be consistent with FEMM's results
             cond.SetValue(u"HysteresisLossCalcType", 1)

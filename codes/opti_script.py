@@ -128,6 +128,9 @@ run_list = [0,1,0,0,0]
 # run_folder = r'run#114/' # femm-mesh-size-sensitivity study
 
 run_folder = r'run#115/' # 敏感性检查：以基本设计为准，检查不同的参数取极值时的电机性能变化！这是最简单有效的办法。七个设计参数，那么就有14种极值设计。
+run_folder = r'run#116/' # more variants! 20 of them!
+
+# run_folder = r'run#117/' # run for the candidate design only
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -200,7 +203,7 @@ if fea_config_dict['flag_optimization'] == True:
                             'mut':        0.8,
                             'crossp':     0.7,
                             'popsize':    42, # 50, # 100,
-                            'iterations': 1 } # 148
+                            'iterations': 0 } # 148
 else:
     de_config_dict = None
 
@@ -237,8 +240,8 @@ if True:
     # generate the initial generation
     sw.generate_pop()
 
-    # add initial_design of Pyrhonen09 to the initial generation
-    utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
+    # # add initial_design of Pyrhonen09 to the initial generation
+    # utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
 
 
     ''' 4. Run DE Optimization
@@ -257,7 +260,7 @@ if True:
         logger.error(u'Optimization aborted.', exc_info=True)
 
 
-        quit()
+        # quit()
         try:
             # reload for changed codes
             reload(population) # relaod for JMAG's python environment
