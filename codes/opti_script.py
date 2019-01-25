@@ -76,7 +76,7 @@ fea_config_dict = {
         # directSolver over ICCG Solver
     'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
     'flag_optimization':True,
-    'FEMM_Coarse_Mesh':False,
+    'FEMM_Coarse_Mesh':True,
 
     ##########################
     # Optimization
@@ -129,8 +129,11 @@ run_list = [0,1,0,0,0]
 
 run_folder = r'run#115/' # 敏感性检查：以基本设计为准，检查不同的参数取极值时的电机性能变化！这是最简单有效的办法。七个设计参数，那么就有14种极值设计。
 run_folder = r'run#116/' # more variants! 20 of them!
+run_folder = r'run#117/' # run for the candidate design only
 
-# run_folder = r'run#117/' # run for the candidate design only
+run_folder = r'run#118/' # for plot in TpX (VanGogh prints P1-P8)
+
+run_folder = r'run#120/' # minimize O2 with narrowed bounds according to sensitivity analysis (run#116)
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -193,20 +196,58 @@ if fea_config_dict['flag_optimization'] == True:
         #                     'popsize':    14, # 50, # 100,
         #                     'iterations': 1 } # 148
         # see Tran2TSS_PS_Opti_Btooth=1.1T.xlsx
-        de_config_dict = {  'bounds':     [ [ 4.9,   9],#--# stator_tooth_width_b_ds
-                                            [ 0.8,   3],   # air_gap_length_delta
-                                            [5e-1,   3],   # Width_RotorSlotOpen 
-                                            [ 2.7,   5],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-                                            [5e-1,   3],   # Length_HeadNeckRotorSlot
-                                            [   1,  10],   # Angle_StatorSlotOpen
-                                            [5e-1,   3] ], # Width_StatorTeethHeadThickness
+        de_config_dict = {  'original_bounds':[ [ 4.9,   9],#--# stator_tooth_width_b_ds
+                                                [ 0.8,   3],   # air_gap_length_delta
+                                                [5e-1,   3],   # Width_RotorSlotOpen 
+                                                [ 2.7,   5],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                                [5e-1,   3],   # Length_HeadNeckRotorSlot
+                                                [   1,  10],   # Angle_StatorSlotOpen
+                                                [5e-1,   3] ], # Width_StatorTeethHeadThickness
                             'mut':        0.8,
                             'crossp':     0.7,
-                            'popsize':    42, # 50, # 100,
-                            'iterations': 0 } # 148
+                            'popsize':    30, # 50, # 100,
+                            'iterations': 100,
+                            'narrow_bounds_normalized':[[],
+                                                        [],
+                                                        [],
+                                                        [],
+                                                        [],
+                                                        [],
+                                                        [] ],
+                            'bounds':[]}
 else:
     de_config_dict = None
 
+# Sensitivity Analysis based narrowing bounds
+if True:
+    # data acquired from run#116
+    numver_of_variants = 20.0
+    raw_narrow_bounds = [   [9, 10],
+                            [5, 6, 7], #[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                            [0, 1, 2, 3],
+                            [20],
+                            [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+                            [5, 6, 7],
+                            [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
+    for ind, bound in enumerate(raw_narrow_bounds):
+        de_config_dict['narrow_bounds_normalized'][ind].append(bound[0] /numver_of_variants)
+        de_config_dict['narrow_bounds_normalized'][ind].append(bound[-1]/numver_of_variants)
+        if de_config_dict['narrow_bounds_normalized'][ind][0] == de_config_dict['narrow_bounds_normalized'][ind][1]:
+            print 'ind=',ind, '---manually set the proper bounds based on the initial design: 7.00075,1.26943,0.924664,4.93052,1,3,1'
+            de_config_dict['narrow_bounds_normalized'][ind][0] = 4.93052 / 5
+    print de_config_dict['narrow_bounds_normalized']
+
+    for bnd1, bnd2 in zip(de_config_dict['original_bounds'], de_config_dict['narrow_bounds_normalized']):
+        diff = bnd1[1] - bnd1[0]
+        de_config_dict['bounds'].append( [ bnd1[0]+diff*bnd2[0] , bnd1[0]+diff*bnd2[1] ]) # 注意，都是乘以original_bounds的上限哦！
+
+    print de_config_dict['bounds']
+    print de_config_dict['original_bounds']
+
+else:
+    de_config_dict['bounds'] = de_config_dict['original_bounds']
+
+# quit()
 
 
 
@@ -240,8 +281,8 @@ if True:
     # generate the initial generation
     sw.generate_pop()
 
-    # # add initial_design of Pyrhonen09 to the initial generation
-    # utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
+    # add initial_design of Pyrhonen09 to the initial generation
+    utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
 
 
     ''' 4. Run DE Optimization

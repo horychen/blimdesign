@@ -35,7 +35,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     rated_frequency = 1000 # Hz
     no_pole_pairs = 2
     speed_rpm = rated_frequency * 60 / no_pole_pairs # rpm
-    U1_rms = 500 / sqrt(3) # V - Wye-connect
+    U1_rms = 500 / sqrt(3) # V - Wye-connect #480 is standarnd
     # U1_rms = 500  # V - Delta-connect
     stator_phase_voltage_rms = U1_rms
     no_phase_m = 3
@@ -690,7 +690,7 @@ for rotor_tooth_flux_density_B_dr in arange(1.1, 2.11, 0.2): #1.5–2.2 (rotor)
 
 
 print '\n\n\nMechanical Limits Check:'
-quit()
+# quit()
 
 if True:
     print 'Radius_OuterRotor=', Radius_OuterRotor, 'mm'

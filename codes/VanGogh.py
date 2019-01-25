@@ -93,6 +93,18 @@ class VanGogh(object):
         # if self.child_index == JMAG:
             self.init_sketch_coil()
 
+        # run#118
+        # print 'Stator: P1-P8:'
+        # print P1
+        # print P2
+        # print P3
+        # print P4
+        # print P5
+        # print P6
+        # print P7
+        # print P8
+        # quit() 
+
         # P_Coil
         l = LineString([(P3[0], P3[1]), (P3[0], im.Radius_OuterStatorYoke)])
         P_Coil = self.get_node_at_intersection(l_sector, l)

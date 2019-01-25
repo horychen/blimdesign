@@ -565,13 +565,15 @@ diff = np.fabs(min_b - max_b)
 import itertools
 if __name__ == '__main__':
     from pylab import *
-    import seaborn as sns
+    plt.rcParams["font.family"] = "Times New Roman"
+    # import seaborn as sns
+
     # style.use('seaborn-poster') #sets the size of the charts
     # style.use('grayscale')
     # ax = sns.barplot(y= "Deaths", x = "Causes", data = deaths_pd, palette=("Blues_d"))
     # sns.set_context("poster")
 
-    def autolabel(rects, xpos='center'):
+    def autolabel(rects, xpos='center', bias=0.0):
         """
         Attach a text label above each bar in *rects*, displaying its height.
 
@@ -585,8 +587,81 @@ if __name__ == '__main__':
 
         for rect in rects:
             height = rect.get_height()
-            ax.text(rect.get_x() + rect.get_width()*offset[xpos], 1.01*height,
+            ax.text(rect.get_x() + rect.get_width()*offset[xpos], 1.01*height+bias,
                     '%.2f'%(height), ha=ha[xpos], va='bottom', rotation=90)
+
+    def efficiency_at_50kW(total_loss):
+        return 50e3 / (array(total_loss) + 50e3)  # 用50 kW去算才对，只是这样转子铜耗数值会偏大哦。 效率计算：机械功率/(损耗+机械功率)        
+
+    def fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, 
+                    weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ]):
+
+        list_cost = [   30e3 / ( torque_average/rotor_volume ),
+                        normalized_torque_ripple         *  20, #       / 0.05 * 0.1
+                        1.0 / ( ss_avg_force_magnitude/rotor_weight ),
+                        normalized_force_error_magnitude *  20, #       / 0.05 * 0.1
+                        force_error_angle                * 0.2, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
+                        total_loss                       / 2500. ] #10 / efficiency**2,
+        cost_function = np.dot(array(list_cost), array(weights))
+        return cost_function
+
+    def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss,
+                    weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ]):
+    
+        l_cost_function = []
+        for torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss in zip(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss):
+            list_cost = [   30e3 / ( torque_average/rotor_volume ),
+                            normalized_torque_ripple         *  20,
+                            1.0 / ( ss_avg_force_magnitude/rotor_weight ),
+                            normalized_force_error_magnitude *  20,
+                            force_error_angle                * 0.2,
+                            total_loss                     / 2500. ]
+            cost_function = np.dot(array(list_cost), array(weights))
+            l_cost_function.append(cost_function)
+        return array(l_cost_function)
+
+
+    # def fobj2(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss):
+    
+    #     weights    = [ 1, 1,   1, 1, 1,   0 ]
+
+    #     if type(l_torque_average) == type(0.0): # not a list
+    #         list_weighted_cost = [  30e3 / ( l_torque_average/rotor_volume ),
+    #                                 1.0 / ( l_ss_avg_force_magnitude/rotor_weight ),
+    #                                 l_normalized_torque_ripple         *  20, #       / 0.05 * 0.1
+    #                                 l_normalized_force_error_magnitude *  20, #       / 0.05 * 0.1
+    #                                 l_force_error_angle * 0.2          *  10, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
+    #                                 2*l_total_loss/2500.*0 ] #10 / efficiency**2,
+    #         cost_function = sum(list_weighted_cost)
+    #         return cost_function
+    #     else:
+    #         l_cost_function = []
+    #         for torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss in zip(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss):
+    #             list_weighted_cost = [  30e3 / ( torque_average/rotor_volume ),
+    #                                     1.0 / ( ss_avg_force_magnitude/rotor_weight ),
+    #                                     normalized_torque_ripple         *  20, #       / 0.05 * 0.1
+    #                                     normalized_force_error_magnitude *  20, #       / 0.05 * 0.1
+    #                                     force_error_angle * 0.2          *  10, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
+    #                                     2*total_loss/2500.*0 ] #10 / efficiency**2,
+    #             # print list_weighted_cost
+    #             cost_function = sum(list_weighted_cost)
+    #             # print cost_function
+    #             l_cost_function.append(cost_function)
+    #         # print l_cost_function
+    #         return array(l_cost_function)
+
+    # fobj1 = fobj2
+
+    # Basic information
+    required_torque = 15.9154943092 #Nm
+
+    Radius_OuterRotor = 47.092753
+    stack_length = 93.200295
+    Omega =  3132.95327379
+    rotor_volume = pi*(Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
+    rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
+    print 'rotor_volume=', rotor_volume, 'm^3'
+    print 'rotor_weight=', rotor_weight, 'N'
 
 
     # swda = SwarmDataAnalyzer(run_integer=113)
@@ -598,12 +673,24 @@ if __name__ == '__main__':
     swda = SwarmDataAnalyzer(run_integer=116)
     number_of_variant = 20 + 1
 
+    # swda = SwarmDataAnalyzer(run_integer=117)
+    # number_of_variant = 1
+        # gives the reference values:
+        # 0 [0.635489] <-In population.py   [0.65533] <- from initial_design.txt
+        # 1 [0.963698] <-In population.py   [0.967276] <- from initial_design.txt
+        # 2 [19.1197]  <-In population.py  [16.9944] <- from initial_design.txt
+        # 3 [0.0864712]<-In population.py    [0.0782085] <- from initial_design.txt
+        # 4 [96.9263]  <-In population.py  [63.6959] <- from initial_design.txt
+        # 5 [0.104915] <-In population.py   [0.159409] <- from initial_design.txt
+        # 6 [6.53137]  <-In population.py  [10.1256] <- from initial_design.txt
+        # 7 [1817.22]  <-In population.py  [1353.49] <- from initial_design.txt
+
     fi, axeses = subplots(4, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
     ax_list = []
     for i in range(4):
         ax_list.extend(axeses[i].tolist())
 
-    obj_list = ['stator_tooth_width_b_ds',
+    param_list = ['stator_tooth_width_b_ds',
     'air_gap_length_delta',
     'Width_RotorSlotOpen ',
     'rotor_tooth_width_b_dr',
@@ -615,6 +702,10 @@ if __name__ == '__main__':
     # print next(swda.get_list_objective_function())
     data_max = []
     data_min = []
+    eta_at_50kW_max = []
+    eta_at_50kW_min = []
+    O1_max   = []
+    O1_min   = []
     for ind, i in enumerate(range(7)+[9]):
     # for i in range(14):
         print '\n-----------', y_label_list[i]
@@ -622,6 +713,15 @@ if __name__ == '__main__':
 
         # y = l[:len(l)/2] # 115
         y = l # 116
+        print 'len(y)=', len(y)
+
+        if i == 9: # replace P_Fe with P_Fe,Cu
+            l_femm_stator_copper = array(list(swda.get_certain_objective_function(12)))
+            l_femm_rotor_copper  = array(list(swda.get_certain_objective_function(13)))
+            y = array(l) + l_femm_stator_copper + l_femm_rotor_copper 
+            # print l, len(l)
+            # print y, len(y)
+            # quit()
 
         data_max.append([])
         data_min.append([])
@@ -629,11 +729,11 @@ if __name__ == '__main__':
             y_vs_design_parameter = y[j*number_of_variant:(j+1)*number_of_variant]
 
             # if j == 6:
-            ax_list[ind].plot(y_vs_design_parameter, label=str(j), alpha=0.5)
-            print '\t', j, obj_list[j], '\t\t', max(y_vs_design_parameter) - min(y_vs_design_parameter)
+            ax_list[ind].plot(y_vs_design_parameter, label=str(j)+' '+param_list[j], alpha=0.5)
+            print '\t', j, param_list[j], '\t\t', max(y_vs_design_parameter) - min(y_vs_design_parameter)
 
             data_max[ind].append(max(y_vs_design_parameter))
-            data_min[ind].append(min(y_vs_design_parameter))
+            data_min[ind].append(min(y_vs_design_parameter))            
 
         if i==1:
             ax_list[ind].legend()
@@ -642,20 +742,93 @@ if __name__ == '__main__':
 
     for ind, el in enumerate(data_max):
         print ind, el
-    # print data_min
+    print
+    for ind, el in enumerate(data_min):
+        print ind, el
 
-    rotor_weight = 50
-    required_torque = 16
+    O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ])
+    O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ])
 
+    print  'Objective function 1'
+    O1 = fobj_list( list(swda.get_certain_objective_function(2)), 
+                    list(swda.get_certain_objective_function(4)), 
+                    list(swda.get_certain_objective_function(3)), 
+                    list(swda.get_certain_objective_function(5)), 
+                    list(swda.get_certain_objective_function(6)), 
+                    array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))),
+                    weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ] )
+    O1_max = []
+    O1_min = []
+    O1_ax  = figure().gca()
+    for j in range(len(O1)/number_of_variant): # iterate design parameters
+        O1_vs_design_parameter = O1[j*number_of_variant:(j+1)*number_of_variant]
+
+        O1_ax.plot(O1_vs_design_parameter, label=str(j)+' '+param_list[j], alpha=0.5)
+        print '\t', j, param_list[j], '\t\t', max(O1_vs_design_parameter) - min(O1_vs_design_parameter)
+
+        O1_max.append(max(O1_vs_design_parameter))
+        O1_min.append(min(O1_vs_design_parameter))            
+    O1_ax.legend()
+    O1_ax.grid()
+    O1_ax.set_ylabel('O1 [1]')
+    O1_ax.set_xlabel('Count of design variants')
+
+    print  'Objective function 2'
+    O2 = fobj_list( list(swda.get_certain_objective_function(2)), 
+                    list(swda.get_certain_objective_function(4)), 
+                    list(swda.get_certain_objective_function(3)), 
+                    list(swda.get_certain_objective_function(5)), 
+                    list(swda.get_certain_objective_function(6)), 
+                    array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))),
+                    weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ] )
+    O2_max = []
+    O2_min = []
+    O2_ax  = figure().gca()
+    for j in range(len(O2)/number_of_variant): # iterate design parameters
+        O2_vs_design_parameter = O2[j*number_of_variant:(j+1)*number_of_variant]
+
+        O2_ax.plot(O2_vs_design_parameter, label=str(j)+' '+param_list[j], alpha=0.5)
+        print '\t', j, param_list[j], '\t\t', max(O2_vs_design_parameter) - min(O2_vs_design_parameter), '\t\t',
+        print [ind for ind, el in enumerate(O2_vs_design_parameter) if el < O2_ref] #'<- to derive new bounds.'
+
+        O2_max.append(max(O2_vs_design_parameter))
+        O2_min.append(min(O2_vs_design_parameter))            
+    O2_ax.legend()
+    O2_ax.grid()
+    O2_ax.set_ylabel('O2 [1]')
+    O2_ax.set_xlabel('Count of design variants')
+
+    # Reference candidate design
+    ref = zeros(8)
+        # ref[0] = 0.635489                                   # PF
+        # ref[1] = 0.963698                                   # eta
+        # ref[1] = efficiency_at_50kW(1817.22+216.216+224.706)# eta@50kW
+    O2_ax.plot(range(-1, 22), O2_ref*np.ones(23), 'k--')
+    O1_ax.plot(range(-1, 22), O1_ref*np.ones(23), 'k--')
+    ref[0] = O2_ref    / 8
+    ref[1] = O1_ref    / 3
+    ref[2] = 19.1197   / required_torque                # 100%
+    ref[3] = 0.0864712 / 0.1                            # 100%
+    ref[4] = 96.9263   / rotor_weight                   # 100% = FRW
+    ref[5] = 0.104915  / 0.2                            # 100%
+    ref[6] = 6.53137   / 10                             # deg
+    ref[7] = (1817.22+216.216+224.706) / 2500           # W
+
+    # Maximum
     data_max = array(data_max)
-    data_max[0]                     # PF
-    data_max[1]                     # eta
-    data_max[2] /= required_torque  # 100%
-    data_max[3] /= 0.1              # 100%
-    data_max[4] /= rotor_weight     # 100% = FRW
-    data_max[5] /= 0.1              # 100%
-    data_max[6] /= 5                # deg
-    data_max[7] /= 2500             # W
+    O1_max   = array(O1_max)
+    O2_max   = array(O2_max)
+        # data_max[0] = (data_max[0])                   # PF
+        # data_max[1] = (data_max[1])                   # eta
+        # data_max[1] = efficiency_at_50kW(data_max[7]) # eta@50kW # should use data_min[7] because less loss, higher efficiency
+    data_max[0] = O2_max / 8
+    data_max[1] = O1_max / 3
+    data_max[2] = (data_max[2])/ required_torque  # 100%
+    data_max[3] = (data_max[3])/ 0.1              # 100%
+    data_max[4] = (data_max[4])/ rotor_weight     # 100% = FRW
+    data_max[5] = (data_max[5])/ 0.2              # 100%
+    data_max[6] = (data_max[6])/ 10               # deg
+    data_max[7] = (data_max[7])/ 2500             # W
     y_max_vs_design_parameter_0 = [el[0] for el in data_max]
     y_max_vs_design_parameter_1 = [el[1] for el in data_max]
     y_max_vs_design_parameter_2 = [el[2] for el in data_max]
@@ -664,15 +837,21 @@ if __name__ == '__main__':
     y_max_vs_design_parameter_5 = [el[5] for el in data_max]
     y_max_vs_design_parameter_6 = [el[6] for el in data_max]
 
+    # Minimum
     data_min = array(data_min)
-    data_min[0]                     # PF
-    data_min[1]                     # eta
-    data_min[2] /= required_torque  # 100%
-    data_min[3] /= 0.1              # 100%
-    data_min[4] /= rotor_weight     # 100% = FRW
-    data_min[5] /= 0.1              # 100%
-    data_min[6] /= 5                # deg
-    data_min[7] /= 2500             # W
+    O1_min   = array(O1_min)
+    O2_min   = array(O2_min)
+        # data_min[0] = (data_min[0])                    # PF
+        # data_min[1] = (data_min[1])                    # eta
+        # data_min[1] = efficiency_at_50kW(data_min[7])  # eta@50kW
+    data_min[0] = O2_min / 8
+    data_min[1] = O1_min / 3
+    data_min[2] = (data_min[2]) / required_torque  # 100%
+    data_min[3] = (data_min[3]) / 0.1              # 100%
+    data_min[4] = (data_min[4]) / rotor_weight     # 100% = FRW
+    data_min[5] = (data_min[5]) / 0.2              # 100%
+    data_min[6] = (data_min[6]) / 10               # deg
+    data_min[7] = (data_min[7]) / 2500             # W
     y_min_vs_design_parameter_0 = [el[0] for el in data_min]
     y_min_vs_design_parameter_1 = [el[1] for el in data_min]
     y_min_vs_design_parameter_2 = [el[2] for el in data_min]
@@ -682,31 +861,51 @@ if __name__ == '__main__':
     y_min_vs_design_parameter_6 = [el[6] for el in data_min]
 
     count = np.arange(len(y_max_vs_design_parameter_0))  # the x locations for the groups
-    width = 0.8  # the width of the bars
+    width = 1.0  # the width of the bars
 
-    fig, ax = plt.subplots()                                                                                        #  #1034A
-    rects1 = ax.bar(count - 3*width/8, y_min_vs_design_parameter_0, width/8, alpha=0.5, label=r'$b_{\rm tooth,s}$', color='#1D2951') # https://digitalsynopsis.com/design/beautiful-color-palettes-combinations-schemes/
-    rects2 = ax.bar(count - 2*width/8, y_min_vs_design_parameter_1, width/8, alpha=0.5, label=r'$\delta$',          color='#0E4D92')
-    rects3 = ax.bar(count - 1*width/8, y_min_vs_design_parameter_2, width/8, alpha=0.5, label=r'$w_{\rm open,r}$',  color='#000080')
-    rects4 = ax.bar(count - 0*width/8, y_min_vs_design_parameter_3, width/8, alpha=0.5, label=r'$b_{\rm tooth,r}$', color='#03396c')
-    rects5 = ax.bar(count + 1*width/8, y_min_vs_design_parameter_4, width/8, alpha=0.5, label=r'$h_{head,s}$',      color='#005b96')
-    rects6 = ax.bar(count + 2*width/8, y_min_vs_design_parameter_5, width/8, alpha=0.5, label=r'$w_{\rm open,s}$',  color='#6497b1')
-    rects7 = ax.bar(count + 3*width/8, y_min_vs_design_parameter_6, width/8, alpha=0.5, label=r'$h_{head,r}$',      color='#b3cde0') 
-    autolabel(rects1)
-    autolabel(rects2)
-    autolabel(rects3)
-    autolabel(rects4)
-    autolabel(rects5)
-    autolabel(rects6)
-    autolabel(rects7)
+    fig, ax = plt.subplots(dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')                                      #  #1034A
+    rects2 = ax.bar(count - 3*width/8, y_min_vs_design_parameter_1, width/8, alpha=0.5, label=r'$\delta$,           Air gap length', color='#6593F5')
+    rects1 = ax.bar(count - 2*width/8, y_min_vs_design_parameter_0, width/8, alpha=0.5, label=r'$b_{\rm tooth,s}$, Stator tooth width', color='#1D2951') # https://digitalsynopsis.com/design/beautiful-color-palettes-combinations-schemes/
+    rects4 = ax.bar(count - 1*width/8, y_min_vs_design_parameter_3, width/8, alpha=0.5, label=r'$b_{\rm tooth,r}$, Rotor tooth width', color='#03396c')
+    rects6 = ax.bar(count + 0*width/8, y_min_vs_design_parameter_5, width/8, alpha=0.5, label=r'$w_{\rm open,s}$, Stator slot open', color='#6497b1')
+    rects3 = ax.bar(count + 1*width/8, y_min_vs_design_parameter_2, width/8, alpha=0.5, label=r'$w_{\rm open,r}$, Rotor slot open',  color='#0E4D92')
+    rects5 = ax.bar(count + 2*width/8, y_min_vs_design_parameter_4, width/8, alpha=0.5, label=r'$h_{\rm head,s}$, Stator head height', color='#005b96')
+    rects7 = ax.bar(count + 3*width/8, y_min_vs_design_parameter_6, width/8, alpha=0.5, label=r'$h_{\rm head,r}$, Rotor head height', color='#b3cde0') 
+    print 'ylim=', ax.get_ylim()
+    autolabel(rects1, bias=-0.10)
+    autolabel(rects2, bias=-0.10)
+    autolabel(rects3, bias=-0.10)
+    autolabel(rects4, bias=-0.10)
+    autolabel(rects5, bias=-0.10)
+    autolabel(rects6, bias=-0.10)
+    autolabel(rects7, bias=-0.10)
+    one_one = array([1, 1])
+    minus_one_one = array([-1, 1])
+    ax.plot(rects6[0].get_x() + 0.5*width*minus_one_one, ref[0]*one_one, 'k--', lw=1.0, alpha=0.6, label='Reference design' )
+    ax.plot(rects6[1].get_x() + 0.5*width*minus_one_one, ref[1]*one_one, 'k--', lw=1.0, alpha=0.6 )
+    ax.plot(rects6[2].get_x() + 0.5*width*minus_one_one, ref[2]*one_one, 'k--', lw=1.0, alpha=0.6 )
+    ax.plot(rects6[3].get_x() + 0.5*width*minus_one_one, ref[3]*one_one, 'k--', lw=1.0, alpha=0.6 )
+    ax.plot(rects6[4].get_x() + 0.5*width*minus_one_one, ref[4]*one_one, 'k--', lw=1.0, alpha=0.6 )
+    ax.plot(rects6[5].get_x() + 0.5*width*minus_one_one, ref[5]*one_one, 'k--', lw=1.0, alpha=0.6 )
+    ax.plot(rects6[6].get_x() + 0.5*width*minus_one_one, ref[6]*one_one, 'k--', lw=1.0, alpha=0.6 )
+    ax.plot(rects6[7].get_x() + 0.5*width*minus_one_one, ref[7]*one_one, 'k--', lw=1.0, alpha=0.6 )
+    ax.legend(loc='upper right') 
+    ax.text(rects6[0].get_x() - 3.5/8*width, ref[0]*1.01, '%.2f'%(ref[0]), ha='center', va='bottom', rotation=90)
+    ax.text(rects6[1].get_x() - 3.5/8*width, ref[1]*1.01, '%.2f'%(ref[1]), ha='center', va='bottom', rotation=90)
+    ax.text(rects6[2].get_x() - 3.5/8*width, ref[2]*1.01, '%.2f'%(ref[2]), ha='center', va='bottom', rotation=90)
+    ax.text(rects6[3].get_x() - 3.5/8*width, ref[3]*1.01, '%.2f'%(ref[3]), ha='center', va='bottom', rotation=90)
+    ax.text(rects6[4].get_x() - 3.5/8*width, ref[4]*1.01, '%.2f'%(ref[4]), ha='center', va='bottom', rotation=90)
+    ax.text(rects6[5].get_x() - 3.5/8*width, ref[5]*1.01, '%.2f'%(ref[5]), ha='center', va='bottom', rotation=90)
+    ax.text(rects6[6].get_x() - 3.5/8*width, ref[6]*1.01, '%.2f'%(ref[6]), ha='center', va='bottom', rotation=90)
+    ax.text(rects6[7].get_x() - 3.5/8*width, ref[7]*1.01, '%.2f'%(ref[7]), ha='center', va='bottom', rotation=90)
 
-    rects1 = ax.bar(count - 3*width/8, y_max_vs_design_parameter_0, width/8, bottom=y_min_vs_design_parameter_0, alpha=1.0, label=r'$b_{\rm tooth,s}$', color='#1D2951') 
-    rects2 = ax.bar(count - 2*width/8, y_max_vs_design_parameter_1, width/8, bottom=y_min_vs_design_parameter_1, alpha=1.0, label=r'$\delta$',          color='#0E4D92')
-    rects3 = ax.bar(count - 1*width/8, y_max_vs_design_parameter_2, width/8, bottom=y_min_vs_design_parameter_2, alpha=1.0, label=r'$w_{\rm open,r}$',  color='#000080')
-    rects4 = ax.bar(count - 0*width/8, y_max_vs_design_parameter_3, width/8, bottom=y_min_vs_design_parameter_3, alpha=1.0, label=r'$b_{\rm tooth,r}$', color='#03396c')
-    rects5 = ax.bar(count + 1*width/8, y_max_vs_design_parameter_4, width/8, bottom=y_min_vs_design_parameter_4, alpha=1.0, label=r'$h_{head,s}$',      color='#005b96')
-    rects6 = ax.bar(count + 2*width/8, y_max_vs_design_parameter_5, width/8, bottom=y_min_vs_design_parameter_5, alpha=1.0, label=r'$w_{\rm open,s}$',  color='#6497b1')
-    rects7 = ax.bar(count + 3*width/8, y_max_vs_design_parameter_6, width/8, bottom=y_min_vs_design_parameter_6, alpha=1.0, label=r'$h_{head,r}$',      color='#b3cde0') 
+    rects1 = ax.bar(count - 2*width/8, y_max_vs_design_parameter_0, width/8, alpha=0.5, label=r'$b_{\rm tooth,s}$', color='#1D2951') # bottom=y_min_vs_design_parameter_0, 
+    rects2 = ax.bar(count - 3*width/8, y_max_vs_design_parameter_1, width/8, alpha=0.5, label=r'$\delta$',          color='#6593F5') # bottom=y_min_vs_design_parameter_1, 
+    rects3 = ax.bar(count + 1*width/8, y_max_vs_design_parameter_2, width/8, alpha=0.5, label=r'$w_{\rm open,r}$',  color='#0E4D92') # bottom=y_min_vs_design_parameter_2, 
+    rects4 = ax.bar(count - 1*width/8, y_max_vs_design_parameter_3, width/8, alpha=0.5, label=r'$b_{\rm tooth,r}$', color='#03396c') # bottom=y_min_vs_design_parameter_3, 
+    rects5 = ax.bar(count + 2*width/8, y_max_vs_design_parameter_4, width/8, alpha=0.5, label=r'$h_{head,s}$',      color='#005b96') # bottom=y_min_vs_design_parameter_4, 
+    rects6 = ax.bar(count + 0*width/8, y_max_vs_design_parameter_5, width/8, alpha=0.5, label=r'$w_{\rm open,s}$',  color='#6497b1') # bottom=y_min_vs_design_parameter_5, 
+    rects7 = ax.bar(count + 3*width/8, y_max_vs_design_parameter_6, width/8, alpha=0.5, label=r'$h_{head,r}$',      color='#b3cde0') # bottom=y_min_vs_design_parameter_6, 
     autolabel(rects1)
     autolabel(rects2)
     autolabel(rects3)
@@ -716,17 +915,40 @@ if __name__ == '__main__':
     autolabel(rects7)
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel('Normalized Objective Functions [%]')
-    # ax.set_title('Scores by group and gender')
+    ax.set_ylabel('Normalized Objective Functions')
     ax.set_xticks(count)
-    ax.set_xticklabels(('PF', r'$\eta$ [100%]', r'$T_{em} [N]$', r'$T_{rip}$ [100%]', r'$|F|$ [N]', r'$E_m$ [100%]', r'$E_a$ [deg]', r'$P_{Fe}$ [W]'))
-    ax.legend()
-
+    # ax.set_xticklabels(('Power Factor [100%]', r'$\eta$@$T_{em}$ [100%]', r'$T_{em}$ [15.9 N]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]')))
+    # ax.set_xticklabels(('Power Factor [100%]', r'$O_1$ [3]', r'$T_{em}$ [15.9 N]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]'))
+    ax.set_xticklabels((r'$O_2$ [8]', r'$O_1$ [3]', r'$T_{em}$ [15.9 Nm]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]'))
+    ax.grid()
     fig.tight_layout()
 
     show()
 
     quit()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     # Pseudo Pareto Optimal Front
     gen_best = swda.get_best_generation()

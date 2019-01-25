@@ -277,7 +277,7 @@ class swarm(object):
                 for ind, el in enumerate(self.init_pop):
                     print ind, el
                 # quit()
-            if self.fea_config_dict['run_folder'] == r'run#116/' or self.fea_config_dict['run_folder'] == r'run#117/':
+            if self.fea_config_dict['run_folder'] == r'run#116/':
                 # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
                 initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
                 initial_design = (initial_design_denorm - min_b) / diff
@@ -293,6 +293,22 @@ class swarm(object):
                         design_variant = base_design[::]
                         design_variant[i] = j * 1./numver_of_variants
                         self.init_pop.append(design_variant)
+                for ind, el in enumerate(self.init_pop):
+                    print ind, el
+                # quit()
+            if self.fea_config_dict['run_folder'] == r'run#117/':
+                # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
+                initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
+                initial_design = (initial_design_denorm - min_b) / diff
+                print initial_design_denorm.tolist()
+                print initial_design.tolist()
+                base_design = initial_design.tolist()
+                print base_design, '\n-------------'
+                numver_of_variants = 20
+                self.init_pop = []
+                for i in range(len(base_design)): # 7 design parameters
+                    for j in range(numver_of_variants+1): # 5 variants interval
+                        self.init_pop.append(initial_design) #<---------------------------ONLY Base Design
                 for ind, el in enumerate(self.init_pop):
                     print ind, el
                 # quit()
@@ -749,16 +765,25 @@ class swarm(object):
         efficiency   = shaft_power / (total_loss + shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
         str_results  += '\n\teta: %g' % (efficiency)
 
-        # The weight is [TpRV=30e3, FpRW=1, Trip=50%, FEmag=50%, FEang=50deg, eta=sqrt(10)=3.16]
-        # which means the FEang must be up to 50deg so so be the same level as TpRV=30e3 or FpRW=1 or eta=316%
-        list_weighted_cost = [  30e3 / ( torque_average/rotor_volume ),
-                                1.0 / ( ss_avg_force_magnitude/rotor_weight ),
-                                normalized_torque_ripple         *   2, #       / 0.05 * 0.1
-                                normalized_force_error_magnitude *   2, #       / 0.05 * 0.1
-                                force_error_angle * 0.2          * 0.1, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
-                                2*total_loss/2500., #10 / efficiency**2,
-                                im_variant.thermal_penalty ] # thermal penalty is evaluated when drawing the model according to the parameters' constraints (if the rotor current and rotor slot size requirement does not suffice)
-        cost_function = sum(list_weighted_cost)
+        # O2
+        weights = [ 1, 0.1,   1, 0.1, 0.1,   0 ]
+        list_cost = [   30e3 / ( torque_average/rotor_volume ),
+                        normalized_torque_ripple         *  20, 
+                        1.0 / ( ss_avg_force_magnitude/rotor_weight ),
+                        normalized_force_error_magnitude *  20, 
+                        force_error_angle                * 0.2, # [deg] 
+                        total_loss                       / 2500. ] 
+        cost_function = np.dot(np.array(list_cost), np.array(weights))
+            # The weight is [TpRV=30e3, FpRW=1, Trip=50%, FEmag=50%, FEang=50deg, eta=sqrt(10)=3.16]
+            # which means the FEang must be up to 50deg so so be the same level as TpRV=30e3 or FpRW=1 or eta=316%
+            # list_weighted_cost = [  30e3 / ( torque_average/rotor_volume ),
+            #                         1.0 / ( ss_avg_force_magnitude/rotor_weight ),
+            #                         normalized_torque_ripple         *   2, #       / 0.05 * 0.1
+            #                         normalized_force_error_magnitude *   2, #       / 0.05 * 0.1
+            #                         force_error_angle * 0.2          * 0.1, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
+            #                         2*total_loss/2500., #10 / efficiency**2,
+            #                         im_variant.thermal_penalty ] # thermal penalty is evaluated when drawing the model according to the parameters' constraints (if the rotor current and rotor slot size requirement does not suffice)
+            # cost_function = sum(list_weighted_cost)
 
 
 
@@ -788,6 +813,7 @@ class swarm(object):
                         ','.join(['%g'%(el) for el in individual]) ) + str_results)
 
         self.im = mylatch
+        # quit() # for run#117: write the initial design to swarm_data.txt
         return cost_function
 
     def fobj_test(self, individual_index, individual):
