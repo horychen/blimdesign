@@ -6,6 +6,11 @@ import operator
 
 def get_max_and_index(the_list):
     return max(enumerate(the_list), key=operator.itemgetter(1))
+    # index, max_value
+
+def get_min_and_index(the_list):
+    return min(enumerate(the_list), key=operator.itemgetter(1))
+    # index, min_value
 
 def gcd(a,b):
     while b:
@@ -178,8 +183,8 @@ def basefreqDFT(signal, samp_freq, ax_time_domain=None, ax_freq_domain=None, bas
         ax_time_domain.set_ylabel('B [T]')
 
 class Pyrhonen_design(object):
-    def __init__(self, im, bounds):
-        ''' Determine bounds for these parameters:
+    def __init__(self, im, original_bounds):
+        ''' Determine original_bounds for these parameters:
             stator_tooth_width_b_ds              = design_parameters[0]*1e-3 # m                       # stator tooth width [mm]
             air_gap_length_delta                 = design_parameters[1]*1e-3 # m                       # air gap length [mm]
             b1                                   = design_parameters[2]*1e-3 # m                       # rotor slot opening [mm]
@@ -195,6 +200,7 @@ class Pyrhonen_design(object):
             # = ( 2*PI()*(G4 - I4) - J4 * (2*C4+2*PI()) ) / C4
         from math import pi
         Qr = im.Qr
+
 
         # unit: mm and deg
         self.stator_tooth_width_b_ds        = im.Width_StatorTeethBody
@@ -213,21 +219,21 @@ class Pyrhonen_design(object):
                                             self.Angle_StatorSlotOpen,
                                             self.Width_StatorTeethHeadThickness]
 
-        self.show_norm(bounds, self.design_parameters_denorm)
+        self.show_norm(original_bounds, self.design_parameters_denorm)
 
 
-    def show_denorm(self, bounds, design_parameters_norm):
+    def show_denorm(self, original_bounds, design_parameters_norm):
         import numpy as np
         pop = design_parameters_norm
-        min_b, max_b = np.asarray(bounds).T 
+        min_b, max_b = np.asarray(original_bounds).T 
         diff = np.fabs(min_b - max_b)
         pop_denorm = min_b + pop * diff
         print '[De-normalized]:',
         print pop_denorm.tolist()
         
-    def show_norm(self, bounds, design_parameters_denorm):
+    def show_norm(self, original_bounds, design_parameters_denorm):
         import numpy as np
-        min_b, max_b = np.asarray(bounds).T 
+        min_b, max_b = np.asarray(original_bounds).T 
         diff = np.fabs(min_b - max_b)
         self.design_parameters_norm = (design_parameters_denorm - min_b)/diff #= pop
         # print type(self.design_parameters_norm)
@@ -235,7 +241,7 @@ class Pyrhonen_design(object):
         print self.design_parameters_norm.tolist()
 
         # pop = design_parameters_norm
-        # min_b, max_b = np.asarray(bounds).T 
+        # min_b, max_b = np.asarray(original_bounds).T 
         # diff = np.fabs(min_b - max_b)
         # pop_denorm = min_b + pop * diff
         # print '[De-normalized:]---------------------------Are these two the same?'
@@ -243,14 +249,14 @@ class Pyrhonen_design(object):
         # print design_parameters_denorm
 
 def add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger):
-    initial_design = Pyrhonen_design(sw.im, de_config_dict['bounds'])
+    initial_design = Pyrhonen_design(sw.im, de_config_dict['original_bounds'])
     # print 'SWAP!'
     # print initial_design.design_parameters_norm.tolist()
     # print '\nInitial Population:'
     # for index in range(len(sw.init_pop)):
     #     # print sw.init_pop[index].tolist()
     #     print index,
-    #     initial_design.show_denorm(de_config_dict['bounds'], sw.init_pop[index])
+    #     initial_design.show_denorm(de_config_dict['original_bounds'], sw.init_pop[index])
     # print sw.init_pop[0].tolist()
     sw.init_pop_denorm[0] = initial_design.design_parameters_denorm
     # print sw.init_pop[0].tolist()
@@ -531,20 +537,86 @@ class SwarmDataAnalyzer(object):
             individual = self.buf[i*21:(1+i)*21]
             yield [float(el) for el in individual[3].split(',')][which]
 
-# run 115
-de_config_dict = {  'bounds':     [ [ 4.9,   9],#--# stator_tooth_width_b_ds
-                                    [ 0.8,   3],   # air_gap_length_delta
-                                    [5e-1,   3],   # Width_RotorSlotOpen 
-                                    [ 2.7,   5],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-                                    [5e-1,   3],   # Length_HeadNeckRotorSlot
-                                    [   1,  10],   # Angle_StatorSlotOpen
-                                    [5e-1,   3] ], # Width_StatorTeethHeadThickness
+
+def autolabel(rects, xpos='center', bias=0.0):
+    """
+    Attach a text label above each bar in *rects*, displaying its height.
+
+    *xpos* indicates which side to place the text w.r.t. the center of
+    the bar. It can be one of the following {'center', 'right', 'left'}.
+    """
+
+    xpos = xpos.lower()  # normalize the case of the parameter
+    ha = {'center': 'center', 'right': 'left', 'left': 'right'}
+    offset = {'center': 0.5, 'right': 0.57, 'left': 0.43}  # x_txt = x + w*off
+
+    for rect in rects:
+        height = rect.get_height()
+        ax.text(rect.get_x() + rect.get_width()*offset[xpos], 1.01*height+bias,
+                '%.2f'%(height), ha=ha[xpos], va='bottom', rotation=90)
+
+def efficiency_at_50kW(total_loss):
+    return 50e3 / (array(total_loss) + 50e3)  # 用50 kW去算才对，只是这样转子铜耗数值会偏大哦。 效率计算：机械功率/(损耗+机械功率)        
+
+
+
+# Basic information
+from math import pi
+required_torque = 15.9154943092 #Nm
+
+Radius_OuterRotor = 47.092753
+stack_length = 93.200295
+Omega =  3132.95327379
+rotor_volume = pi*(Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
+rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
+
+print 'rotor_volume=', rotor_volume, 'm^3'
+print 'rotor_weight=', rotor_weight, 'N'
+
+
+
+def fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, 
+                weights=[ 1,1,1,1,1,  0 ]):
+
+    list_cost = [   30e3 / ( torque_average/rotor_volume ),
+                    normalized_torque_ripple         *  20, #       / 0.05 * 0.1
+                    1.0 / ( ss_avg_force_magnitude/rotor_weight ),
+                    normalized_force_error_magnitude *  20, #       / 0.05 * 0.1
+                    force_error_angle                * 0.2, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
+                    total_loss                       / 2500. ] #10 / efficiency**2,
+    cost_function = np.dot(array(list_cost), array(weights))
+    return cost_function
+
+def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss,
+                weights=[ 1,1,1,1,1,  0 ]):
+
+    l_cost_function = []
+    for torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss in zip(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss):
+        list_cost = [   30e3 / ( torque_average/rotor_volume ),
+                        normalized_torque_ripple         *  20,
+                        1.0 / ( ss_avg_force_magnitude/rotor_weight ),
+                        normalized_force_error_magnitude *  20,
+                        force_error_angle                * 0.2,
+                        total_loss                     / 2500. ]
+        cost_function = np.dot(array(list_cost), array(weights))
+        l_cost_function.append(cost_function)
+    return array(l_cost_function)
+
+
+# run 115 and 116
+de_config_dict = {  'original_bounds':[ [ 4.9,   9],#--# stator_tooth_width_b_ds
+                                        [ 0.8,   3],   # air_gap_length_delta
+                                        [5e-1,   3],   # Width_RotorSlotOpen 
+                                        [ 2.7,   5],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                        [5e-1,   3],   # Length_HeadNeckRotorSlot
+                                        [   1,  10],   # Angle_StatorSlotOpen
+                                        [5e-1,   3] ], # Width_StatorTeethHeadThickness
                     'mut':        0.8,
                     'crossp':     0.7,
                     'popsize':    42, # 50, # 100,
                     'iterations': 1 } # 148
 # run 114 and 200
-# de_config_dict = {  'bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
+# de_config_dict = {  'original_bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
 #                                     [ 0.8,   4],   # air_gap_length_delta
 #                                     [5e-1,   3],   # Width_RotorSlotOpen 
 #                                     [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
@@ -555,12 +627,15 @@ de_config_dict = {  'bounds':     [ [ 4.9,   9],#--# stator_tooth_width_b_ds
 #                     'crossp':     0.7,
 #                     'popsize':    50, # 50, # 100,
 #                     'iterations': 2*48 } # 148
-bounds = de_config_dict['bounds']
-dimensions = len(bounds)
-min_b, max_b = np.asarray(bounds).T 
+original_bounds = de_config_dict['original_bounds']
+dimensions = len(original_bounds)
+min_b, max_b = np.asarray(original_bounds).T 
 diff = np.fabs(min_b - max_b)
 # pop_denorm = min_b + pop * diff
 # pop[j] = (pop_denorm[j] - min_b) / diff
+
+def pareto_plot():
+    pass
 
 import itertools
 if __name__ == '__main__':
@@ -573,96 +648,229 @@ if __name__ == '__main__':
     # ax = sns.barplot(y= "Deaths", x = "Causes", data = deaths_pd, palette=("Blues_d"))
     # sns.set_context("poster")
 
-    def autolabel(rects, xpos='center', bias=0.0):
-        """
-        Attach a text label above each bar in *rects*, displaying its height.
+    if True:
+        swda = SwarmDataAnalyzer(run_integer=121)
+        # print swda.lsit_cost_function()
+        # 
+        O2 = fobj_list( list(swda.get_certain_objective_function(2)), #torque_average, 
+                        list(swda.get_certain_objective_function(4)), #ss_avg_force_magnitude, 
+                        list(swda.get_certain_objective_function(3)), #normalized_torque_ripple, 
+                        list(swda.get_certain_objective_function(5)), #normalized_force_error_magnitude, 
+                        list(swda.get_certain_objective_function(6)), #force_error_angle, 
+                        array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))), #total_loss, 
+                        weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ] )
+        # print O2
+        # print array(swda.lsit_cost_function()) - array(O2) # they are the same
+        O2 = O2.tolist()
 
-        *xpos* indicates which side to place the text w.r.t. the center of
-        the bar. It can be one of the following {'center', 'right', 'left'}.
-        """
+        O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ])
+        print 'O2_ref=', O2_ref
 
-        xpos = xpos.lower()  # normalize the case of the parameter
-        ha = {'center': 'center', 'right': 'left', 'left': 'right'}
-        offset = {'center': 0.5, 'right': 0.57, 'left': 0.43}  # x_txt = x + w*off
+        def my_scatter_plot(x,y,O,xy_ref,O_ref, fig=None, ax=None, s=15):
+            # O is a copy of your list rather than array or the adress of the list
+            # O is a copy of your list rather than array or the adress of the list
+            # O is a copy of your list rather than array or the adress of the list
+            x += [xy_ref[0]]
+            y += [xy_ref[1]]
+            O += [O2_ref]
+            if ax is None or fig is None:
+                fig = figure()
+                ax = fig.gca()
+            # O2_mix = np.concatenate([[O2_ref], O2], axis=0) # # https://stackoverflow.com/questions/46106912/one-colorbar-for-multiple-scatter-plots
+            # min_, max_ = O2_mix.min(), O2_mix.max()
+            ax.annotate('Initial design', xytext=(xy_ref[0]*0.95, xy_ref[1]*0.9), xy=xy_ref, xycoords='data', arrowprops=dict(arrowstyle="->"))
+            # scatter(*xy_ref, marker='s', c=O2_ref, s=20, alpha=0.75, cmap='viridis')
+            # clim(min_, max_)
+            scatter_handle = ax.scatter(x, y, c=O, s=s, alpha=0.5, cmap='viridis')
+            # clim(min_, max_)
+            ax.grid()
 
-        for rect in rects:
-            height = rect.get_height()
-            ax.text(rect.get_x() + rect.get_width()*offset[xpos], 1.01*height+bias,
-                    '%.2f'%(height), ha=ha[xpos], va='bottom', rotation=90)
+            if True:
+                best_index, best_O = get_min_and_index(O)
+                print best_index, best_O
+                xy_best = (x[best_index], y[best_index])
+                handle_best = ax.scatter(*xy_best, s=s*3, marker='s', facecolors='none', edgecolors='r')
+                ax.legend((handle_best,), ('Best',))
 
-    def efficiency_at_50kW(total_loss):
-        return 50e3 / (array(total_loss) + 50e3)  # 用50 kW去算才对，只是这样转子铜耗数值会偏大哦。 效率计算：机械功率/(损耗+机械功率)        
-
-    def fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, 
-                    weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ]):
-
-        list_cost = [   30e3 / ( torque_average/rotor_volume ),
-                        normalized_torque_ripple         *  20, #       / 0.05 * 0.1
-                        1.0 / ( ss_avg_force_magnitude/rotor_weight ),
-                        normalized_force_error_magnitude *  20, #       / 0.05 * 0.1
-                        force_error_angle                * 0.2, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
-                        total_loss                       / 2500. ] #10 / efficiency**2,
-        cost_function = np.dot(array(list_cost), array(weights))
-        return cost_function
-
-    def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss,
-                    weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ]):
-    
-        l_cost_function = []
-        for torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss in zip(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss):
-            list_cost = [   30e3 / ( torque_average/rotor_volume ),
-                            normalized_torque_ripple         *  20,
-                            1.0 / ( ss_avg_force_magnitude/rotor_weight ),
-                            normalized_force_error_magnitude *  20,
-                            force_error_angle                * 0.2,
-                            total_loss                     / 2500. ]
-            cost_function = np.dot(array(list_cost), array(weights))
-            l_cost_function.append(cost_function)
-        return array(l_cost_function)
+            return scatter_handle
+        
+        fig, axeses = subplots(2, 2, sharex=False, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
+        # fig, axeses = subplots(2, 2, sharex=False, dpi=150, figsize=(10, 8), facecolor='w', edgecolor='k')
+        fig.subplots_adjust(right=0.9, hspace=0.21, wspace=0.11) # won't work after I did something. just manual adjust!
 
 
-    # def fobj2(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss):
-    
-    #     weights    = [ 1, 1,   1, 1, 1,   0 ]
+        # TRV vs Torque Ripple
+        ax = axeses[0][0]
+        xy_ref = (19.1197/rotor_volume, 0.0864712) # from run#117
+        x, y = array(list(swda.get_certain_objective_function(2)))/rotor_volume, list(swda.get_certain_objective_function(3))
+        x = x.tolist()
+        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+        ax.set_xlabel('TRV [Nm/m^3]\n(a)')
+        ax.set_ylabel(r'$T_{\rm rip}$ [100%]')
 
-    #     if type(l_torque_average) == type(0.0): # not a list
-    #         list_weighted_cost = [  30e3 / ( l_torque_average/rotor_volume ),
-    #                                 1.0 / ( l_ss_avg_force_magnitude/rotor_weight ),
-    #                                 l_normalized_torque_ripple         *  20, #       / 0.05 * 0.1
-    #                                 l_normalized_force_error_magnitude *  20, #       / 0.05 * 0.1
-    #                                 l_force_error_angle * 0.2          *  10, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
-    #                                 2*l_total_loss/2500.*0 ] #10 / efficiency**2,
-    #         cost_function = sum(list_weighted_cost)
-    #         return cost_function
-    #     else:
-    #         l_cost_function = []
-    #         for torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss in zip(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss):
-    #             list_weighted_cost = [  30e3 / ( torque_average/rotor_volume ),
-    #                                     1.0 / ( ss_avg_force_magnitude/rotor_weight ),
-    #                                     normalized_torque_ripple         *  20, #       / 0.05 * 0.1
-    #                                     normalized_force_error_magnitude *  20, #       / 0.05 * 0.1
-    #                                     force_error_angle * 0.2          *  10, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
-    #                                     2*total_loss/2500.*0 ] #10 / efficiency**2,
-    #             # print list_weighted_cost
-    #             cost_function = sum(list_weighted_cost)
-    #             # print cost_function
-    #             l_cost_function.append(cost_function)
-    #         # print l_cost_function
-    #         return array(l_cost_function)
+        # FRW vs Ea
+        ax = axeses[0][1]
+        xy_ref = (96.9263/rotor_weight, 6.53137)
+        x, y = array(list(swda.get_certain_objective_function(4)))/rotor_weight, list(swda.get_certain_objective_function(6))
+        x = x.tolist()
+        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+        ax.set_xlabel('FRW [1]\n(b)')
+        ax.set_ylabel(r'$E_a$ [deg]')
 
-    # fobj1 = fobj2
+        # FRW vs Em
+        ax = axeses[1][0]
+        xy_ref = (96.9263/rotor_weight, 0.104915)
+        x, y = array(list(swda.get_certain_objective_function(4)))/rotor_weight, list(swda.get_certain_objective_function(5))
+        x = x.tolist()
+        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+        ax.set_xlabel('FRW [1]\n(c)')
+        ax.set_ylabel(r'$E_m$ [100%]')
 
-    # Basic information
-    required_torque = 15.9154943092 #Nm
+        # Em vs Ea
+        ax = axeses[1][1]
+        xy_ref = (0.104915, 6.53137)
+        x, y = list(swda.get_certain_objective_function(5)), list(swda.get_certain_objective_function(6))
+        scatter_handle = my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+        ax.set_xlabel('$E_m$ [100%]\n(d)')
+        ax.set_ylabel(r'$E_a$ [deg]')
 
-    Radius_OuterRotor = 47.092753
-    stack_length = 93.200295
-    Omega =  3132.95327379
-    rotor_volume = pi*(Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
-    rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
-    print 'rotor_volume=', rotor_volume, 'm^3'
-    print 'rotor_weight=', rotor_weight, 'N'
+        # fig.subplots_adjust(right=0.8)
+        # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7]) # left, bottom, width, height
+        # fig.subplots_adjust(right=0.9)
+        # cbar_ax = fig.add_axes([0.925, 0.15, 0.025, 0.7])
+        cbar_ax = fig.add_axes([0.925, 0.15, 0.02, 0.7])
+        cbar_ax.get_yaxis().labelpad = 10
+        clb = fig.colorbar(scatter_handle, cax=cbar_ax)
+        clb.ax.set_ylabel(r'Cost function $O_2$', rotation=270)
+        # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
 
+
+        fig.tight_layout()
+        # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
+        show()
+        quit()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        # Torque vs Torque Ripple
+        ax = axeses[0][0]
+        xy_ref = (19.1197, 0.0864712) # from run#117
+        x, y = list(swda.get_certain_objective_function(2)), list(swda.get_certain_objective_function(3))
+        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+        ax.set_xlabel('$T_{em}$ [Nm]\n(a)')
+        ax.set_ylabel(r'$T_{\rm rip}$ [100%]')
+
+        # Force vs Ea
+        ax = axeses[0][1]
+        xy_ref = (96.9263, 6.53137)
+        x, y = list(swda.get_certain_objective_function(4)), list(swda.get_certain_objective_function(6))
+        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+        ax.set_xlabel('$|F|$ [N]\n(b)')
+        ax.set_ylabel(r'$E_a$ [deg]')
+
+        # Force vs Em
+        ax = axeses[1][0]
+        xy_ref = (96.9263, 0.104915)
+        x, y = list(swda.get_certain_objective_function(4)), list(swda.get_certain_objective_function(5))
+        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+        ax.set_xlabel('$|F|$ [N]\n(c)')
+        ax.set_ylabel(r'$E_m$ [100%]')
+
+        # Em vs Ea
+        ax = axeses[1][1]
+        xy_ref = (0.104915, 6.53137)
+        x, y = list(swda.get_certain_objective_function(5)), list(swda.get_certain_objective_function(6))
+        scatter_handle = my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+        ax.set_xlabel('$E_m$ [100%]\n(d)')
+        ax.set_ylabel(r'$E_a$ [deg]')
+
+        # fig.subplots_adjust(right=0.8)
+        # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7]) # left, bottom, width, height
+        # fig.subplots_adjust(right=0.9)
+        # cbar_ax = fig.add_axes([0.925, 0.15, 0.025, 0.7])
+        cbar_ax = fig.add_axes([0.925, 0.15, 0.02, 0.7])
+        cbar_ax.get_yaxis().labelpad = 10
+        clb = fig.colorbar(scatter_handle, cax=cbar_ax)
+        clb.ax.set_ylabel(r'Cost function $O_2$', rotation=270)
+        # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
+
+
+        fig.tight_layout()
+        # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
+        show()
+
+        # Loss vs Ea
+        xy_ref = ((1817.22+216.216+224.706), 6.53137)
+        x, y = array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))), list(swda.get_certain_objective_function(6))
+        x = x.tolist()
+        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref)
+        xlabel(r'$P_{\rm Cu,Fe}$ [W]')
+        ylabel(r'$E_a$ [deg]')
+
+
+
+        # # for ecce digest
+        # fig_ecce = figure(figsize=(10, 5), facecolor='w', edgecolor='k')
+        # O2_ecce_ax = fig_ecce.gca()
+        # O2_ecce_ax.plot(O2_ecce_data[1], 'o-', lw=0.75, alpha=0.5, label=r'$\delta$'         )
+        # O2_ecce_ax.plot(O2_ecce_data[0], 'v-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,s}$')
+        # O2_ecce_ax.plot(O2_ecce_data[3], 's-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,r}$')
+        # O2_ecce_ax.plot(O2_ecce_data[5], '^-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,s}$')
+        # O2_ecce_ax.plot(O2_ecce_data[2], 'd-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,r}$')
+        # O2_ecce_ax.plot(O2_ecce_data[4], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
+        # O2_ecce_ax.plot(O2_ecce_data[6], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
+
+        # Reference candidate design
+        # ref = zeros(8)
+        # O2_ecce_ax.plot(range(-1, 22), O2_ref*np.ones(23), 'k--', label='reference design')
+        # O2_ecce_ax.legend()
+        # O2_ecce_ax.grid()
+        # O2_ecce_ax.set_xticks(range(21))
+        # O2_ecce_ax.annotate('Lower bound', xytext=(0.5, 5.5), xy=(0, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
+        # O2_ecce_ax.annotate('Upper bound', xytext=(18.5, 5.5),  xy=(20, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
+        # O2_ecce_ax.set_xlim((-0.5,20.5))
+        # O2_ecce_ax.set_ylim((4,14))
+        # O2_ecce_ax.set_xlabel(r'Number of design variant')
+        # O2_ecce_ax.set_ylabel(r'$O_2(x)$ [1]')
+        # fig_ecce.tight_layout()
+        # fig_ecce.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\O2_vs_params.png', dpi=150)
+        # show()
+        quit()   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
+    # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
+    # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
 
     # swda = SwarmDataAnalyzer(run_integer=113)
     # swda = SwarmDataAnalyzer(run_integer=200)
@@ -784,12 +992,14 @@ if __name__ == '__main__':
     O2_max = []
     O2_min = []
     O2_ax  = figure().gca()
-    for j in range(len(O2)/number_of_variant): # iterate design parameters
+    O2_ecce_data = []
+    for j in range(len(O2)/number_of_variant): # iterate design parameters: range(7)
         O2_vs_design_parameter = O2[j*number_of_variant:(j+1)*number_of_variant]
+        O2_ecce_data.append(O2_vs_design_parameter)
 
-        O2_ax.plot(O2_vs_design_parameter, label=str(j)+' '+param_list[j], alpha=0.5)
+        O2_ax.plot(O2_vs_design_parameter, 'o-', label=str(j)+' '+param_list[j], alpha=0.5)
         print '\t', j, param_list[j], '\t\t', max(O2_vs_design_parameter) - min(O2_vs_design_parameter), '\t\t',
-        print [ind for ind, el in enumerate(O2_vs_design_parameter) if el < O2_ref] #'<- to derive new bounds.'
+        print [ind for ind, el in enumerate(O2_vs_design_parameter) if el < O2_ref] #'<- to derive new original_bounds.'
 
         O2_max.append(max(O2_vs_design_parameter))
         O2_min.append(min(O2_vs_design_parameter))            
@@ -798,13 +1008,38 @@ if __name__ == '__main__':
     O2_ax.set_ylabel('O2 [1]')
     O2_ax.set_xlabel('Count of design variants')
 
+    # for ecce digest
+    fig_ecce = figure(figsize=(10, 5), facecolor='w', edgecolor='k')
+    O2_ecce_ax = fig_ecce.gca()
+    O2_ecce_ax.plot(O2_ecce_data[1], 'o-', lw=0.75, alpha=0.5, label=r'$\delta$'         )
+    O2_ecce_ax.plot(O2_ecce_data[0], 'v-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,s}$')
+    O2_ecce_ax.plot(O2_ecce_data[3], 's-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,r}$')
+    O2_ecce_ax.plot(O2_ecce_data[5], '^-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,s}$')
+    O2_ecce_ax.plot(O2_ecce_data[2], 'd-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,r}$')
+    O2_ecce_ax.plot(O2_ecce_data[4], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
+    O2_ecce_ax.plot(O2_ecce_data[6], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
+
     # Reference candidate design
     ref = zeros(8)
         # ref[0] = 0.635489                                   # PF
         # ref[1] = 0.963698                                   # eta
         # ref[1] = efficiency_at_50kW(1817.22+216.216+224.706)# eta@50kW
-    O2_ax.plot(range(-1, 22), O2_ref*np.ones(23), 'k--')
     O1_ax.plot(range(-1, 22), O1_ref*np.ones(23), 'k--')
+    O2_ax.plot(range(-1, 22), O2_ref*np.ones(23), 'k--')
+    O2_ecce_ax.plot(range(-1, 22), O2_ref*np.ones(23), 'k--', label='reference design')
+    O2_ecce_ax.legend()
+    O2_ecce_ax.grid()
+    O2_ecce_ax.set_xticks(range(21))
+    O2_ecce_ax.annotate('Lower bound', xytext=(0.5, 5.5), xy=(0, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
+    O2_ecce_ax.annotate('Upper bound', xytext=(18.5, 5.5),  xy=(20, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
+    O2_ecce_ax.set_xlim((-0.5,20.5))
+    O2_ecce_ax.set_ylim((4,14))
+    O2_ecce_ax.set_xlabel(r'Number of design variant')
+    O2_ecce_ax.set_ylabel(r'$O_2(x)$ [1]')
+    fig_ecce.tight_layout()
+    fig_ecce.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\O2_vs_params.png', dpi=150)
+    # show()
+    # quit()
     ref[0] = O2_ref    / 8
     ref[1] = O1_ref    / 3
     ref[2] = 19.1197   / required_torque                # 100%
@@ -922,6 +1157,7 @@ if __name__ == '__main__':
     ax.set_xticklabels((r'$O_2$ [8]', r'$O_1$ [3]', r'$T_{em}$ [15.9 Nm]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]'))
     ax.grid()
     fig.tight_layout()
+    fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\sensitivity_results.png', dpi=150)
 
     show()
 

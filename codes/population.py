@@ -196,6 +196,8 @@ class swarm(object):
                     logger.warn('Unfinished iteration is found with ongoing files in run folder.') # Make sure the project is not opened in JMAG, and we are going to remove the project files and ongoing files.')
                     # logger.warn(u'不出意外，就从第一个个体开始迭代。但是很多时候跑到第150个个体的时候跑断了，你总不会想要把这一代都删了，重新跑吧？')
                     # os.remove(u"D:/JMAG_Files/" + run_folder[:-1] + file[:-12] + ".jproj")
+
+                    # logger.debug('\n'.join(','.join('%.16f'%(x) for x in y) for y in self.ongoing_pop_denorm))
                     print 'List ongoing_pop_denorm here:', self.ongoing_pop_denorm.tolist()
 
                 if 'fit#' in file:
@@ -766,7 +768,9 @@ class swarm(object):
         str_results  += '\n\teta: %g' % (efficiency)
 
         # O2
-        weights = [ 1, 0.1,   1, 0.1, 0.1,   0 ]
+        weights = [ 1, 1.0,   1, 1.0, 1.0,   0 ]
+        # # O1
+        # weights = [ 1, 0.1,   1, 0.1, 0.1,   0 ]
         list_cost = [   30e3 / ( torque_average/rotor_volume ),
                         normalized_torque_ripple         *  20, 
                         1.0 / ( ss_avg_force_magnitude/rotor_weight ),
@@ -809,7 +813,7 @@ class swarm(object):
                         self.project_name, im_variant.individual_name, 
                         self.number_current_generation, individual_index, cost_function, 
                         str_machine_results,
-                        ','.join(['%g'%(el) for el in list_weighted_cost]),
+                        ','.join(['%g'%(el) for el in list_cost]),
                         ','.join(['%g'%(el) for el in individual]) ) + str_results)
 
         self.im = mylatch
@@ -879,10 +883,18 @@ class swarm(object):
         #  [ 5  5  5  5]]
         diff = np.fabs(min_b - max_b)
         pop_denorm = min_b + pop * diff
-        if self.number_current_generation == 0:
-            print 'gen#0000 with initail design as the first individual:'
-            for el in pop_denorm:
-                print el.tolist()
+        # if self.number_current_generation == 0:
+        #     print 'gen#0000 with initail design as the first individual:'
+        #     for el in pop_denorm:
+        #         print el.tolist()
+        # 出现以下BUG：        
+        # 2019-01-25 00:44:42,292 - root - ERROR - Optimization aborted.
+        # Traceback (most recent call last):
+        #   File "D:/OneDrive - UW-Madison/c/codes/opti_script.py", line 297, in <module>
+        #     for result in de_generator:
+        #   File "D:/OneDrive - UW-Madison/c/codes/population.py", line 885, in de
+        #     print el.tolist()
+        # IOError: [Errno 9] Bad file descriptor
 
 
 
