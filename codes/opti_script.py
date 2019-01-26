@@ -133,7 +133,9 @@ run_folder = r'run#117/' # run for the candidate design only
 
 run_folder = r'run#118/' # for plot in TpX (VanGogh prints P1-P8)
 
-run_folder = r'run#120/' # minimize O2 with narrowed bounds according to sensitivity analysis (run#116)
+run_folder = r'run#120/' # minimize O1 with narrowed bounds according to sensitivity analysis (run#116)
+
+run_folder = r'run#121/' # minimize O2 with narrowed bounds according to sensitivity analysis (run#116)
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -273,16 +275,19 @@ if fea_config_dict['jmag_run_list'][0] == 0:
     sw.femm_solver = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static
 
 
-
-# while True:
-if True:
+count_abort = 0
+while True:
+# if True:
+    
+    logger.debug('count_abort=%d' % (count_abort))
 
     # if optimization_flat == True:
     # generate the initial generation
     sw.generate_pop()
 
-    # add initial_design of Pyrhonen09 to the initial generation
-    utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
+    # if count_abort == 0:
+    #     # add initial_design of Pyrhonen09 to the initial generation
+    #     utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
 
 
     ''' 4. Run DE Optimization
@@ -300,25 +305,31 @@ if True:
         print 'See log file for the error msg.'
         logger.error(u'Optimization aborted.', exc_info=True)
 
+        raise e
 
-        # quit()
-        try:
-            # reload for changed codes
-            reload(population) # relaod for JMAG's python environment
-            reload(FEMM_Solver)
-            reload(utility)
+        # # 避免死循环
+        # count_abort+1
+        # if count_abort > 10:
+        #     quit()
 
-            # notification via email
-            utility.send_notification(u'Optimization aborted.')
+        # # quit()
+        # try:
+        #     # reload for changed codes
+        #     reload(population) # relaod for JMAG's python environment
+        #     reload(FEMM_Solver)
+        #     reload(utility)
+
+        #     # notification via email
+        #     # utility.send_notification(u'Optimization aborted.')
         
-            # msg = 'Pop status report\n------------------------\n'
-            # msg += '\n'.join('%.16f'%(x) for x in sw.fitness) + '\n'
-            # msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)    
-            # logger.debug(msg)
+        #     # msg = 'Pop status report\n------------------------\n'
+        #     # msg += '\n'.join('%.16f'%(x) for x in sw.fitness) + '\n'
+        #     # msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)    
+        #     # logger.debug(msg)
 
-            # sw.bool_auto_recovered_run = True
-        except:
-            pass
+        #     # sw.bool_auto_recovered_run = True
+        # except:
+        #     pass
     else:
         logger.info('Done.')
         utility.send_notification('Done.')
