@@ -699,169 +699,117 @@ if __name__ == '__main__':
         fig.subplots_adjust(right=0.9, hspace=0.21, wspace=0.11) # won't work after I did something. just manual adjust!
 
 
-        # TRV vs Torque Ripple
-        ax = axeses[0][0]
-        xy_ref = (19.1197/rotor_volume/1e3, 0.0864712) # from run#117
-        x, y = array(list(swda.get_certain_objective_function(2)))/rotor_volume/1e3, list(swda.get_certain_objective_function(3))
-        x = x.tolist()
-        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-        ax.set_xlabel('TRV [Nm/m^3]\n(a)')
-        ax.set_ylabel(r'$T_{\rm rip}$ [100%]')
+        if True:
+            # TRV vs Torque Ripple
+            ax = axeses[0][0]
+            xy_ref = (19.1197/rotor_volume/1e3, 0.0864712) # from run#117
+            x, y = array(list(swda.get_certain_objective_function(2)))/rotor_volume/1e3, list(swda.get_certain_objective_function(3))
+            x = x.tolist()
+            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+            ax.set_xlabel('TRV [kNm/m^3]\n(a)')
+            ax.set_ylabel(r'$T_{\rm rip}$ [100%]')
 
-        # FRW vs Ea
-        ax = axeses[0][1]
-        xy_ref = (96.9263/rotor_weight, 6.53137)
-        x, y = array(list(swda.get_certain_objective_function(4)))/rotor_weight, list(swda.get_certain_objective_function(6))
-        x = x.tolist()
-        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-        ax.set_xlabel('FRW [1]\n(b)')
-        ax.set_ylabel(r'$E_a$ [deg]')
+            # FRW vs Ea
+            ax = axeses[0][1]
+            xy_ref = (96.9263/rotor_weight, 6.53137)
+            x, y = array(list(swda.get_certain_objective_function(4)))/rotor_weight, list(swda.get_certain_objective_function(6))
+            x = x.tolist()
+            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+            ax.set_xlabel('FRW [1]\n(b)')
+            ax.set_ylabel(r'$E_a$ [deg]')
 
-        # FRW vs Em
-        ax = axeses[1][0]
-        xy_ref = (96.9263/rotor_weight, 0.104915)
-        x, y = array(list(swda.get_certain_objective_function(4)))/rotor_weight, list(swda.get_certain_objective_function(5))
-        x = x.tolist()
-        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-        ax.set_xlabel('FRW [1]\n(c)')
-        ax.set_ylabel(r'$E_m$ [100%]')
+            # FRW vs Em
+            ax = axeses[1][0]
+            xy_ref = (96.9263/rotor_weight, 0.104915)
+            x, y = array(list(swda.get_certain_objective_function(4)))/rotor_weight, list(swda.get_certain_objective_function(5))
+            x = x.tolist()
+            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+            ax.set_xlabel('FRW [1]\n(c)')
+            ax.set_ylabel(r'$E_m$ [100%]')
 
-        # Em vs Ea
-        ax = axeses[1][1]
-        xy_ref = (0.104915, 6.53137)
-        x, y = list(swda.get_certain_objective_function(5)), list(swda.get_certain_objective_function(6))
-        scatter_handle = my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-        ax.set_xlabel('$E_m$ [100%]\n(d)')
-        ax.set_ylabel(r'$E_a$ [deg]')
+            # Em vs Ea
+            ax = axeses[1][1]
+            xy_ref = (0.104915, 6.53137)
+            x, y = list(swda.get_certain_objective_function(5)), list(swda.get_certain_objective_function(6))
+            scatter_handle = my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+            ax.set_xlabel('$E_m$ [100%]\n(d)')
+            ax.set_ylabel(r'$E_a$ [deg]')
 
-        # fig.subplots_adjust(right=0.8)
-        # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7]) # left, bottom, width, height
-        # fig.subplots_adjust(right=0.9)
-        # cbar_ax = fig.add_axes([0.925, 0.15, 0.025, 0.7])
-        cbar_ax = fig.add_axes([0.925, 0.15, 0.02, 0.7])
-        cbar_ax.get_yaxis().labelpad = 10
-        clb = fig.colorbar(scatter_handle, cax=cbar_ax)
-        clb.ax.set_ylabel(r'Cost function $O_2$', rotation=270)
-        # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
-
-
-        fig.tight_layout()
-        # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
-        show()
-        quit()
+            # fig.subplots_adjust(right=0.8)
+            # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7]) # left, bottom, width, height
+            # fig.subplots_adjust(right=0.9)
+            # cbar_ax = fig.add_axes([0.925, 0.15, 0.025, 0.7])
+            cbar_ax = fig.add_axes([0.925, 0.15, 0.02, 0.7])
+            cbar_ax.get_yaxis().labelpad = 10
+            clb = fig.colorbar(scatter_handle, cax=cbar_ax)
+            clb.ax.set_ylabel(r'Cost function $O_2$', rotation=270)
+            # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
 
 
+            fig.tight_layout()
+            # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
+            # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\pareto_plot.png', dpi=150, bbox_inches='tight')
+            show()
+            quit()
+
+        if False:
+
+            # Torque vs Torque Ripple
+            ax = axeses[0][0]
+            xy_ref = (19.1197, 0.0864712) # from run#117
+            x, y = list(swda.get_certain_objective_function(2)), list(swda.get_certain_objective_function(3))
+            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+            ax.set_xlabel('$T_{em}$ [Nm]\n(a)')
+            ax.set_ylabel(r'$T_{\rm rip}$ [100%]')
+
+            # Force vs Ea
+            ax = axeses[0][1]
+            xy_ref = (96.9263, 6.53137)
+            x, y = list(swda.get_certain_objective_function(4)), list(swda.get_certain_objective_function(6))
+            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+            ax.set_xlabel('$|F|$ [N]\n(b)')
+            ax.set_ylabel(r'$E_a$ [deg]')
+
+            # Force vs Em
+            ax = axeses[1][0]
+            xy_ref = (96.9263, 0.104915)
+            x, y = list(swda.get_certain_objective_function(4)), list(swda.get_certain_objective_function(5))
+            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+            ax.set_xlabel('$|F|$ [N]\n(c)')
+            ax.set_ylabel(r'$E_m$ [100%]')
+
+            # Em vs Ea
+            ax = axeses[1][1]
+            xy_ref = (0.104915, 6.53137)
+            x, y = list(swda.get_certain_objective_function(5)), list(swda.get_certain_objective_function(6))
+            scatter_handle = my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+            ax.set_xlabel('$E_m$ [100%]\n(d)')
+            ax.set_ylabel(r'$E_a$ [deg]')
+
+            # fig.subplots_adjust(right=0.8)
+            # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7]) # left, bottom, width, height
+            # fig.subplots_adjust(right=0.9)
+            # cbar_ax = fig.add_axes([0.925, 0.15, 0.025, 0.7])
+            cbar_ax = fig.add_axes([0.925, 0.15, 0.02, 0.7])
+            cbar_ax.get_yaxis().labelpad = 10
+            clb = fig.colorbar(scatter_handle, cax=cbar_ax)
+            clb.ax.set_ylabel(r'Cost function $O_2$', rotation=270)
+            # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
 
 
+            fig.tight_layout()
+            # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
+            show()
 
+            # Loss vs Ea
+            xy_ref = ((1817.22+216.216+224.706), 6.53137)
+            x, y = array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))), list(swda.get_certain_objective_function(6))
+            x = x.tolist()
+            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref)
+            xlabel(r'$P_{\rm Cu,Fe}$ [W]')
+            ylabel(r'$E_a$ [deg]')
 
-
-
-
-
-
-
-
-
-
-
-
-        # Torque vs Torque Ripple
-        ax = axeses[0][0]
-        xy_ref = (19.1197, 0.0864712) # from run#117
-        x, y = list(swda.get_certain_objective_function(2)), list(swda.get_certain_objective_function(3))
-        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-        ax.set_xlabel('$T_{em}$ [Nm]\n(a)')
-        ax.set_ylabel(r'$T_{\rm rip}$ [100%]')
-
-        # Force vs Ea
-        ax = axeses[0][1]
-        xy_ref = (96.9263, 6.53137)
-        x, y = list(swda.get_certain_objective_function(4)), list(swda.get_certain_objective_function(6))
-        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-        ax.set_xlabel('$|F|$ [N]\n(b)')
-        ax.set_ylabel(r'$E_a$ [deg]')
-
-        # Force vs Em
-        ax = axeses[1][0]
-        xy_ref = (96.9263, 0.104915)
-        x, y = list(swda.get_certain_objective_function(4)), list(swda.get_certain_objective_function(5))
-        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-        ax.set_xlabel('$|F|$ [N]\n(c)')
-        ax.set_ylabel(r'$E_m$ [100%]')
-
-        # Em vs Ea
-        ax = axeses[1][1]
-        xy_ref = (0.104915, 6.53137)
-        x, y = list(swda.get_certain_objective_function(5)), list(swda.get_certain_objective_function(6))
-        scatter_handle = my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-        ax.set_xlabel('$E_m$ [100%]\n(d)')
-        ax.set_ylabel(r'$E_a$ [deg]')
-
-        # fig.subplots_adjust(right=0.8)
-        # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7]) # left, bottom, width, height
-        # fig.subplots_adjust(right=0.9)
-        # cbar_ax = fig.add_axes([0.925, 0.15, 0.025, 0.7])
-        cbar_ax = fig.add_axes([0.925, 0.15, 0.02, 0.7])
-        cbar_ax.get_yaxis().labelpad = 10
-        clb = fig.colorbar(scatter_handle, cax=cbar_ax)
-        clb.ax.set_ylabel(r'Cost function $O_2$', rotation=270)
-        # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
-
-
-        fig.tight_layout()
-        # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
-        show()
-
-        # Loss vs Ea
-        xy_ref = ((1817.22+216.216+224.706), 6.53137)
-        x, y = array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))), list(swda.get_certain_objective_function(6))
-        x = x.tolist()
-        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref)
-        xlabel(r'$P_{\rm Cu,Fe}$ [W]')
-        ylabel(r'$E_a$ [deg]')
-
-
-
-        # # for ecce digest
-        # fig_ecce = figure(figsize=(10, 5), facecolor='w', edgecolor='k')
-        # O2_ecce_ax = fig_ecce.gca()
-        # O2_ecce_ax.plot(O2_ecce_data[1], 'o-', lw=0.75, alpha=0.5, label=r'$\delta$'         )
-        # O2_ecce_ax.plot(O2_ecce_data[0], 'v-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,s}$')
-        # O2_ecce_ax.plot(O2_ecce_data[3], 's-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,r}$')
-        # O2_ecce_ax.plot(O2_ecce_data[5], '^-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,s}$')
-        # O2_ecce_ax.plot(O2_ecce_data[2], 'd-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,r}$')
-        # O2_ecce_ax.plot(O2_ecce_data[4], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
-        # O2_ecce_ax.plot(O2_ecce_data[6], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
-
-        # Reference candidate design
-        # ref = zeros(8)
-        # O2_ecce_ax.plot(range(-1, 22), O2_ref*np.ones(23), 'k--', label='reference design')
-        # O2_ecce_ax.legend()
-        # O2_ecce_ax.grid()
-        # O2_ecce_ax.set_xticks(range(21))
-        # O2_ecce_ax.annotate('Lower bound', xytext=(0.5, 5.5), xy=(0, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
-        # O2_ecce_ax.annotate('Upper bound', xytext=(18.5, 5.5),  xy=(20, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
-        # O2_ecce_ax.set_xlim((-0.5,20.5))
-        # O2_ecce_ax.set_ylim((4,14))
-        # O2_ecce_ax.set_xlabel(r'Number of design variant')
-        # O2_ecce_ax.set_ylabel(r'$O_2(x)$ [1]')
-        # fig_ecce.tight_layout()
-        # fig_ecce.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\O2_vs_params.png', dpi=150)
-        # show()
-        quit()   
-
-
-
-
-
-
-
-
-
-
-
-
+            quit()   
 
 
 
@@ -1011,6 +959,7 @@ if __name__ == '__main__':
     # for ecce digest
     fig_ecce = figure(figsize=(10, 5), facecolor='w', edgecolor='k')
     O2_ecce_ax = fig_ecce.gca()
+    O2_ecce_ax.plot(range(-1, 22), O2_ref*np.ones(23), 'k--', label='reference design')
     O2_ecce_ax.plot(O2_ecce_data[1], 'o-', lw=0.75, alpha=0.5, label=r'$\delta$'         )
     O2_ecce_ax.plot(O2_ecce_data[0], 'v-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,s}$')
     O2_ecce_ax.plot(O2_ecce_data[3], 's-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,r}$')
@@ -1019,6 +968,10 @@ if __name__ == '__main__':
     O2_ecce_ax.plot(O2_ecce_data[4], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
     O2_ecce_ax.plot(O2_ecce_data[6], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
 
+    myfontsize = 12.5
+    rcParams.update({'font.size': myfontsize})
+
+
     # Reference candidate design
     ref = zeros(8)
         # ref[0] = 0.635489                                   # PF
@@ -1026,20 +979,19 @@ if __name__ == '__main__':
         # ref[1] = efficiency_at_50kW(1817.22+216.216+224.706)# eta@50kW
     O1_ax.plot(range(-1, 22), O1_ref*np.ones(23), 'k--')
     O2_ax.plot(range(-1, 22), O2_ref*np.ones(23), 'k--')
-    O2_ecce_ax.plot(range(-1, 22), O2_ref*np.ones(23), 'k--', label='reference design')
     O2_ecce_ax.legend()
     O2_ecce_ax.grid()
     O2_ecce_ax.set_xticks(range(21))
     O2_ecce_ax.annotate('Lower bound', xytext=(0.5, 5.5), xy=(0, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
-    O2_ecce_ax.annotate('Upper bound', xytext=(18.5, 5.5),  xy=(20, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
+    O2_ecce_ax.annotate('Upper bound', xytext=(18.0, 5.5),  xy=(20, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
     O2_ecce_ax.set_xlim((-0.5,20.5))
     O2_ecce_ax.set_ylim((4,14))
-    O2_ecce_ax.set_xlabel(r'Number of design variant')
-    O2_ecce_ax.set_ylabel(r'$O_2(x)$ [1]')
+    O2_ecce_ax.set_xlabel(r'Number of design variant', fontsize=myfontsize)
+    O2_ecce_ax.set_ylabel(r'$O_2(x)$ [1]', fontsize=myfontsize)
     fig_ecce.tight_layout()
-    fig_ecce.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\O2_vs_params.png', dpi=150)
-    # show()
-    # quit()
+    fig_ecce.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\O2_vs_params.png', dpi=150)
+    show()
+    quit()
     ref[0] = O2_ref    / 8
     ref[1] = O1_ref    / 3
     ref[2] = 19.1197   / required_torque                # 100%
