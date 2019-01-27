@@ -37,14 +37,14 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     no_pole_pairs = 2
     speed_rpm = rated_frequency * 60 / no_pole_pairs # rpm
 
-    bool_standard_voltage_rating = True
+    bool_standard_voltage_rating = False
     if bool_standard_voltage_rating:
         U1_rms = 480. / sqrt(3) # V - Wye-connect #480 V is standarnd # 电压越高，意味着越厚的绝缘占去槽空间（Lipo2017书）
         # U1_rms = 480  # V - Delta-connect
     else:
         U1_rms = 500. / sqrt(3) # The design used in ECCE
     print 'bool_standard_voltage_rating=', bool_standard_voltage_rating
-    print 'U1_rms=', U1_rms, 'V'
+    print 'U1_rms=', U1_rms, 'V', 
 
     stator_phase_voltage_rms = U1_rms
     no_phase_m = 3
@@ -187,6 +187,8 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
 
     print '''\n7. Number of Coil Turns '''
     desired_emf_Em = 0.95 * stator_phase_voltage_rms # 0.96~0.98, high speed motor has higher leakage reactance hence 0.95
+    print 'stator_phase_voltage_rms=', stator_phase_voltage_rms, 'V'
+    print 'desired_emf_Em=', desired_emf_Em, 'V'
     flux_linkage_Psi_m = desired_emf_Em / (2*pi*rated_frequency) 
 
     alpha_i = 2/pi # ideal sinusoidal flux density distribusion, when the saturation happens in teeth, alpha_i becomes higher.
@@ -208,18 +210,20 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         no_series_coil_turns_N = min([no_pole_pairs*distribution_q*i for i in range(100)], key=lambda x:abs(x - no_series_coil_turns_N))  # using lower turns value has priority # https://stackoverflow.com/questions/12141150/from-list-of-integers-get-number-closest-to-a-given-value
     print 'The suggested no_series_coil_turns_N is', no_series_coil_turns_N, '---modify this manually, if necessary.'
 
+    print '------------\n\t',
     if bool_standard_voltage_rating == True:
         # reduce the magnetic load on rotor tooth by allowing the back EMF to become larger.
         if no_series_coil_turns_N < backup:
             no_series_coil_turns_N += no_pole_pairs*distribution_q
-            print '------------\n\tAuto use a larger no_series_coil_turns_N=%d,\n\tto make sure the air gap B is lower than 0.8T so as to limit the rotor tooth width and the solution of a rotor slot height exist.' % (no_series_coil_turns_N)
+            print 'Auto use a larger no_series_coil_turns_N=%d,\n\tto make sure the air gap B is lower than 0.8T so as to limit the rotor tooth width and the solution of a rotor slot height exist.' % (no_series_coil_turns_N)
             print '\tThis means that you sacrifice your power factor (directly related to air gap B only) to make sure you have enough rotor slot area for your rotor current.'
-        print 'no_series_coil_turns_N=%d means desired_emf_Em=%g V becomes %g V.\n' % (no_series_coil_turns_N, desired_emf_Em, no_series_coil_turns_N * (2*pi*rated_frequency * kw1 * air_gap_flux_Phi_m) / sqrt(2))
         # quit()
     else:
         if no_series_coil_turns_N < backup:
             print 'Since your voltage is not fixed, you can vary it to make the selection of no_series_coil_turns_N works without increasing your air gap B.'
             quit()
+    print 'no_series_coil_turns_N=%d means desired_emf_Em=%g V becomes %g V.' % (no_series_coil_turns_N, desired_emf_Em, no_series_coil_turns_N * (2*pi*rated_frequency * kw1 * air_gap_flux_Phi_m) / sqrt(2))
+    print '\tno_series_coil_turns_N=%d means desired_emf_Em*1.732=%g V becomes %g V.\n' % (no_series_coil_turns_N, desired_emf_Em*sqrt(3), no_series_coil_turns_N * (2*pi*rated_frequency * kw1 * air_gap_flux_Phi_m) / sqrt(2)*sqrt(3))
 
     no_parallel_path = 1
     print '''In some cases, especially in low-voltage, high-power machines, there may be a need to change the stator slot number, the number of parallel paths or even the main dimensions of the machine in order to find the appropriate number of conductors in a slot.'''
