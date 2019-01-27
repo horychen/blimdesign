@@ -2731,8 +2731,9 @@ class bearingless_induction_motor_design(object):
         self.omega = None # This variable name is devil! you can't tell its electrical or mechanical! #+ self.DriveW_Freq * (1-self.the_slip) * 2*pi
         # self.the_speed = + self.the_speed
 
-        if self.fea_config_dict['flag_optimization'] == False: # or else it becomes annoying
-            print '[Update %s]'%(self.ID), self.slip_freq_breakdown_torque, self.the_slip, self.the_speed, self.Omega, self.DriveW_Freq, self.BeariW_Freq
+        if self.fea_config_dict is not None:
+            if self.fea_config_dict['flag_optimization'] == False: # or else it becomes annoying
+                print '[Update %s]'%(self.ID), self.slip_freq_breakdown_torque, self.the_slip, self.the_speed, self.Omega, self.DriveW_Freq, self.BeariW_Freq
 
     def __init__(self, row=None, fea_config_dict=None, model_name_prefix='PS'):
 
@@ -2795,8 +2796,9 @@ class bearingless_induction_motor_design(object):
         self.update_mechanical_parameters(slip_freq=2.75) #, syn_freq=500.)
 
         #04 Material Condutivity Properties
-        self.End_Ring_Resistance = fea_config_dict['End_Ring_Resistance']
-        self.Bar_Conductivity = fea_config_dict['Bar_Conductivity']
+        if self.fea_config_dict is not None:
+            self.End_Ring_Resistance = fea_config_dict['End_Ring_Resistance']
+            self.Bar_Conductivity = fea_config_dict['Bar_Conductivity']
         self.Copper_Loss = self.DriveW_CurrentAmp**2 / 2 * self.DriveW_Rs * 3
         # self.Resistance_per_Turn = 0.01 # TODO
 
@@ -2804,21 +2806,24 @@ class bearingless_induction_motor_design(object):
         #05 Windings & Excitation
         self.l41=[ 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', ]
         self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', ]
-        if self.fea_config_dict['DPNV'] == True:
-            # DPNV style for one phase: -- oo ++ oo
-            self.l21=[  'A', 'A', 'C', 'C', 'B', 'B', 
-                        'A', 'A', 'C', 'C', 'B', 'B', 
-                        'A', 'A', 'C', 'C', 'B', 'B', 
-                        'A', 'A', 'C', 'C', 'B', 'B']
-            self.l22=[  '-', '-', 'o', 'o', '+', '+', # 横着读和竖着读都是负零正零。 
-                        'o', 'o', '-', '-', 'o', 'o', 
-                        '+', '+', 'o', 'o', '-', '-', 
-                        'o', 'o', '+', '+', 'o', 'o']
+        if self.fea_config_dict is not None:
+            if self.fea_config_dict['DPNV'] == True:
+                # DPNV style for one phase: -- oo ++ oo
+                self.l21=[  'A', 'A', 'C', 'C', 'B', 'B', 
+                            'A', 'A', 'C', 'C', 'B', 'B', 
+                            'A', 'A', 'C', 'C', 'B', 'B', 
+                            'A', 'A', 'C', 'C', 'B', 'B']
+                self.l22=[  '-', '-', 'o', 'o', '+', '+', # 横着读和竖着读都是负零正零。 
+                            'o', 'o', '-', '-', 'o', 'o', 
+                            '+', '+', 'o', 'o', '-', '-', 
+                            'o', 'o', '+', '+', 'o', 'o']
+            else:
+                # separate style for one phase: ---- ++++
+                self.l21=[ 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', ]
+                self.l22=[ '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', ]
         else:
-            # separate style for one phase: ---- ++++
-            self.l21=[ 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', ]
-            self.l22=[ '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', ]
-
+            self.l21 = None
+            self.l22 = None            
 
         if self.DriveW_poles == 2:
             self.BeariW_poles = self.DriveW_poles+2; 
