@@ -149,6 +149,8 @@ fea_config_dict['Active_Qr'] = 16
 run_folder = r'run#400/' # Sensitivity analysis for Qr=16, T440p
 run_folder = r'run#140/' # Sensitivity analysis for Qr=16, Y730
 
+# Exact Approach: compute the tangent points of the two circles （未修正）
+
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
 def build_model_name_prefix(fea_config_dict):
@@ -293,7 +295,8 @@ else:
 # init the swarm
 sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)
 # sw.show(which='all')
-
+# print sw.im.show(toString=True)
+# quit()
 
 ################################################################
 # Check the shitty design (that fails to draw) or the best design

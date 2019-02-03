@@ -1,7 +1,7 @@
 # coding:u8
 from shapely.geometry import LineString
 from shapely.geometry import Point
-from math import tan, pi, atan, sqrt, sin, cos, copysign, atan2
+from math import tan, pi, atan, sqrt, sin, cos, copysign, atan2, asin
 
 CUSTOM = 2
 JMAG = 1
@@ -200,15 +200,30 @@ class VanGogh(object):
         P5 = self.get_node_at_intersection(c,l)
         self.draw_line(P4, P5)
 
-        # P6
-        # femm.mi_addnode(-im.Location_RotorBarCenter, im.Radius_of_RotorSlot)
-        P6 = (-im.Location_RotorBarCenter, im.Radius_of_RotorSlot)
-        self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, c.centroid.coords[0]))
+        if True: # 近似方法，直接取两个圆心正上方的点
+            # P6
+            # femm.mi_addnode(-im.Location_RotorBarCenter, im.Radius_of_RotorSlot)
+            P6 = (-im.Location_RotorBarCenter, im.Radius_of_RotorSlot)
+            self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, c.centroid.coords[0]))
 
-        # P7
-        # femm.mi_addnode(-im.Location_RotorBarCenter2, im.Radius_of_RotorSlot2)
-        P7 = (-im.Location_RotorBarCenter2, im.Radius_of_RotorSlot2)
-        self.draw_line(P6, P7)
+            # P7
+            # femm.mi_addnode(-im.Location_RotorBarCenter2, im.Radius_of_RotorSlot2)
+            P7 = (-im.Location_RotorBarCenter2, im.Radius_of_RotorSlot2)
+            self.draw_line(P6, P7)
+
+        else: # Exact Approach: compute the tangent points of the two circles
+            if im.Location_RotorBarCenter == im.Location_RotorBarCenter2:
+                P6 = (-im.Location_RotorBarCenter, im.Radius_of_RotorSlot)
+                P7 = P6
+            else:
+                P6, P7 = get_tangent_points_of_two_circles((-im.Location_RotorBarCenter,0), im.Radius_of_RotorSlot, 
+                                                           (-im.Location_RotorBarCenter2,0), im.Radius_of_RotorSlot2)
+                if abs(P6[0]) > abs(P7[0]):
+                    pass
+                else:
+                    raise Exception('P6 should be outer of P7: get_tangent_points_of_two_circles().')
+            self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, c.centroid.coords[0]))
+            self.draw_line(P6, P7)
 
         # P8
         # femm.mi_addnode(-im.Location_RotorBarCenter2+im.Radius_of_RotorSlot2, 0)
@@ -537,8 +552,6 @@ def whole_row_reader(reader):
     for row in reader:
         yield row[:]
 
-
-
 class VanGogh_Plotter(VanGogh):
     """VanGogh_Plotter is child class of VanGogh for plotting IM geometry in matplotlib."""
     def __init__(self, im, child_index=2):
@@ -588,6 +601,8 @@ class VanGogh_Plotter(VanGogh):
         return obj
 
     def pyplot_arc(self, radius, angle_span=3.14, center=(0,0), rotation=0, maxseg=0.1, ax=None, **kwarg):
+        # Plot an arc starting from x-axis to axis aligned to angle_span. Use rotation to change the beginning axis.
+
         # make sure ax is not empty
         if ax is None:
             ax = self.ax
@@ -601,6 +616,45 @@ class VanGogh_Plotter(VanGogh):
         # phis = np.arange(rotation, rotation+angle_span, 2*radius*np.pi / (360./maxseg))
         phis = np.linspace(rotation, rotation+angle_span, 360./maxseg)
         return ax.plot( *xy(radius, phis, center), c='k', **kwarg)
+
+
+# wiki: https://en.wikipedia.org/wiki/Tangent_lines_to_circles
+def get_tangent_points_of_two_circles(center1, radius1, center2, radius2):
+    x1, y1 = center1[0], center1[1]
+    r      = radius1
+    x2, y2 = center2[0], center2[1]
+    R      = radius2
+
+    gamma  = - atan( (y2-y1) / (x2-x1) )
+    beta   = asin( (R-r) / sqrt((x2-x1)**2+(y2-y1)**2) )
+    alpha  = gamma - beta
+
+    x3, y3 = x1 + r*cos(0.5*pi - alpha), y1 + r*sin(0.5*pi - alpha), 
+    x4, y4 = x2 + R*cos(0.5*pi - alpha), y2 + R*sin(0.5*pi - alpha), 
+
+    return (x3, y3), (x4, y4)
+
+if __name__ == '__main__':
+
+    c1 = (-48,0)
+    c2 = (-40,0)
+    c2 = c1
+    loc1, loc2 = get_tangent_points_of_two_circles(c1, 5, c2, 5)
+    from pylab import *
+    fig = figure()        
+    ax = gcf().gca() # get current figure/axis
+    ax = fig.add_subplot(111, aspect='equal')
+    scatter(*loc1)
+    scatter(*loc2)
+    scatter(*c1)
+    scatter(*c2)
+    circle1 = plt.Circle(c1, 5, color='r')
+    circle2 = plt.Circle(c2, 5, color='r')
+    ax.add_artist(circle1)
+    ax.add_artist(circle2)
+    ax.plot([loc1[0], loc2[0]], [loc1[1], loc2[1]], 'k')
+    show()
+    quit()
 
 if __name__ == '__main__':
     import matplotlib.patches as mpatches

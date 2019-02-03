@@ -2884,6 +2884,16 @@ class bearingless_induction_motor_design(object):
             logger = logging.getLogger(__name__)
             logger.debug('Warning: There is no need to use a drop shape rotor, because the centers of the inner and outer circles are too close: %g, %g.' % (self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
             self.use_drop_shape_rotor_bar = False
+            
+            # for VanGogh (FEMM) to work properly （如何不把两者设置成一样的，那么FEMM画出来的（很短的droop shape slot）和JMAG画出来的（Round shape圆形槽）则不一样。
+            self.Location_RotorBarCenter2_backup = self.Location_RotorBarCenter2
+            self.Location_RotorBarCenter2 = self.Location_RotorBarCenter 
+            # use the larger slot radius
+            if self.Radius_of_RotorSlot > self.Radius_of_RotorSlot2:
+                self.Radius_of_RotorSlot2 = self.Radius_of_RotorSlot
+            if self.Radius_of_RotorSlot2 > self.Radius_of_RotorSlot:
+                self.Radius_of_RotorSlot = self.Radius_of_RotorSlot2
+
         else:
             self.use_drop_shape_rotor_bar = True
 
@@ -2898,8 +2908,10 @@ class bearingless_induction_motor_design(object):
                 if self.Location_RotorBarCenter2 >= self.Location_RotorBarCenter:
                     logger.debug('Location_RotorBarCenter2 suggests to use round bar.')
                     self.use_drop_shape_rotor_bar = False
+
+                    # for VanGogh (FEMM) to work properly
                     self.Location_RotorBarCenter2_backup = self.Location_RotorBarCenter2
-                    self.Location_RotorBarCenter2 = self.Location_RotorBarCenter # for VanGogh to work properly
+                    self.Location_RotorBarCenter2 = self.Location_RotorBarCenter 
                     # use the larger slot radius
                     if self.Radius_of_RotorSlot > self.Radius_of_RotorSlot2:
                         self.Radius_of_RotorSlot2 = self.Radius_of_RotorSlot
