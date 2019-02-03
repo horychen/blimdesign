@@ -89,6 +89,7 @@ class swarm(object):
         # load initial design using the obsolete class bearingless_induction_motor_design
         self.im_list = []
         with open(self.initial_design_file, 'r') as f: 
+            print self.initial_design_file
             for row in self.csv_row_reader(f):
                 im = bearingless_induction_motor_design([row[0]]+[float(el) for el in row[1:]], fea_config_dict, model_name_prefix=fea_config_dict['model_name_prefix'])
                 self.im_list.append(im)
@@ -259,61 +260,86 @@ class swarm(object):
             
             # generate the initial random swarm from the initial design
             self.init_pop = np.random.rand(popsize, dimensions) # normalized design parameters between 0 and 1
-            # # 敏感性检查：以基本设计为准，检查不同的参数取极值时的电机性能变化！这是最简单有效的办法。七个设计参数，那么就有14种极值设计。
-            if self.fea_config_dict['run_folder'] == r'run#115/':
-                # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
-                initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
-                initial_design = (initial_design_denorm - min_b) / diff
-                print initial_design_denorm.tolist()
-                print initial_design.tolist()
-                base_design = initial_design.tolist()
-                print base_design, '\n-------------'
-                numver_of_variants = 5
-                self.init_pop = []
-                for i in range(len(base_design)): # 7 design parameters
-                    for j in range(numver_of_variants+1): # 5 variants interval
-                        # copy list
-                        design_variant = base_design[::]
-                        design_variant[i] = j * 1./numver_of_variants
-                        self.init_pop.append(design_variant)
-                for ind, el in enumerate(self.init_pop):
-                    print ind, el
-                # quit()
-            if self.fea_config_dict['run_folder'] == r'run#116/':
-                # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
-                initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
-                initial_design = (initial_design_denorm - min_b) / diff
-                print initial_design_denorm.tolist()
-                print initial_design.tolist()
-                base_design = initial_design.tolist()
-                print base_design, '\n-------------'
-                numver_of_variants = 20
-                self.init_pop = []
-                for i in range(len(base_design)): # 7 design parameters
-                    for j in range(numver_of_variants+1): # 5 variants interval
-                        # copy list
-                        design_variant = base_design[::]
-                        design_variant[i] = j * 1./numver_of_variants
-                        self.init_pop.append(design_variant)
-                for ind, el in enumerate(self.init_pop):
-                    print ind, el
-                # quit()
-            if self.fea_config_dict['run_folder'] == r'run#117/':
-                # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
-                initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
-                initial_design = (initial_design_denorm - min_b) / diff
-                print initial_design_denorm.tolist()
-                print initial_design.tolist()
-                base_design = initial_design.tolist()
-                print base_design, '\n-------------'
-                numver_of_variants = 20
-                self.init_pop = []
-                for i in range(len(base_design)): # 7 design parameters
-                    for j in range(numver_of_variants+1): # 5 variants interval
-                        self.init_pop.append(initial_design) #<---------------------------ONLY Base Design
-                for ind, el in enumerate(self.init_pop):
-                    print ind, el
-                # quit()
+
+            def local_sensitivity_analysis(self):
+
+                # 敏感性检查：以基本设计为准，检查不同的参数取极值时的电机性能变化！这是最简单有效的办法。七个设计参数，那么就有14种极值设计。
+                if self.fea_config_dict['run_folder'] == r'run#115/':
+                    # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
+                    initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
+                    initial_design = (initial_design_denorm - min_b) / diff
+                    print initial_design_denorm.tolist()
+                    print initial_design.tolist()
+                    base_design = initial_design.tolist()
+                    print base_design, '\n-------------'
+                    numver_of_variants = 5
+                    self.init_pop = []
+                    for i in range(len(base_design)): # 7 design parameters
+                        for j in range(numver_of_variants+1): # 5 variants interval
+                            # copy list
+                            design_variant = base_design[::]
+                            design_variant[i] = j * 1./numver_of_variants
+                            self.init_pop.append(design_variant)
+                    for ind, el in enumerate(self.init_pop):
+                        print ind, el
+                    # quit()
+                if self.fea_config_dict['run_folder'] == r'run#116/':
+                    # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
+                    initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
+                    initial_design = (initial_design_denorm - min_b) / diff
+                    print initial_design_denorm.tolist()
+                    print initial_design.tolist()
+                    base_design = initial_design.tolist()
+                    print base_design, '\n-------------'
+                    numver_of_variants = 20
+                    self.init_pop = []
+                    for i in range(len(base_design)): # 7 design parameters
+                        for j in range(numver_of_variants+1): # 21 variants interval
+                            # copy list
+                            design_variant = base_design[::]
+                            design_variant[i] = j * 1./numver_of_variants
+                            self.init_pop.append(design_variant)
+                    for ind, el in enumerate(self.init_pop):
+                        print ind, el
+                    # quit()
+                if self.fea_config_dict['run_folder'] == r'run#117/':
+                    # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
+                    initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
+                    initial_design = (initial_design_denorm - min_b) / diff
+                    print initial_design_denorm.tolist()
+                    print initial_design.tolist()
+                    base_design = initial_design.tolist()
+                    print base_design, '\n-------------'
+                    numver_of_variants = 20
+                    self.init_pop = []
+                    for i in range(len(base_design)): # 7 design parameters
+                        for j in range(numver_of_variants+1): # 21 variants interval
+                            self.init_pop.append(initial_design) #<---------------------------ONLY Base Design
+                    for ind, el in enumerate(self.init_pop):
+                        print ind, el
+                    # quit()
+
+                if self.fea_config_dict['run_folder'] == r'run#400/':
+                    initial_design_denorm = np.array( utility.Pyrhonen_design(self.im).design_parameters_denorm )
+                    initial_design = (initial_design_denorm - min_b) / diff
+                    print initial_design_denorm.tolist()
+                    print initial_design.tolist()
+                    base_design = initial_design.tolist()
+                    print 'base_design:', base_design, '\n-------------'
+                    numver_of_variants = 20
+                    self.init_pop = []
+                    for i in range(len(base_design)): # 7 design parameters
+                        for j in range(numver_of_variants+1): # 21 variants interval
+                            # copy list
+                            design_variant = base_design[::]
+                            design_variant[i] = j * 1./numver_of_variants
+                            self.init_pop.append(design_variant)
+                    for ind, el in enumerate(self.init_pop):
+                        print ind, el
+                    # quit()
+
+            local_sensitivity_analysis(self)
+
             self.init_pop_denorm = min_b + self.init_pop * diff
             self.init_fitness = None
 
@@ -367,7 +393,7 @@ class swarm(object):
                 # self.append_population_data(self.init_pop_denorm[solved_popsize:])
                 # logger.debug('init_pop before:\n' + '\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop))
             elif popsize < solved_popsize:
-                raise Exception('Reducing popsize during a run---feature is not supported.')
+                raise Exception('Reducing popsize during a run---feature is not supported. If you are testing local sensitivity analysis, then delete the run folder (under pop/ and csv_opti/) and run again.')
 
         # add a database using the swarm_data.txt file
         if os.path.exists(self.dir_run+'swarm_data.txt'):
@@ -406,12 +432,12 @@ class swarm(object):
         # too avoid tons of the same material in JAMG's material library
         if not os.path.exists(self.dir_parent + '.jmag_state.txt'):
             with open(self.dir_parent + '.jmag_state.txt', 'w') as f:
-                f.write(self.fea_config_dict['Steel'] + '\n')
+                f.write(self.fea_config_dict['pc_name'] + '/' + self.fea_config_dict['Steel'] + '\n')
             add_steel(self)
         else:
             with open(self.dir_parent + '.jmag_state.txt', 'r') as f:
                 for line in f.readlines():
-                    if self.fea_config_dict['Steel'] not in line:
+                    if self.fea_config_dict['pc_name'] + '/' + self.fea_config_dict['Steel'] not in line:
                         add_steel(self)
 
     def get_gen_file(self, no_generation, ongoing=False):
@@ -627,7 +653,7 @@ class swarm(object):
                 self.fig_main.savefig(self.dir_run + im_variant.individual_name + 'results.png', dpi=150)
                 self.pyplot_clear()
             except Exception, e:
-                logger.error(u'Error when loading csv results for Tran2TSS.', exc_info=True)
+                logger.error(u'Error when loading csv results for Tran2TSS. Check the Report of JMAG Designer. (Maybe Material is not added.)', exc_info=True)
                 raise e
             # show()
 
@@ -725,7 +751,7 @@ class swarm(object):
                 # JMAG+JMAG
                 # model = app.GetCurrentModel()
                 im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
-                self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger, clock_time())
+                self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger)
 
             # export Voltage if field data exists.
             if self.fea_config_dict['delete_results_after_calculation'] == False:
@@ -1419,8 +1445,8 @@ class swarm(object):
         DRAW_SUCCESS = self.draw_jmag_model( 0, 
                                         im,
                                         self.im.model_name)
-        print 'TEST VanGogh for JMAG.'
-        return
+        # print 'TEST VanGogh for JMAG.'
+        # return
         self.jmag_control_state = True # indicating that the jmag project is already created
         if DRAW_SUCCESS == 0:
             # TODO: skip this model and its evaluation
@@ -1536,7 +1562,7 @@ class swarm(object):
             study.GetDesignTable().GetEquation(u"slip").SetExpression("%g"%(self.im.the_slip))
             study.GetDesignTable().GetEquation(u"slip").SetDescription(u"Slip [1]")
             study.GetDesignTable().GetEquation(u"speed").SetType(1)
-            study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * 30")
+            study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * 30") ######################## 4 pole motor
             study.GetDesignTable().GetEquation(u"speed").SetDescription(u"mechanical speed of four pole")
 
             # speed, freq, slip
@@ -2592,25 +2618,28 @@ class swarm(object):
 
             # Iron Loss Calculation Condition
             # Stator 
-            cond = study.CreateCondition(u"Ironloss", u"IronLossConStator")
-            cond.SetValue(u"RevolutionSpeed", u"freq*60/%d"%(0.5*(im_variant.DriveW_poles)))
-            cond.ClearParts()
-            sel = cond.GetSelection()
-            sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+1e-2, 0 ,0)
-            cond.AddSelected(sel)
-            # Use FFT for hysteresis to be consistent with FEMM's results and to have a FFT plot
-            cond.SetValue(u"HysteresisLossCalcType", 1)
-            cond.SetValue(u"PresetType", 3) # 3:Custom
-            # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
-            cond.SetValue(u"StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
-            cond.SetValue(u"EndReferenceStep", number_of_total_steps)
-            cond.SetValue(u"UseStartReferenceStep", 1)
-            cond.SetValue(u"UseEndReferenceStep", 1)
-            cond.SetValue(u"Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
-            cond.SetValue(u"UseFrequencyOrder", 1)
-            cond.SetValue(u"FrequencyOrder", u"1-50") # Harmonics up to 50th orders 
-            # Check CSV reults for iron loss (You cannot check this for Freq study)
+            if True:
+                cond = study.CreateCondition(u"Ironloss", u"IronLossConStator")
+                cond.SetValue(u"RevolutionSpeed", u"freq*60/%d"%(0.5*(im_variant.DriveW_poles)))
+                cond.ClearParts()
+                sel = cond.GetSelection()
+                sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+1e-2, 0 ,0)
+                cond.AddSelected(sel)
+                # Use FFT for hysteresis to be consistent with FEMM's results and to have a FFT plot
+                cond.SetValue(u"HysteresisLossCalcType", 1)
+                cond.SetValue(u"PresetType", 3) # 3:Custom
+                # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
+                cond.SetValue(u"StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
+                cond.SetValue(u"EndReferenceStep", number_of_total_steps)
+                cond.SetValue(u"UseStartReferenceStep", 1)
+                cond.SetValue(u"UseEndReferenceStep", 1)
+                cond.SetValue(u"Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
+                cond.SetValue(u"UseFrequencyOrder", 1)
+                cond.SetValue(u"FrequencyOrder", u"1-50") # Harmonics up to 50th orders 
+            # Check CSV reults for iron loss (You cannot check this for Freq study) # CSV and save space
+            study.GetStudyProperties().SetValue(u"CsvOutputPath", self.dir_csv_output_folder) # it's folder rather than file!
             study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;LineCurrent;TerminalVoltage;JouleLoss;TotalDisplacementAngle;JouleLoss_IronLoss;IronLoss_IronLoss;HysteresisLoss_IronLoss")
+            study.GetStudyProperties().SetValue(u"DeleteResultFiles", self.fea_config_dict['delete_results_after_calculation'])
             # Terminal Voltage/Circuit Voltage: Check for outputing CSV results 
             study.GetCircuit().CreateTerminalLabel(u"Terminal4A", 8, -13)
             study.GetCircuit().CreateTerminalLabel(u"Terminal4B", 8, -11)
@@ -2625,16 +2654,26 @@ class swarm(object):
             study.GetMaterial(u"Cage").SetValue(u"OutputResult", 0)
             study.GetMaterial(u"Coil").SetValue(u"OutputResult", 0)
             # Rotor
-                # study.CreateCondition(u"Ironloss", u"IronLossConRotor")
-                # cond.SetValue(u"BasicFrequencyType", 2)
-                # cond.SetValue(u"BasicFrequency", u"slip*freq")
-                # cond.ClearParts()
-                # sel = cond.GetSelection()
-                # sel.SelectPartByPosition(-im.Radius_Shaft-1e-2, 0 ,0)
-                # cond.AddSelected(sel)
-                # # Use FFT for hysteresis to be consistent with FEMM's results
-                # cond.SetValue(u"HysteresisLossCalcType", 1)
-                # cond.SetValue(u"PresetType", 3)
+            if True:
+                cond = study.CreateCondition(u"Ironloss", u"IronLossConRotor")
+                cond.SetValue(u"BasicFrequencyType", 2)
+                cond.SetValue(u"BasicFrequency", u"freq")
+                    # cond.SetValue(u"BasicFrequency", u"slip*freq") # this require the signal length to be at least 1/4 of slip period, that's too long!
+                cond.ClearParts()
+                sel = cond.GetSelection()
+                sel.SelectPartByPosition(-im_variant.Radius_Shaft-1e-2, 0 ,0)
+                cond.AddSelected(sel)
+                # Use FFT for hysteresis to be consistent with FEMM's results
+                cond.SetValue(u"HysteresisLossCalcType", 1)
+                cond.SetValue(u"PresetType", 3)
+                # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
+                cond.SetValue(u"StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
+                cond.SetValue(u"EndReferenceStep", number_of_total_steps)
+                cond.SetValue(u"UseStartReferenceStep", 1)
+                cond.SetValue(u"UseEndReferenceStep", 1)
+                cond.SetValue(u"Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
+                cond.SetValue(u"UseFrequencyOrder", 1)
+                cond.SetValue(u"FrequencyOrder", u"1-50") # Harmonics up to 50th orders 
 
             # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
             study.GetStudyProperties().SetValue(u"DirectSolverType", 1)
@@ -2842,10 +2881,30 @@ class bearingless_induction_motor_design(object):
 
         #07: Some Checking
         if abs(self.Location_RotorBarCenter2 - self.Location_RotorBarCenter) < 0.1*(self.Radius_of_RotorSlot + self.Radius_of_RotorSlot2):
-            print 'Warning: There is no need to use a drop shape rotor, because the required rotor bar height is not high.'
+            logger = logging.getLogger(__name__)
+            logger.debug('Warning: There is no need to use a drop shape rotor, because the centers of the inner and outer circles are too close: %g, %g.' % (self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
             self.use_drop_shape_rotor_bar = False
         else:
             self.use_drop_shape_rotor_bar = True
+
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            # For a low Qr value, there is a chance that the Location_RotorBarCenter2 is larger than Location_RotorBarCenter,
+            # This means the round bar should be used instead of drop shape bar.
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            if self.use_drop_shape_rotor_bar == True:
+                logger = logging.getLogger(__name__)
+                logger.debug('Location_RotorBarCenter1,2: %g, %g.'%(self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
+
+                if self.Location_RotorBarCenter2 >= self.Location_RotorBarCenter:
+                    logger.debug('Location_RotorBarCenter2 suggests to use round bar.')
+                    self.use_drop_shape_rotor_bar = False
+                    self.Location_RotorBarCenter2_backup = self.Location_RotorBarCenter2
+                    self.Location_RotorBarCenter2 = self.Location_RotorBarCenter # for VanGogh to work properly
+                    # use the larger slot radius
+                    if self.Radius_of_RotorSlot > self.Radius_of_RotorSlot2:
+                        self.Radius_of_RotorSlot2 = self.Radius_of_RotorSlot
+                    if self.Radius_of_RotorSlot2 > self.Radius_of_RotorSlot:
+                        self.Radius_of_RotorSlot = self.Radius_of_RotorSlot2
 
         if abs(self.Qs-self.Qr)<1:
             print 'Warning: Must not use a same Qs and Qr, to avoid synchronous torques created by slot harmonics. - (7.111)'
@@ -3016,11 +3075,14 @@ class bearingless_induction_motor_design(object):
                 if 'Bearingless' in title: # Have we removed the title line?
                     break
             while True:
-                # the last line does not end in ', \n', so remove it first
+                # the last line does not end in ', \n', so handle it first
                 last_line = buf.pop()
                 if len(last_line) > 1:
                     exec('self.' + last_line[8:])
                     break
+
+        count_of_space = buf[0].find('A')
+        print 'count_of_space=', count_of_space
 
         for ind, line in enumerate(buf):
             index_equal_symbol = line.find('=') 
@@ -3030,7 +3092,7 @@ class bearingless_induction_motor_design(object):
                 line = line[:index_equal_symbol+2] + '"' + line[index_equal_symbol+2:index_comma_symbol] + '"' + line[index_comma_symbol:]
 
             # the leading 8 char are space, while the ending 3 char are ', \n'
-            exec('self.' + line[8:-3]) 
+            exec('self.' + line[count_of_space:-3]) 
         return self
 
     def whole_row_reader(self, reader):
@@ -3208,7 +3270,7 @@ class bearingless_induction_motor_design(object):
             self.table_freq_division_refarray[0][1] =   1
             self.table_freq_division_refarray[0][2] =    self.max_nonlinear_iteration
             self.table_freq_division_refarray[1][0] = 10
-            self.table_freq_division_refarray[1][1] =   8
+            self.table_freq_division_refarray[1][1] =   32 # 8
             self.table_freq_division_refarray[1][2] =    self.max_nonlinear_iteration
             self.table_freq_division_refarray[2][0] = 16
             self.table_freq_division_refarray[2][1] =   2
@@ -3245,7 +3307,7 @@ class bearingless_induction_motor_design(object):
             study.GetStudyProperties().SetValue(u"Slip", self.the_slip)
             study.GetStudyProperties().SetValue(u"OutputSteadyResultAs1stStep", 0)
             study.GetStudyProperties().SetValue(u"NonlinearMaxIteration", self.max_nonlinear_iteration)
-            study.GetStudyProperties().SetValue(u"CsvOutputPath", dir_csv_output_folder) # it's folder rather than file!
+            study.GetStudyProperties().SetValue(u"CsvOutputPath", self.dir_csv_output_folder) # it's folder rather than file!
             # study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;FEMCoilFlux;LineCurrent;ElectricPower;TerminalVoltage;JouleLoss;TotalDisplacementAngle")
             study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;LineCurrent;TerminalVoltage;JouleLoss;TotalDisplacementAngle")
             study.GetStudyProperties().SetValue(u"TimePeriodicType", 2) # This is for TP-EEC but is not effective
@@ -3266,7 +3328,7 @@ class bearingless_induction_motor_design(object):
             study.GetStudyProperties().SetValue(u"NonlinearMaxIteration", self.max_nonlinear_iteration)
             study.GetStudyProperties().SetValue(u"ModelThickness", self.stack_length) # Stack Length
             study.GetStudyProperties().SetValue(u"ConversionType", 0)
-            study.GetStudyProperties().SetValue(u"CsvOutputPath", dir_csv_output_folder) # it's folder rather than file!
+            study.GetStudyProperties().SetValue(u"CsvOutputPath", self.dir_csv_output_folder) # it's folder rather than file!
                 # study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;FEMCoilFlux;LineCurrent;ElectricPower;TerminalVoltage;JouleLoss;TotalDisplacementAngle")
             study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;LineCurrent;JouleLoss")
             study.GetStudyProperties().SetValue(u"DeleteResultFiles", self.fea_config_dict['delete_results_after_calculation'])
@@ -3291,7 +3353,7 @@ class bearingless_induction_motor_design(object):
             study.GetStudyProperties().SetValue(u"NonlinearMaxIteration", self.max_nonlinear_iteration)
             study.GetStudyProperties().SetValue(u"ModelThickness", self.stack_length) # Stack Length
             study.GetStudyProperties().SetValue(u"ConversionType", 0)
-            study.GetStudyProperties().SetValue(u"CsvOutputPath", dir_csv_output_folder) # it's folder rather than file!
+            study.GetStudyProperties().SetValue(u"CsvOutputPath", self.dir_csv_output_folder) # it's folder rather than file!
                 # study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;FEMCoilFlux;LineCurrent;ElectricPower;TerminalVoltage;JouleLoss;TotalDisplacementAngle")
             study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;LineCurrent;JouleLoss")
             study.GetStudyProperties().SetValue(u"DeleteResultFiles", self.fea_config_dict['delete_results_after_calculation'])
@@ -4845,6 +4907,7 @@ class TrimDrawer(object):
         self.trim_l(l1,-EPS-self.im.Radius_OuterRotor, 0.5*self.im.Width_RotorSlotOpen)
         self.trim_l(l1,-EPS-self.im.Location_RotorBarCenter, 0.5*self.im.Width_RotorSlotOpen)
 
+
         if self.im.use_drop_shape_rotor_bar == True:
             # the inner rotor slot for drop shape rotor suggested by Gerada2011
             c4=self.circle(-self.im.Location_RotorBarCenter2, 0, self.im.Radius_of_RotorSlot2) # Circle.4
@@ -4899,11 +4962,8 @@ class TrimDrawer(object):
                 # raise Exception('Is c4 still there? If c4 is not deleted, you will get Unexpected Part Number error afterwards. So fix it here now.')
 
 
-
         # Trim the Sketch Object!
         arc2 = self.trim_c(c2,0, c2.GetRadius()) # or self.trim_c(c2,0, self.im.Radius_OuterRotor)
-
-
 
         X = float(c3.GetCenterVertex().GetX()) # the returned type is long, which will cause failing to trim. Convert to float. Or simply add 1e-2 to it, so Python will do the conversion for you.
         arc3 = self.trim_c(c3, X, -c3.GetRadius()+1e-6) # or self.trim_c(c3,-self.im.Location_RotorBarCenter, -self.im.Radius_of_RotorSlot)
@@ -4913,10 +4973,6 @@ class TrimDrawer(object):
         arc1 = self.trim_c(c1, 0, c1.GetRadius()) # or self.trim_c(c1, 0, self.im.Radius_Shaft)
 
         self.trim_l(l2,-0.5*self.im.Radius_Shaft, 0)
-            # if self.im.use_drop_shape_rotor_bar == True:
-            #     self.trim_l(l2,0.5*self.im.Radius_of_RotorSlot2-self.im.Location_RotorBarCenter2, 0)
-            # else:
-            #     self.trim_l(l2,0.5*self.im.Radius_of_RotorSlot-self.im.Location_RotorBarCenter, 0)
 
         # 上面说的“导致Line.3整根消失！”的原因是直接剪在了原点(0,0)上，所以把整根线都删掉了，稍微偏一点(-0.1,0.1)操作即可
         # ä¸Šé¢è¯´çš„â€œå¯¼è‡´Line.3æ•´æ ¹æ¶ˆå¤±ï¼â€çš„åŽŸå› æ˜¯ç›´æŽ\å‰ªåœ¨äº†åŽŸç‚¹(0,0)ä¸Šï¼Œæ‰€ä»\æŠŠæ•´æ ¹çº¿éƒ½åˆ æŽ‰äº†ï¼Œç¨å¾®åä¸€ç‚¹(-0.1,0.1)æ“ä½œå³å¯

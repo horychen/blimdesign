@@ -183,7 +183,7 @@ def basefreqDFT(signal, samp_freq, ax_time_domain=None, ax_freq_domain=None, bas
         ax_time_domain.set_ylabel('B [T]')
 
 class Pyrhonen_design(object):
-    def __init__(self, im, original_bounds):
+    def __init__(self, im, original_bounds=None):
         ''' Determine original_bounds for these parameters:
             stator_tooth_width_b_ds              = design_parameters[0]*1e-3 # m                       # stator tooth width [mm]
             air_gap_length_delta                 = design_parameters[1]*1e-3 # m                       # air gap length [mm]
@@ -219,7 +219,10 @@ class Pyrhonen_design(object):
                                             self.Angle_StatorSlotOpen,
                                             self.Width_StatorTeethHeadThickness]
 
-        self.show_norm(original_bounds, self.design_parameters_denorm)
+        if original_bounds is None:
+            self.design_parameters_denorm
+        else:
+            self.show_norm(original_bounds, self.design_parameters_denorm)
 
 
     def show_denorm(self, original_bounds, design_parameters_norm):
@@ -570,9 +573,9 @@ Omega =  3132.95327379
 rotor_volume = pi*(Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
 rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
 
-print 'rotor_volume=', rotor_volume, 'm^3'
-print 'rotor_weight=', rotor_weight, 'N'
-
+print 'utility.py'
+print 'Qr=32, rotor_volume=', rotor_volume, 'm^3'
+print 'Qr=32, rotor_weight=', rotor_weight, 'N'
 
 
 def fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, 

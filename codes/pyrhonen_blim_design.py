@@ -13,6 +13,7 @@ print 'Guesses: alpha_i, efficiency, power_factor.'
 # model_name_prefix = 'ECRot_PS_Opti' # longer solve time, less models, better mesh, higher turns for bearing winding.
 # model_name_prefix = 'StaticFEA_PS_Opti' # Fix Bug for the rotor slot radius as half of rotor tooth width
 model_name_prefix = 'Tran2TSS_PS_Opti'
+model_name_prefix = 'Tran2TSS_PS_Opti_Qr16'
 
 # delete existing file
 loc_txt_file = '../pop/%s.txt'%(model_name_prefix)
@@ -659,19 +660,27 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
 # for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (for alpha_i and k_sat) with Arnon5 at least
 # for THE_IM_DESIGN_ID, Qr in enumerate([32]):
 Qr = 32
+Qr = 16
+bool_run_for_bounds = False
 for rotor_tooth_flux_density_B_dr in arange(1.1, 2.11, 0.2): #1.5–2.2 (rotor) 
     for stator_tooth_flux_density_B_ds in arange(1.1, 1.81, 0.2): #1.4–2.1 (stator) # too large you will get End of Loop Error (Fixed by extropolating the k_sat vs alpha_i curve.)
         for rotor_current_density_Jr in arange(3e6, 8e6+1, 1e6):
 
-            rotor_tooth_flux_density_B_dr = 1.5
-            stator_tooth_flux_density_B_ds = 1.4
-            rotor_current_density_Jr = 6.4e6
+            if not bool_run_for_bounds:
+                rotor_tooth_flux_density_B_dr = 1.5
+                stator_tooth_flux_density_B_ds = 1.4
+                rotor_current_density_Jr = 6.4e6
+
             Radius_OuterRotor = pyrhonen_blim_design(   rotor_tooth_flux_density_B_dr,
                                                         stator_tooth_flux_density_B_ds,
                                                         rotor_current_density_Jr)
+
+            if not bool_run_for_bounds:
+                break
+        if not bool_run_for_bounds:
             break
+    if not bool_run_for_bounds:
         break
-    break
 
 
 
