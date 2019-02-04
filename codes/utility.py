@@ -541,7 +541,7 @@ class SwarmDataAnalyzer(object):
             yield [float(el) for el in individual[3].split(',')][which]
 
 
-def autolabel(rects, xpos='center', bias=0.0):
+def autolabel(ax, rects, xpos='center', bias=0.0):
     """
     Attach a text label above each bar in *rects*, displaying its height.
 
@@ -587,7 +587,7 @@ def fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple
                     normalized_force_error_magnitude *  20, #       / 0.05 * 0.1
                     force_error_angle                * 0.2, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
                     total_loss                       / 2500. ] #10 / efficiency**2,
-    cost_function = np.dot(array(list_cost), array(weights))
+    cost_function = np.dot(np.array(list_cost), np.array(weights))
     return cost_function
 
 def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss,
@@ -601,9 +601,9 @@ def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ri
                         normalized_force_error_magnitude *  20,
                         force_error_angle                * 0.2,
                         total_loss                     / 2500. ]
-        cost_function = np.dot(array(list_cost), array(weights))
+        cost_function = np.dot(np.array(list_cost), np.array(weights))
         l_cost_function.append(cost_function)
-    return array(l_cost_function)
+    return np.array(l_cost_function)
 
 
 # run 115 and 116
@@ -1061,13 +1061,13 @@ if __name__ == '__main__':
     rects5 = ax.bar(count + 2*width/8, y_min_vs_design_parameter_4, width/8, alpha=0.5, label=r'$h_{\rm head,s}$, Stator head height', color='#005b96')
     rects7 = ax.bar(count + 3*width/8, y_min_vs_design_parameter_6, width/8, alpha=0.5, label=r'$h_{\rm head,r}$, Rotor head height', color='#b3cde0') 
     print 'ylim=', ax.get_ylim()
-    autolabel(rects1, bias=-0.10)
-    autolabel(rects2, bias=-0.10)
-    autolabel(rects3, bias=-0.10)
-    autolabel(rects4, bias=-0.10)
-    autolabel(rects5, bias=-0.10)
-    autolabel(rects6, bias=-0.10)
-    autolabel(rects7, bias=-0.10)
+    autolabel(ax, rects1, bias=-0.10)
+    autolabel(ax, rects2, bias=-0.10)
+    autolabel(ax, rects3, bias=-0.10)
+    autolabel(ax, rects4, bias=-0.10)
+    autolabel(ax, rects5, bias=-0.10)
+    autolabel(ax, rects6, bias=-0.10)
+    autolabel(ax, rects7, bias=-0.10)
     one_one = array([1, 1])
     minus_one_one = array([-1, 1])
     ax.plot(rects6[0].get_x() + 0.5*width*minus_one_one, ref[0]*one_one, 'k--', lw=1.0, alpha=0.6, label='Reference design' )

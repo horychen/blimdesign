@@ -634,26 +634,7 @@ def get_tangent_points_of_two_circles(center1, radius1, center2, radius2):
 
     return (x3, y3), (x4, y4)
 
-# if __name__ == '__main__':
-#     l41 = ['C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B']
-#     l42 = ['+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
-#     dl = {'A': [], 'B': [], 'C':[]}
-#     count_slot = 0
-#     while True:
-#         try:
-#             count_slot += 1
-#             ABC     = l41.pop(0)
-#             up_down = l42.pop(0)
-#             for target in ['A', 'B', 'C']:
-#                 if ABC == target:
-#                     dl[target].append(up_down+str(count_slot))
-#                     break
-#         except:
-#             break
-#     print dl
-#     for key, item in dl.iteritems():
-#         print key, [int(el) for el in item]
-#     quit()
+
 
 # winding diagram
 if __name__ == '__main__':
@@ -682,17 +663,25 @@ if __name__ == '__main__':
     coil_pitch = 6
 
     from pylab import *
+    plt.rcParams["font.family"] = "Times New Roman"
     fig = figure(dpi=300)
     ax = fig.add_subplot(111, aspect='equal')
 
-    coil_bias = 0.3
+    coil_bias = 0.3 # 绘制双层绕组的第二层的偏移量
+    END   = Qs + 1 - 1/3.
+    SHIFT = END - 1 + 1/3.
+    # END = Qs+coil_pitch/2+coil_bias/2
+    print "END=", END
+    print "SHIFT=", SHIFT
+
+    # x means coil location (meaning is equivalent to loc)
     def draw_vertical_line_and_arrow_head(x):
         coil_spacing = 1
         x *= coil_spacing
         ax.plot([abs(x), abs(x)], 
-                [-4, 4], 'b', lw=1,alpha=0.7)
+                [-4, 4], '-'+color, lw=1,alpha=0.7)
         ax.plot([abs(x)+coil_bias, abs(x)+coil_bias], 
-                [-4, 4], '--b', lw=1,alpha=0.7)
+                [-4, 4], '--'+color, lw=1,alpha=0.7)
 
         annotate_bias = 0.1
         if x>0:
@@ -701,8 +690,8 @@ if __name__ == '__main__':
         else:
             xy     = [abs(x), (-4+4)/2 + annotate_bias + 0.9]
             xytext = [abs(x), (-4+4)/2 - annotate_bias + 0.9]
-        ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color='b'))
-        ax.annotate('', xytext=(xytext[0]+coil_bias, xytext[1]), xy=(xy[0]+coil_bias, xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->", color='b', alpha=0.7))
+        ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=0.7))
+        ax.annotate('', xytext=(xytext[0]+coil_bias, xytext[1]), xy=(xy[0]+coil_bias, xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=0.7))
         ax.text(xy[0]+1.25*coil_bias, annotate_bias + 0.9, '%d'%(abs(x)), fontsize=6)
 
     def draw_end_turns(x, coil_pitch):
@@ -714,66 +703,191 @@ if __name__ == '__main__':
         slope = (6-4) / (coil_pitch/2 + coil_bias/2)
 
         # going up
-        loc1 = abs(x) + coil_pitch/2 + coil_bias/2
-        # print loc1,
-        if  loc1 <= Qs:
-            mirror_plot(ax,  [ abs(x),
-                        loc1   ],
-                      [ 4,6 ], 'b', lw=0.5,alpha=0.7)
-        else:
-            # partial plot on the right 
-            mirror_plot(ax,  [ abs(x),
-                        Qs],
-                      [ 4,4+slope*(Qs-abs(x)) ], 'b', lw=0.5,alpha=0.7)
-            # partial plot on the left 
-            mirror_plot(ax,  [ 0,
-                        loc1-Qs],
-                      [ 4+slope*(Qs-abs(x)),6 ], 'b', lw=0.5,alpha=0.7)
-
+        loc1 = abs(x) + coil_pitch/2 + coil_bias/2 # half pitch
         # going down
-        loc2 = abs(x) + coil_pitch + coil_bias
-        # print loc2
-        if  loc2 <= Qs:
-            mirror_plot(ax,  [ loc1,
-                        loc2 ],
-                      [ 6,4 ], '--b', lw=0.5,alpha=0.7)
-        else:
-            if loc1 <= Qs: # 如果连loc1都超了，那就没必要再考虑loc2了
-                pass
+        loc2 = abs(x) + coil_pitch + coil_bias # full pitch
+
+        if loc1 <= END:
+            # going up
+            mirror_plot(ax,  [ abs(x),
+                               loc1   ],
+                             [ 4,6 ], '-'+color, lw=0.5,alpha=0.7)
+            if loc2 < END:
+                # going down 
                 mirror_plot(ax,  [ loc1,
-                            Qs],
-                          [ 6-slope*(Qs-loc1),4 ], '--b', lw=0.5,alpha=0.7)
+                                   loc2 ],
+                                 [ 6,4 ], '--'+color, lw=0.5,alpha=0.7)
             else:
-                # partial plot on the left 
-                mirror_plot(ax,  [ loc1-Qs,
-                            loc2-Qs],
-                          [ 6,4 ], '--b', lw=0.5,alpha=0.7)
+                # going down (to be continued)
+                mirror_plot(ax,  [ loc1,
+                                   END],
+                                 [ 6,6-slope*(END-loc1) ], '--'+color, lw=0.5,alpha=0.7)
+                # going down (continued)
+                mirror_plot(ax,  [ END-SHIFT,
+                                   loc2-SHIFT],
+                                 [ 6-slope*(END-loc1),4 ], '--'+color, lw=0.5,alpha=0.7)
+        else:
+            # going up (to be continued)
+            mirror_plot(ax,  [ abs(x),
+                               END],
+                             [ 4,4+slope*(END-abs(x)) ], '-'+color, lw=0.5,alpha=0.7)
+            # going up (continued)
+            mirror_plot(ax,  [ END-SHIFT,
+                               loc1-SHIFT],
+                             [ 4+slope*(END-abs(x)),6 ], '-'+color, lw=0.5,alpha=0.7)
+            # going down 
+            mirror_plot(ax,  [ loc1-SHIFT,
+                               loc2-SHIFT ],
+                             [ 6,4 ], '--'+color, lw=0.5,alpha=0.7)
 
-    def draw_terminals(list_terminals):
-        for ind, x in enumerate(list_terminals):        
-            c1 = (0,0)
-            c2 = (1,0)
-        circle1 = plt.Circle(c1, 0.1, edgecolor='b', facecolor='w')
-        circle2 = plt.Circle(c2, 0.1, edgecolor='b', facecolor='w')
-        ax.add_artist(circle1)
-        ax.add_artist(circle2)
+        # if loc2 <= END:
+        # else: # loc2 超了
+        #     if loc1 <= END: # loc1 没超
+        #         mirror_plot(ax,  [ loc1,
+        #                            END],
+        #                          [ 6,6-slope*(END-loc1) ], '--'+color, lw=0.5,alpha=0.7)
+        #     else: # loc1 也超了
+        #         print '-------------------------AAAAAA'
+        #         # partial plot on the left 
+        #         mirror_plot(ax,  [ loc1-SHIFT,
+        #                            loc2-SHIFT],
+        #                          [ 6,4 ], '--'+color, lw=0.5,alpha=0.7)
 
-    # ua          ub          uc           ud
-    list_terminals = [(9, -10),    (-4,  3),     (15, -7),       (22, -22)]
+        return slope
 
-    for el in dl['A']:
-        x = float(el)
-        print x
-        draw_vertical_line_and_arrow_head(x)
-        draw_end_turns(x, coil_pitch)
+    def draw_terminals(list_terminals, slope, phase='u'):
+        # xx means (x,x) <=> (loc, loc)
+        for xx, letter in zip(list_terminals, ['a', 'b', 'c', 'd']):
+            print xx, letter
+            # ua+
+            loc_plus = abs(xx[0])+coil_pitch/2+coil_bias/2 # top of the triangle
+            if xx[0]>0: # solid line
+                if loc_plus + 0.3 > END:
+                    loc_plus -= SHIFT
+                c1 = (loc_plus - 0.3, 9)
+                y_span = [c1[1]]+[6-0.3*slope]
+                xy     = [c1[0], sum(y_span)/2]
+                xytext = [c1[0], sum(y_span)/2 + 0.9]
+                line_style = '-'+color
+            else: # dashed line
+                if loc_plus + 0.3 > END:
+                    loc_plus -= SHIFT
+                c1 = (loc_plus + 0.3, 9)
+                y_span = [c1[1]]+[6-0.3*slope]
+                xy     = [c1[0], sum(y_span)/2]
+                xytext = [c1[0], sum(y_span)/2 + 0.9]
+                line_style = '--'+color
+            ax.plot([c1[0]]*2, y_span, line_style, lw=0.5, alpha=0.7)
+            ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=0.7))
 
-    draw_terminals(list_terminals)
-    # draw_coil_connections()
+            # ua-
+            loc_minus = abs(xx[1])+coil_pitch/2+coil_bias/2 # top of the triangle
+            if xx[1]>0: # solid line
+                if loc_minus + 0.3 > END:
+                    loc_minus -= SHIFT
+                c2 = (loc_minus - 0.3, 9)
+                y_span = [c2[1]]+[6-0.3*slope]
+                xytext = [c2[0], sum(y_span)/2]
+                xy     = [c2[0], sum(y_span)/2 + 0.9]
+                line_style = '-'+color
+            else: # dashed line
+                if loc_minus + 0.3 > END:
+                    loc_minus -= SHIFT
+                c2 = (loc_minus + 0.3, 9)
+                y_span = [c2[1]]+[6-0.3*slope]
+                xytext = [c2[0], sum(y_span)/2]
+                xy     = [c2[0], sum(y_span)/2 + 0.9]
+                line_style = '--'+color
+            ax.plot([c2[0]]*2, y_span, line_style, lw=0.5, alpha=0.7)
+            ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=0.7))
 
-    # ax.get_xaxis().set_visible(False)
-    # ax.get_yaxis().set_visible(False)
-    ax.set_xlim([0,Qs])
-    ax.set_ylim([-8,8])
+            # circle and ua+/- labels
+            terminal_symbols = (r'$%s_{%s}^+$'%(phase, letter), r'$%s_{%s}^-$'%(phase, letter))
+            ax.text(c1[0]-0.5, c1[1]+0.5, terminal_symbols[0], fontsize=6, color=color)
+            ax.text(c2[0]-0.5, c2[1]+0.5, terminal_symbols[1], fontsize=6, color=color)
+            circle1 = plt.Circle(c1, 0.1, edgecolor=color, facecolor='w', lw=0.5, zorder=10)
+            circle2 = plt.Circle(c2, 0.1, edgecolor=color, facecolor='w', lw=0.5, zorder=10)
+            ax.add_artist(circle1)
+            ax.add_artist(circle2)
+
+    def draw_coil_connections(list_coil_connection, slope):
+
+        # xx means (x,x) <=> (loc, loc)
+        for xx in list_coil_connection:
+            print xx
+            loc1 = abs(xx[0])+coil_pitch/2+coil_bias/2 # top of the triangle
+            loc2 = abs(xx[1])+coil_pitch/2+coil_bias/2 # top of the triangle
+            flag_shift = False
+            if loc1 > END:
+                loc1 -= SHIFT
+                flag_shift = not flag_shift
+            if loc2 > END:
+                loc2 -= SHIFT
+                flag_shift = not flag_shift # two shifts are equivalent to no shift ~
+
+            flag_swapped = False
+            if loc1 > loc2:
+                loc1, loc2 = loc2, loc1 # make sure that loc1/loc2 are the left/right location, respectively
+                flag_swapped = True
+
+            bias = 0.25
+            # horizontal
+            if flag_shift:
+                bias *= -1
+                # find the shortest connection (if shifted)
+                ax.plot([loc2-bias, END], [6.25, 6.25], '-'+color, lw=0.5, alpha=0.7)
+                ax.plot([END-SHIFT, loc1+bias], [6.25, 6.25], '-'+color, lw=0.5, alpha=0.7)
+            else:
+                # regular 
+                ax.plot([loc1+bias, loc2-bias], [6.25, 6.25], '-'+color, lw=0.5, alpha=0.7)
+
+            # vertical 1
+            line_style = '-'+color
+            if flag_swapped != (xx[0]<0): # XOR
+                line_style = '-' + line_style
+            ax.plot([loc1+bias]*2, [6.25, 6-abs(bias)*slope], line_style, lw=0.5, alpha=0.7)
+
+            # vertical 2
+            line_style = '-'+color
+            if flag_swapped != (xx[1]<0): # XOR
+                line_style = '-' + line_style
+            ax.plot([loc2-bias]*2, [6.25, 6-abs(bias)*slope], line_style, lw=0.5, alpha=0.7)
+
+    # draw coils in the slots as vertical lines
+    for color, winding_layout, phase in zip(['b', 'r', 'g'] , [dl['A'], dl['B'], dl['C']], ['u', 'v', 'w']):
+        # if color != 'b':
+        #     continue
+        for el in winding_layout:
+            x = float(el)
+            print color, x
+            draw_vertical_line_and_arrow_head(x)
+            slope = draw_end_turns(x, coil_pitch)
+
+        if phase == 'u':
+            # The key to determine this terminal location is to stick to the dual purpose feature 
+            # meanwhile considering the fact that ub and ud will not change current direction, while ua and uc will when under suspension excitation.
+            # Minus sign means dashed line (the second/lower layer of the double layer winding),
+            # while the first number of the tuple means the current is entering, and the second number of the tuple means the current is leaving.
+            # E.g., for ub, current enters 4 and leaves 3. Particularly, the current first enters the lower layer of slot 4, hence -4.
+            # Coil Group:     ua                       ub                           uc                         ud                         (see Severson15Dual@Fig.4b)
+            list_terminals = [(9, -10),                (-4,  3),                    (-16, 15),                 (21, -22)] 
+        if phase == 'v':
+            list_terminals = [(9+Qs/3, -(10+Qs/3)),    (-(4+Qs/3),     3+Qs/3),     (-(16+Qs/3), 15+Qs/3),     (21+Qs/3-Qs, -(22+Qs/3-Qs))]
+        if phase == 'w':
+            list_terminals = [(9-Qs/3, -(10-Qs/3)),    (-(4-Qs/3+Qs),  3-Qs/3+Qs),  (-(16-Qs/3), 15-Qs/3),     (21-Qs/3, -(22-Qs/3))]
+        draw_terminals(list_terminals, slope, phase=phase)
+
+        # draw connection lines between coil and coil
+        list_coil_connection = [(-el[0], -el[1]) for el in list_terminals]
+        if Qs!=24:
+            raise Exception('this pattern only works for winding whose coil group has only two coils.')
+        draw_coil_connections(list_coil_connection, slope)
+
+
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    ax.set_xlim([-0.5,Qs+1.5])
+    ax.set_ylim([-6.5,10])
     # scatter(*loc2)
     # scatter(*c1)
     # scatter(*c2)
@@ -813,6 +927,8 @@ if __name__ == '__main__':
     import matplotlib.patches as mpatches
     import matplotlib.pyplot as plt
     import numpy as np
+    plt.rcParams["font.family"] = "Times New Roman"
+
     myfontsize = 13.5
     plt.rcParams.update({'font.size': myfontsize})
 
