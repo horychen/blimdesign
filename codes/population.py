@@ -843,6 +843,7 @@ class swarm(object):
                         ','.join(['%g'%(el) for el in individual]) ) + str_results)
 
         self.im = mylatch
+        # raise
         # quit() # for run#117: write the initial design to swarm_data.txt
         return cost_function
 
@@ -1015,6 +1016,8 @@ class swarm(object):
         # except:
         #     pass
 
+        if self.fea_config_dict['local_sensitivity_analysis'] == True:
+            raise
 
         # Begin DE with pop, fitness of a completed generation
         for i in range(iterations):
@@ -5541,3 +5544,4 @@ def add_Arnon5(app, dir_parent):
 
 if __name__ == '__main__':
     pass
+

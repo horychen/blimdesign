@@ -69,7 +69,7 @@ def where_am_i(fea_config_dict):
 
 fea_config_dict = {
     ##########################
-    # Sysetm Controlc
+    # Sysetm Control
     ##########################
     'Active_Qr':32, # 36
     'TranRef-StepPerCycle':40,
@@ -79,6 +79,7 @@ fea_config_dict = {
     'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
     'flag_optimization':True,
     'FEMM_Coarse_Mesh':True,
+    'local_sensitivity_analysis':False,
 
     ##########################
     # Optimization
@@ -146,10 +147,15 @@ run_list = [0,1,0,0,0]
 # run_folder = r'run#122/' # O2 best: with end ring and fine step size transient FEA
 
 fea_config_dict['Active_Qr'] = 16
+fea_config_dict['local_sensitivity_analysis'] = True
 run_folder = r'run#400/' # Sensitivity analysis for Qr=16, T440p
 run_folder = r'run#140/' # Sensitivity analysis for Qr=16, Y730
 
 # Exact Approach: compute the tangent points of the two circles （未修正）
+
+fea_config_dict['local_sensitivity_analysis'] = False
+run_folder = r'run#141/' # run for reference
+run_folder = r'run#142/' # optimize Qr=16 for O1
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -249,7 +255,7 @@ if fea_config_dict['flag_optimization'] == True:
                                                     [5e-1,   3] ], # Width_StatorTeethHeadThickness
                                 'mut':        0.8,
                                 'crossp':     0.7,
-                                'popsize':    21*7, #30, # 50, # 100,
+                                'popsize':    30, # 21*7,  # 50, # 100,
                                 'iterations': 100,
                                 'narrow_bounds_normalized':[[],
                                                             [],
@@ -261,16 +267,27 @@ if fea_config_dict['flag_optimization'] == True:
                                 'bounds':[]}
 
     # Sensitivity Analysis based narrowing bounds
-    if False:
+    if True:
         # data acquired from run#116
         numver_of_variants = 20.0
-        raw_narrow_bounds = [   [9, 10],
-                                [5, 6, 7], #[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                [0, 1, 2, 3],
-                                [20],
-                                [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
-                                [5, 6, 7],
-                                [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
+        if fea_config_dict['Active_Qr'] == 32: # O1 is already from utility.py
+            raw_narrow_bounds = [   [9, 10],
+                                    [5, 6, 7], #[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                    [0, 1, 2, 3],
+                                    [20],
+                                    [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+                                    [5, 6, 7],
+                                    [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
+
+        if fea_config_dict['Active_Qr'] == 16: # O2 is already from utility_run140.py
+            raw_narrow_bounds = [   [3, 4, 7, 9, 12, 14, 15, 16, 19, 20],
+                                    [1, 2, 7, 8, 9, 12, 13, 14, 15, 16, 18],
+                                    [1, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16, 19],
+                                    [1, 4, 5, 9, 11, 12, 13, 16, 17],
+                                    [1, 2, 3, 6, 7, 10, 11, 12, 13, 15, 18],
+                                    [2, 4, 5, 6, 8, 10, 11, 12, 13, 16, 18, 19],
+                                    [0, 1, 3, 4, 6, 7, 8, 9, 10, 12, 15, 17, 18, 20]]
+
         for ind, bound in enumerate(raw_narrow_bounds):
             de_config_dict['narrow_bounds_normalized'][ind].append(bound[0] /numver_of_variants)
             de_config_dict['narrow_bounds_normalized'][ind].append(bound[-1]/numver_of_variants)

@@ -634,6 +634,158 @@ def get_tangent_points_of_two_circles(center1, radius1, center2, radius2):
 
     return (x3, y3), (x4, y4)
 
+# if __name__ == '__main__':
+#     l41 = ['C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B']
+#     l42 = ['+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
+#     dl = {'A': [], 'B': [], 'C':[]}
+#     count_slot = 0
+#     while True:
+#         try:
+#             count_slot += 1
+#             ABC     = l41.pop(0)
+#             up_down = l42.pop(0)
+#             for target in ['A', 'B', 'C']:
+#                 if ABC == target:
+#                     dl[target].append(up_down+str(count_slot))
+#                     break
+#         except:
+#             break
+#     print dl
+#     for key, item in dl.iteritems():
+#         print key, [int(el) for el in item]
+#     quit()
+
+# winding diagram
+if __name__ == '__main__':
+    
+    l41 = ['C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B']
+    l42 = ['+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
+    dl = {'A': [], 'B': [], 'C':[]}
+    count_slot = 0
+    while True:
+        try:
+            count_slot += 1
+            ABC     = l41.pop(0)
+            up_down = l42.pop(0)
+            for target in ['A', 'B', 'C']:
+                if ABC == target:
+                    dl[target].append(up_down+str(count_slot))
+                    break
+        except:
+            break
+    # [float(el) for el in item]
+
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # Motor Spec
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    Qs = 24
+    coil_pitch = 6
+
+    from pylab import *
+    fig = figure(dpi=300)
+    ax = fig.add_subplot(111, aspect='equal')
+
+    coil_bias = 0.3
+    def draw_vertical_line_and_arrow_head(x):
+        coil_spacing = 1
+        x *= coil_spacing
+        ax.plot([abs(x), abs(x)], 
+                [-4, 4], 'b', lw=1,alpha=0.7)
+        ax.plot([abs(x)+coil_bias, abs(x)+coil_bias], 
+                [-4, 4], '--b', lw=1,alpha=0.7)
+
+        annotate_bias = 0.1
+        if x>0:
+            xytext = [abs(x), (-4+4)/2 + annotate_bias + 0.0]
+            xy     = [abs(x), (-4+4)/2 - annotate_bias + 0.0]
+        else:
+            xy     = [abs(x), (-4+4)/2 + annotate_bias + 0.9]
+            xytext = [abs(x), (-4+4)/2 - annotate_bias + 0.9]
+        ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color='b'))
+        ax.annotate('', xytext=(xytext[0]+coil_bias, xytext[1]), xy=(xy[0]+coil_bias, xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->", color='b', alpha=0.7))
+        ax.text(xy[0]+1.25*coil_bias, annotate_bias + 0.9, '%d'%(abs(x)), fontsize=6)
+
+    def draw_end_turns(x, coil_pitch):
+
+        def mirror_plot(ax, X, Y, *arg, **kwarg):
+            ax.plot(X, Y, *arg, **kwarg)
+            ax.plot(X, [-el for el in Y], *arg, **kwarg)
+
+        slope = (6-4) / (coil_pitch/2 + coil_bias/2)
+
+        # going up
+        loc1 = abs(x) + coil_pitch/2 + coil_bias/2
+        # print loc1,
+        if  loc1 <= Qs:
+            mirror_plot(ax,  [ abs(x),
+                        loc1   ],
+                      [ 4,6 ], 'b', lw=0.5,alpha=0.7)
+        else:
+            # partial plot on the right 
+            mirror_plot(ax,  [ abs(x),
+                        Qs],
+                      [ 4,4+slope*(Qs-abs(x)) ], 'b', lw=0.5,alpha=0.7)
+            # partial plot on the left 
+            mirror_plot(ax,  [ 0,
+                        loc1-Qs],
+                      [ 4+slope*(Qs-abs(x)),6 ], 'b', lw=0.5,alpha=0.7)
+
+        # going down
+        loc2 = abs(x) + coil_pitch + coil_bias
+        # print loc2
+        if  loc2 <= Qs:
+            mirror_plot(ax,  [ loc1,
+                        loc2 ],
+                      [ 6,4 ], '--b', lw=0.5,alpha=0.7)
+        else:
+            if loc1 <= Qs: # 如果连loc1都超了，那就没必要再考虑loc2了
+                pass
+                mirror_plot(ax,  [ loc1,
+                            Qs],
+                          [ 6-slope*(Qs-loc1),4 ], '--b', lw=0.5,alpha=0.7)
+            else:
+                # partial plot on the left 
+                mirror_plot(ax,  [ loc1-Qs,
+                            loc2-Qs],
+                          [ 6,4 ], '--b', lw=0.5,alpha=0.7)
+
+    def draw_terminals(list_terminals):
+        for ind, x in enumerate(list_terminals):        
+            c1 = (0,0)
+            c2 = (1,0)
+        circle1 = plt.Circle(c1, 0.1, edgecolor='b', facecolor='w')
+        circle2 = plt.Circle(c2, 0.1, edgecolor='b', facecolor='w')
+        ax.add_artist(circle1)
+        ax.add_artist(circle2)
+
+    # ua          ub          uc           ud
+    list_terminals = [(9, -10),    (-4,  3),     (15, -7),       (22, -22)]
+
+    for el in dl['A']:
+        x = float(el)
+        print x
+        draw_vertical_line_and_arrow_head(x)
+        draw_end_turns(x, coil_pitch)
+
+    draw_terminals(list_terminals)
+    # draw_coil_connections()
+
+    # ax.get_xaxis().set_visible(False)
+    # ax.get_yaxis().set_visible(False)
+    ax.set_xlim([0,Qs])
+    ax.set_ylim([-8,8])
+    # scatter(*loc2)
+    # scatter(*c1)
+    # scatter(*c2)
+    # circle1 = plt.Circle(c1, 5, color='r')
+    # circle2 = plt.Circle(c2, 5, color='r')
+    # ax.add_artist(circle1)
+    # ax.add_artist(circle2)
+    # ax.plot([loc1[0], loc2[0]], [loc1[1], loc2[1]], 'k')
+    show()
+    quit()
+
+# test tengent points of circles
 if __name__ == '__main__':
 
     c1 = (-48,0)
@@ -656,6 +808,7 @@ if __name__ == '__main__':
     show()
     quit()
 
+# plot geometry with LaTeX labels
 if __name__ == '__main__':
     import matplotlib.patches as mpatches
     import matplotlib.pyplot as plt
