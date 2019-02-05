@@ -155,7 +155,9 @@ run_folder = r'run#140/' # Sensitivity analysis for Qr=16, Y730
 
 fea_config_dict['local_sensitivity_analysis'] = False
 run_folder = r'run#141/' # run for reference
-run_folder = r'run#142/' # optimize Qr=16 for O1
+run_folder = r'run#142/' # optimize Qr=16 for O2
+run_folder = r'run#143/' # test for shitty design (not true)
+run_folder = r'run#144/' # optimize Qr=16 for O1
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -315,16 +317,30 @@ sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)
 # print sw.im.show(toString=True)
 # quit()
 
+
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# 3. Initialize FEMM Solver (if required)
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+if fea_config_dict['jmag_run_list'][0] == 0:
+    # and let jmag know about it
+    sw.femm_solver = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static
+
+
 ################################################################
 # Check the shitty design (that fails to draw) or the best design
 ################################################################
-if False:
+if True:
     if False:
         # Now with this redraw from im.show(toString=True) feature, you can see actually sometimes jmag fails to draw because of PC system level interference, rather than bug in my codes.
         # debug for shitty design that failed to draw
         shitty_design = population.bearingless_induction_motor_design.reproduce_the_problematic_design(r'D:\OneDrive - UW-Madison\c\codes/'+'shitty_design.txt')
         shitty_design.show()
         sw.run(shitty_design)
+    elif True:
+        # this is not a shitty design. just due to something going wrong calling JMAG remote method
+        shitty_design = population.bearingless_induction_motor_design.reproduce_the_problematic_design(r'D:\OneDrive - UW-Madison\c\codes/'+'shitty_design_Qr16_statorCore.txt')        
+        sw.number_current_generation = 0
+        sw.fobj(99, utility.Pyrhonen_design(shitty_design).design_parameters_denorm)
     else:
         best_design = population.bearingless_induction_motor_design.reproduce_the_problematic_design(r'D:\OneDrive - UW-Madison\c\codes/'+'Qr32_O2Best_Design.txt')
         individual_denorm = utility.Pyrhonen_design(best_design).design_parameters_denorm
@@ -334,14 +350,6 @@ if False:
         sw.number_current_generation = 0
         sw.fobj(99, individual_denorm)
     raise
-
-
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# 3. Initialize FEMM Solver (if required)
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-if fea_config_dict['jmag_run_list'][0] == 0:
-    # and let jmag know about it
-    sw.femm_solver = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static
 
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~

@@ -58,6 +58,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         tangential_stress = 21500 # 12000 ~ 33000
     else: # for wound rotor, the required rotor slot is really too large to find a solution, we must reduce tangential_stress to make a larger rotor.    
         tangential_stress = 12000 # larger rotor to increase rotor slot area and to reduce rotor heating.
+        # tangential_stress = 16000
 
     if no_pole_pairs == 1:
         machine_constant_Cmec = 150 # kW s / m^3. Figure 6.3 <- This is what Eric calls the penalty on the 2 pole IM---you loss power density.
@@ -231,7 +232,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         rotor_tooth_width_b_dr = stack_length_eff*rotor_slot_pitch_tau_ur*air_gap_flux_density_B / (lamination_stacking_factor_kFe*stack_length*rotor_tooth_flux_density_B_dr) + 0.1e-3
         print 'rotor_tooth_width_b_dr=', rotor_tooth_width_b_dr*1e3, 'mm', '--- Here, we neglect the flux through the rotor slot!'
         print 'rotor_slot_pitch_tau_ur=', rotor_slot_pitch_tau_ur*1e3, 'mm'
-
+        quit()
 
 
         print '''\n11. Dimension of Slots '''
@@ -337,7 +338,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         minimum__rotor_tooth_height_h_dr = ( -sqrt(temp**2 - 4*pi*minimum__area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
         print 'minimum__rotor_tooth_height_h_dr', minimum__rotor_tooth_height_h_dr, '<', rotor_tooth_height_h_dr
         print 'rotor_tooth_width_b_dr', rotor_tooth_width_b_dr*1e3, 'mm'
-        # quit()
+        quit()
 
         print '''\n12. Magnetic Voltage '''
         bool_use_M19 = True

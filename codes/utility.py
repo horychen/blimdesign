@@ -640,6 +640,15 @@ diff = np.fabs(min_b - max_b)
 def pareto_plot():
     pass
 
+
+if __name__ == '__main__':
+    swda = SwarmDataAnalyzer(run_integer=142)
+    gen_best = swda.get_best_generation(popsize=30)
+    with open('d:/Qr16_gen_best.txt', 'w') as f:
+        f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in gen_best)) # convert 2d array to string            
+    quit()
+
+
 import itertools
 if __name__ == '__main__':
     from pylab import *
@@ -651,6 +660,8 @@ if __name__ == '__main__':
     # ax = sns.barplot(y= "Deaths", x = "Causes", data = deaths_pd, palette=("Blues_d"))
     # sns.set_context("poster")
 
+
+    # Pareto Plot or Correlation Plot
     if False:
         swda = SwarmDataAnalyzer(run_integer=121)
         # print swda.lsit_cost_function()
@@ -1119,26 +1130,8 @@ if __name__ == '__main__':
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+if __name__ == '__main__':
+    swda = SwarmDataAnalyzer(run_integer=121)
 
     # Pseudo Pareto Optimal Front
     gen_best = swda.get_best_generation()

@@ -793,10 +793,10 @@ class swarm(object):
         efficiency   = shaft_power / (total_loss + shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
         str_results  += '\n\teta: %g' % (efficiency)
 
-        # O2
-        weights = [ 1, 1.0,   1, 1.0, 1.0,   0 ]
-        # # O1
-        # weights = [ 1, 0.1,   1, 0.1, 0.1,   0 ]
+        # # O2
+        # weights = [ 1, 1.0,   1, 1.0, 1.0,   0 ]
+        # O1
+        weights = [ 1, 0.1,   1, 0.1, 0.1,   0 ]
         list_cost = [   30e3 / ( torque_average/rotor_volume ),
                         normalized_torque_ripple         *  20, 
                         1.0 / ( ss_avg_force_magnitude/rotor_weight ),
