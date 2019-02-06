@@ -37,48 +37,6 @@ class suspension_force_vector(object):
         self.ss_max_force_err_ang = max(self.force_err_ang[-range_ss:]), min(self.force_err_ang[-range_ss:])
         self.ss_max_force_err_abs = max(self.force_err_abs[-range_ss:]), min(self.force_err_abs[-range_ss:])
 
-class data_manager(object):
-
-    def __init__(self):
-        self.basic_info = []
-        self.time_list = []
-        self.TorCon_list = []
-        self.ForConX_list = []
-        self.ForConY_list = []
-        self.ForConAbs_list = []
-
-        self.jmag_loss_list = None
-        self.femm_loss_list = None
-
-    def unpack(self):
-        return self.basic_info, self.time_list, self.TorCon_list, self.ForConX_list, self.ForConY_list, self.ForConAbs_list
-
-    def terminal_voltage(self, which='4C'): # 2A 2B 2C 4A 4B 4C
-        return self.Current_dict['Terminal%s [Case 1]'%(which)]
-        # 端点电压是相电压吗？应该是，我们在中性点设置了地电位
-
-    def circuit_current(self, which='4C'): # 2A 2B 2C 4A 4B 4C
-        return self.Current_dict['Coil%s'%(which)]
-
-    def power_factor(self, number_of_steps_2ndTTS, targetFreq=1e3, numPeriodicalExtension=1000):
-        # for key, val in self.Current_dict.iteritems():
-        #     if 'Terminal' in key:
-        #         print key, val
-        # quit()
-
-        # 4C
-        mytime  = self.Current_dict['Time(s)'][-number_of_steps_2ndTTS:]
-        voltage =      self.terminal_voltage()[-number_of_steps_2ndTTS:]
-        current =       self.circuit_current()[-number_of_steps_2ndTTS:]
-        # from pylab import *
-        # print len(mytime), len(voltage), len(current)
-        # figure()
-        # plot(mytime, voltage)
-        # plot(mytime, current)
-        # show()
-        power_factor = utility.compute_power_factor_from_half_period(voltage, current, mytime, targetFreq=targetFreq, numPeriodicalExtension=numPeriodicalExtension)
-        return power_factor
-
 class swarm(object):
 
     def __init__(self, fea_config_dict, de_config_dict=None):
@@ -2362,7 +2320,7 @@ class swarm(object):
         else:
             s, r = None, None
 
-        dm = data_manager()
+        dm = utility.data_manager()
         dm.basic_info     = basic_info
         dm.time_list      = time_list
         dm.TorCon_list    = TorCon_list
@@ -2440,7 +2398,7 @@ class swarm(object):
                     for ind, val in enumerate(row):
                         Current_dict[key_list[ind]].append(float(val))
 
-        dm = data_manager()
+        dm = utility.data_manager()
         dm.basic_info     = basic_info
         dm.time_list      = time_list
         dm.TorCon_list    = TorCon_list
@@ -2478,7 +2436,7 @@ class swarm(object):
                     ForConY_list.append(float(row[2]))
         ForConAbs_list = np.sqrt(np.array(ForConX_list)**2 + np.array(ForConY_list)**2 )
 
-        dm = data_manager()
+        dm = utility.data_manager()
         dm.basic_info     = None
         dm.time_list      = None
         dm.TorCon_list    = TorCon_list

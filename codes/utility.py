@@ -283,6 +283,251 @@ def send_notification(text='Hello'):
     mail.close()
     print "Notificaiont sent."
 
+class data_manager(object):
+
+    def __init__(self):
+        self.basic_info = []
+        self.time_list = []
+        self.TorCon_list = []
+        self.ForConX_list = []
+        self.ForConY_list = []
+        self.ForConAbs_list = []
+
+        self.jmag_loss_list = None
+        self.femm_loss_list = None
+
+    def unpack(self):
+        return self.basic_info, self.time_list, self.TorCon_list, self.ForConX_list, self.ForConY_list, self.ForConAbs_list
+
+    def terminal_voltage(self, which='4C'): # 2A 2B 2C 4A 4B 4C
+        return self.Current_dict['Terminal%s [Case 1]'%(which)]
+        # 端点电压是相电压吗？应该是，我们在中性点设置了地电位
+
+    def circuit_current(self, which='4C'): # 2A 2B 2C 4A 4B 4C
+        return self.Current_dict['Coil%s'%(which)]
+
+    def power_factor(self, number_of_steps_2ndTTS, targetFreq=1e3, numPeriodicalExtension=1000):
+        # for key, val in self.Current_dict.iteritems():
+        #     if 'Terminal' in key:
+        #         print key, val
+        # quit()
+
+        # 4C
+        mytime  = self.Current_dict['Time(s)'][-number_of_steps_2ndTTS:]
+        voltage =      self.terminal_voltage()[-number_of_steps_2ndTTS:]
+        current =       self.circuit_current()[-number_of_steps_2ndTTS:]
+        # from pylab import *
+        # print len(mytime), len(voltage), len(current)
+        # figure()
+        # plot(mytime, voltage)
+        # plot(mytime, current)
+        # show()
+        power_factor = utility.compute_power_factor_from_half_period(voltage, current, mytime, targetFreq=targetFreq, numPeriodicalExtension=numPeriodicalExtension)
+        return power_factor
+
+from VanGogh import csv_row_reader
+def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict, femm_solver):
+
+    print 'Look into:', path_prefix
+
+    # Torque
+    basic_info = []
+    time_list = []
+    TorCon_list = []
+    with open(path_prefix + study_name + '_torque.csv', 'r') as f:
+        count = 0
+        for row in csv_row_reader(f):
+            count +=1
+            if count<=8:
+                try:
+                    float(row[1])
+                except:
+                    continue
+                else:
+                    basic_info.append((row[0], float(row[1])))
+            else:
+                time_list.append(float(row[0]))
+                TorCon_list.append(float(row[1]))
+
+    # Force
+    basic_info = []
+    # time_list = []
+    ForConX_list = []
+    ForConY_list = []
+    with open(path_prefix + study_name + '_force.csv', 'r') as f:
+        count = 0
+        for row in csv_row_reader(f):
+            count +=1
+            if count<=8:
+                try:
+                    float(row[1])
+                except:
+                    continue
+                else:
+                    basic_info.append((row[0], float(row[1])))
+            else:
+                # time_list.append(float(row[0]))
+                ForConX_list.append(float(row[1]))
+                ForConY_list.append(float(row[2]))
+    ForConAbs_list = np.sqrt(np.array(ForConX_list)**2 + np.array(ForConY_list)**2 )
+
+    # Current
+    key_list = []
+    Current_dict = {}
+    with open(path_prefix + study_name + '_circuit_current.csv', 'r') as f:
+        count = 0
+        for row in csv_row_reader(f):
+            count +=1
+            if count<=8:
+                if 'Time' in row[0]: # Time(s)
+                    for key in row:
+                        key_list.append(key)
+                        Current_dict[key] = []
+                else:
+                    continue
+            else:
+                for ind, val in enumerate(row):
+                    Current_dict[key_list[ind]].append(float(val))
+
+    # Terminal Voltage 
+    new_key_list = []
+    if fea_config_dict['delete_results_after_calculation'] == False:
+        # file name is by individual_name like ID32-2-4_EXPORT_CIRCUIT_VOLTAGE.csv rather than ID32-2-4Tran2TSS_circuit_current.csv
+        with open(path_prefix + study_name[:-8] + "_EXPORT_CIRCUIT_VOLTAGE.csv", 'r') as f:
+            count = 0
+            for row in csv_row_reader(f):
+                count +=1
+                if count==1: # Time | Terminal1 | Terminal2 | ... | Termial6
+                    if 'Time' in row[0]: # Time, s
+                        for key in row:
+                            new_key_list.append(key) # Yes, you have to use a new key list, because the ind below bgeins at 0.
+                            Current_dict[key] = []
+                    else:
+                        raise Exception('Problem with csv file for terminal voltage.')
+                else:
+                    for ind, val in enumerate(row):
+                        Current_dict[new_key_list[ind]].append(float(val))
+    key_list += new_key_list
+
+    # Loss
+    # Iron Loss
+    with open(path_prefix + study_name + '_iron_loss_loss.csv', 'r') as f:
+        count = 0
+        for row in csv_row_reader(f):
+            count +=1
+            if count>8:
+                stator_iron_loss = float(row[3]) # Stator Core
+                break
+    with open(path_prefix + study_name + '_joule_loss_loss.csv', 'r') as f:
+        count = 0
+        for row in csv_row_reader(f):
+            count +=1
+            if count>8:
+                stator_eddycurrent_loss = float(row[3]) # Stator Core
+                break
+    with open(path_prefix + study_name + '_hysteresis_loss_loss.csv', 'r') as f:
+        count = 0
+        for row in csv_row_reader(f):
+            count +=1
+            if count>8:
+                stator_hysteresis_loss = float(row[3]) # Stator Core
+                break
+    # Copper Loss
+    rotor_copper_loss_list = []
+    with open(path_prefix + study_name + '_joule_loss.csv', 'r') as f:
+        count = 0
+        for row in csv_row_reader(f):
+            count +=1
+            if count>8:
+                if count==9:
+                    stator_copper_loss = float(row[8]) # Coil # it is the same over time, this value does not account for end coil
+
+                rotor_copper_loss_list.append(float(row[7])) # Cage
+    
+    # use the last 1/4 period data to compute average copper loss of Tran2TSS rather than use that of Freq study
+    effective_part = rotor_copper_loss_list[:int(0.5*fea_config_dict['number_of_steps_2ndTTS'])] # number_of_steps_2ndTTS = steps for half peirod
+    rotor_copper_loss = sum(effective_part) / len(effective_part)
+
+    if fea_config_dict['jmag_run_list'][0] == 0:
+        utility.blockPrint()
+        try:
+            # convert rotor current results (complex number) into its amplitude
+            femm_solver.list_rotor_current_amp = [abs(el) for el in femm_solver.vals_results_rotor_current] # el is complex number
+            # settings not necessarily be consistent with Pyrhonen09's design: , STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1., TEMPERATURE_OF_COIL=75
+            s, r = femm_solver.get_copper_loss(femm_solver.stator_slot_area, femm_solver.rotor_slot_area)
+        except Exception as e:
+            raise e
+        utility.enablePrint()
+    else:
+        s, r = None, None
+
+    dm = data_manager()
+    dm.basic_info     = basic_info
+    dm.time_list      = time_list
+    dm.TorCon_list    = TorCon_list
+    dm.ForConX_list   = ForConX_list
+    dm.ForConY_list   = ForConY_list
+    dm.ForConAbs_list = ForConAbs_list
+    dm.Current_dict   = Current_dict
+    dm.key_list       = key_list
+    dm.jmag_loss_list    = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
+    dm.femm_loss_list = [s, r]
+    return dm
+
+def check_csv_results_4_general_purpose(study_name, path_prefix, returnBoolean=False):
+
+    print 'Check:', path_prefix + study_name + '_torque.csv'
+
+    if not os.path.exists(path_prefix + study_name + '_torque.csv'):
+        if returnBoolean == False:
+            return None
+        else:
+            return False
+    else:
+        if returnBoolean == True:
+            return True
+
+    try:
+        # check csv results 
+        l_slip_freq = []
+        l_TorCon    = []
+        l_ForCon_X  = []
+        l_ForCon_Y  = []
+
+        # fitness_in_physics_data = []
+        with open(path_prefix + study_name + '_torque.csv', 'r') as f: 
+            for ind, row in enumerate(csv_row_reader(f)):
+                if ind >= 5:
+                    try:
+                        float(row[0])
+                    except:
+                        continue
+                    l_slip_freq.append(float(row[0]))
+                    l_TorCon.append(float(row[1]))
+
+        with open(path_prefix + study_name + '_force.csv', 'r') as f: 
+            for ind, row in enumerate(csv_row_reader(f)):
+                if ind >= 5:
+                    try:
+                        float(row[0])
+                    except:
+                        continue
+                    # l_slip_freq.append(float(row[0]))
+                    l_ForCon_X.append(float(row[1]))
+                    l_ForCon_Y.append(float(row[2]))
+
+        # self.fitness_in_physics_data.append(l_slip_freq)
+        # self.fitness_in_physics_data.append(l_TorCon)
+
+        breakdown_force = max(np.sqrt(np.array(l_ForCon_X)**2 + np.array(l_ForCon_Y)**2))
+
+        index, breakdown_torque = get_max_and_index(l_TorCon)
+        slip_freq_breakdown_torque = l_slip_freq[index]
+        return slip_freq_breakdown_torque, breakdown_torque, breakdown_force
+    except NameError, e:
+        logger = logging.getLogger(__name__)
+        logger.error(u'No CSV File Found.', exc_info=True)
+        raise e
 
 
 # https://dsp.stackexchange.com/questions/11513/estimate-frequency-and-peak-value-of-a-signals-fundamental
