@@ -720,7 +720,7 @@ if __name__ == '__main__':
             x, y = array(list(swda.get_certain_objective_function(2)))/rotor_volume/1e3, list(swda.get_certain_objective_function(3))
             x = x.tolist()
             my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-            ax.set_xlabel('TRV [Nm/m^3]\n(a)')
+            ax.set_xlabel('TRV [kNm/m^3]\n(a)')
             ax.set_ylabel(r'$T_{\rm rip}$ [100%]')
 
             # FRW vs Ea
@@ -762,6 +762,7 @@ if __name__ == '__main__':
 
             fig.tight_layout()
             # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
+            # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\pareto_plot.png', dpi=150, bbox_inches='tight')
             show()
             quit()
 

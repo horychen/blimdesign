@@ -591,15 +591,6 @@ class VanGogh_Plotter(VanGogh):
         self.plot_object_list.append(obj[0])
         return obj
         
-    def draw_line(self, p1, p2, ax=None, **kwarg):
-        # make sure ax is not empty
-        if ax is None:
-            ax = self.ax
-
-        obj = ax.plot( [p1[0], p2[0]], [p1[1], p2[1]], c='k', **kwarg)
-        self.plot_object_list.append(obj[0])
-        return obj
-
     def pyplot_arc(self, radius, angle_span=3.14, center=(0,0), rotation=0, maxseg=0.1, ax=None, **kwarg):
         # Plot an arc starting from x-axis to axis aligned to angle_span. Use rotation to change the beginning axis.
 
@@ -616,6 +607,16 @@ class VanGogh_Plotter(VanGogh):
         # phis = np.arange(rotation, rotation+angle_span, 2*radius*np.pi / (360./maxseg))
         phis = np.linspace(rotation, rotation+angle_span, 360./maxseg)
         return ax.plot( *xy(radius, phis, center), c='k', **kwarg)
+    
+    def draw_line(self, p1, p2, ax=None, **kwarg):
+        # make sure ax is not empty
+        if ax is None:
+            ax = self.ax
+
+        obj = ax.plot( [p1[0], p2[0]], [p1[1], p2[1]], c='k', **kwarg)
+        self.plot_object_list.append(obj[0])
+        return obj
+
 
 
 # wiki: https://en.wikipedia.org/wiki/Tangent_lines_to_circles
@@ -1064,11 +1065,33 @@ if __name__ == '__main__':
     # some_angle = atan2(vector_r67[1], vector_r67[0])
     add_label_inside(vg, r'$b_{\rm tooth,r}$', Ptemp1, Ptemp2)
 
-    #4
+    #4 (This one is angle)
     Ps3 = vg.Ps_list[3-BIAS]
     Ptemp1 = Ps3 * np.array((1,-1)) # mirror
     Ptemp2 = np.dot( TS, Ptemp1 ) # rotate
-    add_label_inside(vg, r'$w_{\rm open,s}$', Ps3, Ptemp2)
+    if False: # treat it as width
+        add_label_inside(vg, r'$w_{\rm open,s}$', Ps3, Ptemp2)
+    else: # it is an angle, ok.
+        Ps2 = vg.Ps_list[2-BIAS]
+        vector_ext = Ps3 - Ps2
+        vector_ext = add_extension_line(vg, Ps3, vector_ext, distance_factor=3)
+        Ptemp1 = (Ps3 + 0.5*vector_ext)
+
+        vector_ext *= array([1,-1]) # mirror
+        vector_ext = np.dot( TS, vector_ext ) # rotate
+        vector_ext = add_extension_line(vg, Ptemp2, vector_ext, distance_factor=3)
+        Ptemp2 = (Ptemp2 + 0.5*vector_ext)
+
+        some_angle = atan2(vector_ext[1], vector_ext[0])
+        print some_angle/pi*180, 180 - Stator_Sector_Angle/pi*180
+        vg.pyplot_arc(im.Radius_OuterRotor+im.Length_AirGap+im.Width_StatorTeethHeadThickness+2, 
+            angle_span=0.95*im.Angle_StatorSlotOpen/180*pi, rotation=some_angle-0.475*im.Angle_StatorSlotOpen/180*pi, center=(0,0), lw=0.6)
+        # vg.ax.text(Ptemp1[0], Ptemp1[1], r'$w_{\rm open,s}$',
+        #             bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
+        vg.ax.text(0.5*(Ptemp1[0]+Ptemp2[0])-5, 0.5*(Ptemp1[1]+Ptemp2[1]), r'$w_{\rm open,s}$',
+                    bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
+
+
 
     #5
     Pr4 = vg.Pr_list[4-BIAS]
@@ -1079,18 +1102,18 @@ if __name__ == '__main__':
 
     #6
     Ps2 = vg.Ps_list[2-BIAS]
+    Ps3 = vg.Ps_list[3-BIAS] 
     Ptemp1 = np.dot( TS, Ps2 )
-    Ptemp11 = np.array((Ps2[0], Ps2[1]+5))
-    Ptemp11 = np.dot( TS, Ptemp11 )
-    vector_ext = np.array((Ptemp11[0] - Ptemp1[0], Ptemp11[1] - Ptemp1[1]))
+    Ptemp11 = np.dot( TS, Ps3 )
+    vector_ext = -np.array((Ptemp11[0] - Ptemp1[0], Ptemp11[1] - Ptemp1[1]))
+    vector_ext = np.array((-vector_ext[1], vector_ext[0]))
     vector_ext = add_extension_line(vg, Ptemp1, vector_ext, distance_factor=1)
     Ptemp1 = (Ptemp1 + 0.5*vector_ext)
 
-    Ps3 = vg.Ps_list[3-BIAS] 
     Ptemp2 = np.dot( TS, Ps3 )
-    Ptemp22 = np.array((Ps3[0], Ps3[1]+5))
-    Ptemp22 = np.dot( TS, Ptemp22 )
+    Ptemp22 = np.dot( TS, Ps2 )
     vector_ext = np.array((Ptemp22[0] - Ptemp2[0], Ptemp22[1] - Ptemp2[1]))
+    vector_ext = np.array((-vector_ext[1], vector_ext[0]))
     vector_ext = add_extension_line(vg, Ptemp2, vector_ext, distance_factor=1)
     Ptemp2 = (Ptemp2 + 0.5*vector_ext)
 

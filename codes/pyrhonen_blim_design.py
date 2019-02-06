@@ -29,6 +29,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     # if Qr == 32:
     #     continue
 
+
     THE_IM_DESIGN_ID = Qr
 
     print '''\n1. Initial Design Parameters '''
@@ -36,8 +37,16 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     rated_frequency = 1000 # Hz
     no_pole_pairs = 2
     speed_rpm = rated_frequency * 60 / no_pole_pairs # rpm
-    U1_rms = 500 / sqrt(3) # V - Wye-connect #480 is standarnd
-    # U1_rms = 500  # V - Delta-connect
+
+    bool_standard_voltage_rating = False
+    if bool_standard_voltage_rating:
+        U1_rms = 480. / sqrt(3) # V - Wye-connect #480 V is standarnd # 电压越高，意味着越厚的绝缘占去槽空间（Lipo2017书）
+        # U1_rms = 480  # V - Delta-connect
+    else:
+        U1_rms = 500. / sqrt(3) # The design used in ECCE
+    print 'bool_standard_voltage_rating=', bool_standard_voltage_rating
+    print 'U1_rms=', U1_rms, 'V', 
+
     stator_phase_voltage_rms = U1_rms
     no_phase_m = 3
     print 'rated_frequency=', rated_frequency
@@ -165,7 +174,11 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
 
 
     print '''\n6. Air Gap Flux Density '''
-    air_gap_flux_density_B = 0.8 # 0.7 ~ 0.9 Table 6.3
+    
+    if bool_standard_voltage_rating:
+        air_gap_flux_density_B = 0.8 # 0.7 ~ 0.9 Table 6.3
+    else:
+        air_gap_flux_density_B = 0.8 # 0.7 ~ 0.9 Table 6.3
     print 'air_gap_flux_density_B=', air_gap_flux_density_B
     linear_current_density_A = machine_constant_Cmec / (pi**2/sqrt(2)*kw1*air_gap_flux_density_B)
     
@@ -175,7 +188,9 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         raise Exception('Bad linear_current_density_A.')
 
     print '''\n7. Number of Coil Turns '''
-    desired_emf_Em = 0.95 * U1_rms # 0.96~0.98, high speed motor has higher leakage reactance hence 0.95
+    desired_emf_Em = 0.95 * stator_phase_voltage_rms # 0.96~0.98, high speed motor has higher leakage reactance hence 0.95
+    print 'stator_phase_voltage_rms=', stator_phase_voltage_rms, 'V'
+    print 'desired_emf_Em=', desired_emf_Em, 'V'
     flux_linkage_Psi_m = desired_emf_Em / (2*pi*rated_frequency) 
 
     alpha_i = 2/pi # ideal sinusoidal flux density distribusion, when the saturation happens in teeth, alpha_i becomes higher.
@@ -189,12 +204,28 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     print 'no_series_coil_turns_N=', no_series_coil_turns_N
 
     print 'The no_series_coil_turns_N must be divisible by pq=%d' %(no_pole_pairs*distribution_q)
-    print 'Remainder is', int(no_series_coil_turns_N) % int(no_pole_pairs*distribution_q)
+    print 'The remainder is', int(no_series_coil_turns_N) % int(no_pole_pairs*distribution_q)
     if bool_we_have_plenty_voltage:
-        no_series_coil_turns_N = min([no_pole_pairs*distribution_q*i for i in range(100,0,-1)], key=lambda x:abs(x - no_series_coil_turns_N))
+        backup = no_series_coil_turns_N
+        no_series_coil_turns_N = min([no_pole_pairs*distribution_q*i for i in range(100,0,-1)], key=lambda x:abs(x - no_series_coil_turns_N)) # using larger turns value has priority
     else:
-        no_series_coil_turns_N = min([no_pole_pairs*distribution_q*i for i in range(100)], key=lambda x:abs(x - no_series_coil_turns_N)) # https://stackoverflow.com/questions/12141150/from-list-of-integers-get-number-closest-to-a-given-value
-    print 'Suggested no_series_coil_turns_N is', no_series_coil_turns_N, '---modify this manually, if necessary.'
+        no_series_coil_turns_N = min([no_pole_pairs*distribution_q*i for i in range(100)], key=lambda x:abs(x - no_series_coil_turns_N))  # using lower turns value has priority # https://stackoverflow.com/questions/12141150/from-list-of-integers-get-number-closest-to-a-given-value
+    print 'The suggested no_series_coil_turns_N is', no_series_coil_turns_N, '---modify this manually, if necessary.'
+
+    print '------------\n\t',
+    if bool_standard_voltage_rating == True:
+        # reduce the magnetic load on rotor tooth by allowing the back EMF to become larger.
+        if no_series_coil_turns_N < backup:
+            no_series_coil_turns_N += no_pole_pairs*distribution_q
+            print 'Auto use a larger no_series_coil_turns_N=%d,\n\tto make sure the air gap B is lower than 0.8T so as to limit the rotor tooth width and the solution of a rotor slot height exist.' % (no_series_coil_turns_N)
+            print '\tThis means that you sacrifice your power factor (directly related to air gap B only) to make sure you have enough rotor slot area for your rotor current.'
+        # quit()
+    else:
+        if no_series_coil_turns_N < backup:
+            print 'Since your voltage is not fixed, you can vary it to make the selection of no_series_coil_turns_N works without increasing your air gap B.'
+            quit()
+    print 'no_series_coil_turns_N=%d means desired_emf_Em=%g V becomes %g V.' % (no_series_coil_turns_N, desired_emf_Em, no_series_coil_turns_N * (2*pi*rated_frequency * kw1 * air_gap_flux_Phi_m) / sqrt(2))
+    print '\tno_series_coil_turns_N=%d means desired_emf_Em*1.732=%g V becomes %g V.\n' % (no_series_coil_turns_N, desired_emf_Em*sqrt(3), no_series_coil_turns_N * (2*pi*rated_frequency * kw1 * air_gap_flux_Phi_m) / sqrt(2)*sqrt(3))
 
     no_parallel_path = 1
     print '''In some cases, especially in low-voltage, high-power machines, there may be a need to change the stator slot number, the number of parallel paths or even the main dimensions of the machine in order to find the appropriate number of conductors in a slot.'''
@@ -208,8 +239,8 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         if loop_count>25:
             raise Exception("Abort. This script may not converge anyway.")
         loop_count += 1
-        print '''\n9. Recalculate Air Gap Flux Density '''
-        air_gap_flux_density_B = sqrt(2)*desired_emf_Em / (2*pi*rated_frequency * kw1 *  alpha_i * no_series_coil_turns_N * pole_pitch_tau_p * stack_length_eff) # p306
+        print '''\n9. Recalculate Air Gap Flux Density ''' # 反电势 sqrt(2)*desired_emf_Em 用幅值哦！
+        air_gap_flux_density_B = (sqrt(2)*desired_emf_Em) / (2*pi*rated_frequency * kw1 *  alpha_i * no_series_coil_turns_N * pole_pitch_tau_p * stack_length_eff) # p306
         print 'air_gap_flux_density_B=', air_gap_flux_density_B, 'T', '变得比0.8T大了，是因为你减少了匝数取整，反之亦然。'
 
 
@@ -236,9 +267,12 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
 
 
         print '''\n11. Dimension of Slots '''
-        efficiency = 0.9 # iterative?
+        if bool_standard_voltage_rating:
+            efficiency = 0.9375 # 500/1.732 * 0.9 / (480/1.732)
+        else:
+            efficiency = 0.9 # design used in ECCE
         print 'efficiency=', efficiency
-        power_factor =0.6  #0.85
+        power_factor = 0.6  #0.85
         print 'power_factor=', power_factor
 
         stator_phase_current_rms = mec_power / (no_phase_m*efficiency*stator_phase_voltage_rms*power_factor)
@@ -247,7 +281,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         rotor_current_referred = stator_phase_current_rms * power_factor
         rotor_current_actual = no_conductors_per_slot_zQ / no_parallel_path * Qs / Qr * rotor_current_referred
         print 'rotor current:', rotor_current_referred, '(referred)', rotor_current_actual, '(actual) Arms'
-
+        # quit()
     
         # Current density (Pyrhonen09@Example6.4)
 
@@ -585,7 +619,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     Width_RotorSlotOpen = b1*1e3 # 10% of 360/Qr
 
 
-    # new method
+    # new exact method
     Radius_of_RotorSlot2 = 1e3 * (2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot - rotor_slot_height_h_sr*1e3)*1e-3 - rotor_tooth_width_b_dr*Qr) / (2*Qr-2*pi)
     print 'Radius_of_RotorSlot2=', Radius_of_RotorSlot2
     Location_RotorBarCenter2 = Radius_OuterRotor - Length_HeadNeckRotorSlot - rotor_slot_height_h_sr*1e3 + Radius_of_RotorSlot2 
@@ -631,12 +665,12 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     with open(loc_txt_file, 'a') as f:
         f.write('%d, ' %(THE_IM_DESIGN_ID))
         f.write('%d, %d, ' %(Qs, Qr))
-        f.write('%f, %f, %f, %f, %f, ' % (Radius_OuterStatorYoke, Radius_InnerStatorYoke, Length_AirGap, Radius_OuterRotor, Radius_Shaft))
-        f.write('%f, %f, %f, %f, %f, %f, ' % (Length_HeadNeckRotorSlot,Radius_of_RotorSlot, Location_RotorBarCenter, Width_RotorSlotOpen, Radius_of_RotorSlot2, Location_RotorBarCenter2))
-        f.write('%f, %f, %f, %f, ' % (Angle_StatorSlotOpen, Width_StatorTeethBody, Width_StatorTeethHeadThickness, Width_StatorTeethNeck))
-        f.write('%f, %f, %f, %f, %f, %f,' % (DriveW_poles, DriveW_turns, DriveW_Rs, DriveW_CurrentAmp, DriveW_Freq, stack_length*1000))
-        f.write('%.14f, %.14f, %.14f,' % (area_stator_slot_Sus, area_rotor_slot_Sur, minimum__area_rotor_slot_Sur)) # this line exports values need to impose constraints among design parameters for the de optimization
-        f.write('%g, %g, %g, %g\n' % (rotor_tooth_flux_density_B_dr, stator_tooth_flux_density_B_ds, rotor_current_density_Jr, rotor_tooth_width_b_dr))
+        f.write('%f, %f, %f, %f, %f, '      % (Radius_OuterStatorYoke, Radius_InnerStatorYoke, Length_AirGap, Radius_OuterRotor, Radius_Shaft))
+        f.write('%f, %f, %f, %f, %f, %f, '  % (Length_HeadNeckRotorSlot, Radius_of_RotorSlot, Location_RotorBarCenter, Width_RotorSlotOpen, Radius_of_RotorSlot2, Location_RotorBarCenter2))
+        f.write('%f, %f, %f, %f, '          % (Angle_StatorSlotOpen, Width_StatorTeethBody, Width_StatorTeethHeadThickness, Width_StatorTeethNeck))
+        f.write('%f, %f, %f, %f, %f, %f, '  % (DriveW_poles, DriveW_turns, DriveW_Rs, DriveW_CurrentAmp, DriveW_Freq, stack_length*1000))
+        f.write('%.14f, %.14f, %.14f, '     % (area_stator_slot_Sus, area_rotor_slot_Sur, minimum__area_rotor_slot_Sur)) # this line exports values need to impose constraints among design parameters for the de optimization
+        f.write('%g, %g, %g, %g\n'          % (rotor_tooth_flux_density_B_dr, stator_tooth_flux_density_B_ds, rotor_current_density_Jr, rotor_tooth_width_b_dr))
 
     ''' Determine bounds for these parameters:
         stator_tooth_width_b_ds       = design_parameters[0]*1e-3 # m                       # stator tooth width [mm]
