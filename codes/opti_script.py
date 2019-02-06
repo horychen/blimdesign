@@ -329,14 +329,14 @@ if fea_config_dict['jmag_run_list'][0] == 0:
 ################################################################
 # Check the shitty design (that fails to draw) or the best design
 ################################################################
-if True:
+if False:
     if False:
         # Now with this redraw from im.show(toString=True) feature, you can see actually sometimes jmag fails to draw because of PC system level interference, rather than bug in my codes.
         # debug for shitty design that failed to draw
         shitty_design = population.bearingless_induction_motor_design.reproduce_the_problematic_design(r'D:\OneDrive - UW-Madison\c\codes/'+'shitty_design.txt')
         shitty_design.show()
         sw.run(shitty_design)
-    elif True:
+    elif False:
         # this is not a shitty design. just due to something going wrong calling JMAG remote method
         shitty_design = population.bearingless_induction_motor_design.reproduce_the_problematic_design(r'D:\OneDrive - UW-Madison\c\codes/'+'shitty_design_Qr16_statorCore.txt')        
         sw.number_current_generation = 0

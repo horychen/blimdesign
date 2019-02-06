@@ -1603,7 +1603,7 @@ class FEMM_Solver(object):
             self.probdef()        
             femm.mi_saveas(self.output_file_name + '.fem')
 
-        self.parallel_solve(dir_run=self.dir_run_sweeping) # subprocess will wait for cmd but not the pytho script
+        self.parallel_solve(dir_run=self.dir_run_sweeping, number_of_instantces=4) # subprocess will wait for cmd but not the pytho script
         self.wait(list_ans_file)
 
         # flux and current of circuit can be used for parameter identification
