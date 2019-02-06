@@ -640,6 +640,7 @@ def get_tangent_points_of_two_circles(center1, radius1, center2, radius2):
 # winding diagram
 if __name__ == '__main__':
     
+    # generate the dict of list: dl
     l41 = ['C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B']
     l42 = ['+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
     dl = {'A': [], 'B': [], 'C':[]}
@@ -662,11 +663,11 @@ if __name__ == '__main__':
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     Qs = 24
     coil_pitch = 6
+    fig_xlim = (0.25,Qs+1)
+    fig_ylim = (-6.25,10)
 
     from pylab import *
     plt.rcParams["font.family"] = "Times New Roman"
-    fig = figure(dpi=300)
-    ax = fig.add_subplot(111, aspect='equal')
 
     coil_bias = 0.3 # 绘制双层绕组的第二层的偏移量
     END   = Qs + 1 - 1/3.
@@ -854,27 +855,34 @@ if __name__ == '__main__':
                 line_style = '-' + line_style
             ax.plot([loc2-bias]*2, [6.25, 6-abs(bias)*slope], line_style, lw=0.5, alpha=0.7)
 
-    # draw coils in the slots as vertical lines
-    for color, winding_layout, phase in zip(['b', 'r', 'g'] , [dl['A'], dl['B'], dl['C']], ['u', 'v', 'w']):
-        # if color != 'b':
-        #     continue
-        for el in winding_layout:
-            x = float(el)
-            print color, x
-            draw_vertical_line_and_arrow_head(x)
-            slope = draw_end_turns(x, coil_pitch)
+    for phase in ['u', 'v', 'w']:
+        fig = figure(dpi=300)
+        ax = fig.add_subplot(111, aspect='equal') # fixed aspect ratio such that a circle is still a circle when you drag the tk plot window
 
-        if phase == 'u':
+        # draw coils in the slots as vertical lines
+        for color, winding_layout, _ in zip(['b', 'r', 'g'] , [dl['A'], dl['B'], dl['C']], range(3)):
+            # if color != 'b':
+            #     continue
+            for el in winding_layout:
+                x = float(el)
+                print _, color, x
+                draw_vertical_line_and_arrow_head(x)
+                slope = draw_end_turns(x, coil_pitch)
+
+        if phase == 'u': 
             # The key to determine this terminal location is to stick to the dual purpose feature 
             # meanwhile considering the fact that ub and ud will not change current direction, while ua and uc will when under suspension excitation.
             # Minus sign means dashed line (the second/lower layer of the double layer winding),
             # while the first number of the tuple means the current is entering, and the second number of the tuple means the current is leaving.
             # E.g., for ub, current enters 4 and leaves 3. Particularly, the current first enters the lower layer of slot 4, hence -4.
             # Coil Group:     ua                       ub                           uc                         ud                         (see Severson15Dual@Fig.4b)
+            color = 'b'
             list_terminals = [(9, -10),                (-4,  3),                    (-16, 15),                 (21, -22)] 
-        if phase == 'v':
+        if phase == 'v': 
+            color = 'r'
             list_terminals = [(9+Qs/3, -(10+Qs/3)),    (-(4+Qs/3),     3+Qs/3),     (-(16+Qs/3), 15+Qs/3),     (21+Qs/3-Qs, -(22+Qs/3-Qs))]
-        if phase == 'w':
+        if phase == 'w': 
+            color = 'g'
             list_terminals = [(9-Qs/3, -(10-Qs/3)),    (-(4-Qs/3+Qs),  3-Qs/3+Qs),  (-(16-Qs/3), 15-Qs/3),     (21-Qs/3, -(22-Qs/3))]
         draw_terminals(list_terminals, slope, phase=phase)
 
@@ -884,19 +892,14 @@ if __name__ == '__main__':
             raise Exception('this pattern only works for winding whose coil group has only two coils.')
         draw_coil_connections(list_coil_connection, slope)
 
+        scatter(fig_xlim[0], fig_ylim[1], color='w') # 不然text要超出画框了
+        ax.set_xlim(fig_xlim)
+        ax.set_ylim(fig_ylim)
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        fig.tight_layout()
+        fig.savefig(r'D:\OneDrive - UW-Madison\c\release\winding_diagram_phase_%s.png'%(phase), dpi=300)
 
-    ax.get_xaxis().set_visible(False)
-    ax.get_yaxis().set_visible(False)
-    ax.set_xlim([-0.5,Qs+1.5])
-    ax.set_ylim([-6.5,10])
-    # scatter(*loc2)
-    # scatter(*c1)
-    # scatter(*c2)
-    # circle1 = plt.Circle(c1, 5, color='r')
-    # circle2 = plt.Circle(c2, 5, color='r')
-    # ax.add_artist(circle1)
-    # ax.add_artist(circle2)
-    # ax.plot([loc1[0], loc2[0]], [loc1[1], loc2[1]], 'k')
     show()
     quit()
 

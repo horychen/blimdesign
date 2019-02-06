@@ -11,7 +11,7 @@ required_torque = 15.9154943092 #Nm
 Radius_OuterRotor = 47.092753
 stack_length = 93.200295
 Omega =  3132.95327379
-rotor_volume = pi*(Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
+rotor_volume = math.pi*(Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
 rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
 
 print 'utility_run140.py'
@@ -54,12 +54,12 @@ if __name__ == '__main__':
                         list(swda.get_certain_objective_function(5)), #normalized_force_error_magnitude, 
                         list(swda.get_certain_objective_function(6)), #force_error_angle, 
                         array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))), #total_loss, 
-                        weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ] )
+                        weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
         # print O2
         # print array(swda.lsit_cost_function()) - array(O2) # they are the same
         O2 = O2.tolist()
 
-        O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ])
+        O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
         print 'O2_ref=', O2_ref
 
         def my_scatter_plot(x,y,O,xy_ref,O_ref, fig=None, ax=None, s=15):
@@ -294,10 +294,10 @@ if __name__ == '__main__':
         print ind, el
 
 
-    O2_ref = fobj_scalar(9.89265, 45.7053,  0.11069, 0.0249602, 1.24351, (727.695+230.058+289.72), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ])
-    O1_ref = fobj_scalar(9.89265, 45.7053,  0.11069, 0.0249602, 1.24351, (727.695+230.058+289.72), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ])
-    # O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ])
-    # O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ])
+    O2_ref = fobj_scalar(9.89265, 45.7053,  0.11069, 0.0249602, 1.24351, (727.695+230.058+289.72), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+    O1_ref = fobj_scalar(9.89265, 45.7053,  0.11069, 0.0249602, 1.24351, (727.695+230.058+289.72), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+    # O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+    # O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
 
     print  'Objective function 1'
     O1 = fobj_list( list(swda.get_certain_objective_function(2)), 
@@ -306,7 +306,7 @@ if __name__ == '__main__':
                     list(swda.get_certain_objective_function(5)), 
                     list(swda.get_certain_objective_function(6)), 
                     array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))),
-                    weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ] )
+                    weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
     O1_max = []
     O1_min = []
     O1_ax  = figure().gca()
@@ -331,7 +331,7 @@ if __name__ == '__main__':
                     list(swda.get_certain_objective_function(5)), 
                     list(swda.get_certain_objective_function(6)), 
                     array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))),
-                    weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ] )
+                    weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
     O2_max = []
     O2_min = []
     O2_ax  = figure().gca()

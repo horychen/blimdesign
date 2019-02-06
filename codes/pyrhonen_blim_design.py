@@ -263,7 +263,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         rotor_tooth_width_b_dr = stack_length_eff*rotor_slot_pitch_tau_ur*air_gap_flux_density_B / (lamination_stacking_factor_kFe*stack_length*rotor_tooth_flux_density_B_dr) + 0.1e-3
         print 'rotor_tooth_width_b_dr=', rotor_tooth_width_b_dr*1e3, 'mm', '--- Here, we neglect the flux through the rotor slot!'
         print 'rotor_slot_pitch_tau_ur=', rotor_slot_pitch_tau_ur*1e3, 'mm'
-        quit()
+        # quit()
 
 
         print '''\n11. Dimension of Slots '''
@@ -372,7 +372,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         minimum__rotor_tooth_height_h_dr = ( -sqrt(temp**2 - 4*pi*minimum__area_rotor_slot_Sur*Qr) + temp ) / (2*pi)
         print 'minimum__rotor_tooth_height_h_dr', minimum__rotor_tooth_height_h_dr, '<', rotor_tooth_height_h_dr
         print 'rotor_tooth_width_b_dr', rotor_tooth_width_b_dr*1e3, 'mm'
-        quit()
+        # quit()
 
         print '''\n12. Magnetic Voltage '''
         bool_use_M19 = True
@@ -704,7 +704,10 @@ for rotor_tooth_flux_density_B_dr in arange(1.1, 2.11, 0.2): #1.5–2.2 (rotor)
             if not bool_run_for_bounds:
                 rotor_tooth_flux_density_B_dr = 1.5
                 stator_tooth_flux_density_B_ds = 1.4
-                rotor_current_density_Jr = 6.4e6
+                if Qr == 32:
+                    rotor_current_density_Jr = 6.4e6
+                if Qr == 16:
+                    rotor_current_density_Jr = 4.0e6
 
             Radius_OuterRotor = pyrhonen_blim_design(   rotor_tooth_flux_density_B_dr,
                                                         stator_tooth_flux_density_B_ds,

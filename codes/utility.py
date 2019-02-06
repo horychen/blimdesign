@@ -513,20 +513,24 @@ class SwarmDataAnalyzer(object):
                     return [float(el) for el in self.buf[i*21:(1+i)*21][5].split(',')], float(self.buf[i*21:(1+i)*21][2].split(',')[2])
         return None, None
 
-    def get_best_generation(self, popsize=50, generator=None):
+    def get_best_generation(self, popsize=50, generator=None, returnMore=False):
 
         if generator is None:
-            generator = swda.design_parameters_generator()
+            generator = self.design_parameters_generator()
 
-        cost = swda.lsit_cost_function()
+        cost = self.lsit_cost_function()
         indices, items = min_indices(cost, popsize)
-        print indices, items
+        print indices
+        print items
 
         gen_best = []
         for index, design in enumerate(generator):
             if index in indices:
                 gen_best.append(design)
-        return gen_best
+        if returnMore == False:
+            return gen_best
+        else:
+            return gen_best, indices, items
 
     def get_list_objective_function(self):
         for i in range(self.number_of_designs):
@@ -561,25 +565,8 @@ def autolabel(ax, rects, xpos='center', bias=0.0):
 def efficiency_at_50kW(total_loss):
     return 50e3 / (array(total_loss) + 50e3)  # 用50 kW去算才对，只是这样转子铜耗数值会偏大哦。 效率计算：机械功率/(损耗+机械功率)        
 
-
-
-# Basic information
-from math import pi
-required_torque = 15.9154943092 #Nm
-
-Radius_OuterRotor = 47.092753
-stack_length = 93.200295
-Omega =  3132.95327379
-rotor_volume = pi*(Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
-rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
-
-print 'utility.py'
-print 'Qr=32, rotor_volume=', rotor_volume, 'm^3'
-print 'Qr=32, rotor_weight=', rotor_weight, 'N'
-
-
 def fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, 
-                weights=[ 1,1,1,1,1,  0 ]):
+                weights=[ 1,1,1,1,1,  0 ], rotor_volume=None, rotor_weight=None):
 
     list_cost = [   30e3 / ( torque_average/rotor_volume ),
                     normalized_torque_ripple         *  20, #       / 0.05 * 0.1
@@ -591,7 +578,7 @@ def fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple
     return cost_function
 
 def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss,
-                weights=[ 1,1,1,1,1,  0 ]):
+                weights=[ 1,1,1,1,1,  0 ], rotor_volume=None, rotor_weight=None):
 
     l_cost_function = []
     for torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss in zip(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss):
@@ -605,50 +592,66 @@ def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ri
         l_cost_function.append(cost_function)
     return np.array(l_cost_function)
 
+# Basic information
+if __name__ == '__main__':
+    required_torque = 15.9154943092 #Nm
 
-# run 115 and 116
-de_config_dict = {  'original_bounds':[ [ 4.9,   9],#--# stator_tooth_width_b_ds
-                                        [ 0.8,   3],   # air_gap_length_delta
-                                        [5e-1,   3],   # Width_RotorSlotOpen 
-                                        [ 2.7,   5],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-                                        [5e-1,   3],   # Length_HeadNeckRotorSlot
-                                        [   1,  10],   # Angle_StatorSlotOpen
-                                        [5e-1,   3] ], # Width_StatorTeethHeadThickness
-                    'mut':        0.8,
-                    'crossp':     0.7,
-                    'popsize':    42, # 50, # 100,
-                    'iterations': 1 } # 148
-# run 114 and 200
-# de_config_dict = {  'original_bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
-#                                     [ 0.8,   4],   # air_gap_length_delta
-#                                     [5e-1,   3],   # Width_RotorSlotOpen 
-#                                     [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-#                                     [5e-1,   3],   # Length_HeadNeckRotorSlot
-#                                     [   1,  10],   # Angle_StatorSlotOpen
-#                                     [5e-1,   3] ], # Width_StatorTeethHeadThickness
-#                     'mut':        0.8,
-#                     'crossp':     0.7,
-#                     'popsize':    50, # 50, # 100,
-#                     'iterations': 2*48 } # 148
-original_bounds = de_config_dict['original_bounds']
-dimensions = len(original_bounds)
-min_b, max_b = np.asarray(original_bounds).T 
-diff = np.fabs(min_b - max_b)
-# pop_denorm = min_b + pop * diff
-# pop[j] = (pop_denorm[j] - min_b) / diff
+    Radius_OuterRotor = 47.092753
+    stack_length = 93.200295
+    Omega =  3132.95327379
+    rotor_volume = math.pi*(Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
+    rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
+
+    print 'utility.py'
+    print 'Qr=32, rotor_volume=', rotor_volume, 'm^3'
+    print 'Qr=32, rotor_weight=', rotor_weight, 'N'
+
+
+    # run 115 and 116
+    de_config_dict = {  'original_bounds':[ [ 4.9,   9],#--# stator_tooth_width_b_ds
+                                            [ 0.8,   3],   # air_gap_length_delta
+                                            [5e-1,   3],   # Width_RotorSlotOpen 
+                                            [ 2.7,   5],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                            [5e-1,   3],   # Length_HeadNeckRotorSlot
+                                            [   1,  10],   # Angle_StatorSlotOpen
+                                            [5e-1,   3] ], # Width_StatorTeethHeadThickness
+                        'mut':        0.8,
+                        'crossp':     0.7,
+                        'popsize':    42, # 50, # 100,
+                        'iterations': 1 } # 148
+    # run 114 and 200
+    # de_config_dict = {  'original_bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
+    #                                     [ 0.8,   4],   # air_gap_length_delta
+    #                                     [5e-1,   3],   # Width_RotorSlotOpen 
+    #                                     [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+    #                                     [5e-1,   3],   # Length_HeadNeckRotorSlot
+    #                                     [   1,  10],   # Angle_StatorSlotOpen
+    #                                     [5e-1,   3] ], # Width_StatorTeethHeadThickness
+    #                     'mut':        0.8,
+    #                     'crossp':     0.7,
+    #                     'popsize':    50, # 50, # 100,
+    #                     'iterations': 2*48 } # 148
+    original_bounds = de_config_dict['original_bounds']
+    dimensions = len(original_bounds)
+    min_b, max_b = np.asarray(original_bounds).T 
+    diff = np.fabs(min_b - max_b)
+    # pop_denorm = min_b + pop * diff
+    # pop[j] = (pop_denorm[j] - min_b) / diff
 
 def pareto_plot():
     pass
 
-
+# find best individual
 if __name__ == '__main__':
     swda = SwarmDataAnalyzer(run_integer=142)
     gen_best = swda.get_best_generation(popsize=30)
+
     with open('d:/Qr16_gen_best.txt', 'w') as f:
         f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in gen_best)) # convert 2d array to string            
     quit()
 
 
+# plot sensitivity bar chart, Oj v.s. geometry parameters, pareto plot for ecce paper
 import itertools
 if __name__ == '__main__':
     from pylab import *
@@ -672,12 +675,12 @@ if __name__ == '__main__':
                         list(swda.get_certain_objective_function(5)), #normalized_force_error_magnitude, 
                         list(swda.get_certain_objective_function(6)), #force_error_angle, 
                         array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))), #total_loss, 
-                        weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ] )
+                        weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
         # print O2
         # print array(swda.lsit_cost_function()) - array(O2) # they are the same
         O2 = O2.tolist()
 
-        O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ])
+        O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
         print 'O2_ref=', O2_ref
 
         def my_scatter_plot(x,y,O,xy_ref,O_ref, fig=None, ax=None, s=15):
@@ -916,8 +919,8 @@ if __name__ == '__main__':
     for ind, el in enumerate(data_min):
         print ind, el
 
-    O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ])
-    O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ])
+    O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+    O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
 
     print  'Objective function 1'
     O1 = fobj_list( list(swda.get_certain_objective_function(2)), 
@@ -926,7 +929,7 @@ if __name__ == '__main__':
                     list(swda.get_certain_objective_function(5)), 
                     list(swda.get_certain_objective_function(6)), 
                     array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))),
-                    weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ] )
+                    weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
     O1_max = []
     O1_min = []
     O1_ax  = figure().gca()
@@ -950,7 +953,7 @@ if __name__ == '__main__':
                     list(swda.get_certain_objective_function(5)), 
                     list(swda.get_certain_objective_function(6)), 
                     array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))),
-                    weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ] )
+                    weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight )
     O2_max = []
     O2_min = []
     O2_ax  = figure().gca()
@@ -1130,7 +1133,7 @@ if __name__ == '__main__':
     quit()
 
 
-
+# test for power factor (Goertzel Algorithm with periodic extension 1000), etc.
 if __name__ == '__main__':
     swda = SwarmDataAnalyzer(run_integer=121)
 

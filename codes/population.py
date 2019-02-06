@@ -262,7 +262,6 @@ class swarm(object):
             self.init_pop = np.random.rand(popsize, dimensions) # normalized design parameters between 0 and 1
 
             def local_sensitivity_analysis(self):
-
                 # 敏感性检查：以基本设计为准，检查不同的参数取极值时的电机性能变化！这是最简单有效的办法。七个设计参数，那么就有14种极值设计。
                 if self.fea_config_dict['run_folder'] == r'run#115/':
                     # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
@@ -318,7 +317,6 @@ class swarm(object):
                     for ind, el in enumerate(self.init_pop):
                         print ind, el
                     # quit()
-
                 if self.fea_config_dict['run_folder'] == r'run#400/':
                     initial_design_denorm = np.array( utility.Pyrhonen_design(self.im).design_parameters_denorm )
                     initial_design = (initial_design_denorm - min_b) / diff
@@ -337,8 +335,8 @@ class swarm(object):
                     for ind, el in enumerate(self.init_pop):
                         print ind, el
                     # quit()
-
-            local_sensitivity_analysis(self)
+            if self.fea_config_dict['local_sensitivity_analysis'] == True:
+                local_sensitivity_analysis(self)
 
             self.init_pop_denorm = min_b + self.init_pop * diff
             self.init_fitness = None
@@ -395,12 +393,12 @@ class swarm(object):
             elif popsize < solved_popsize:
                 raise Exception('Reducing popsize during a run---feature is not supported. If you are testing local sensitivity analysis, then delete the run folder (under pop/ and csv_opti/) and run again.')
 
-        # add a database using the swarm_data.txt file
-        if os.path.exists(self.dir_run+'swarm_data.txt'):
-            self.database = utility.SwarmDataAnalyzer(dir_run=self.dir_run)
-            self.database.the_generation_that_i_am_worried_about = self.number_current_generation+1
-        else: 
-            self.database = None
+        # # add a database using the swarm_data.txt file
+        # if os.path.exists(self.dir_run+'swarm_data.txt'):
+        #     self.database = utility.SwarmDataAnalyzer(dir_run=self.dir_run)
+        #     self.database.the_generation_that_i_am_worried_about = self.number_current_generation+1
+        # else: 
+        #     self.database = None
 
         # pop: make sure the data type is array
         self.init_pop = np.asarray(self.init_pop)
@@ -522,7 +520,7 @@ class swarm(object):
         return info, torque_average, normalized_torque_ripple, sfv.ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
 
 
-    # @u。blockPrinting
+    # @unblockPrinting
     def fobj(self, individual_index, individual):
         # based on the individual data, create design variant of the initial design of Pyrhonen09
         logger = logging.getLogger(__name__)
@@ -760,6 +758,11 @@ class swarm(object):
                 app.GetDataManager().CreateGraphModel(ref1)
                 app.GetDataManager().GetGraphModel(u"Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
 
+        # if csv already exists, im_variant.slip_freq_breakdown_torque is still None till here
+        # print 'DEBUG::::::::::::', im_variant.slip_freq_breakdown_torque
+        if im_variant.slip_freq_breakdown_torque is None:
+            im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
+
 
 
         ################################################################
@@ -781,7 +784,10 @@ class swarm(object):
                 iron_loss    = jmag_loss_list[2] 
             else:
                 # by JMAG for iron loss and FEMM for copper loss
-                copper_loss  = femm_loss_list[0] + femm_loss_list[1]
+                if femm_loss_list[0] is None: # this will happen for running release_design.py
+                    copper_loss  = jmag_loss_list[0] + jmag_loss_list[1] 
+                else:
+                    copper_loss  = femm_loss_list[0] + femm_loss_list[1]
                 iron_loss    = jmag_loss_list[2] 
 
             # some factor to account for rotor iron loss?
@@ -817,23 +823,23 @@ class swarm(object):
 
 
 
-        # before writing, do a double check that individual (design_parameters) corresponds to the evaluation results
-        if self.database is not None and self.number_current_generation == self.database.the_generation_that_i_am_worried_about:
-            design_parameters_database, cost_function_database = self.database.find_individual(self.number_current_generation, individual_index)
-            if design_parameters_database is not None:
-                if abs(sum(np.array(design_parameters_database) - np.array(individual)))>1e-4 or abs(cost_function_database-cost_function)>1e-4:
-                    print design_parameters_database, individual
-                    print cost_function_database, cost_function
-                    raise Exception('Wrong individual. Unmatch database data.')
-                logger.debug('Locate the design in the database. worried gen#=%d'%(self.database.the_generation_that_i_am_worried_about))
-            else:
-                logger.debug('Cannot find the design in the database. worried gen#=%d'%(self.database.the_generation_that_i_am_worried_about))
+        # # before writing, do a double check that individual (design_parameters) corresponds to the evaluation results from database
+        # if self.database is not None and self.number_current_generation == self.database.the_generation_that_i_am_worried_about:
+        #     design_parameters_database, cost_function_database = self.database.find_individual(self.number_current_generation, individual_index)
+        #     if design_parameters_database is not None:
+        #         if abs(sum(np.array(design_parameters_database) - np.array(individual)))>1e-4 or abs(cost_function_database-cost_function)>1e-4:
+        #             print design_parameters_database, individual
+        #             print cost_function_database, cost_function
+        #             raise Exception('Wrong individual. Unmatch database data.')
+        #         logger.debug('Locate the design in the database. worried gen#=%d'%(self.database.the_generation_that_i_am_worried_about))
+        #     else:
+        #         logger.debug('Cannot find the design in the database. worried gen#=%d'%(self.database.the_generation_that_i_am_worried_about))
 
         # write design evaluation data to file
         machine_results = [power_factor, efficiency, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle]
         machine_results.extend(jmag_loss_list)
         machine_results.extend(femm_loss_list)
-        str_machine_results = ','.join('%g'%(el) for el in machine_results)
+        str_machine_results = ','.join('%g'%(el) for el in machine_results if el is not None) # note that femm_loss_list can be None called by release_design.py
         with open(self.dir_run + 'swarm_data.txt', 'a') as f:
             f.write('\n-------\n%s-%s\n%d,%d,%g\n%s\n%s\n%s\n' % (
                         self.project_name, im_variant.individual_name, 
@@ -1268,6 +1274,7 @@ class swarm(object):
         return True
 
     def check_csv_results(self, study_name, returnBoolean=False):
+        # print self.dir_csv_output_folder + study_name + '_torque.csv'
         if not os.path.exists(self.dir_csv_output_folder + study_name + '_torque.csv'):
             if returnBoolean == False:
                 return None
@@ -1314,7 +1321,6 @@ class swarm(object):
             index, breakdown_torque = utility.get_max_and_index(l_TorCon)
             slip_freq_breakdown_torque = l_slip_freq[index]
             return slip_freq_breakdown_torque, breakdown_torque, breakdown_force
-
         except NameError, e:
             logger = logging.getLogger(__name__)
             logger.error(u'No CSV File Found.', exc_info=True)
@@ -1624,6 +1630,7 @@ class swarm(object):
 
 
         # These two studies are not needed in optimization
+        # TranRef & EC-Rotate
         if self.fea_config_dict['flag_optimization'] == False:
             # These two studies are no longer needed after iemdc digest 
             # EC Rotate
@@ -2746,10 +2753,9 @@ class bearingless_induction_motor_design(object):
         else:
             raise Exception('I do not recommend to modify synchronous speed at instance level. Go update the initial design.')
 
-        if syn_freq == 0.0:
-            # lock rotor
-            self.the_slip = 0. # this is not totally correct
-            if slip_freq == None:            
+        if syn_freq == 0.0: # lock rotor
+            self.the_slip = 0. # this does not actually make sense
+            if slip_freq == None:
                 self.DriveW_Freq = self.slip_freq_breakdown_torque
                 self.BeariW_Freq = self.slip_freq_breakdown_torque
             else:
@@ -2761,7 +2767,7 @@ class bearingless_induction_motor_design(object):
                 self.the_slip = slip_freq / syn_freq
                 self.slip_freq_breakdown_torque = slip_freq
             else:
-                # change syn_freq
+                # change syn_freq so update the slip
                 self.the_slip = self.slip_freq_breakdown_torque / syn_freq
 
             self.DriveW_Freq = syn_freq
@@ -2775,7 +2781,7 @@ class bearingless_induction_motor_design(object):
 
         if self.fea_config_dict is not None:
             if self.fea_config_dict['flag_optimization'] == False: # or else it becomes annoying
-                print '[Update %s]'%(self.ID), self.slip_freq_breakdown_torque, self.the_slip, self.the_speed, self.Omega, self.DriveW_Freq, self.BeariW_Freq
+                print '[Update ID:%s]'%(self.ID), self.slip_freq_breakdown_torque, self.the_slip, self.the_speed, self.Omega, self.DriveW_Freq, self.BeariW_Freq
 
     def __init__(self, row=None, fea_config_dict=None, model_name_prefix='PS'):
 
@@ -2835,7 +2841,7 @@ class bearingless_induction_motor_design(object):
             return None # __init__ is required to return None. You cannot (or at least shouldn't) return something else.
 
         #03 Mechanical Parameters
-        self.update_mechanical_parameters(slip_freq=2.75) #, syn_freq=500.)
+        self.update_mechanical_parameters(slip_freq=0.233) #, syn_freq=500.)
 
         #04 Material Condutivity Properties
         if self.fea_config_dict is not None:
@@ -3322,7 +3328,7 @@ class bearingless_induction_motor_design(object):
             study.GetStudyProperties().SetValue(u"Slip", self.the_slip)
             study.GetStudyProperties().SetValue(u"OutputSteadyResultAs1stStep", 0)
             study.GetStudyProperties().SetValue(u"NonlinearMaxIteration", self.max_nonlinear_iteration)
-            study.GetStudyProperties().SetValue(u"CsvOutputPath", self.dir_csv_output_folder) # it's folder rather than file!
+            study.GetStudyProperties().SetValue(u"CsvOutputPath", dir_csv_output_folder) # it's folder rather than file!
             # study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;FEMCoilFlux;LineCurrent;ElectricPower;TerminalVoltage;JouleLoss;TotalDisplacementAngle")
             study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;LineCurrent;TerminalVoltage;JouleLoss;TotalDisplacementAngle")
             study.GetStudyProperties().SetValue(u"TimePeriodicType", 2) # This is for TP-EEC but is not effective
@@ -3343,7 +3349,7 @@ class bearingless_induction_motor_design(object):
             study.GetStudyProperties().SetValue(u"NonlinearMaxIteration", self.max_nonlinear_iteration)
             study.GetStudyProperties().SetValue(u"ModelThickness", self.stack_length) # Stack Length
             study.GetStudyProperties().SetValue(u"ConversionType", 0)
-            study.GetStudyProperties().SetValue(u"CsvOutputPath", self.dir_csv_output_folder) # it's folder rather than file!
+            study.GetStudyProperties().SetValue(u"CsvOutputPath", dir_csv_output_folder) # it's folder rather than file!
                 # study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;FEMCoilFlux;LineCurrent;ElectricPower;TerminalVoltage;JouleLoss;TotalDisplacementAngle")
             study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;LineCurrent;JouleLoss")
             study.GetStudyProperties().SetValue(u"DeleteResultFiles", self.fea_config_dict['delete_results_after_calculation'])
@@ -3368,7 +3374,7 @@ class bearingless_induction_motor_design(object):
             study.GetStudyProperties().SetValue(u"NonlinearMaxIteration", self.max_nonlinear_iteration)
             study.GetStudyProperties().SetValue(u"ModelThickness", self.stack_length) # Stack Length
             study.GetStudyProperties().SetValue(u"ConversionType", 0)
-            study.GetStudyProperties().SetValue(u"CsvOutputPath", self.dir_csv_output_folder) # it's folder rather than file!
+            study.GetStudyProperties().SetValue(u"CsvOutputPath", dir_csv_output_folder) # it's folder rather than file!
                 # study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;FEMCoilFlux;LineCurrent;ElectricPower;TerminalVoltage;JouleLoss;TotalDisplacementAngle")
             study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;LineCurrent;JouleLoss")
             study.GetStudyProperties().SetValue(u"DeleteResultFiles", self.fea_config_dict['delete_results_after_calculation'])
