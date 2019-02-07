@@ -10,6 +10,7 @@ execfile('./default_setting.py')
 
 
 fea_config_dict['Active_Qr'] = 16
+fea_config_dict['use_weights'] = 'O1'
 
 fea_config_dict['local_sensitivity_analysis'] = True
 run_folder = r'run#400/' # Sensitivity analysis for Qr=16, T440p

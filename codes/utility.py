@@ -283,6 +283,157 @@ def send_notification(text='Hello'):
     mail.close()
     print "Notificaiont sent."
 
+# @staticmethod
+def add_plot(axeses, title=None, label=None, zorder=None, time_list=None, sfv=None, torque=None, range_ss=None, alpha=0.7):
+
+    info = '%s' % (title)
+    torque_average = sum(torque[-range_ss:])/len(torque[-range_ss:])
+    info += '\nAverage Torque: %g Nm' % (torque_average)
+    # torque error = torque - avg. torque
+    torque_error = np.array(torque) - torque_average
+    ss_max_torque_error = max(torque_error[-range_ss:]), min(torque_error[-range_ss:])
+    # we use peak value to compute error rather than use peak-to-peak value
+    normalized_torque_ripple   = 0.5*(ss_max_torque_error[0] - ss_max_torque_error[1]) / torque_average
+    info += '\nNormalized Torque Ripple: %g %%' % (normalized_torque_ripple*100)
+
+    info += '\nAverage Force Mag: %g N'% (sfv.ss_avg_force_magnitude)
+    # we use peak value to compute error rather than use peak-to-peak value
+    normalized_force_error_magnitude = 0.5*(sfv.ss_max_force_err_abs[0]-sfv.ss_max_force_err_abs[1])/sfv.ss_avg_force_magnitude
+    info += '\nNormalized Force Error Mag: %g%%, (+)%g%% (-)%g%%' % (normalized_force_error_magnitude*100,
+                                                                  sfv.ss_max_force_err_abs[0]/sfv.ss_avg_force_magnitude*100,
+                                                                  sfv.ss_max_force_err_abs[1]/sfv.ss_avg_force_magnitude*100)
+    # we use peak value to compute error rather than use peak-to-peak value
+    force_error_angle= 0.5*(sfv.ss_max_force_err_ang[0]-sfv.ss_max_force_err_ang[1])
+    info += '\nMaximum Force Error Angle: %g [deg], (+)%g deg (-)%g deg' % (force_error_angle,
+                                                                 sfv.ss_max_force_err_ang[0],
+                                                                 sfv.ss_max_force_err_ang[1])
+    info += '\nExtra Info:'
+    info += '\n\tAverage Force Vecotr: (%g, %g) N' % (sfv.ss_avg_force_vector[0], sfv.ss_avg_force_vector[1])
+    info += '\n\tTorque Ripple (Peak-to-Peak) %g Nm'% ( max(torque[-range_ss:]) - min(torque[-range_ss:]))
+    info += '\n\tForce Mag Ripple (Peak-to-Peak) %g N'% (sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1])
+
+    ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
+    ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs, alpha=alpha, label=label, zorder=zorder)
+    ax = axeses[1][0]; ax.plot(time_list, 100*sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
+    ax = axeses[1][1]; ax.plot(time_list, np.arctan2(sfv.force_y, sfv.force_x)/np.pi*180. - sfv.ss_avg_force_angle, label=label, alpha=alpha, zorder=zorder)
+
+    return info, torque_average, normalized_torque_ripple, sfv.ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
+
+def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv_output_folder, fea_config_dict, femm_solver):
+    # originate from fobj
+
+    dm = read_csv_results_4_general_purpose(tran_study_name, dir_csv_output_folder, fea_config_dict, femm_solver)
+    basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
+    sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=fea_config_dict['number_of_steps_2ndTTS']) # samples in the tail that are in steady state
+    str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
+        add_plot( axeses,
+                      title=tran_study_name,
+                      label='Transient FEA w/ 2 Time Step Sections',
+                      zorder=8,
+                      time_list=time_list,
+                      sfv=sfv,
+                      torque=TorCon_list,
+                      range_ss=sfv.range_ss)
+    str_results += '\n\tbasic info:' +   ''.join(  [str(el) for el in basic_info])
+
+    if dm.jmag_loss_list is None:
+        raise Exception('Loss data is not loaded?')
+    else:
+        str_results += '\n\tjmag loss info:'  + ', '.join(['%g'%(el) for el in dm.jmag_loss_list]) # dm.jmag_loss_list = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
+
+    if fea_config_dict['jmag_run_list'][0] == 0:
+        str_results += '\n\tfemm loss info:'  + ', '.join(['%g'%(el) for el in dm.femm_loss_list])
+
+    if fea_config_dict['delete_results_after_calculation'] == False:
+        power_factor = dm.power_factor(fea_config_dict['number_of_steps_2ndTTS'], targetFreq=im_variant.DriveW_Freq)
+        str_results += '\n\tPF: %g' % (power_factor)
+
+    # compute the fitness 
+    rotor_volume = im_variant.get_rotor_volume() 
+    rotor_weight = im_variant.get_rotor_weights()
+    shaft_power  = im_variant.Omega * torque_average # make sure update_mechanical_parameters is called so that Omega corresponds to slip_freq_breakdown_torque
+    if dm.jmag_loss_list is None:
+        copper_loss  = 0.0
+        iron_loss    = 0.0
+    else:
+        if False:
+            # by JMAG only
+            copper_loss  = dm.jmag_loss_list[0] + dm.jmag_loss_list[1] 
+            iron_loss    = dm.jmag_loss_list[2] 
+        else:
+            # by JMAG for iron loss and FEMM for copper loss
+            if dm.femm_loss_list[0] is None: # this will happen for running release_design.py
+                copper_loss  = dm.jmag_loss_list[0] + dm.jmag_loss_list[1] 
+            else:
+                copper_loss  = dm.femm_loss_list[0] + dm.femm_loss_list[1]
+            iron_loss    = dm.jmag_loss_list[2] 
+
+        # some factor to account for rotor iron loss?
+        # iron_loss *= 1
+
+    # 这样计算效率，输出转矩大的，铁耗大一倍也没关系了，总之就是气隙变得最小。。。要不就不要优化气隙了。。。
+
+    total_loss   = copper_loss + iron_loss
+    efficiency   = shaft_power / (total_loss + shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
+    str_results  += '\n\teta: %g' % (efficiency)
+
+    # for easy access to codes
+    machine_results = [power_factor, efficiency, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle]
+    machine_results.extend(dm.jmag_loss_list)
+    if dm.femm_loss_list is not None:
+        machine_results.extend(dm.femm_loss_list)
+    else:
+        machine_results.extend([0.0, 0.0])
+    str_machine_results = ','.join('%g'%(el) for el in machine_results if el is not None) # note that femm_loss_list can be None called by release_design.py
+    
+    cost_function, list_cost = compute_list_cost(use_weights(fea_config_dict['use_weights']), rotor_volume, rotor_weight, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list, power_factor, total_loss)
+
+    str_results = '\n-------\n%s-%s\n%d,%d,%g\n%s\n%s\n%s\n' % (
+                    project_name, im_variant.get_individual_name(), 
+                    im_variant.number_current_generation, im_variant.individual_index, cost_function, 
+                    str_machine_results,
+                    ','.join(['%g'%(el) for el in list_cost]),
+                    ','.join(['%g'%(el) for el in im_variant.design_parameters]) ) + str_results
+
+
+    return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list, power_factor, total_loss, cost_function
+
+
+class suspension_force_vector(object):
+    """docstring for suspension_force_vector"""
+    def __init__(self, force_x, force_y, range_ss=None): # range_ss means range_steadystate
+        super(suspension_force_vector, self).__init__()
+        self.force_x = force_x
+        self.force_y = force_y
+        self.force_ang = np.arctan2(force_y, force_x) / np.pi * 180 # [deg]
+        self.force_abs = np.sqrt(np.array(force_x)**2 + np.array(force_y)**2 )
+
+        if range_ss == None:
+            range_ss = len(force_x)
+        self.range_ss = range_ss
+
+        self.ss_avg_force_vector    = np.array([sum(force_x[-range_ss:]), sum(force_y[-range_ss:])]) / range_ss #len(force_x[-range_ss:])
+        self.ss_avg_force_angle     = np.arctan2(self.ss_avg_force_vector[1], self.ss_avg_force_vector[0]) / np.pi * 180
+        self.ss_avg_force_magnitude = np.sqrt(self.ss_avg_force_vector[0]**2 + self.ss_avg_force_vector[1]**2)
+
+        self.force_err_ang = self.force_ang - self.ss_avg_force_angle
+        self.force_err_abs = self.force_abs - self.ss_avg_force_magnitude
+
+        self.ss_max_force_err_ang = max(self.force_err_ang[-range_ss:]), min(self.force_err_ang[-range_ss:])
+        self.ss_max_force_err_abs = max(self.force_err_abs[-range_ss:]), min(self.force_err_abs[-range_ss:])
+
+def pyplot_clear(axeses):
+    # self.fig_main.clf()
+    # axeses = self.axeses
+    for ax in [axeses[0][0],axeses[0][1],axeses[1][0],axeses[1][1]]:
+        ax.cla()
+        ax.grid()
+    ax = axeses[0][0]; ax.set_xlabel('(a)',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)
+    ax = axeses[0][1]; ax.set_xlabel('(b)',fontsize=14.5); ax.set_ylabel('Force Amplitude [N]',fontsize=14.5)
+    ax = axeses[1][0]; ax.set_xlabel('Time [s]\n(c)',fontsize=14.5); ax.set_ylabel('Normalized Force Error Magnitude [%]',fontsize=14.5)
+    ax = axeses[1][1]; ax.set_xlabel('Time [s]\n(d)',fontsize=14.5); ax.set_ylabel('Force Error Angle [deg]',fontsize=14.5)
+
+
 class data_manager(object):
 
     def __init__(self):
@@ -307,6 +458,8 @@ class data_manager(object):
         return self.Current_dict['Coil%s'%(which)]
 
     def power_factor(self, number_of_steps_2ndTTS, targetFreq=1e3, numPeriodicalExtension=1000):
+        # number_of_steps_2ndTTS: steps corresponding to half the period 
+
         # for key, val in self.Current_dict.iteritems():
         #     if 'Terminal' in key:
         #         print key, val
@@ -322,7 +475,7 @@ class data_manager(object):
         # plot(mytime, voltage)
         # plot(mytime, current)
         # show()
-        power_factor = utility.compute_power_factor_from_half_period(voltage, current, mytime, targetFreq=targetFreq, numPeriodicalExtension=numPeriodicalExtension)
+        power_factor = compute_power_factor_from_half_period(voltage, current, mytime, targetFreq=targetFreq, numPeriodicalExtension=numPeriodicalExtension)
         return power_factor
 
 from VanGogh import csv_row_reader
@@ -741,7 +894,7 @@ class SwarmDataAnalyzer(object):
             # the_row[2] # cost_function
         return the_dict #每代只留下最后一个个体的结果，因为字典不能重复key
 
-    def lsit_cost_function(self):
+    def list_cost_function(self):
         l = []
         for i in range(self.number_of_designs):
             l.append( float( self.buf[i*21:(1+i)*21][2].split(',')[2] ) )
@@ -763,15 +916,23 @@ class SwarmDataAnalyzer(object):
         if generator is None:
             generator = self.design_parameters_generator()
 
-        cost = self.lsit_cost_function()
+        cost = self.list_cost_function()
         indices, items = min_indices(cost, popsize)
         print indices
         print items
 
-        gen_best = []
+        # for ind, el in enumerate(cost):
+        #     print ind, el,
+        # quit()
+
+        # this is in wrong order as inidices, so use dict instead
+        # gen_best = [design for index, design in enumerate(generator) if index in indices]
+        gen_best = {}
         for index, design in enumerate(generator):
             if index in indices:
-                gen_best.append(design)
+                gen_best[index] = design
+        gen_best = [gen_best[index] for index in indices] # now it is in order
+
         if returnMore == False:
             return gen_best
         else:
@@ -809,6 +970,39 @@ def autolabel(ax, rects, xpos='center', bias=0.0):
 
 def efficiency_at_50kW(total_loss):
     return 50e3 / (array(total_loss) + 50e3)  # 用50 kW去算才对，只是这样转子铜耗数值会偏大哦。 效率计算：机械功率/(损耗+机械功率)        
+
+def use_weights(which='O1'):
+    if which == 'O1':
+        return [ 1, 0.1,   1, 0.1, 0.1,   0 ]
+    if which == 'O2':
+        return [ 1,1,1,1,1,  0 ]
+    return None
+
+def compute_list_cost(weights, rotor_volume, rotor_weight, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss):
+    # O2
+    # weights = [ 1, 1.0,   1, 1.0, 1.0,   0 ]
+    # O1
+    # weights = [ 1, 0.1,   1, 0.1, 0.1,   0 ]
+    list_cost = [   30e3 / ( torque_average/rotor_volume ),
+                    normalized_torque_ripple         *  20, 
+                    1.0 / ( ss_avg_force_magnitude/rotor_weight ),
+                    normalized_force_error_magnitude *  20, 
+                    force_error_angle                * 0.2, # [deg] 
+                    total_loss                       / 2500. ] 
+    cost_function = np.dot(np.array(list_cost), np.array(weights))
+    return cost_function, list_cost
+
+    # The weight is [TpRV=30e3, FpRW=1, Trip=50%, FEmag=50%, FEang=50deg, eta=sqrt(10)=3.16]
+    # which means the FEang must be up to 50deg so so be the same level as TpRV=30e3 or FpRW=1 or eta=316%
+    # list_weighted_cost = [  30e3 / ( torque_average/rotor_volume ),
+    #                         1.0 / ( ss_avg_force_magnitude/rotor_weight ),
+    #                         normalized_torque_ripple         *   2, #       / 0.05 * 0.1
+    #                         normalized_force_error_magnitude *   2, #       / 0.05 * 0.1
+    #                         force_error_angle * 0.2          * 0.1, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
+    #                         2*total_loss/2500., #10 / efficiency**2,
+    #                         im_variant.thermal_penalty ] # thermal penalty is evaluated when drawing the model according to the parameters' constraints (if the rotor current and rotor slot size requirement does not suffice)
+    # cost_function = sum(list_weighted_cost)
+
 
 def fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, 
                 weights=[ 1,1,1,1,1,  0 ], rotor_volume=None, rotor_weight=None):
@@ -912,7 +1106,7 @@ if __name__ == '__main__':
     # Pareto Plot or Correlation Plot
     if False:
         swda = SwarmDataAnalyzer(run_integer=121)
-        # print swda.lsit_cost_function()
+        # print swda.list_cost_function()
         # 
         O2 = fobj_list( list(swda.get_certain_objective_function(2)), #torque_average, 
                         list(swda.get_certain_objective_function(4)), #ss_avg_force_magnitude, 
@@ -922,7 +1116,7 @@ if __name__ == '__main__':
                         array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))), #total_loss, 
                         weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
         # print O2
-        # print array(swda.lsit_cost_function()) - array(O2) # they are the same
+        # print array(swda.list_cost_function()) - array(O2) # they are the same
         O2 = O2.tolist()
 
         O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
@@ -1406,7 +1600,7 @@ if __name__ == '__main__':
     #     print ''.join(design),
     quit()
 
-    cost = swda.lsit_cost_function()
+    cost = swda.list_cost_function()
     indices, items = min_indices(cost, 50)
     print indices
     print items

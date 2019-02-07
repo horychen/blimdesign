@@ -81,6 +81,7 @@ fea_config_dict = {
     'number_of_steps_2ndTTS':32, # use a multiples of 4! # 8*32 # steps for half period (0.5). That is, we implement two time sections, the 1st section lasts half slip period and the 2nd section lasts half fandamental period.
     'JMAG_Scheduler':False, # multi-cores run
     'delete_results_after_calculation': False, # check if True can we still export Terminal Voltage? 如果是True，那么就得不到Terminal Voltage了！
+    'use_weights':None,
 
     ##########################
     # Design Specifications
@@ -169,6 +170,7 @@ print 'femm_deg_per_step is', fea_config_dict['femm_deg_per_step'], 'deg (Qs=24,
 
 # run_folder = r'run#120/' # minimize O1 with narrowed bounds according to sensitivity analysis (run#116)
 # run_folder = r'run#121/' # minimize O2 with narrowed bounds according to sensitivity analysis (run#116)
+# fea_config_dict['use_weights'] = 'O2'
 
 ################################################################
 # Those best design codes are now implemented in release_design.py
@@ -177,7 +179,7 @@ print 'femm_deg_per_step is', fea_config_dict['femm_deg_per_step'], 'deg (Qs=24,
 # fea_config_dict['flag_optimization'] = False
 # fea_config_dict['End_Ring_Resistance'] = 9.69e-6
 # run_folder = r'run#122/' # O2 best: with end ring and fine step size transient FEA
-
+# fea_config_dict['use_weights'] = 'O2'
 
 
 

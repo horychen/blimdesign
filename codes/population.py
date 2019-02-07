@@ -14,28 +14,6 @@ from time import time as clock_time
 
 EPS = 1e-2
 
-class suspension_force_vector(object):
-    """docstring for suspension_force_vector"""
-    def __init__(self, force_x, force_y, range_ss=None): # range_ss means range_steadystate
-        super(suspension_force_vector, self).__init__()
-        self.force_x = force_x
-        self.force_y = force_y
-        self.force_ang = np.arctan2(force_y, force_x) / pi * 180 # [deg]
-        self.force_abs = np.sqrt(np.array(force_x)**2 + np.array(force_y)**2 )
-
-        if range_ss == None:
-            range_ss = len(force_x)
-        self.range_ss = range_ss
-
-        self.ss_avg_force_vector    = np.array([sum(force_x[-range_ss:]), sum(force_y[-range_ss:])]) / range_ss #len(force_x[-range_ss:])
-        self.ss_avg_force_angle     = np.arctan2(self.ss_avg_force_vector[1], self.ss_avg_force_vector[0]) / pi * 180
-        self.ss_avg_force_magnitude = np.sqrt(self.ss_avg_force_vector[0]**2 + self.ss_avg_force_vector[1]**2)
-
-        self.force_err_ang = self.force_ang - self.ss_avg_force_angle
-        self.force_err_abs = self.force_abs - self.ss_avg_force_magnitude
-
-        self.ss_max_force_err_ang = max(self.force_err_ang[-range_ss:]), min(self.force_err_ang[-range_ss:])
-        self.ss_max_force_err_abs = max(self.force_err_abs[-range_ss:]), min(self.force_err_abs[-range_ss:])
 
 class swarm(object):
 
@@ -97,18 +75,7 @@ class swarm(object):
 
         # post-process feature
         self.fig_main, self.axeses = subplots(2, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
-        self.pyplot_clear()
-
-    def pyplot_clear(self):
-        # self.fig_main.clf()
-        axeses = self.axeses
-        for ax in [axeses[0][0],axeses[0][1],axeses[1][0],axeses[1][1]]:
-            ax.cla()
-            ax.grid()
-        ax = axeses[0][0]; ax.set_xlabel('(a)',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)
-        ax = axeses[0][1]; ax.set_xlabel('(b)',fontsize=14.5); ax.set_ylabel('Force Amplitude [N]',fontsize=14.5)
-        ax = axeses[1][0]; ax.set_xlabel('Time [s]\n(c)',fontsize=14.5); ax.set_ylabel('Normalized Force Error Magnitude [%]',fontsize=14.5)
-        ax = axeses[1][1]; ax.set_xlabel('Time [s]\n(d)',fontsize=14.5); ax.set_ylabel('Force Error Angle [deg]',fontsize=14.5)
+        utility.pyplot_clear(self.axeses)
 
     def write_to_file_fea_config_dict(self):
         with open(self.dir_run + '../FEA_CONFIG-%s.txt'%(self.fea_config_dict['model_name_prefix']), 'w') as f:
@@ -441,56 +408,26 @@ class swarm(object):
 
         return out_string
 
-    @staticmethod
-    def add_plot(axeses, title=None, label=None, zorder=None, time_list=None, sfv=None, torque=None, range_ss=None, alpha=0.7):
-
-        info = '%s' % (title)
-        torque_average = sum(torque[-range_ss:])/len(torque[-range_ss:])
-        info += '\nAverage Torque: %g Nm' % (torque_average)
-        # torque error = torque - avg. torque
-        torque_error = np.array(torque) - torque_average
-        ss_max_torque_error = max(torque_error[-range_ss:]), min(torque_error[-range_ss:])
-        # we use peak value to compute error rather than use peak-to-peak value
-        normalized_torque_ripple   = 0.5*(ss_max_torque_error[0] - ss_max_torque_error[1]) / torque_average
-        info += '\nNormalized Torque Ripple: %g %%' % (normalized_torque_ripple*100)
-
-        info += '\nAverage Force Mag: %g N'% (sfv.ss_avg_force_magnitude)
-        # we use peak value to compute error rather than use peak-to-peak value
-        normalized_force_error_magnitude = 0.5*(sfv.ss_max_force_err_abs[0]-sfv.ss_max_force_err_abs[1])/sfv.ss_avg_force_magnitude
-        info += '\nNormalized Force Error Mag: %g%%, (+)%g%% (-)%g%%' % (normalized_force_error_magnitude*100,
-                                                                      sfv.ss_max_force_err_abs[0]/sfv.ss_avg_force_magnitude*100,
-                                                                      sfv.ss_max_force_err_abs[1]/sfv.ss_avg_force_magnitude*100)
-        # we use peak value to compute error rather than use peak-to-peak value
-        force_error_angle= 0.5*(sfv.ss_max_force_err_ang[0]-sfv.ss_max_force_err_ang[1])
-        info += '\nMaximum Force Error Angle: %g [deg], (+)%g deg (-)%g deg' % (force_error_angle,
-                                                                     sfv.ss_max_force_err_ang[0],
-                                                                     sfv.ss_max_force_err_ang[1])
-        info += '\nExtra Info:'
-        info += '\n\tAverage Force Vecotr: (%g, %g) N' % (sfv.ss_avg_force_vector[0], sfv.ss_avg_force_vector[1])
-        info += '\n\tTorque Ripple (Peak-to-Peak) %g Nm'% ( max(torque[-range_ss:]) - min(torque[-range_ss:]))
-        info += '\n\tForce Mag Ripple (Peak-to-Peak) %g N'% (sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1])
-
-        ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
-        ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs, alpha=alpha, label=label, zorder=zorder)
-        ax = axeses[1][0]; ax.plot(time_list, 100*sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
-        ax = axeses[1][1]; ax.plot(time_list, np.arctan2(sfv.force_y, sfv.force_x)/pi*180. - sfv.ss_avg_force_angle, label=label, alpha=alpha, zorder=zorder)
-
-        return info, torque_average, normalized_torque_ripple, sfv.ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
-
+    def get_project_name(self, individual_index=None):
+        if self.fea_config_dict['flag_optimization'] == False:
+            return self.fea_config_dict['model_name_prefix']
+        else:
+            return self.run_folder[:-1]+'gen#%04dind#%04d' % (self.number_current_generation, individual_index)
 
     # @unblockPrinting
-    def fobj(self, individual_index, individual):
-        # based on the individual data, create design variant of the initial design of Pyrhonen09
+    def fobj(self, individual_index, individual_denorm):
+        # based on the individual_denorm data, create design variant of the initial design of Pyrhonen09
         logger = logging.getLogger(__name__)
         mylatch = self.im
         self.im = None # to avoid to use this reference by mistake
         im_variant = bearingless_induction_motor_design.local_design_variant(mylatch, \
-                        self.number_current_generation, individual_index, individual) # due to compatability issues: a new child class is used instead
-        self.im_variant = im_variant # for write im_variant.ID to file corresponding to the living individual # also for command line access debug purpose
+                        self.number_current_generation, individual_index, individual_denorm) # due to compatability issues: a new child class is used instead
+        self.im_variant = im_variant # for write im_variant.ID to file corresponding to the living individual_denorm # also for command line access debug purpose
         im = im_variant # for Tran2TSS (应该给它弄个函数调用的)
         im_variant.individual_name = im_variant.get_individual_name() 
 
-        self.project_name = self.run_folder[:-1]+'gen#%04dind#%04d' % (self.number_current_generation, individual_index)
+        self.project_name = self.get_project_name()
+
         self.jmag_control_state = False
 
         # local scripts
@@ -580,40 +517,16 @@ class swarm(object):
             # Load Results for Tran2TSS
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             try:
-                dm = self.read_csv_results_4_optimization(tran2tss_study_name)
-                basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
-                sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=self.fea_config_dict['number_of_steps_2ndTTS']) # samples in the tail that are in steady state
-                str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
-                    self.add_plot( self.axeses,
-                                  title=tran2tss_study_name,
-                                  label='Transient FEA w/ 2 Time Step Sections',
-                                  zorder=8,
-                                  time_list=time_list,
-                                  sfv=sfv,
-                                  torque=TorCon_list,
-                                  range_ss=sfv.range_ss)
-                str_results += '\n\tbasic info:' +   ''.join(  [str(el) for el in basic_info])
-
-                if dm.jmag_loss_list is None:
-                    raise Exception('Loss data is not loaded?')
-                else:
-                    str_results += '\n\tjmag loss info:'  + ', '.join(['%g'%(el) for el in dm.jmag_loss_list]) # dm.jmag_loss_list = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
-
-                if self.fea_config_dict['jmag_run_list'][0] == 0:
-                    str_results += '\n\tfemm loss info:'  + ', '.join(['%g'%(el) for el in dm.femm_loss_list])
-
-                if self.fea_config_dict['delete_results_after_calculation'] == False:
-                    power_factor = dm.power_factor(self.fea_config_dict['number_of_steps_2ndTTS'], targetFreq=im_variant.DriveW_Freq)
-                    str_results += '\n\tPF: %g' % (power_factor)
+                results = utility.build_str_results(self.axeses, im_variant, self.project_name, tran2tss_study_name, self.dir_csv_output_folder, self.fea_config_dict, self.femm_solver)
 
                 self.fig_main.savefig(self.dir_run + im_variant.individual_name + 'results.png', dpi=150)
-                self.pyplot_clear()
+                utility.pyplot_clear()
             except Exception, e:
                 logger.error(u'Error when loading csv results for Tran2TSS. Check the Report of JMAG Designer. (Maybe Material is not added.)', exc_info=True)
                 raise e
             # show()
 
-            return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list, power_factor
+            return results
 
         ################################################################
         # Begin from where left: Frequency Study
@@ -726,97 +639,35 @@ class swarm(object):
         ################################################################
         # Load data for cost function evaluation
         ################################################################
-        str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor= load_transeint()
+        str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss, cost_function = load_transeint()
 
-        # compute the fitness 
-        rotor_volume = pi*(im_variant.Radius_OuterRotor*1e-3)**2 * (im_variant.stack_length*1e-3)
-        rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
-        shaft_power  = im_variant.Omega * torque_average # make sure update_mechanical_parameters is called so that Omega corresponds to slip_freq_breakdown_torque
-        if jmag_loss_list is None:
-            copper_loss  = 0.0
-            iron_loss    = 0.0
-        else:
-            if False:
-                # by JMAG only
-                copper_loss  = jmag_loss_list[0] + jmag_loss_list[1] 
-                iron_loss    = jmag_loss_list[2] 
-            else:
-                # by JMAG for iron loss and FEMM for copper loss
-                if femm_loss_list[0] is None: # this will happen for running release_design.py
-                    copper_loss  = jmag_loss_list[0] + jmag_loss_list[1] 
-                else:
-                    copper_loss  = femm_loss_list[0] + femm_loss_list[1]
-                iron_loss    = jmag_loss_list[2] 
-
-            # some factor to account for rotor iron loss?
-            # iron_loss *= 1
-
-        # 这样计算效率，输出转矩大的，铁耗大一倍也没关系了，总之就是气隙变得最小。。。要不就不要优化气隙了。。。
-
-        total_loss   = copper_loss + iron_loss
-        efficiency   = shaft_power / (total_loss + shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
-        str_results  += '\n\teta: %g' % (efficiency)
-
-        # # O2
-        # weights = [ 1, 1.0,   1, 1.0, 1.0,   0 ]
-        # O1
-        weights = [ 1, 0.1,   1, 0.1, 0.1,   0 ]
-        list_cost = [   30e3 / ( torque_average/rotor_volume ),
-                        normalized_torque_ripple         *  20, 
-                        1.0 / ( ss_avg_force_magnitude/rotor_weight ),
-                        normalized_force_error_magnitude *  20, 
-                        force_error_angle                * 0.2, # [deg] 
-                        total_loss                       / 2500. ] 
-        cost_function = np.dot(np.array(list_cost), np.array(weights))
-            # The weight is [TpRV=30e3, FpRW=1, Trip=50%, FEmag=50%, FEang=50deg, eta=sqrt(10)=3.16]
-            # which means the FEang must be up to 50deg so so be the same level as TpRV=30e3 or FpRW=1 or eta=316%
-            # list_weighted_cost = [  30e3 / ( torque_average/rotor_volume ),
-            #                         1.0 / ( ss_avg_force_magnitude/rotor_weight ),
-            #                         normalized_torque_ripple         *   2, #       / 0.05 * 0.1
-            #                         normalized_force_error_magnitude *   2, #       / 0.05 * 0.1
-            #                         force_error_angle * 0.2          * 0.1, # [deg] /5 deg * 0.1 is reported to be the base line (Yegu Kang) # force_error_angle is not consistent with Yegu Kang 2018-060-case of TFE
-            #                         2*total_loss/2500., #10 / efficiency**2,
-            #                         im_variant.thermal_penalty ] # thermal penalty is evaluated when drawing the model according to the parameters' constraints (if the rotor current and rotor slot size requirement does not suffice)
-            # cost_function = sum(list_weighted_cost)
-
-
-
-        # # before writing, do a double check that individual (design_parameters) corresponds to the evaluation results from database
+        # # before writing, do a double check that individual_denorm (design_parameters) corresponds to the evaluation results from database
         # if self.database is not None and self.number_current_generation == self.database.the_generation_that_i_am_worried_about:
-        #     design_parameters_database, cost_function_database = self.database.find_individual(self.number_current_generation, individual_index)
+        #     design_parameters_database, cost_function_database = self.database.find_individual_denorm(self.number_current_generation, individual_index)
         #     if design_parameters_database is not None:
-        #         if abs(sum(np.array(design_parameters_database) - np.array(individual)))>1e-4 or abs(cost_function_database-cost_function)>1e-4:
-        #             print design_parameters_database, individual
+        #         if abs(sum(np.array(design_parameters_database) - np.array(individual_denorm)))>1e-4 or abs(cost_function_database-cost_function)>1e-4:
+        #             print design_parameters_database, individual_denorm
         #             print cost_function_database, cost_function
-        #             raise Exception('Wrong individual. Unmatch database data.')
+        #             raise Exception('Wrong individual_denorm. Unmatch database data.')
         #         logger.debug('Locate the design in the database. worried gen#=%d'%(self.database.the_generation_that_i_am_worried_about))
         #     else:
         #         logger.debug('Cannot find the design in the database. worried gen#=%d'%(self.database.the_generation_that_i_am_worried_about))
 
         # write design evaluation data to file
-        machine_results = [power_factor, efficiency, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle]
-        machine_results.extend(jmag_loss_list)
-        machine_results.extend(femm_loss_list)
-        str_machine_results = ','.join('%g'%(el) for el in machine_results if el is not None) # note that femm_loss_list can be None called by release_design.py
         with open(self.dir_run + 'swarm_data.txt', 'a') as f:
-            f.write('\n-------\n%s-%s\n%d,%d,%g\n%s\n%s\n%s\n' % (
-                        self.project_name, im_variant.individual_name, 
-                        self.number_current_generation, individual_index, cost_function, 
-                        str_machine_results,
-                        ','.join(['%g'%(el) for el in list_cost]),
-                        ','.join(['%g'%(el) for el in individual]) ) + str_results)
+            f.write(str_results)
 
         self.im = mylatch
         # raise
         # quit() # for run#117: write the initial design to swarm_data.txt
         return cost_function
 
-    def fobj_test(self, individual_index, individual):
+    def fobj_test(self, individual_index, individual_denorm):
 
         def fmodel(x, w):
             return w[0] + w[1]*x + w[2] * x**2 + w[3] * x**3 + w[4] * x**4 + w[5] * x**5 + w[6] * x**6
-        def rmse(y, individual):
-            y_pred = fmodel(x, individual)
+        def rmse(y, individual_denorm):
+            y_pred = fmodel(x, individual_denorm)
             return np.sqrt(sum((y - y_pred)**2) / len(y))
 
         try:
@@ -829,7 +680,7 @@ class swarm(object):
         x = np.linspace(0, 6.28, 50) 
         y = fmodel(x, w=self.weights)
 
-        return rmse(y, individual)
+        return rmse(y, individual_denorm)
         # plt.scatter(x, y)
         # plt.plot(x, np.cos(x), label='cos(x)')
         # plt.legend()
@@ -894,7 +745,7 @@ class swarm(object):
             if self.number_current_generation == 0:
                 # there is no fitness file yet. run evaluation for the initial pop            
                 self.jmag_control_state = False # demand to initialize the jamg designer
-                fitness = np.asarray( [fobj(index, individual) for index, individual in enumerate(pop_denorm)] ) # modification #2
+                fitness = np.asarray( [fobj(index, individual_denorm) for index, individual_denorm in enumerate(pop_denorm)] ) # modification #2
 
                 logger = logging.getLogger(__name__)
                 logger.debug('Generating fitness data for the initial population: %s', self.get_fit_file(self.number_current_generation))
@@ -1386,7 +1237,7 @@ class swarm(object):
         # initialize JMAG Designer
         self.designer_init()
         app = self.app
-        self.project_name = self.fea_config_dict['model_name_prefix']
+        self.project_name = self.get_project_name() # self.fea_config_dict['model_name_prefix']
         self.im.model_name = self.im.get_individual_name() 
         if self.jmag_control_state == False: # initilize JMAG Designer
             expected_project_file = self.dir_project_files + "%s.jproj"%(self.project_name)
@@ -1995,7 +1846,7 @@ class swarm(object):
         study_name = 'TranRef'
         dm = self.read_csv_results_4_comparison__transient(study_name, path_prefix=r'D:\JMAG_Files\TimeStepSensitivity/'+'PS_Qr%d_NoEndRing_M15_17303l/'%(int(self.im.Qr)))
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
-        sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=400*10) # samples in the tail that are in steady state
+        sfv = utility.suspension_force_vector(ForConX_list, ForConY_list, range_ss=400*10) # samples in the tail that are in steady state
         add_plot( axeses,
                   title=study_name,
                   label='Transient FEA', #'TranFEARef', #400',
@@ -2063,7 +1914,7 @@ class swarm(object):
         dm = self.read_csv_results_4_comparison__transient(study_name)
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
         end_time = time_list[-1]
-        sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=48) # samples in the tail that are in steady state
+        sfv = utility.suspension_force_vector(ForConX_list, ForConY_list, range_ss=48) # samples in the tail that are in steady state
         add_plot( axeses,
                   title=study_name,
                   label='Transient FEA w/ 2 Time Step Sections',
@@ -2110,7 +1961,7 @@ class swarm(object):
         femm_force_y = number_of_repeat * femm_solver_data[3].tolist()
         femm_force_abs = number_of_repeat * femm_force_abs.tolist()
 
-        sfv = suspension_force_vector(femm_force_x, femm_force_y, range_ss=len(rotor_position_in_deg)) # samples in the tail that are in steady state
+        sfv = utility.suspension_force_vector(femm_force_x, femm_force_y, range_ss=len(rotor_position_in_deg)) # samples in the tail that are in steady state
         add_plot( axeses,
                   title=study_name,
                   label='Static FEA', #'StaticFEAwiRR',
@@ -2141,7 +1992,7 @@ class swarm(object):
         ec_force_x       = number_of_repeat*ForConX_list
         ec_force_y       = number_of_repeat*ForConY_list
 
-        sfv = suspension_force_vector(ec_force_x, ec_force_y, range_ss=len(rotor_position_in_deg))
+        sfv = utility.suspension_force_vector(ec_force_x, ec_force_y, range_ss=len(rotor_position_in_deg))
         add_plot( axeses,
                   title=study_name,
                   label='Eddy Current FEA', #'EddyCurFEAwiRR',
@@ -3024,6 +2875,9 @@ class bearingless_induction_motor_design(object):
         self = cls( row_translated_from_design_paramters, 
                     im.fea_config_dict, 
                     im.model_name_prefix)
+        self.number_current_generation = number_current_generation
+        self.individual_index = individual_index
+        self.design_parameters = design_parameters
 
         # introspection (settings that may differ for initial design and variant designs)
         self.bool_initial_design = False # no, this is a variant design of the initial design
@@ -3073,6 +2927,12 @@ class bearingless_induction_motor_design(object):
             # the leading 8 char are space, while the ending 3 char are ', \n'
             exec('self.' + line[count_of_space:-3]) 
         return self
+
+    def get_rotor_volume(self):
+        return pi*(self.Radius_OuterRotor*1e-3)**2 * (self.stack_length*1e-3)
+
+    def get_rotor_weights(self):
+        return 9.8 * self.get_rotor_volume() * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg        
 
     def whole_row_reader(self, reader):
         for row in reader:
