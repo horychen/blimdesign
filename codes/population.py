@@ -74,7 +74,7 @@ class swarm(object):
         self.bool_auto_recovered_run = False # auto-recovered run
 
         # post-process feature
-        self.fig_main, self.axeses = subplots(2, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+        self.fig_main, self.axeses = subplots(3, 2, sharex=False, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
         utility.pyplot_clear(self.axeses)
 
     def write_to_file_fea_config_dict(self):

@@ -284,7 +284,7 @@ def send_notification(text='Hello'):
     print "Notificaiont sent."
 
 # @staticmethod
-def add_plot(axeses, title=None, label=None, zorder=None, time_list=None, sfv=None, torque=None, range_ss=None, alpha=0.7):
+def add_plots(axeses, dm, title=None, label=None, zorder=None, time_list=None, sfv=None, torque=None, range_ss=None, alpha=0.7):
 
     info = '%s' % (title)
     torque_average = sum(torque[-range_ss:])/len(torque[-range_ss:])
@@ -317,6 +317,11 @@ def add_plot(axeses, title=None, label=None, zorder=None, time_list=None, sfv=No
     ax = axeses[1][0]; ax.plot(time_list, 100*sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
     ax = axeses[1][1]; ax.plot(time_list, np.arctan2(sfv.force_y, sfv.force_x)/np.pi*180. - sfv.ss_avg_force_angle, label=label, alpha=alpha, zorder=zorder)
 
+    # plot for visialization of power factor 
+    dm.get_voltage_and_current(range_ss)
+    ax = axeses[2][0]; ax.plot(dm.mytime, dm.myvoltage, label=label, alpha=alpha, zorder=zorder)
+    ax = axeses[2][0]; ax.plot(dm.mytime, dm.mycurrent, label=label, alpha=alpha, zorder=zorder)
+
     return info, torque_average, normalized_torque_ripple, sfv.ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
 
 def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv_output_folder, fea_config_dict, femm_solver):
@@ -326,7 +331,7 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
     basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
     sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=fea_config_dict['number_of_steps_2ndTTS']) # samples in the tail that are in steady state
     str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
-        add_plot( axeses,
+        add_plots( axeses, dm,
                       title=tran_study_name,
                       label='Transient FEA w/ 2 Time Step Sections',
                       zorder=8,
@@ -457,6 +462,25 @@ class data_manager(object):
     def circuit_current(self, which='4C'): # 2A 2B 2C 4A 4B 4C
         return self.Current_dict['Coil%s'%(which)]
 
+    def get_voltage_and_current(self, number_of_steps_2ndTTS):
+
+        # 4C <- the C-phase of the 4 pole winding
+        mytime  = self.Current_dict['Time(s)'][-number_of_steps_2ndTTS:]
+        voltage =      self.terminal_voltage()[-number_of_steps_2ndTTS:]
+        current =       self.circuit_current()[-number_of_steps_2ndTTS:]
+
+        # if len(mytime) > len(voltage):
+        #     mytime = mytime[:len(voltage)]
+
+        print len(mytime), len(voltage), number_of_steps_2ndTTS
+        print len(mytime), len(voltage)
+        print len(mytime), len(voltage)
+
+        # for access to plot
+        self.myvoltage = voltage
+        self.mycurrent = current
+        self.mytime    = mytime
+
     def power_factor(self, number_of_steps_2ndTTS, targetFreq=1e3, numPeriodicalExtension=1000):
         # number_of_steps_2ndTTS: steps corresponding to half the period 
 
@@ -465,10 +489,11 @@ class data_manager(object):
         #         print key, val
         # quit()
 
-        # 4C
-        mytime  = self.Current_dict['Time(s)'][-number_of_steps_2ndTTS:]
-        voltage =      self.terminal_voltage()[-number_of_steps_2ndTTS:]
-        current =       self.circuit_current()[-number_of_steps_2ndTTS:]
+        self.get_voltage_and_current(number_of_steps_2ndTTS)
+        mytime  = self.mytime
+        voltage = self.myvoltage
+        current = self.mycurrent
+
         # from pylab import *
         # print len(mytime), len(voltage), len(current)
         # figure()
@@ -546,7 +571,9 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
     new_key_list = []
     if fea_config_dict['delete_results_after_calculation'] == False:
         # file name is by individual_name like ID32-2-4_EXPORT_CIRCUIT_VOLTAGE.csv rather than ID32-2-4Tran2TSS_circuit_current.csv
-        with open(path_prefix + study_name[:-8] + "_EXPORT_CIRCUIT_VOLTAGE.csv", 'r') as f:
+        fname = path_prefix + study_name[:-8] + "_EXPORT_CIRCUIT_VOLTAGE.csv"
+        print 'Terminal Voltage - look into:', fname
+        with open(fname, 'r') as f:
             count = 0
             for row in csv_row_reader(f):
                 count +=1
