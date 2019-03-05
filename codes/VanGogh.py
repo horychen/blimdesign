@@ -149,6 +149,7 @@ class VanGogh(object):
             self.mirror_and_copyrotate(im.Qs, im.Radius_OuterStatorYoke, fraction)
 
     def draw_rotor(self, fraction):
+        print 'draw rotor with fraction=%d'%(fraction)
         im = self.im
 
         origin = Point(0,0)

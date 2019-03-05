@@ -12,8 +12,16 @@ print 'Guesses: alpha_i, efficiency, power_factor.'
 # model_name_prefix = 'EC_Rotate_PS' # longer solve time, less models, better mesh, higher turns for bearing winding.
 # model_name_prefix = 'ECRot_PS_Opti' # longer solve time, less models, better mesh, higher turns for bearing winding.
 # model_name_prefix = 'StaticFEA_PS_Opti' # Fix Bug for the rotor slot radius as half of rotor tooth width
-model_name_prefix = 'Tran2TSS_PS_Opti'
+
+model_name_prefix = 'Tran2TSS_PS_Opti' # Qr=36
 model_name_prefix = 'Tran2TSS_PS_Opti_Qr16'
+
+Qs = 24 # 18
+
+Qr = Qs+8 # 32
+Qr = Qs-8 # 16 or 10
+
+model_name_prefix = 'NineSigma_Qr%d' % (Qr)
 
 # delete existing file
 loc_txt_file = '../pop/%s.txt'%(model_name_prefix)
@@ -33,19 +41,19 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     THE_IM_DESIGN_ID = Qr
 
     print '''\n1. Initial Design Parameters '''
-    mec_power = 50e3 # W
-    rated_frequency = 1000 # Hz
-    no_pole_pairs = 2
+    mec_power = 70e3 # W
+    no_pole_pairs = 1
+    rated_frequency = 750*no_pole_pairs # Hz
     speed_rpm = rated_frequency * 60 / no_pole_pairs # rpm
 
-    bool_standard_voltage_rating = False
+    bool_standard_voltage_rating = True
     if bool_standard_voltage_rating:
         U1_rms = 480. / sqrt(3) # V - Wye-connect #480 V is standarnd # 电压越高，意味着越厚的绝缘占去槽空间（Lipo2017书）
         # U1_rms = 480  # V - Delta-connect
     else:
         U1_rms = 500. / sqrt(3) # The design used in ECCE
     print 'bool_standard_voltage_rating=', bool_standard_voltage_rating
-    print 'U1_rms=', U1_rms, 'V', 
+    print 'U1_rms=', U1_rms, 'V'
 
     stator_phase_voltage_rms = U1_rms
     no_phase_m = 3
@@ -84,18 +92,26 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
 
     rotor_volume_Vr = required_torque/(2*tangential_stress)
 
-    length_ratio_chi = pi/(2*no_pole_pairs) * no_pole_pairs**(1/3.) # Table 6.5
-    print 'length_ratio_chi=', length_ratio_chi
+    if no_pole_pairs == 1:
+        rotor_outer_radius_r_or = 28.8e-3 # based on the mechanical check with a safety factor of 1.5 according to the ECCE paper of Yegu Kang
+        rotor_outer_diameter_Dr = 2*rotor_outer_radius_r_or
+        # We have: rotor_volume_Vr = pi * rotor_outer_radius_r_or**2 * stack_length
+        # so
+        stack_length = rotor_volume_Vr / (pi * rotor_outer_radius_r_or**2)
 
-    rotor_outer_diameter_Dr = (4/pi*rotor_volume_Vr*length_ratio_chi)**(1/3.)
-    rotor_outer_radius_r_or = 0.5 * rotor_outer_diameter_Dr
+    else:
+        length_ratio_chi = pi/(2*no_pole_pairs) * no_pole_pairs**(1/3.) # Table 6.5
+        print 'length_ratio_chi=', length_ratio_chi
+
+        rotor_outer_diameter_Dr = (4/pi*rotor_volume_Vr*length_ratio_chi)**(1/3.)
+        rotor_outer_radius_r_or = 0.5 * rotor_outer_diameter_Dr
+
+        stack_length = rotor_outer_diameter_Dr * length_ratio_chi
+
+    # print 'Yegu Kang: rotor_outer_diameter_Dr, 95 mm'
     print 'rotor_outer_diameter_Dr=', rotor_outer_diameter_Dr*1e3, 'mm'
     print 'rotor_outer_radius_r_or=', rotor_outer_radius_r_or*1e3, 'mm'
-    print 'Yegu Kang: rotor_outer_diameter_Dr, 95 mm'
-
-    stack_length = rotor_outer_diameter_Dr * length_ratio_chi
     print 'stack_length=', stack_length*1e3, 'mm'
-
 
 
 
@@ -140,7 +156,8 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
             print i * 2*(no_pole_pairs+1)*no_phase_m,
         else:
             print i * 2*(no_pole_pairs)*no_phase_m,
-    Qs = 24
+
+    global Qs # Qs = 24 # 18
     no_winding_layer = 1
 
     distribution_q = Qs / (2*no_pole_pairs*no_phase_m)
@@ -182,10 +199,10 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     print 'air_gap_flux_density_B=', air_gap_flux_density_B
     linear_current_density_A = machine_constant_Cmec / (pi**2/sqrt(2)*kw1*air_gap_flux_density_B)
     
-    if linear_current_density_A<65 and linear_current_density_A>30:
+    if linear_current_density_A<65 and linear_current_density_A>30: # Example 6.4
         print 'linear_current_density_A=', linear_current_density_A, 'kA/m'
     else:
-        raise Exception('Bad linear_current_density_A.')
+        print '[Warning] Bad linear_current_density_A of %g kA/m.' % (linear_current_density_A)
 
     print '''\n7. Number of Coil Turns '''
     desired_emf_Em = 0.95 * stator_phase_voltage_rms # 0.96~0.98, high speed motor has higher leakage reactance hence 0.95
@@ -339,7 +356,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
             print 'area_rotor_slot_Sur', area_rotor_slot_Sur*1e6, 'mm^2'
 
             # guess this local design values or adapt from other designs
-            length_headNeckRotorSlot = 1e-3 # m
+            length_headNeckRotorSlot = 1e-3 # for 2 pole motor # 1e-3 m for 4 pole motor
 
             # rotor slot height depends on rotor_tooth_width_b_dr and rotor current (power factor)
             rotor_outer_radius_r_or_eff = rotor_outer_radius_r_or - length_headNeckRotorSlot
@@ -500,8 +517,12 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
 
     print '''\n14. Yoke Geometry (its Magnetic Voltage cannot be caculated because Dse is still unknown) '''
 
-    stator_yoke_flux_density_Bys = 1.2
-    rotor_yoke_flux_density_Byr = 1.1
+    if no_pole_pairs == 1:
+        stator_yoke_flux_density_Bys = 1.2
+        rotor_yoke_flux_density_Byr = 1.1 + 0.3
+    else:
+        stator_yoke_flux_density_Bys = 1.2
+        rotor_yoke_flux_density_Byr = 1.1
 
     # compute this again for the new alpha_i and new air_gap_flux_density_B
     air_gap_flux_Phi_m = alpha_i * air_gap_flux_density_B * pole_pitch_tau_p * stack_length_eff
@@ -618,11 +639,14 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     Location_RotorBarCenter = Radius_OuterRotor - Length_HeadNeckRotorSlot - Radius_of_RotorSlot
     Width_RotorSlotOpen = b1*1e3 # 10% of 360/Qr
 
-
+    # compute Radius_of_RotorSlot2
     # new exact method
     Radius_of_RotorSlot2 = 1e3 * (2*pi*(Radius_OuterRotor - Length_HeadNeckRotorSlot - rotor_slot_height_h_sr*1e3)*1e-3 - rotor_tooth_width_b_dr*Qr) / (2*Qr-2*pi)
     print 'Radius_of_RotorSlot2=', Radius_of_RotorSlot2
     Location_RotorBarCenter2 = Radius_OuterRotor - Length_HeadNeckRotorSlot - rotor_slot_height_h_sr*1e3 + Radius_of_RotorSlot2 
+
+    # print Location_RotorBarCenter2, Length_HeadNeckRotorSlot, Radius_of_RotorSlot2
+    # quit()
 
     # old approximate mehtod
     # Location_RotorBarCenter2 = Radius_OuterRotor - Length_HeadNeckRotorSlot - rotor_tooth_height_h_dr*1e3 # 本来还应该减去转子内槽半径的，但是这里还不知道，干脆不要了，这样槽会比预计的偏深，
@@ -694,8 +718,6 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
 # for THE_IM_DESIGN_ID, Qr in enumerate([16,20,28,32,36]): # any Qr>36 will not converge (for alpha_i and k_sat)
 # for THE_IM_DESIGN_ID, Qr in enumerate([32,36]): # any Qr>36 will not converge (for alpha_i and k_sat) with Arnon5 at least
 # for THE_IM_DESIGN_ID, Qr in enumerate([32]):
-Qr = 32
-Qr = 16
 bool_run_for_bounds = False
 for rotor_tooth_flux_density_B_dr in arange(1.1, 2.11, 0.2): #1.5–2.2 (rotor) 
     for stator_tooth_flux_density_B_ds in arange(1.1, 1.81, 0.2): #1.4–2.1 (stator) # too large you will get End of Loop Error (Fixed by extropolating the k_sat vs alpha_i curve.)
@@ -707,7 +729,10 @@ for rotor_tooth_flux_density_B_dr in arange(1.1, 2.11, 0.2): #1.5–2.2 (rotor)
                 if Qr == 32:
                     rotor_current_density_Jr = 6.4e6
                 if Qr == 16:
-                    rotor_current_density_Jr = 4.0e6
+                    rotor_current_density_Jr = 4e6
+                    rotor_current_density_Jr = 10.25e6 # for p=1 blim design
+                if Qr == 10:
+                    rotor_current_density_Jr = 9e6 # for p=1 blim design
 
             Radius_OuterRotor = pyrhonen_blim_design(   rotor_tooth_flux_density_B_dr,
                                                         stator_tooth_flux_density_B_ds,
@@ -740,9 +765,10 @@ print '\n\n\nMechanical Limits Check:'
 # quit()
 
 if True:
-    print 'Radius_OuterRotor=', Radius_OuterRotor, 'mm'
     rotor_radius = Radius_OuterRotor*1e-3
-    speed_rpm = 30000
+    speed_rpm = 45000
+    print 'Current Radius_OuterRotor=', Radius_OuterRotor, 'mm'
+    print 'Current speed_rpm=', speed_rpm
 
     Omega = speed_rpm/(60)*2*pi
     modulus_of_elasticity = 190 * 1e9 # Young's modulus
@@ -756,7 +782,7 @@ if True:
     # print 'stack_length_max=', stack_length_max
 
     # speed_rpm = 30000
-    # Omega = speed_rpm/(60)*2*pi
+    Omega = speed_rpm/(60)*2*pi
     C_prime = (3+0.29)/4
     rotor_radius_max = sqrt(300e6/(C_prime*8760*Omega**2))
     print 'rotor_radius_max', rotor_radius_max*1e3, 'mm'

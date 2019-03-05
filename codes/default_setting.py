@@ -64,13 +64,13 @@ fea_config_dict = {
     ##########################
     # Sysetm Control
     ##########################
-    'Active_Qr':32, # 36
+    'Active_Qr':16, #16, #32,
     'TranRef-StepPerCycle':40,
     'OnlyTableResults':False, # modified later according to pc_name
         # multiple cpu (SMP=2)
         # directSolver over ICCG Solver
     'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
-    'flag_optimization':True,
+    'flag_optimization':False,
     'FEMM_Coarse_Mesh':True,
     'local_sensitivity_analysis':False,
 
@@ -86,14 +86,14 @@ fea_config_dict = {
     ##########################
     # Design Specifications
     ##########################
-    'DPNV': True,
+    'DPNV': False,
     'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
 
     'Steel': 'M19Gauge29', 
     # 'Steel': 'M15',
     # 'Steel': 'Arnon5', 
                                 # If you modify the temperature here, you should update the initial design (the im.DriveW_Rs should be updated and it used in JMAG FEM Coil)
-    'Bar_Conductivity':1/((3.76*75+873)*1e-9/55.), # 1/((3.76*100+873)*1e-9/55.) for Copper, where temperature is 25 or 100 deg Celsius.
+    'Bar_Conductivity':1/((3.76*75+873)*1e-9/55.), # @75 Degree Celsius # 1/((3.76*100+873)*1e-9/55.) for Copper, where temperature is 25 or 100 deg Celsius.
     # 'Bar_Conductivity':40e6, # 40e6 for Aluminium; 
 }
 # add path to fea_config_dict
@@ -110,8 +110,8 @@ reload(population) # relaod for JMAG's python environment
 reload(FEMM_Solver)
 reload(utility)
 
-# run_list = [1,1,0,0,0] 
-run_list = [0,1,0,0,0] 
+run_list = [1,1,0,0,0] # use JMAG only
+run_list = [0,1,0,0,0] # use FEMM to search for breakdown slip
 fea_config_dict['jmag_run_list'] = run_list
 def build_model_name_prefix(fea_config_dict):
     if fea_config_dict['flag_optimization'] == True:

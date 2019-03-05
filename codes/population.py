@@ -242,7 +242,9 @@ class swarm(object):
                     for ind, el in enumerate(self.init_pop):
                         print ind, el
                     # quit()
-                if self.fea_config_dict['run_folder'] == r'run#400/':
+                if self.fea_config_dict['run_folder'] == r'run#400/' \
+                   or self.fea_config_dict['run_folder'] == r'run#180/'\
+                   or self.fea_config_dict['run_folder'] == r'run#181/':
                     initial_design_denorm = np.array( utility.Pyrhonen_design(self.im).design_parameters_denorm )
                     initial_design = (initial_design_denorm - min_b) / diff
                     print initial_design_denorm.tolist()
@@ -520,7 +522,7 @@ class swarm(object):
                 results = utility.build_str_results(self.axeses, im_variant, self.project_name, tran2tss_study_name, self.dir_csv_output_folder, self.fea_config_dict, self.femm_solver)
 
                 self.fig_main.savefig(self.dir_run + im_variant.individual_name + 'results.png', dpi=150)
-                utility.pyplot_clear()
+                utility.pyplot_clear(self.axeses)
             except Exception, e:
                 logger.error(u'Error when loading csv results for Tran2TSS. Check the Report of JMAG Designer. (Maybe Material is not added.)', exc_info=True)
                 raise e
@@ -564,7 +566,10 @@ class swarm(object):
                 # no direct returning of results, wait for it later when you need it.
                 femm_tic = clock_time()
                 self.femm_solver.__init__(im_variant, flag_read_from_jmag=False, freq=2.23)
-                self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name )
+                if im_variant.DriveW_poles == 2:
+                    self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, fraction=1 ) # 必须形成通路
+                else:
+                    self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, fraction=2 )
 
                 # this is the only if path that no slip_freq_breakdown_torque is assigned!
                 # this is the only if path that no slip_freq_breakdown_torque is assigned!
@@ -693,8 +698,9 @@ class swarm(object):
         if self.bool_first_time_call_de == True:
             self.bool_first_time_call_de = False
 
-        if self.fea_config_dict['flag_optimization'] == False:
-            raise Exception('Please set flag_optimization before calling de.')
+        # if self.fea_config_dict['flag_optimization'] == False:
+        #     raise Exception('Please set flag_optimization before calling de.')
+
         # ''' 
         #     https://pablormier.github.io/2017/09/05/a-tutorial-on-differential-evolution-with-python/
         #     我对于DE的感觉，就是如果受体本身就是原最优个体的时候，如果试验体优于受体，不应该采用greedy selection把它抛弃了。
@@ -1380,7 +1386,7 @@ class swarm(object):
             study.GetDesignTable().GetEquation(u"slip").SetExpression("%g"%(self.im.the_slip))
             study.GetDesignTable().GetEquation(u"slip").SetDescription(u"Slip [1]")
             study.GetDesignTable().GetEquation(u"speed").SetType(1)
-            study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * 30") ######################## 4 pole motor
+            study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * %d"%(60/(self.im.DriveW_poles/2))) ######################## 4 pole motor
             study.GetDesignTable().GetEquation(u"speed").SetDescription(u"mechanical speed of four pole")
 
             # speed, freq, slip
@@ -1555,7 +1561,7 @@ class swarm(object):
                 study.GetDesignTable().GetEquation(u"slip").SetExpression("%g"%(im.the_slip))
                 study.GetDesignTable().GetEquation(u"slip").SetDescription(u"Slip [1]")
                 study.GetDesignTable().GetEquation(u"speed").SetType(1)
-                study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * 30")
+                study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * %d"%(60/(im.DriveW_poles/2)))
                 study.GetDesignTable().GetEquation(u"speed").SetDescription(u"mechanical speed of four pole")
 
                 # rotate the rotor by cad parameters via Park Transformation
@@ -2408,7 +2414,7 @@ class swarm(object):
             study.GetDesignTable().GetEquation(u"slip").SetExpression("%g"%(im_variant.the_slip))
             study.GetDesignTable().GetEquation(u"slip").SetDescription(u"Slip [1]")
             study.GetDesignTable().GetEquation(u"speed").SetType(1)
-            study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * 30")
+            study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * %d"%(60/(im_variant.DriveW_poles/2)))
             study.GetDesignTable().GetEquation(u"speed").SetDescription(u"mechanical speed of four pole")
 
             # speed, freq, slip
@@ -2661,6 +2667,7 @@ class bearingless_induction_motor_design(object):
 
 
         #05 Windings & Excitation
+        self.Qs
         self.l41=[ 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', ]
         self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', ]
         if self.fea_config_dict is not None:
@@ -2680,16 +2687,16 @@ class bearingless_induction_motor_design(object):
                 self.l22=[ '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', ]
         else:
             self.l21 = None
-            self.l22 = None            
+            self.l22 = None
 
         if self.DriveW_poles == 2:
             self.BeariW_poles = self.DriveW_poles+2; 
         else:
-            self.BeariW_poles = 2; 
+            self.BeariW_poles = 2;
         self.BeariW_turns= self.DriveW_turns; # TODO Revision here. 20181117
         self.BeariW_Rs = self.BeariW_turns / self.DriveW_turns * self.DriveW_Rs; 
         self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975; 
-        self.BeariW_Freq =self.DriveW_Freq;
+        self.BeariW_Freq = self.DriveW_Freq;
         self.dict_coil_connection = {41:self.l41, 42:self.l42, 21:self.l21, 22:self.l22}
 
         #06 Meshing & Solver Properties
@@ -3500,42 +3507,61 @@ class bearingless_induction_motor_design(object):
 
             rotor_phase_name_list = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
             X = 40; Y = 40;
-            for i in range(int(self.no_slot_per_pole)):
-                Y += -12
-                place_conductor(X,   Y, u"Conductor%s1"%(rotor_phase_name_list[i]))
-                place_conductor(X, Y-3, u"Conductor%s2"%(rotor_phase_name_list[i]))
-                place_conductor(X, Y-6, u"Conductor%s3"%(rotor_phase_name_list[i]))
-                place_conductor(X, Y-9, u"Conductor%s4"%(rotor_phase_name_list[i]))
+            if self.DriveW_poles == 2:
+                for i in range(int(self.no_slot_per_pole)):
+                    Y += -12
+                    place_conductor(X,   Y, u"Conductor%s1"%(rotor_phase_name_list[i]))
+                    # place_conductor(X, Y-3, u"Conductor%s2"%(rotor_phase_name_list[i]))
+                    # place_conductor(X, Y-6, u"Conductor%s3"%(rotor_phase_name_list[i]))
+                    place_conductor(X, Y-9, u"Conductor%s2"%(rotor_phase_name_list[i]))
 
-                if self.End_Ring_Resistance == 0: # setting a small value to End_Ring_Resistance is a bad idea (slow down the solver). Instead, don't model it
-                    # no end ring resistors to behave like FEMM model
-                    study.GetCircuit().CreateWire(X+2,   Y, X+2, Y-3)
-                    study.GetCircuit().CreateWire(X-2, Y-3, X-2, Y-6)
-                    study.GetCircuit().CreateWire(X+2, Y-6, X+2, Y-9)
-                    study.GetCircuit().CreateInstance(u"Ground", X-5, Y-2)
-                    study.GetCircuit().CreateWire(X-2,   Y, X-5, Y)
-                    study.GetCircuit().CreateWire(X-5,   Y, X-2, Y-9)
-                else:
-                    place_resistor(X+4,   Y, u"R_%s1"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
-                    place_resistor(X-4, Y-3, u"R_%s2"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
-                    place_resistor(X+4, Y-6, u"R_%s3"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
-                    place_resistor(X-4, Y-9, u"R_%s4"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
-        
-                    study.GetCircuit().CreateWire(X+6,   Y, X+2, Y-3)
-                    study.GetCircuit().CreateWire(X-6, Y-3, X-2, Y-6)
-                    study.GetCircuit().CreateWire(X+6, Y-6, X+2, Y-9)
-                    study.GetCircuit().CreateWire(X-6, Y-9, X-7, Y-9)
-                    study.GetCircuit().CreateWire(X-2, Y, X-7, Y)
-                    study.GetCircuit().CreateInstance(u"Ground", X-7, Y-2)
-                        #study.GetCircuit().GetInstance(u"Ground", ini_ground_no+i).RotateTo(90)
-                    study.GetCircuit().CreateWire(X-7, Y, X-6, Y-9)
+                    if self.End_Ring_Resistance == 0: # setting a small value to End_Ring_Resistance is a bad idea (slow down the solver). Instead, don't model it
+                        # no end ring resistors to behave like FEMM model
+                        study.GetCircuit().CreateWire(X+2,   Y, X+2, Y-9)
+                        # study.GetCircuit().CreateWire(X-2, Y-3, X-2, Y-6)
+                        # study.GetCircuit().CreateWire(X+2, Y-6, X+2, Y-9)
+                        study.GetCircuit().CreateInstance(u"Ground", X-5, Y-2)
+                        study.GetCircuit().CreateWire(X-2,   Y, X-5, Y)
+                        study.GetCircuit().CreateWire(X-5,   Y, X-2, Y-9)
+                    else:
+                        raise Exception('With end ring is not implemented.')
+            else: # poles = 4
+                for i in range(int(self.no_slot_per_pole)):
+                    Y += -12
+                    place_conductor(X,   Y, u"Conductor%s1"%(rotor_phase_name_list[i]))
+                    place_conductor(X, Y-3, u"Conductor%s2"%(rotor_phase_name_list[i]))
+                    place_conductor(X, Y-6, u"Conductor%s3"%(rotor_phase_name_list[i]))
+                    place_conductor(X, Y-9, u"Conductor%s4"%(rotor_phase_name_list[i]))
+
+                    if self.End_Ring_Resistance == 0: # setting a small value to End_Ring_Resistance is a bad idea (slow down the solver). Instead, don't model it
+                        # no end ring resistors to behave like FEMM model
+                        study.GetCircuit().CreateWire(X+2,   Y, X+2, Y-3)
+                        study.GetCircuit().CreateWire(X-2, Y-3, X-2, Y-6)
+                        study.GetCircuit().CreateWire(X+2, Y-6, X+2, Y-9)
+                        study.GetCircuit().CreateInstance(u"Ground", X-5, Y-2)
+                        study.GetCircuit().CreateWire(X-2,   Y, X-5, Y)
+                        study.GetCircuit().CreateWire(X-5,   Y, X-2, Y-9)
+                    else:
+                        place_resistor(X+4,   Y, u"R_%s1"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
+                        place_resistor(X-4, Y-3, u"R_%s2"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
+                        place_resistor(X+4, Y-6, u"R_%s3"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
+                        place_resistor(X-4, Y-9, u"R_%s4"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
+            
+                        study.GetCircuit().CreateWire(X+6,   Y, X+2, Y-3)
+                        study.GetCircuit().CreateWire(X-6, Y-3, X-2, Y-6)
+                        study.GetCircuit().CreateWire(X+6, Y-6, X+2, Y-9)
+                        study.GetCircuit().CreateWire(X-6, Y-9, X-7, Y-9)
+                        study.GetCircuit().CreateWire(X-2, Y, X-7, Y)
+                        study.GetCircuit().CreateInstance(u"Ground", X-7, Y-2)
+                            #study.GetCircuit().GetInstance(u"Ground", ini_ground_no+i).RotateTo(90)
+                        study.GetCircuit().CreateWire(X-7, Y, X-6, Y-9)
 
             for i in range(0, int(self.no_slot_per_pole)):
                 natural_i = i+1
                 study.GetCondition(u"CdctCon %d"%(natural_i)).SetLink(u"Conductor%s1"%(rotor_phase_name_list[i]))
                 study.GetCondition(u"CdctCon %d"%(natural_i+self.no_slot_per_pole)).SetLink(u"Conductor%s2"%(rotor_phase_name_list[i]))
-                study.GetCondition(u"CdctCon %d"%(natural_i+2*self.no_slot_per_pole)).SetLink(u"Conductor%s3"%(rotor_phase_name_list[i]))
-                study.GetCondition(u"CdctCon %d"%(natural_i+3*self.no_slot_per_pole)).SetLink(u"Conductor%s4"%(rotor_phase_name_list[i]))
+                # study.GetCondition(u"CdctCon %d"%(natural_i+2*self.no_slot_per_pole)).SetLink(u"Conductor%s3"%(rotor_phase_name_list[i]))
+                # study.GetCondition(u"CdctCon %d"%(natural_i+3*self.no_slot_per_pole)).SetLink(u"Conductor%s4"%(rotor_phase_name_list[i]))
         else: # Cage
             dyn_circuit = study.GetCircuit().CreateDynamicCircuit(u"Cage")
             dyn_circuit.SetValue(u"AntiPeriodic", False)
@@ -3800,35 +3826,54 @@ class bearingless_induction_motor_design(object):
 
             rotor_phase_name_list = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
             X = 40; Y = 40;
-            for i in range(int(self.no_slot_per_pole)):
-                Y += -12
-                place_conductor(X,   Y, u"Conductor%s1"%(rotor_phase_name_list[i]))
-                place_conductor(X, Y-3, u"Conductor%s2"%(rotor_phase_name_list[i]))
-                place_conductor(X, Y-6, u"Conductor%s3"%(rotor_phase_name_list[i]))
-                place_conductor(X, Y-9, u"Conductor%s4"%(rotor_phase_name_list[i]))
+            if self.DriveW_poles == 2:
+                for i in range(int(self.no_slot_per_pole)):
+                    Y += -12
+                    place_conductor(X,   Y, u"Conductor%s1"%(rotor_phase_name_list[i]))
+                    # place_conductor(X, Y-3, u"Conductor%s2"%(rotor_phase_name_list[i]))
+                    # place_conductor(X, Y-6, u"Conductor%s3"%(rotor_phase_name_list[i]))
+                    place_conductor(X, Y-9, u"Conductor%s2"%(rotor_phase_name_list[i]))
 
-                if self.End_Ring_Resistance == 0: # setting a small value to End_Ring_Resistance is a bad idea (slow down the solver). Instead, don't model it
-                    # no end ring resistors to behave like FEMM model
-                    study.GetCircuit().CreateWire(X+2,   Y, X+2, Y-3)
-                    study.GetCircuit().CreateWire(X-2, Y-3, X-2, Y-6)
-                    study.GetCircuit().CreateWire(X+2, Y-6, X+2, Y-9)
-                    study.GetCircuit().CreateInstance(u"Ground", X-5, Y-2)
-                    study.GetCircuit().CreateWire(X-2,   Y, X-5, Y)
-                    study.GetCircuit().CreateWire(X-5,   Y, X-2, Y-9)
-                else:
-                    place_resistor(X+4,   Y, u"R_%s1"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
-                    place_resistor(X-4, Y-3, u"R_%s2"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
-                    place_resistor(X+4, Y-6, u"R_%s3"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
-                    place_resistor(X-4, Y-9, u"R_%s4"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
-        
-                    study.GetCircuit().CreateWire(X+6,   Y, X+2, Y-3)
-                    study.GetCircuit().CreateWire(X-6, Y-3, X-2, Y-6)
-                    study.GetCircuit().CreateWire(X+6, Y-6, X+2, Y-9)
-                    study.GetCircuit().CreateWire(X-6, Y-9, X-7, Y-9)
-                    study.GetCircuit().CreateWire(X-2, Y, X-7, Y)
-                    study.GetCircuit().CreateInstance(u"Ground", X-7, Y-2)
-                        #study.GetCircuit().GetInstance(u"Ground", ini_ground_no+i).RotateTo(90)
-                    study.GetCircuit().CreateWire(X-7, Y, X-6, Y-9)
+                    if self.End_Ring_Resistance == 0: # setting a small value to End_Ring_Resistance is a bad idea (slow down the solver). Instead, don't model it
+                        # no end ring resistors to behave like FEMM model
+                        study.GetCircuit().CreateWire(X+2,   Y, X+2, Y-9)
+                        # study.GetCircuit().CreateWire(X-2, Y-3, X-2, Y-6)
+                        # study.GetCircuit().CreateWire(X+2, Y-6, X+2, Y-9)
+                        study.GetCircuit().CreateInstance(u"Ground", X-5, Y-2)
+                        study.GetCircuit().CreateWire(X-2,   Y, X-5, Y)
+                        study.GetCircuit().CreateWire(X-5,   Y, X-2, Y-9)
+                    else:
+                        raise Exception('With end ring is not implemented.')
+            else: # poles = 4
+                for i in range(int(self.no_slot_per_pole)):
+                    Y += -12
+                    place_conductor(X,   Y, u"Conductor%s1"%(rotor_phase_name_list[i]))
+                    place_conductor(X, Y-3, u"Conductor%s2"%(rotor_phase_name_list[i]))
+                    place_conductor(X, Y-6, u"Conductor%s3"%(rotor_phase_name_list[i]))
+                    place_conductor(X, Y-9, u"Conductor%s4"%(rotor_phase_name_list[i]))
+
+                    if self.End_Ring_Resistance == 0: # setting a small value to End_Ring_Resistance is a bad idea (slow down the solver). Instead, don't model it
+                        # no end ring resistors to behave like FEMM model
+                        study.GetCircuit().CreateWire(X+2,   Y, X+2, Y-3)
+                        study.GetCircuit().CreateWire(X-2, Y-3, X-2, Y-6)
+                        study.GetCircuit().CreateWire(X+2, Y-6, X+2, Y-9)
+                        study.GetCircuit().CreateInstance(u"Ground", X-5, Y-2)
+                        study.GetCircuit().CreateWire(X-2,   Y, X-5, Y)
+                        study.GetCircuit().CreateWire(X-5,   Y, X-2, Y-9)
+                    else:
+                        place_resistor(X+4,   Y, u"R_%s1"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
+                        place_resistor(X-4, Y-3, u"R_%s2"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
+                        place_resistor(X+4, Y-6, u"R_%s3"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
+                        place_resistor(X-4, Y-9, u"R_%s4"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
+            
+                        study.GetCircuit().CreateWire(X+6,   Y, X+2, Y-3)
+                        study.GetCircuit().CreateWire(X-6, Y-3, X-2, Y-6)
+                        study.GetCircuit().CreateWire(X+6, Y-6, X+2, Y-9)
+                        study.GetCircuit().CreateWire(X-6, Y-9, X-7, Y-9)
+                        study.GetCircuit().CreateWire(X-2, Y, X-7, Y)
+                        study.GetCircuit().CreateInstance(u"Ground", X-7, Y-2)
+                            #study.GetCircuit().GetInstance(u"Ground", ini_ground_no+i).RotateTo(90)
+                        study.GetCircuit().CreateWire(X-7, Y, X-6, Y-9)
 
             for i in range(0, int(self.no_slot_per_pole)):
                 natural_i = i+1
@@ -3929,7 +3974,7 @@ class bearingless_induction_motor_design(object):
         study.GetDesignTable().GetEquation(u"slip").SetExpression("%g"%(im_variant.the_slip))
         study.GetDesignTable().GetEquation(u"slip").SetDescription(u"Slip [1]")
         study.GetDesignTable().GetEquation(u"speed").SetType(1)
-        study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * 30")
+        study.GetDesignTable().GetEquation(u"speed").SetExpression(u"freq * (1 - slip) * %d"%(60/(im_variant.DriveW_poles/2)))
         study.GetDesignTable().GetEquation(u"speed").SetDescription(u"mechanical speed of four pole")
 
         # speed, freq, slip

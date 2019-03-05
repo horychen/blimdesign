@@ -6,21 +6,33 @@
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 1. General Information & Packages Loading
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-execfile('./default_setting.py')
+execfile('D:/OneDrive - UW-Madison/c/codes/default_setting.py') # Absolute path is needed for running in JMAG
 
+if False: # ECCE
+    # fea_config_dict['Active_Qr'] = 16
+    fea_config_dict['use_weights'] = 'O1'
 
-fea_config_dict['Active_Qr'] = 16
-fea_config_dict['use_weights'] = 'O1'
+    fea_config_dict['local_sensitivity_analysis'] = True
+    run_folder = r'run#400/' # Sensitivity analysis for Qr=16, T440p
+    run_folder = r'run#140/' # Sensitivity analysis for Qr=16, Y730
 
-fea_config_dict['local_sensitivity_analysis'] = True
-run_folder = r'run#400/' # Sensitivity analysis for Qr=16, T440p
-run_folder = r'run#140/' # Sensitivity analysis for Qr=16, Y730
+    fea_config_dict['local_sensitivity_analysis'] = False
+    run_folder = r'run#141/' # run for reference
+    run_folder = r'run#142/' # optimize Qr=16 for O2
+    run_folder = r'run#143/' # test for shitty design (not true)
+    run_folder = r'run#144/' # optimize Qr=16 for O1
+else: # NineSigma
 
-fea_config_dict['local_sensitivity_analysis'] = False
-run_folder = r'run#141/' # run for reference
-run_folder = r'run#142/' # optimize Qr=16 for O2
-run_folder = r'run#143/' # test for shitty design (not true)
-run_folder = r'run#144/' # optimize Qr=16 for O1
+    # fea_config_dict['Active_Qr'] = 16
+    fea_config_dict['use_weights'] = 'O1'
+
+    fea_config_dict['local_sensitivity_analysis'] = True
+    run_folder = r'run#180/' # Sensitivity analysis for Qr=32
+    run_folder = r'run#181/' # Sensitivity analysis for Qr=16
+
+        # fea_config_dict['local_sensitivity_analysis'] = False
+        # run_folder = r'run#182/' # optimize Qr=16 for O1
+
 
 fea_config_dict['run_folder'] = run_folder
 logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_'+run_folder[:-1])
@@ -147,7 +159,17 @@ if fea_config_dict['flag_optimization'] == True:
         de_config_dict['bounds'] = de_config_dict['original_bounds']
 
 else:
-    de_config_dict = None
+    de_config_dict = {  'bounds':     [ [   3, 9],   # stator_tooth_width_b_ds
+                                        [ 0.8, 4],   # air_gap_length_delta
+                                        [5e-1, 3],   # Width_RotorSlotOpen 
+                                        [ 2.5, 6],   # rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                        [5e-1, 3],   # Length_HeadNeckRotorSlot
+                                        [   1, 10],  # Angle_StatorSlotOpen
+                                        [5e-1, 3] ], # Width_StatorTeethHeadThickness
+                        'mut':        0.8,
+                        'crossp':     0.7,
+                        'popsize':    20,
+                        'iterations': 1 }
 
 # init the swarm
 sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)
