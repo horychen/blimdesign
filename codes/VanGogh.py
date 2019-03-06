@@ -149,7 +149,7 @@ class VanGogh(object):
             self.mirror_and_copyrotate(im.Qs, im.Radius_OuterStatorYoke, fraction)
 
     def draw_rotor(self, fraction):
-        print 'draw rotor with fraction=%d'%(fraction)
+        # print 'draw rotor with fraction=%d'%(fraction)
         im = self.im
 
         origin = Point(0,0)
@@ -521,7 +521,7 @@ class VanGogh(object):
             raise Exception('There is no intersection.')
 
         for center in [ el.coords[0] for el in i.geoms ]: # shapely does not return intersections in a known order
-            print center
+            # print center
             determinant = (center[0]-p1[0]) * (p2[1]-p1[1]) - (center[1]-p1[1]) * (p2[0]-p1[0])
             if copysign(1, determinant) < 0: # CCW from p1 to p2
                 return center, radius

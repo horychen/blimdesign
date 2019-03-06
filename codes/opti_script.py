@@ -27,8 +27,11 @@ else: # NineSigma
     fea_config_dict['use_weights'] = 'O1'
 
     fea_config_dict['local_sensitivity_analysis'] = True
-    run_folder = r'run#180/' # Sensitivity analysis for Qr=32
-    run_folder = r'run#181/' # Sensitivity analysis for Qr=16
+    run_folder = r'run#180/' # Demo run for Qr=32 (too many end ring layers)
+    run_folder = r'run#181/' # Demo run for Qr=16 (flag_optimization should be true)
+    run_folder = r'run#182/' # Sensitivity analysis for Qr=16 (forget to update generate_pop function)
+    run_folder = r'run#183/' # Sensitivity analysis for Qr=16
+    run_folder = r'run#184/' # Bounds are not adjusted accordingly
 
         # fea_config_dict['local_sensitivity_analysis'] = False
         # run_folder = r'run#182/' # optimize Qr=16 for O1
@@ -46,80 +49,103 @@ logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_'+run_folde
 #    Bounds: 1e-1也还是太小了（第三次报错），至少0.5mm长吧 # 1e-1 is the least geometry value. a 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 if fea_config_dict['flag_optimization'] == True:
-    if False: # intuitive bounds
-        pass
-        # de_config_dict = {  'bounds':     [ [   3, 9],   # stator_tooth_width_b_ds
-        #                                     [ 0.8, 4],   # air_gap_length_delta
-        #                                     [5e-1, 3],   # Width_RotorSlotOpen 
-        #                                     [ 2.5, 6],   # rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-        #                                     [5e-1, 3],   # Length_HeadNeckRotorSlot
-        #                                     [   1, 10],  # Angle_StatorSlotOpen
-        #                                     [5e-1, 3] ], # Width_StatorTeethHeadThickness
-        #                     'mut':        0.8,
-        #                     'crossp':     0.7,
-        #                     'popsize':    20,
-        #                     'iterations': 48 } # begin at 5
-    
-    else: # based on Pyrhonen09
-        # see Tran2TSS_PS_Opti_Qr=16_Btooth=1.5T.xlsx
-        # de_config_dict = {  'bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
-        #                                     [ 0.8,   4],   # air_gap_length_delta
-        #                                     [5e-1,   3],   # Width_RotorSlotOpen 
-        #                                     [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-        #                                     [5e-1,   3],   # Length_HeadNeckRotorSlot
-        #                                     [   1,  10],   # Angle_StatorSlotOpen
-        #                                     [5e-1,   3] ], # Width_StatorTeethHeadThickness
-        #                     'mut':        0.8,
-        #                     'crossp':     0.7,
-        #                     'popsize':    14, # 50, # 100,
-        #                     'iterations': 1 } # 148
+    if False: # 4 pole motor
+        if False: # intuitive bounds
+            pass
+            # de_config_dict = {  'bounds':     [ [   3, 9],   # stator_tooth_width_b_ds
+            #                                     [ 0.8, 4],   # air_gap_length_delta
+            #                                     [5e-1, 3],   # Width_RotorSlotOpen 
+            #                                     [ 2.5, 6],   # rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+            #                                     [5e-1, 3],   # Length_HeadNeckRotorSlot
+            #                                     [   1, 10],  # Angle_StatorSlotOpen
+            #                                     [5e-1, 3] ], # Width_StatorTeethHeadThickness
+            #                     'mut':        0.8,
+            #                     'crossp':     0.7,
+            #                     'popsize':    20,
+            #                     'iterations': 48 } # begin at 5
+        
+        else: # based on Pyrhonen09
+            # see Tran2TSS_PS_Opti_Qr=16_Btooth=1.5T.xlsx
+            # de_config_dict = {  'bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
+            #                                     [ 0.8,   4],   # air_gap_length_delta
+            #                                     [5e-1,   3],   # Width_RotorSlotOpen 
+            #                                     [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+            #                                     [5e-1,   3],   # Length_HeadNeckRotorSlot
+            #                                     [   1,  10],   # Angle_StatorSlotOpen
+            #                                     [5e-1,   3] ], # Width_StatorTeethHeadThickness
+            #                     'mut':        0.8,
+            #                     'crossp':     0.7,
+            #                     'popsize':    14, # 50, # 100,
+            #                     'iterations': 1 } # 148
 
-        # see Tran2TSS_PS_Opti_Qr=32_Btooth=1.1T.xlsx
-        if fea_config_dict['Active_Qr'] == 32:
-            de_config_dict = {  'original_bounds':[ [ 4.9,   9],#--# stator_tooth_width_b_ds
-                                                    [ 0.8,   3],   # air_gap_length_delta
-                                                    [5e-1,   3],   # Width_RotorSlotOpen 
-                                                    [ 2.7,   5],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-                                                    [5e-1,   3],   # Length_HeadNeckRotorSlot
-                                                    [   1,  10],   # Angle_StatorSlotOpen
-                                                    [5e-1,   3] ], # Width_StatorTeethHeadThickness
-                                'mut':        0.8,
-                                'crossp':     0.7,
-                                'popsize':    30, # 50, # 100,
-                                'iterations': 100,
-                                'narrow_bounds_normalized':[[],
-                                                            [],
-                                                            [],
-                                                            [],
-                                                            [],
-                                                            [],
-                                                            [] ],
-                                'bounds':[]}
+            # see Tran2TSS_PS_Opti_Qr=32_Btooth=1.1T.xlsx
+            if fea_config_dict['Active_Qr'] == 32:
+                de_config_dict = {  'original_bounds':[ [ 4.9,   9],#--# stator_tooth_width_b_ds
+                                                        [ 0.8,   3],   # air_gap_length_delta
+                                                        [5e-1,   3],   # Width_RotorSlotOpen 
+                                                        [ 2.7,   5],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                                        [5e-1,   3],   # Length_HeadNeckRotorSlot
+                                                        [   1,  10],   # Angle_StatorSlotOpen
+                                                        [5e-1,   3] ], # Width_StatorTeethHeadThickness
+                                    'mut':        0.8,
+                                    'crossp':     0.7,
+                                    'popsize':    30, # 50, # 100,
+                                    'iterations': 100,
+                                    'narrow_bounds_normalized':[[],
+                                                                [],
+                                                                [],
+                                                                [],
+                                                                [],
+                                                                [],
+                                                                [] ],
+                                    'bounds':[]}
 
-        # see Tran2TSS_PS_Opti_Qr=16.xlsx
-        if fea_config_dict['Active_Qr'] == 16:
-            de_config_dict = {  'original_bounds':[ [ 4.9,   9],#--# stator_tooth_width_b_ds
-                                                    [ 0.8,   3],   # air_gap_length_delta
-                                                    [5e-1,   3],   # Width_RotorSlotOpen 
-                                                    [ 6.5, 9.9],#--# rotor_tooth_width_b_dr 
-                                                    [5e-1,   3],   # Length_HeadNeckRotorSlot
-                                                    [   1,  10],   # Angle_StatorSlotOpen
-                                                    [5e-1,   3] ], # Width_StatorTeethHeadThickness
-                                'mut':        0.8,
-                                'crossp':     0.7,
-                                'popsize':    30, # 21*7,  # 50, # 100,
-                                'iterations': 100,
-                                'narrow_bounds_normalized':[[],
-                                                            [],
-                                                            [],
-                                                            [],
-                                                            [],
-                                                            [],
-                                                            [] ],
-                                'bounds':[]}
+            # see Tran2TSS_PS_Opti_Qr=16.xlsx
+            if fea_config_dict['Active_Qr'] == 16:
+                de_config_dict = {  'original_bounds':[ [ 4.9,   9],#--# stator_tooth_width_b_ds
+                                                        [ 0.8,   3],   # air_gap_length_delta
+                                                        [5e-1,   3],   # Width_RotorSlotOpen 
+                                                        [ 6.5, 9.9],#--# rotor_tooth_width_b_dr 
+                                                        [5e-1,   3],   # Length_HeadNeckRotorSlot
+                                                        [   1,  10],   # Angle_StatorSlotOpen
+                                                        [5e-1,   3] ], # Width_StatorTeethHeadThickness
+                                    'mut':        0.8,
+                                    'crossp':     0.7,
+                                    'popsize':    30, # 21*7,  # 50, # 100,
+                                    'iterations': 100,
+                                    'narrow_bounds_normalized':[[],
+                                                                [],
+                                                                [],
+                                                                [],
+                                                                [],
+                                                                [],
+                                                                [] ],
+                                    'bounds':[]}
+
+    else: # 2 pole motor
+        de_config_dict = {  'original_bounds':[ [   3, 5.6],#--# stator_tooth_width_b_ds
+                                                [ 0.8,   3],   # air_gap_length_delta
+                                                [5e-1,   3],   # Width_RotorSlotOpen 
+                                                [ 3.6,5.45],#--# rotor_tooth_width_b_dr 
+                                                [5e-1,   3],   # Length_HeadNeckRotorSlot
+                                                [   1,  10],   # Angle_StatorSlotOpen
+                                                [5e-1,   3] ], # Width_StatorTeethHeadThickness
+                            'mut':        0.8,
+                            'crossp':     0.7,
+                            'popsize':    30, # 21*7,  # 50, # 100,
+                            'iterations': 100,
+                            'narrow_bounds_normalized':[[],
+                                                        [],
+                                                        [],
+                                                        [],
+                                                        [],
+                                                        [],
+                                                        [] ],
+                            'bounds':[]}
+
 
     # Sensitivity Analysis based narrowing bounds
-    if True:
+    if False:
         # data acquired from run#116
         numver_of_variants = 20.0
         if fea_config_dict['Active_Qr'] == 32: # O1 is already from utility.py

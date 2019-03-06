@@ -244,7 +244,9 @@ class swarm(object):
                     # quit()
                 if self.fea_config_dict['run_folder'] == r'run#400/' \
                    or self.fea_config_dict['run_folder'] == r'run#180/'\
-                   or self.fea_config_dict['run_folder'] == r'run#181/':
+                   or self.fea_config_dict['run_folder'] == r'run#181/'\
+                   or self.fea_config_dict['run_folder'] == r'run#183/'\
+                   or self.fea_config_dict['run_folder'] == r'run#184/':
                     initial_design_denorm = np.array( utility.Pyrhonen_design(self.im).design_parameters_denorm )
                     initial_design = (initial_design_denorm - min_b) / diff
                     print initial_design_denorm.tolist()
@@ -318,7 +320,9 @@ class swarm(object):
                 # self.append_population_data(self.init_pop_denorm[solved_popsize:])
                 # logger.debug('init_pop before:\n' + '\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop))
             elif popsize < solved_popsize:
-                raise Exception('Reducing popsize during a run---feature is not supported. If you are testing local sensitivity analysis, then delete the run folder (under pop/ and csv_opti/) and run again.')
+                logger = logging.getLogger(__name__)
+                logger.warn('Reducing popsize during a run---feature is not supported. If you are testing local sensitivity analysis, then delete the run folder (under pop/ and csv_opti/) and run again.')
+                # raise Exception('Reducing popsize during a run---feature is not supported. If you are testing local sensitivity analysis, then delete the run folder (under pop/ and csv_opti/) and run again.')
 
         # # add a database using the swarm_data.txt file
         # if os.path.exists(self.dir_run+'swarm_data.txt'):
@@ -428,7 +432,7 @@ class swarm(object):
         im = im_variant # for Tran2TSS (应该给它弄个函数调用的)
         im_variant.individual_name = im_variant.get_individual_name() 
 
-        self.project_name = self.get_project_name()
+        self.project_name = self.get_project_name(individual_index)
 
         self.jmag_control_state = False
 

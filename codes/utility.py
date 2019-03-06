@@ -472,9 +472,9 @@ class data_manager(object):
         # if len(mytime) > len(voltage):
         #     mytime = mytime[:len(voltage)]
 
-        print len(mytime), len(voltage), number_of_steps_2ndTTS
-        print len(mytime), len(voltage)
-        print len(mytime), len(voltage)
+        # print len(mytime), len(voltage), number_of_steps_2ndTTS
+        # print len(mytime), len(voltage)
+        # print len(mytime), len(voltage)
 
         # for access to plot
         self.myvoltage = voltage
@@ -506,7 +506,7 @@ class data_manager(object):
 from VanGogh import csv_row_reader
 def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict, femm_solver):
 
-    print 'Look into:', path_prefix
+    logging.getLogger(__name__).debug('Look into: ' + path_prefix)
 
     # Torque
     basic_info = []
@@ -572,7 +572,7 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
     if fea_config_dict['delete_results_after_calculation'] == False:
         # file name is by individual_name like ID32-2-4_EXPORT_CIRCUIT_VOLTAGE.csv rather than ID32-2-4Tran2TSS_circuit_current.csv
         fname = path_prefix + study_name[:-8] + "_EXPORT_CIRCUIT_VOLTAGE.csv"
-        print 'Terminal Voltage - look into:', fname
+        # print 'Terminal Voltage - look into:', fname
         with open(fname, 'r') as f:
             count = 0
             for row in csv_row_reader(f):

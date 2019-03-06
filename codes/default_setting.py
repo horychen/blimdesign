@@ -70,7 +70,7 @@ fea_config_dict = {
         # multiple cpu (SMP=2)
         # directSolver over ICCG Solver
     'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
-    'flag_optimization':False,
+    'flag_optimization':True, # also use true for sensitivity analysis
     'FEMM_Coarse_Mesh':True,
     'local_sensitivity_analysis':False,
 
