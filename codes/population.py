@@ -842,7 +842,7 @@ class swarm(object):
         #     pass
 
         if self.fea_config_dict['local_sensitivity_analysis'] == True:
-            raise
+            raise Exception('The local sensitivity analysis is done.')
 
         # Begin DE with pop, fitness of a completed generation
         for i in range(iterations):

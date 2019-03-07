@@ -121,7 +121,6 @@ if fea_config_dict['flag_optimization'] == True:
                                                                 [],
                                                                 [] ],
                                     'bounds':[]}
-
     else: # 2 pole motor
         de_config_dict = {  'original_bounds':[ [   3, 5.6],#--# stator_tooth_width_b_ds
                                                 [ 0.8,   3],   # air_gap_length_delta
@@ -142,7 +141,6 @@ if fea_config_dict['flag_optimization'] == True:
                                                         [],
                                                         [] ],
                             'bounds':[]}
-
 
     # Sensitivity Analysis based narrowing bounds
     if False:
@@ -180,7 +178,6 @@ if fea_config_dict['flag_optimization'] == True:
 
         print de_config_dict['bounds']
         print de_config_dict['original_bounds']
-
     else:
         de_config_dict['bounds'] = de_config_dict['original_bounds']
 

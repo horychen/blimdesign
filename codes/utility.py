@@ -1060,11 +1060,18 @@ def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ri
 
 # Basic information
 if __name__ == '__main__':
-    required_torque = 15.9154943092 #Nm
+    if False: # 4 pole motor
+        required_torque = 15.9154943092 #Nm
+        Radius_OuterRotor = 47.092753
+        stack_length = 93.200295
+        Omega = 30000 / 60. * 2*np.pi
 
-    Radius_OuterRotor = 47.092753
-    stack_length = 93.200295
-    Omega =  3132.95327379
+    else: # 2 pole motor
+        required_torque = 14.8544613552 #Nm
+        Radius_OuterRotor = 28.8
+        stack_length = 237.525815777
+        Omega = 45000 / 60. * 2*np.pi
+
     rotor_volume = math.pi*(Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
     rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
 
@@ -1072,31 +1079,45 @@ if __name__ == '__main__':
     print 'Qr=32, rotor_volume=', rotor_volume, 'm^3'
     print 'Qr=32, rotor_weight=', rotor_weight, 'N'
 
+    if False: # 4 pole motor
+        # run 115 and 116
+        de_config_dict = {  'original_bounds':[ [ 4.9,   9],#--# stator_tooth_width_b_ds
+                                                [ 0.8,   3],   # air_gap_length_delta
+                                                [5e-1,   3],   # Width_RotorSlotOpen 
+                                                [ 2.7,   5],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+                                                [5e-1,   3],   # Length_HeadNeckRotorSlot
+                                                [   1,  10],   # Angle_StatorSlotOpen
+                                                [5e-1,   3] ], # Width_StatorTeethHeadThickness
+                            'mut':        0.8,
+                            'crossp':     0.7,
+                            'popsize':    42, # 50, # 100,
+                            'iterations': 1 } # 148
+        # run 114 and 200
+        # de_config_dict = {  'original_bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
+        #                                     [ 0.8,   4],   # air_gap_length_delta
+        #                                     [5e-1,   3],   # Width_RotorSlotOpen 
+        #                                     [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
+        #                                     [5e-1,   3],   # Length_HeadNeckRotorSlot
+        #                                     [   1,  10],   # Angle_StatorSlotOpen
+        #                                     [5e-1,   3] ], # Width_StatorTeethHeadThickness
+        #                     'mut':        0.8,
+        #                     'crossp':     0.7,
+        #                     'popsize':    50, # 50, # 100,
+        #                     'iterations': 2*48 } # 148
 
-    # run 115 and 116
-    de_config_dict = {  'original_bounds':[ [ 4.9,   9],#--# stator_tooth_width_b_ds
-                                            [ 0.8,   3],   # air_gap_length_delta
-                                            [5e-1,   3],   # Width_RotorSlotOpen 
-                                            [ 2.7,   5],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-                                            [5e-1,   3],   # Length_HeadNeckRotorSlot
-                                            [   1,  10],   # Angle_StatorSlotOpen
-                                            [5e-1,   3] ], # Width_StatorTeethHeadThickness
-                        'mut':        0.8,
-                        'crossp':     0.7,
-                        'popsize':    42, # 50, # 100,
-                        'iterations': 1 } # 148
-    # run 114 and 200
-    # de_config_dict = {  'original_bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
-    #                                     [ 0.8,   4],   # air_gap_length_delta
-    #                                     [5e-1,   3],   # Width_RotorSlotOpen 
-    #                                     [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-    #                                     [5e-1,   3],   # Length_HeadNeckRotorSlot
-    #                                     [   1,  10],   # Angle_StatorSlotOpen
-    #                                     [5e-1,   3] ], # Width_StatorTeethHeadThickness
-    #                     'mut':        0.8,
-    #                     'crossp':     0.7,
-    #                     'popsize':    50, # 50, # 100,
-    #                     'iterations': 2*48 } # 148
+    else: # 2 pole motor 
+        de_config_dict = {  'original_bounds':[ [   3, 5.6],#--# stator_tooth_width_b_ds
+                                                [ 0.8,   3],   # air_gap_length_delta
+                                                [5e-1,   3],   # Width_RotorSlotOpen 
+                                                [ 3.6,5.45],#--# rotor_tooth_width_b_dr 
+                                                [5e-1,   3],   # Length_HeadNeckRotorSlot
+                                                [   1,  10],   # Angle_StatorSlotOpen
+                                                [5e-1,   3] ], # Width_StatorTeethHeadThickness
+                            'mut':        0.8,
+                            'crossp':     0.7,
+                            'popsize':    30, # 21*7,  # 50, # 100,
+                            'iterations': 100}
+
     original_bounds = de_config_dict['original_bounds']
     dimensions = len(original_bounds)
     min_b, max_b = np.asarray(original_bounds).T 
@@ -1106,15 +1127,6 @@ if __name__ == '__main__':
 
 def pareto_plot():
     pass
-
-# find best individual
-if __name__ == '__main__':
-    swda = SwarmDataAnalyzer(run_integer=142)
-    gen_best = swda.get_best_generation(popsize=30)
-
-    with open('d:/Qr16_gen_best.txt', 'w') as f:
-        f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in gen_best)) # convert 2d array to string            
-    quit()
 
 
 # plot sensitivity bar chart, Oj v.s. geometry parameters, pareto plot for ecce paper
@@ -1303,26 +1315,31 @@ if __name__ == '__main__':
     # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
     # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
 
-    # swda = SwarmDataAnalyzer(run_integer=113)
-    # swda = SwarmDataAnalyzer(run_integer=200)
+    if False: # 4 pole motor
+        # swda = SwarmDataAnalyzer(run_integer=113)
+        # swda = SwarmDataAnalyzer(run_integer=200)
 
-    # swda = SwarmDataAnalyzer(run_integer=115)
-    # number_of_variant = 5 + 1
+        # swda = SwarmDataAnalyzer(run_integer=115)
+        # number_of_variant = 5 + 1
 
-    swda = SwarmDataAnalyzer(run_integer=116)
-    number_of_variant = 20 + 1
+        swda = SwarmDataAnalyzer(run_integer=116)
+        number_of_variant = 20 + 1
 
-    # swda = SwarmDataAnalyzer(run_integer=117)
-    # number_of_variant = 1
-        # gives the reference values:
-        # 0 [0.635489] <-In population.py   [0.65533] <- from initial_design.txt
-        # 1 [0.963698] <-In population.py   [0.967276] <- from initial_design.txt
-        # 2 [19.1197]  <-In population.py  [16.9944] <- from initial_design.txt
-        # 3 [0.0864712]<-In population.py    [0.0782085] <- from initial_design.txt
-        # 4 [96.9263]  <-In population.py  [63.6959] <- from initial_design.txt
-        # 5 [0.104915] <-In population.py   [0.159409] <- from initial_design.txt
-        # 6 [6.53137]  <-In population.py  [10.1256] <- from initial_design.txt
-        # 7 [1817.22]  <-In population.py  [1353.49] <- from initial_design.txt
+        # swda = SwarmDataAnalyzer(run_integer=117)
+        # number_of_variant = 1
+            # gives the reference values:
+            # 0 [0.635489] <-In population.py   [0.65533] <- from initial_design.txt
+            # 1 [0.963698] <-In population.py   [0.967276] <- from initial_design.txt
+            # 2 [19.1197]  <-In population.py  [16.9944] <- from initial_design.txt
+            # 3 [0.0864712]<-In population.py    [0.0782085] <- from initial_design.txt
+            # 4 [96.9263]  <-In population.py  [63.6959] <- from initial_design.txt
+            # 5 [0.104915] <-In population.py   [0.159409] <- from initial_design.txt
+            # 6 [6.53137]  <-In population.py  [10.1256] <- from initial_design.txt
+            # 7 [1817.22]  <-In population.py  [1353.49] <- from initial_design.txt
+
+    else: # 2 pole motor
+        swda = SwarmDataAnalyzer(run_integer=184)
+        number_of_variant = 20 + 1
 
     fi, axeses = subplots(4, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
     ax_list = []
@@ -1350,10 +1367,6 @@ if __name__ == '__main__':
         print '\n-----------', y_label_list[i]
         l = list(swda.get_certain_objective_function(i))
 
-        # y = l[:len(l)/2] # 115
-        y = l # 116
-        print 'len(y)=', len(y)
-
         if i == 9: # replace P_Fe with P_Fe,Cu
             l_femm_stator_copper = array(list(swda.get_certain_objective_function(12)))
             l_femm_rotor_copper  = array(list(swda.get_certain_objective_function(13)))
@@ -1361,15 +1374,24 @@ if __name__ == '__main__':
             # print l, len(l)
             # print y, len(y)
             # quit()
+        else:
+            # y = l[:len(l)/2] # 115
+            y = l # 116
+        print 'ind=', ind, 'i=', i, 'len(y)=', len(y)
 
         data_max.append([])
         data_min.append([])
+
         for j in range(len(y)/number_of_variant): # iterate design parameters
             y_vs_design_parameter = y[j*number_of_variant:(j+1)*number_of_variant]
 
-            # if j == 6:
-            ax_list[ind].plot(y_vs_design_parameter, label=str(j)+' '+param_list[j], alpha=0.5)
-            print '\t', j, param_list[j], '\t\t', max(y_vs_design_parameter) - min(y_vs_design_parameter)
+            try:
+                # if j == 6:
+                ax_list[ind].plot(y_vs_design_parameter, label=str(j)+' '+param_list[j], alpha=0.5)
+            except IndexError as e:
+                print 'Check the length of y should be 7*21=147, or else you should remove the redundant results in swarm_data.txt (they are produced because of the interrupted/resumed script run.)'
+                raise e
+            print '\tj=', j, param_list[j], '\t\t', max(y_vs_design_parameter) - min(y_vs_design_parameter)
 
             data_max[ind].append(max(y_vs_design_parameter))
             data_min[ind].append(min(y_vs_design_parameter))            
@@ -1472,9 +1494,9 @@ if __name__ == '__main__':
     O2_ecce_ax.set_xlabel(r'Number of design variant', fontsize=myfontsize)
     O2_ecce_ax.set_ylabel(r'$O_2(x)$ [1]', fontsize=myfontsize)
     fig_ecce.tight_layout()
-    fig_ecce.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\O2_vs_params.png', dpi=150)
+    # fig_ecce.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\O2_vs_params.png', dpi=150)
     show()
-    quit()
+    # quit() ###################################
     ref[0] = O2_ref    / 8
     ref[1] = O1_ref    / 3
     ref[2] = 19.1197   / required_torque                # 100%
@@ -1576,13 +1598,13 @@ if __name__ == '__main__':
     rects5 = ax.bar(count + 2*width/8, y_max_vs_design_parameter_4, width/8, alpha=0.5, label=r'$h_{head,s}$',      color='#005b96') # bottom=y_min_vs_design_parameter_4, 
     rects6 = ax.bar(count + 0*width/8, y_max_vs_design_parameter_5, width/8, alpha=0.5, label=r'$w_{\rm open,s}$',  color='#6497b1') # bottom=y_min_vs_design_parameter_5, 
     rects7 = ax.bar(count + 3*width/8, y_max_vs_design_parameter_6, width/8, alpha=0.5, label=r'$h_{head,r}$',      color='#b3cde0') # bottom=y_min_vs_design_parameter_6, 
-    autolabel(rects1)
-    autolabel(rects2)
-    autolabel(rects3)
-    autolabel(rects4)
-    autolabel(rects5)
-    autolabel(rects6)
-    autolabel(rects7)
+    autolabel(ax, rects1)
+    autolabel(ax, rects2)
+    autolabel(ax, rects3)
+    autolabel(ax, rects4)
+    autolabel(ax, rects5)
+    autolabel(ax, rects6)
+    autolabel(ax, rects7)
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel('Normalized Objective Functions')
@@ -1592,7 +1614,7 @@ if __name__ == '__main__':
     ax.set_xticklabels((r'$O_2$ [8]', r'$O_1$ [3]', r'$T_{em}$ [15.9 Nm]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]'))
     ax.grid()
     fig.tight_layout()
-    fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\sensitivity_results.png', dpi=150)
+    # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\sensitivity_results.png', dpi=150)
 
     show()
 
@@ -1778,4 +1800,14 @@ if __name__ == '__main__':
 
         # it works!
         # send_notification('Test email')
+
+
+# find best individual
+if __name__ == '__main__':
+    swda = SwarmDataAnalyzer(run_integer=142)
+    gen_best = swda.get_best_generation(popsize=30)
+
+    with open('d:/Qr16_gen_best.txt', 'w') as f:
+        f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in gen_best)) # convert 2d array to string            
+    quit()
 

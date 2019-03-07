@@ -2161,7 +2161,7 @@ class FEMM_Solver(object):
         self.probdef()
 
         self.add_material()
-        print 'Call VanGogh to draw a FEMM model of fraction %d' % (fraction)
+        # print 'Call VanGogh to draw a FEMM model of fraction %d' % (fraction)
         self.vangogh.draw_model(fraction=fraction)
         self.add_block_labels(fraction=fraction)
         # print dir_femm_temp + 'femm_temp.fem'
