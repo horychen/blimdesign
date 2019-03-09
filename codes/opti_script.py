@@ -37,7 +37,9 @@ else: # NineSigma
     # combined DPNV winding
     run_folder = r'run#185/' # Correct bounds
     run_folder = r'run#186/' # New Initial Design but the force profile seems wrong (JMAG only run_list)
-    run_folder = r'run#187/' # Run a sensitivity analysis anyway.
+    run_folder = r'run#187/' # Run a sensitivity analysis anyway. (new codes in add_study, while wrong codes in add_Tran2TSS)
+
+    run_folder = r'run#188/' # Run a sensitivity analysis.
 
         # fea_config_dict['local_sensitivity_analysis'] = False
         # run_folder = r'run#182/' # optimize Qr=16 for O1
