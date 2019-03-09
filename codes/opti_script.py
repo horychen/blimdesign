@@ -27,11 +27,17 @@ else: # NineSigma
     fea_config_dict['use_weights'] = 'O1'
 
     fea_config_dict['local_sensitivity_analysis'] = True
+    # Separate winding
     run_folder = r'run#180/' # Demo run for Qr=32 (too many end ring layers)
     run_folder = r'run#181/' # Demo run for Qr=16 (flag_optimization should be true)
     run_folder = r'run#182/' # Sensitivity analysis for Qr=16 (forget to update generate_pop function)
     run_folder = r'run#183/' # Sensitivity analysis for Qr=16
     run_folder = r'run#184/' # Bounds are not adjusted accordingly
+
+    # combined DPNV winding
+    run_folder = r'run#185/' # Correct bounds
+    run_folder = r'run#186/' # New Initial Design but the force profile seems wrong (JMAG only run_list)
+    run_folder = r'run#187/' # Run a sensitivity analysis anyway.
 
         # fea_config_dict['local_sensitivity_analysis'] = False
         # run_folder = r'run#182/' # optimize Qr=16 for O1

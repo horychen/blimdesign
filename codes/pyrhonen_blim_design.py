@@ -122,7 +122,10 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         air_gap_length_delta = (0.18 + 0.006*mec_power**0.4) / 1000
     print 'air_gap_length_delta=', air_gap_length_delta*1e3, 'mm,', 'but this is for 50 Hz line-start IM.'
     print 'Kevin S. Campbell: this is too small. 3.5 mm is good!'
-    air_gap_length_delta *= 2 # *=3 will not converge
+    if no_pole_pairs == 2:
+        air_gap_length_delta *= 2 # *=3 will not converge
+    elif no_pole_pairs == 1:
+        air_gap_length_delta *= 1.5
     print 'air_gap_length_delta=', air_gap_length_delta*1e3, 'mm.', 'Double it for high speed inverted driven IM.'
     
 
@@ -244,10 +247,13 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     print 'no_series_coil_turns_N=%d means desired_emf_Em=%g V becomes %g V.' % (no_series_coil_turns_N, desired_emf_Em, no_series_coil_turns_N * (2*pi*rated_frequency * kw1 * air_gap_flux_Phi_m) / sqrt(2))
     print '\tno_series_coil_turns_N=%d means desired_emf_Em*1.732=%g V becomes %g V.\n' % (no_series_coil_turns_N, desired_emf_Em*sqrt(3), no_series_coil_turns_N * (2*pi*rated_frequency * kw1 * air_gap_flux_Phi_m) / sqrt(2)*sqrt(3))
 
-    no_parallel_path = 1
+    number_parallel_branch = 2
     print '''In some cases, especially in low-voltage, high-power machines, there may be a need to change the stator slot number, the number of parallel paths or even the main dimensions of the machine in order to find the appropriate number of conductors in a slot.'''
-    no_conductors_per_slot_zQ = 2* no_phase_m * no_series_coil_turns_N /Qs * no_parallel_path
+    no_conductors_per_slot_zQ = 2* no_phase_m * no_series_coil_turns_N /Qs * number_parallel_branch # (7.8)
     print 'no_conductors_per_slot_zQ=', no_conductors_per_slot_zQ
+
+    if no_conductors_per_slot_zQ % 2 != 0:
+        raise Exception('This zQ does not suit for two layer winding.')
 
     loop_count = 0
     global BH_lookup, bdata, hdata
@@ -296,7 +302,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         print 'stator_phase_current_rms', stator_phase_current_rms, 'Arms'
 
         rotor_current_referred = stator_phase_current_rms * power_factor
-        rotor_current_actual = no_conductors_per_slot_zQ / no_parallel_path * Qs / Qr * rotor_current_referred
+        rotor_current_actual = no_conductors_per_slot_zQ / number_parallel_branch * Qs / Qr * rotor_current_referred
         print 'rotor current:', rotor_current_referred, '(referred)', rotor_current_actual, '(actual) Arms'
         # quit()
     
@@ -310,7 +316,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         else:
             print '\tmy_AJ_value is', my_AJ_value*1e-10, 'e10 A^2/m^3.'
             raise Exception('The liear or slot current density is bad.')
-        area_conductor_stator_Scs = stator_phase_current_rms / (no_parallel_path * stator_current_density_Js)
+        area_conductor_stator_Scs = stator_phase_current_rms / (number_parallel_branch * stator_current_density_Js) # (7.13)
         print 'area_conductor_stator_Scs=', area_conductor_stator_Scs * 1e6, 'mm^2'
 
         # space factor or slot packing factor
@@ -337,7 +343,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
         if True:
             # rotor_current_density_Jr = 8e6 # 8e6 for Cu # 6.5e6 for Al # 减少电流密度有效减少转子欧姆热 # 修正4*pi*area_rotor_slot_Sur*Qr处的BUG前，这里设置的转子电流密度都是没用的，和FEA的结果对不上，现在能对上了（用FEMM积分电流和面积验证）！
             print 'rotor_current_density_Jr=', rotor_current_density_Jr, 'A/m^2'
-            area_conductor_rotor_Scr = rotor_current_actual / (1 * rotor_current_density_Jr) # no_parallel_path=1
+            area_conductor_rotor_Scr = rotor_current_actual / (1 * rotor_current_density_Jr) # number_parallel_branch_of_rotor_winding=1
             print 'area_conductor_rotor_Scr=', area_conductor_rotor_Scr * 1e6, 'mm^2'
 
             if bool_pole_specific_rotor == True:
@@ -350,8 +356,8 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
                                      # However, if a cage winding is produced from copper bars by soldering, a clearance of about 0.4mm in width and 1mm in height has to be left in the rotor slot. This clearance also decreases the space factor.
             # no_conductors_per_slot_zQ (z_Qr) for cage rotor is clearly 1. 
             # Even though you use coils in rotor (wound rotor), since all the coils within a slot are parallel connected.
-            # This will give give a no_parallel_path equal to z_Qr, so they will cancel out, anyway. 
-            # Just let both no_parallel_path and z_Qr to be 1 and don't bother.
+            # This will give give a number_parallel_branch equal to z_Qr, so they will cancel out, anyway. 
+            # Just let both number_parallel_branch and z_Qr to be 1 and don't bother.
             area_rotor_slot_Sur = 1 * area_conductor_rotor_Scr / space_factor_kAl 
             print 'area_rotor_slot_Sur', area_rotor_slot_Sur*1e6, 'mm^2'
 
@@ -681,7 +687,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     length_endArcConductor = coil_pitch_slot_count/Qs * (0.5*(Radius_OuterRotor + Length_AirGap + Radius_InnerStatorYoke)) * 2*pi # [mm] arc length = pi * diameter  
     length_conductor = (stack_length*1e3 + length_endArcConductor) * 1e-3 # mm to m  ## imagine: two conductors + two end conducotors = one loop (in and out)
     area_conductor   = (stator_slot_area) * SLOT_FILL_FACTOR / DriveW_turns # TODO: 这里绝缘用槽满率算进去了，但是没有考虑圆形导体之间的空隙？槽满率就是空隙，这里没有考虑绝缘的面积占用。
-    number_parallel_branch = 1
+    # number_parallel_branch = 1
     resistance_per_conductor = rho_Copper * length_conductor / (area_conductor * number_parallel_branch)
     DriveW_Rs = resistance_per_conductor * DriveW_turns * Qs / 3. # resistance per phase
     print 'DriveW_Rs=', DriveW_Rs, 'Ohm'

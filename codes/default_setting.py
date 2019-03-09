@@ -86,7 +86,7 @@ fea_config_dict = {
     ##########################
     # Design Specifications
     ##########################
-    'DPNV': False,
+    'DPNV': True,
     'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
 
     'Steel': 'M19Gauge29', 

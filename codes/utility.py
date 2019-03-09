@@ -430,7 +430,7 @@ class suspension_force_vector(object):
 def pyplot_clear(axeses):
     # self.fig_main.clf()
     # axeses = self.axeses
-    for ax in [axeses[0][0],axeses[0][1],axeses[1][0],axeses[1][1]]:
+    for ax in [axeses[0][0],axeses[0][1],axeses[1][0],axeses[1][1],axeses[2][0],axeses[2][1]]:
         ax.cla()
         ax.grid()
     ax = axeses[0][0]; ax.set_xlabel('(a)',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)

@@ -1,4 +1,5 @@
 # coding:u8
+from __future__ import division
 from shapely.geometry import LineString
 from shapely.geometry import Point
 from math import tan, pi, atan, sqrt, sin, cos, copysign, atan2, asin
@@ -638,32 +639,67 @@ def get_tangent_points_of_two_circles(center1, radius1, center2, radius2):
 
 
 
-# winding diagram
+# winding diagram for four pole dpnv motor
 if __name__ == '__main__':
-    
+
     # generate the dict of list: dl
-    l41 = ['C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B']
-    l42 = ['+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
-    dl = {'A': [], 'B': [], 'C':[]}
+    if False: # 4 pole motor
+        # ExampleQ24p2m3ps1y6
+        l41 = ['C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B']
+        l42 = ['+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
+        l_rightlayer1 = l41[::]
+        l_rightlayer2 = l42[::]
+        l_leftlayer1  = l41[::]
+        l_leftlayer2  = l42[::]
+
+    else: # 2 pole motor
+        # ExampleQ24p1m3ps2y9
+        # -w -w  u  u  u u -v -v -v -v  w  w  w w -u -u -u -u  v  v  v v w w
+        #  v -w -w -w -w u  u  u  u -v -v -v -v w  w  w  w -u -u -u -u v v v
+        l_rightlayer1 = ['C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C'][::-1]
+        l_rightlayer2 = ['-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-'][::-1]
+        l_leftlayer1  = ['B', 'C', 'C', 'C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B'][::-1]
+        l_leftlayer2  = ['+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+'][::-1]
+
+    dl_rightlayer = {'A': [], 'B': [], 'C':[]}
+    dl_leftlayer  = {'A': [], 'B': [], 'C':[]}
     count_slot = 0
     while True:
         try:
             count_slot += 1
-            ABC     = l41.pop(0)
-            up_down = l42.pop(0)
+
+            ABC     = l_rightlayer1.pop(0)
+            up_down = l_rightlayer2.pop(0)
             for target in ['A', 'B', 'C']:
                 if ABC == target:
-                    dl[target].append(up_down+str(count_slot))
+                    dl_rightlayer[target].append(up_down+str(count_slot))
                     break
-        except:
+
+            ABC     = l_leftlayer1.pop(0)
+            up_down = l_leftlayer2.pop(0)
+            for target in ['A', 'B', 'C']:
+                if ABC == target:
+                    dl_leftlayer[target].append(up_down+str(count_slot))
+                    break
+
+        except IndexError as e: # nothing to pop
+            # raise e
             break
-    # [float(el) for el in item]
+
+    # for k, v in dl_rightlayer.iteritems():
+    #     print k,v
+    # for k, v in dl_leftlayer.iteritems():
+    #     print k,v
+    # quit()
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Motor Spec
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     Qs = 24
-    coil_pitch = 6
+    if False: # 4 pole motor: full pitch is 6
+        coil_pitch = 6 
+    else: # 2 pole motor: full pitch is 12
+        coil_pitch = 9
     fig_xlim = (0.25,Qs+1)
     fig_ylim = (-6.25,10)
 
@@ -678,12 +714,12 @@ if __name__ == '__main__':
     print "SHIFT=", SHIFT
 
     # x means coil location (meaning is equivalent to loc)
-    def draw_vertical_line_and_arrow_head(x):
+    def draw_vertical_line_and_arrow_head(x, x2):
         coil_spacing = 1
         x *= coil_spacing
         ax.plot([abs(x), abs(x)], 
                 [-4, 4], '-'+color, lw=1,alpha=0.7)
-        ax.plot([abs(x)+coil_bias, abs(x)+coil_bias], 
+        ax.plot([abs(x2)+coil_bias, abs(x2)+coil_bias], 
                 [-4, 4], '--'+color, lw=1,alpha=0.7)
 
         annotate_bias = 0.1
@@ -694,8 +730,15 @@ if __name__ == '__main__':
             xy     = [abs(x), (-4+4)/2 + annotate_bias + 0.9]
             xytext = [abs(x), (-4+4)/2 - annotate_bias + 0.9]
         ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=0.7))
-        ax.annotate('', xytext=(xytext[0]+coil_bias, xytext[1]), xy=(xy[0]+coil_bias, xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=0.7))
         ax.text(xy[0]+1.25*coil_bias, annotate_bias + 0.9, '%d'%(abs(x)), fontsize=6)
+
+        if x2>0:
+            xytext = [abs(x2), (-4+4)/2 + annotate_bias + 0.0]
+            xy     = [abs(x2), (-4+4)/2 - annotate_bias + 0.0]
+        else:
+            xy     = [abs(x2), (-4+4)/2 + annotate_bias + 0.9]
+            xytext = [abs(x2), (-4+4)/2 - annotate_bias + 0.9]
+        ax.annotate('', xytext=(xytext[0]+coil_bias, xytext[1]), xy=(xy[0]+coil_bias, xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=0.7))
 
     def draw_end_turns(x, coil_pitch):
 
@@ -703,10 +746,10 @@ if __name__ == '__main__':
             ax.plot(X, Y, *arg, **kwarg)
             ax.plot(X, [-el for el in Y], *arg, **kwarg)
 
-        slope = (6-4) / (coil_pitch/2 + coil_bias/2)
+        slope = (6-4) / (coil_pitch/2. + coil_bias/2.)
 
         # going up
-        loc1 = abs(x) + coil_pitch/2 + coil_bias/2 # half pitch
+        loc1 = abs(x) + coil_pitch/2. + coil_bias/2. # half pitch
         # going down
         loc2 = abs(x) + coil_pitch + coil_bias # full pitch
 
@@ -861,30 +904,49 @@ if __name__ == '__main__':
         ax = fig.add_subplot(111, aspect='equal') # fixed aspect ratio such that a circle is still a circle when you drag the tk plot window
 
         # draw coils in the slots as vertical lines
-        for color, winding_layout, _ in zip(['b', 'r', 'g'] , [dl['A'], dl['B'], dl['C']], range(3)):
+        for color, winding_layout_right, winding_layout_left, _ in zip( ['b', 'r', 'g'] , 
+                                                                        [dl_rightlayer['A'], dl_rightlayer['B'], dl_rightlayer['C']],
+                                                                        [dl_leftlayer['A'], dl_leftlayer['B'], dl_leftlayer['C']],
+                                                                        range(3)):
             # if color != 'b':
             #     continue
-            for el in winding_layout:
-                x = float(el)
+            for el1, el2 in zip(winding_layout_right, winding_layout_left):
+                x = float(el1)
+                x2 = float(el2)
                 print _, color, x
-                draw_vertical_line_and_arrow_head(x)
+                draw_vertical_line_and_arrow_head(x, x2) # right layer, left layer
                 slope = draw_end_turns(x, coil_pitch)
+                # show()
 
-        if phase == 'u': 
-            # The key to determine this terminal location is to stick to the dual purpose feature 
-            # meanwhile considering the fact that ub and ud will not change current direction, while ua and uc will when under suspension excitation.
-            # Minus sign means dashed line (the second/lower layer of the double layer winding),
-            # while the first number of the tuple means the current is entering, and the second number of the tuple means the current is leaving.
-            # E.g., for ub, current enters 4 and leaves 3. Particularly, the current first enters the lower layer of slot 4, hence -4.
-            # Coil Group:     ua                       ub                           uc                         ud                         (see Severson15Dual@Fig.4b)
-            color = 'b'
-            list_terminals = [(9, -10),                (-4,  3),                    (-16, 15),                 (21, -22)] 
-        if phase == 'v': 
-            color = 'r'
-            list_terminals = [(9+Qs/3, -(10+Qs/3)),    (-(4+Qs/3),     3+Qs/3),     (-(16+Qs/3), 15+Qs/3),     (21+Qs/3-Qs, -(22+Qs/3-Qs))]
-        if phase == 'w': 
-            color = 'g'
-            list_terminals = [(9-Qs/3, -(10-Qs/3)),    (-(4-Qs/3+Qs),  3-Qs/3+Qs),  (-(16-Qs/3), 15-Qs/3),     (21-Qs/3, -(22-Qs/3))]
+        if False: # 4 pole motor
+            if phase == 'u': 
+                # The key to determine this terminal location is to stick to the dual purpose feature 
+                # meanwhile considering the fact that ub and ud will not change current direction, while ua and uc will change when under suspension excitation.
+                # Minus sign means dashed line (the second/lower layer of the double layer winding),
+                # while the first number of the tuple means the current is entering, and the second number of the tuple means the current is leaving.
+                # E.g., for ub, current enters 4 and leaves 3. Particularly, the current first enters the lower layer of slot 4, hence -4.
+                # Coil Group:     ua                       ub                           uc                         ud                         (see Severson15Dual@Fig.4b)
+                color = 'b'
+                list_terminals = [(9, -10),                (-4,  3),                    (-16, 15),                 (21, -22)] 
+            if phase == 'v': 
+                color = 'r'
+                list_terminals = [(9+Qs/3, -(10+Qs/3)),    (-(4+Qs/3),     3+Qs/3),     (-(16+Qs/3), 15+Qs/3),     (21+Qs/3-Qs, -(22+Qs/3-Qs))]
+            if phase == 'w': 
+                color = 'g'
+                list_terminals = [(9-Qs/3, -(10-Qs/3)),    (-(4-Qs/3+Qs),  3-Qs/3+Qs),  (-(16-Qs/3), 15-Qs/3),     (21-Qs/3, -(22-Qs/3))]
+
+        else: # 2 pole motor
+            if phase == 'u': 
+                color = 'b'
+                list_terminals = [(19, -20),                (-10, 9),                    (21,  -22),                 (-8, 7)] # we have swapped the order of ub and ud
+            if phase == 'v': 
+                color = 'r'
+                list_terminals = [(19+Qs/3, -(20+Qs/3)),    (-(10+Qs/3), 9+Qs/3),        (21+Qs/3,  -(22+Qs/3)),     (-(8+Qs/3), 7+Qs/3)] # we have swapped the order of ub and ud
+            if phase == 'w': 
+                color = 'g'
+                list_terminals = [(19-Qs/3, -(20-Qs/3)),    (-(10-Qs/3), 9-Qs/3),        (21-Qs/3,  -(22-Qs/3)),     (-(8-Qs/3+Qs), 7-Qs/3+Qs)] # we have swapped the order of ub and ud
+
+        # draw terminals
         draw_terminals(list_terminals, slope, phase=phase)
 
         # draw connection lines between coil and coil

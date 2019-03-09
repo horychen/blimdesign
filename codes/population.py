@@ -246,7 +246,10 @@ class swarm(object):
                    or self.fea_config_dict['run_folder'] == r'run#180/'\
                    or self.fea_config_dict['run_folder'] == r'run#181/'\
                    or self.fea_config_dict['run_folder'] == r'run#183/'\
-                   or self.fea_config_dict['run_folder'] == r'run#184/':
+                   or self.fea_config_dict['run_folder'] == r'run#184/'\
+                   or self.fea_config_dict['run_folder'] == r'run#185/'\
+                   or self.fea_config_dict['run_folder'] == r'run#186/'\
+                   or self.fea_config_dict['run_folder'] == r'run#187/':
                     initial_design_denorm = np.array( utility.Pyrhonen_design(self.im).design_parameters_denorm )
                     initial_design = (initial_design_denorm - min_b) / diff
                     print initial_design_denorm.tolist()
@@ -2671,37 +2674,68 @@ class bearingless_induction_motor_design(object):
 
 
         #05 Windings & Excitation
-        self.Qs
-        self.l41=[ 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', ]
-        self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', ]
+        if self.Qs != 24:
+            raise Exception('Not implemented error.')
+
+
         if self.fea_config_dict is not None:
-            if self.fea_config_dict['DPNV'] == True:
-                # DPNV style for one phase: -- oo ++ oo
-                self.l21=[  'A', 'A', 'C', 'C', 'B', 'B', 
-                            'A', 'A', 'C', 'C', 'B', 'B', 
-                            'A', 'A', 'C', 'C', 'B', 'B', 
-                            'A', 'A', 'C', 'C', 'B', 'B']
-                self.l22=[  '-', '-', 'o', 'o', '+', '+', # 横着读和竖着读都是负零正零。 
-                            'o', 'o', '-', '-', 'o', 'o', 
-                            '+', '+', 'o', 'o', '-', '-', 
-                            'o', 'o', '+', '+', 'o', 'o']
-            else:
+            if self.fea_config_dict['DPNV'] == True: # combined winding
+
+                if self.DriveW_poles == 4:
+                    self.l41=[ 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B']
+                    self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
+                    # DPNV style for one phase: -- oo ++ oo
+                    self.l21=[  'A', 'A', 'C', 'C', 'B', 'B', 
+                                'A', 'A', 'C', 'C', 'B', 'B', 
+                                'A', 'A', 'C', 'C', 'B', 'B', 
+                                'A', 'A', 'C', 'C', 'B', 'B']
+                    self.l22=[  '-', '-', 'o', 'o', '+', '+', # 横着读和竖着读都是负零正零。 
+                                'o', 'o', '-', '-', 'o', 'o', 
+                                '+', '+', 'o', 'o', '-', '-', 
+                                'o', 'o', '+', '+', 'o', 'o']
+                    coil_pitch = 6
+
+                if self.DriveW_poles == 2:
+                    l_rightlayer1 = ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C'][::-1]
+                    l_rightlayer2 = ['+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-'][::-1]
+                    l_leftlayer1  = ['C', 'C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C'][::-1]
+                    l_leftlayer2  = ['-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-'][::-1]
+                    coil_pitch    = 9 # left layer can be inferred from coil pitch and right layer diagram
+                        # for ind, phase in enumerate(l_leftlayer1[2:]): # [2:]意味着从完整的B相开始，注意，我们把上面这个list倒过来了。
+                        #     if phase == l_rightlayer1[2:][0]:
+                        #         if l_leftlayer2[2:][ind] != l_rightlayer2[2:][ind]:
+                        #             coil_pitch = ind
+                        #             break
+
+                    self.l41 = l_rightlayer1
+                    self.l42 = l_rightlayer2
+                    self.l21 = l_leftlayer1
+                    self.l22 = l_leftlayer2
+
+            else: # separate winding
+                self.l41=[ 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', ]
+                self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', ]
                 # separate style for one phase: ---- ++++
                 self.l21=[ 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', ]
                 self.l22=[ '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', ]
+                coil_pitch = 6 # = Qs / poles for single layer
         else:
             self.l21 = None
             self.l22 = None
+            coil_pitch = None
 
         if self.DriveW_poles == 2:
-            self.BeariW_poles = self.DriveW_poles+2; 
+            self.BeariW_poles = self.DriveW_poles+2
+            if self.DriveW_turns % 2 != 0:
+                print 'zQ=', self.DriveW_turns
+                raise Exception('This zQ does not suit for two layer winding.')
         else:
             self.BeariW_poles = 2;
-        self.BeariW_turns= self.DriveW_turns; # TODO Revision here. 20181117
-        self.BeariW_Rs = self.BeariW_turns / self.DriveW_turns * self.DriveW_Rs; 
-        self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975; 
-        self.BeariW_Freq = self.DriveW_Freq;
-        self.dict_coil_connection = {41:self.l41, 42:self.l42, 21:self.l21, 22:self.l22}
+        self.BeariW_turns      = self.DriveW_turns
+        self.BeariW_Rs         = self.DriveW_Rs * self.BeariW_turns / self.DriveW_turns
+        self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975 # extra 2.5% as bearing current
+        self.BeariW_Freq       = self.DriveW_Freq
+        self.dict_coil_connection = {41:self.l41, 42:self.l42, 21:self.l21, 22:self.l22, 0:coil_pitch}
 
         #06 Meshing & Solver Properties
         self.max_nonlinear_iteration = 50 # 30 for transient solve
@@ -3286,9 +3320,10 @@ class bearingless_induction_motor_design(object):
             study.GetCondition(u"ForCon").SetLinkWithType(u"LinkedMotion", u"RotCon")
             study.GetCondition(u"ForCon").ClearParts()
         else: # Static
-                # duplicating study can fail if the im instance is destroyed.
-                # model.DuplicateStudyWithType(original_study_name, u"Static2D", "Static")
-                # study = app.GetCurrentStudy()
+            # duplicating study can fail if the im instance is destroyed.
+            # model.DuplicateStudyWithType(original_study_name, u"Static2D", "Static")
+            # study = app.GetCurrentStudy()
+
             study.CreateCondition(u"Torque", u"TorCon")
             study.GetCondition(u"TorCon").SetValue(u"TargetType", 1)
             study.GetCondition(u"TorCon").ClearParts()
@@ -3345,84 +3380,93 @@ class bearingless_induction_motor_design(object):
             If the suspension inverter is a CS, this could not be possible.
             As a result, we model the DPNV as a separate winding with half of slots not exploited by suspension winding.
         '''
-            # if self.im.fea_config_dict['DPNV'] == True: # or 'DPNV' in self.model_name_prefix:
-            #     # Torque winding
-            #     poles = self.DriveW_poles
-            #     turns = self.DriveW_turns
-            #     Rs=self.DriveW_Rs
-            #     amp=self.DriveW_CurrentAmp
-            #     freq=self.DriveW_Freq
-            #     phase=0
+        # if False: # PE Implementation #self.fea_config_dict['DPNV'] == True: # 2 pole motor Qs=24 dpnv implemented by four layer winding (12 coils). In this case, drive winding and bearing winding share the turns in the slot.
+        #     # Torque winding
+        #     poles = self.DriveW_poles
+        #     turns = self.DriveW_turns * 0.5 # two layer winding. 此时，DriveW 实际上是指 rightlayer winding，而 BeariW 是指 leftlayer winding。
+        #     Rs    = self.DriveW_Rs
+        #     amp   = self.DriveW_CurrentAmp
+        #     freq  = self.DriveW_Freq
+        #     phase = 0
 
-            #     study.GetCircuit().CreateComponent(u"3PhaseCurrentSource", u"CS%d"%(poles))
-            #     study.GetCircuit().CreateInstance(u"CS%d"%(poles), -31, 13)
-            #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Amplitude", amp)
-            #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Frequency", freq) # this is not needed for freq analysis
-            #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"PhaseU", phase)
-            #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"CommutatingSequence", 0) # this is essencial for the direction of the field to be consistent with speed: UVW rather than UWV
+        #     study.GetCircuit().CreateComponent(u"3PhaseCurrentSource", u"CS%d"%(poles))
+        #     study.GetCircuit().CreateInstance(u"CS%d"%(poles), -31, 13)
+        #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Amplitude", amp)
+        #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Frequency", freq) # this is not needed for freq analysis
+        #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"PhaseU", phase)
+        #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"CommutatingSequence", 0) # this is essencial for the direction of the field to be consistent with speed: UVW rather than UWV
 
-            #     study.GetCircuit().CreateSubCircuit(u"Star Connection", u"Star Connection %d"%(poles), -8, 12) # è¿™äº›æ•°å­—æŒ‡çš„æ˜¯gridçš„ä¸ªæ•°ï¼Œç¬¬å‡ è¡Œç¬¬å‡ åˆ—çš„æ ¼ç‚¹å¤„
-            #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil1").SetValue(u"Turn", turns)
-            #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil1").SetValue(u"Resistance", Rs)
-            #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil2").SetValue(u"Turn", turns)
-            #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil2").SetValue(u"Resistance", Rs)
-            #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil3").SetValue(u"Turn", turns)
-            #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil3").SetValue(u"Resistance", Rs)
-            #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil1").SetName(u"Coil%dA"%(poles))
-            #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil2").SetName(u"Coil%dB"%(poles))
-            #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil3").SetName(u"Coil%dC"%(poles))
+        #     study.GetCircuit().CreateSubCircuit(u"Star Connection", u"Star Connection %d"%(poles), -8, 12) # è¿™äº›æ•°å­—æŒ‡çš„æ˜¯gridçš„ä¸ªæ•°ï¼Œç¬¬å‡ è¡Œç¬¬å‡ åˆ—çš„æ ¼ç‚¹å¤„
+        #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil1").SetValue(u"Turn", turns)
+        #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil1").SetValue(u"Resistance", Rs)
+        #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil2").SetValue(u"Turn", turns)
+        #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil2").SetValue(u"Resistance", Rs)
+        #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil3").SetValue(u"Turn", turns)
+        #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil3").SetValue(u"Resistance", Rs)
+        #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil1").SetName(u"Coil%dA"%(poles))
+        #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil2").SetName(u"Coil%dB"%(poles))
+        #     study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil3").SetName(u"Coil%dC"%(poles))
 
-            #     # Suspension winding
-            #     poles = self.BeariW_poles
-            #     turns = self.BeariW_turns
-            #     Rs=self.BeariW_Rs
-            #     amp=self.BeariW_CurrentAmp
-            #     freq=self.BeariW_Freq
-            #     phase=0
+        #     # Suspension winding
+        #     poles = self.BeariW_poles
+        #     turns = self.BeariW_turns * 0.5 # two layer winding. 此时，DriveW 实际上是指 rightlayer winding，而 BeariW 是指 leftlayer winding。
+        #     Rs    = self.BeariW_Rs
+        #     amp   = self.BeariW_CurrentAmp
+        #     freq  = self.BeariW_Freq
+        #     phase = 0
 
-            #     study.GetCircuit().CreateComponent(u"3PhaseCurrentSource", u"CS%d"%(poles))
-            #     study.GetCircuit().CreateInstance(u"CS%d"%(poles),  -31, 1)
-            #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Amplitude", amp)
-            #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Frequency", freq) # this is not needed for freq analysis
-            #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"PhaseU", phase)
-            #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"CommutatingSequence", 0) # this is essencial for the direction of the field to be consistent with speed: UVW rather than UWV
+        #     study.GetCircuit().CreateComponent(u"3PhaseCurrentSource", u"CS%d"%(poles))
+        #     study.GetCircuit().CreateInstance(u"CS%d"%(poles),  -31, 1)
+        #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Amplitude", amp)
+        #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Frequency", freq) # this is not needed for freq analysis
+        #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"PhaseU", phase)
+        #     study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"CommutatingSequence", 0) # this is essencial for the direction of the field to be consistent with speed: UVW rather than UWV
 
-            #     study.GetCircuit().CreateComponent(u"Coil", u"Coil10")
-            #     study.GetCircuit().CreateInstance(u"Coil10", -18, 15)
-            #     study.GetCircuit().GetComponent(u"Coil10").SetName(u"Coil%dA"%(poles))
-            #     study.GetCircuit().CreateComponent(u"Coil", u"Coil11")
-            #     study.GetCircuit().CreateInstance(u"Coil11", -16, 13)
-            #     study.GetCircuit().GetComponent(u"Coil11").SetName(u"Coil%dA"%(poles))
-            #     study.GetCircuit().CreateComponent(u"Coil", u"Coil12")
-            #     study.GetCircuit().CreateInstance(u"Coil12", -18, 11)
-            #     study.GetCircuit().GetComponent(u"Coil12").SetName(u"Coil%dA"%(poles))
+        #     study.GetCircuit().CreateComponent(u"Coil", u"Coil10")
+        #     study.GetCircuit().CreateInstance(u"Coil10", -18, 15)
+        #     study.GetCircuit().GetComponent(u"Coil10").SetValue(u"Turn", turns)
+        #     study.GetCircuit().GetComponent(u"Coil10").SetValue(u"Resistance", Rs)
+        #     study.GetCircuit().GetComponent(u"Coil10").SetName(u"Coil%dA"%(poles))
+
+        #     study.GetCircuit().CreateComponent(u"Coil", u"Coil11")
+        #     study.GetCircuit().CreateInstance(u"Coil11", -16, 13)
+        #     study.GetCircuit().GetComponent(u"Coil11").SetValue(u"Turn", turns)
+        #     study.GetCircuit().GetComponent(u"Coil11").SetValue(u"Resistance", Rs)
+        #     study.GetCircuit().GetComponent(u"Coil11").SetName(u"Coil%dB"%(poles))
+
+        #     study.GetCircuit().CreateComponent(u"Coil", u"Coil12")
+        #     study.GetCircuit().CreateInstance(u"Coil12", -18, 11)
+        #     study.GetCircuit().GetComponent(u"Coil12").SetValue(u"Turn", turns)
+        #     study.GetCircuit().GetComponent(u"Coil12").SetValue(u"Resistance", Rs)
+        #     study.GetCircuit().GetComponent(u"Coil12").SetName(u"Coil%dC"%(poles))
 
 
-            #     # Wires to Connect Circuits 
-            #     study.GetCircuit().CreateWire(-10, 15, -16, 15)
-            #     study.GetCircuit().CreateWire(-10, 13, -14, 13)
-            #     study.GetCircuit().CreateWire(-10, 11, -16, 11)
-            #     study.GetCircuit().CreateWire(-10, 15, -10, 19)
-            #     study.GetCircuit().CreateWire(-10, 19, -29, 19)
-            #     study.GetCircuit().CreateWire(-29, 19, -29, 15)
-            #     study.GetCircuit().CreateWire(-29, 13, -27, 13)
-            #     study.GetCircuit().CreateWire(-27, 13, -27, 17)
-            #     study.GetCircuit().CreateWire(-27, 17, -14, 17)
-            #     study.GetCircuit().CreateWire(-14, 17, -14, 13)
-            #     study.GetCircuit().CreateWire(-29, 11, -29, 9)
-            #     study.GetCircuit().CreateWire(-29, 9, -10, 9)
-            #     study.GetCircuit().CreateWire(-10, 9, -10, 11)
-            #     study.GetCircuit().CreateWire(-20, 15, -25, 15)
-            #     study.GetCircuit().CreateWire(-25, 15, -25, 3)
-            #     study.GetCircuit().CreateWire(-25, 3, -29, 3)
-            #     study.GetCircuit().CreateWire(-18, 13, -23, 13)
-            #     study.GetCircuit().CreateWire(-23, 13, -23, 1)
-            #     study.GetCircuit().CreateWire(-23, 1, -29, 1)
-            #     study.GetCircuit().CreateWire(-20, 11, -21, 11)
-            #     study.GetCircuit().CreateWire(-21, 11, -21, -1)
-            #     study.GetCircuit().CreateWire(-21, -1, -29, -1)
-            # else:
-        def circuit(poles,turns,Rs,amp,freq,phase=0, x=10,y=10):
+        #     # Wires to Connect Circuits 
+        #     study.GetCircuit().CreateWire(-10, 15, -16, 15)
+        #     study.GetCircuit().CreateWire(-10, 13, -14, 13)
+        #     study.GetCircuit().CreateWire(-10, 11, -16, 11)
+        #     study.GetCircuit().CreateWire(-10, 15, -10, 19)
+        #     study.GetCircuit().CreateWire(-10, 19, -29, 19)
+        #     study.GetCircuit().CreateWire(-29, 19, -29, 15)
+        #     study.GetCircuit().CreateWire(-29, 13, -27, 13)
+        #     study.GetCircuit().CreateWire(-27, 13, -27, 17)
+        #     study.GetCircuit().CreateWire(-27, 17, -14, 17)
+        #     study.GetCircuit().CreateWire(-14, 17, -14, 13)
+        #     study.GetCircuit().CreateWire(-29, 11, -29, 9)
+        #     study.GetCircuit().CreateWire(-29, 9, -10, 9)
+        #     study.GetCircuit().CreateWire(-10, 9, -10, 11)
+        #     study.GetCircuit().CreateWire(-20, 15, -25, 15)
+        #     study.GetCircuit().CreateWire(-25, 15, -25, 3)
+        #     study.GetCircuit().CreateWire(-25, 3, -29, 3)
+        #     study.GetCircuit().CreateWire(-18, 13, -23, 13)
+        #     study.GetCircuit().CreateWire(-23, 13, -23, 1)
+        #     study.GetCircuit().CreateWire(-23, 1, -29, 1)
+        #     study.GetCircuit().CreateWire(-20, 11, -21, 11)
+        #     study.GetCircuit().CreateWire(-21, 11, -21, -1)
+        #     study.GetCircuit().CreateWire(-21, -1, -29, -1)
+
+        # else: #  # 4 pole motor Qs=24 dpnv implemented by two layer winding (6 coils). In this case, drive winding has the same slot turns as bearing winding
+        def circuit(poles,turns,Rs,amp,freq,phase=0, x=10,y=10, CommutatingSequence=0):
             study.GetCircuit().CreateSubCircuit(u"Star Connection", u"Star Connection %d"%(poles), x, y) # è¿™äº›æ•°å­—æŒ‡çš„æ˜¯gridçš„ä¸ªæ•°ï¼Œç¬¬å‡ è¡Œç¬¬å‡ åˆ—çš„æ ¼ç‚¹å¤„
             study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil1").SetValue(u"Turn", turns)
             study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil1").SetValue(u"Resistance", Rs)
@@ -3438,50 +3482,122 @@ class bearingless_induction_motor_design(object):
             study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Amplitude", amp)
             study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Frequency", freq) # this is not needed for freq analysis
             study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"PhaseU", phase)
-            study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"CommutatingSequence", 0) # this is essencial for the direction of the field to be consistent with speed: UVW rather than UWV
+            study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"CommutatingSequence", CommutatingSequence) # this is essencial for the direction of the field to be consistent with speed: UVW rather than UWV
             study.GetCircuit().CreateComponent(u"Ground", u"Ground")
             study.GetCircuit().CreateInstance(u"Ground", x+2, y+1)
-        circuit(self.DriveW_poles, self.DriveW_turns, Rs=self.DriveW_Rs,amp=self.DriveW_CurrentAmp,freq=self.DriveW_Freq,phase=0)
-        circuit(self.BeariW_poles, self.BeariW_turns, Rs=self.BeariW_Rs,amp=self.BeariW_CurrentAmp,freq=self.BeariW_Freq,phase=0,x=25)
+        # 这里电流幅值中的0.5因子源自DPNV导致的等于2的平行支路数。没有考虑到这一点，是否会对initial design的有效性产生影响？
+        # 仔细看DPNV的接线，对于转矩逆变器，绕组的并联支路数为2，而对于悬浮逆变器，绕组的并联支路数为1。
+        number_parallel_branch = 2.
+        circuit(self.DriveW_poles, self.DriveW_turns/number_parallel_branch, Rs=self.DriveW_Rs,amp=(self.DriveW_CurrentAmp/number_parallel_branch-self.BeariW_CurrentAmp),freq=self.DriveW_Freq,phase=0,CommutatingSequence=1)
+        circuit(self.BeariW_poles, self.BeariW_turns/number_parallel_branch, Rs=self.BeariW_Rs,amp=(self.DriveW_CurrentAmp/number_parallel_branch+self.BeariW_CurrentAmp),freq=self.BeariW_Freq,phase=0,x=25,CommutatingSequence=1) # CS4 corresponds to uauc (conflict with following codes but it does not matter.)
+        
+        # Link FEM Coils to Coil Set
+        if False: # 4 pole motor
+            # Link FEM Coils to Coil Set as if it is a separate winding (two layers are independent)
+            def link_FEMCoils_2_CoilSet(poles,l1,l2):
+                # link between FEM Coil Condition and Circuit FEM Coil
+                for ABC in [u'A',u'B',u'C']:
+                    which_phase = u"%d%s-Phase"%(poles,ABC)
+                    study.CreateCondition(u"FEMCoil", which_phase)
+                    condition = study.GetCondition(which_phase)
+                    condition.SetLink(u"Coil%d%s"%(poles,ABC))
+                    condition.GetSubCondition(u"untitled").SetName(u"Coil Set 1")
+                    condition.GetSubCondition(u"Coil Set 1").SetName(u"delete")
+                count = 0
+                dict_dir = {'+':1, '-':0, 'o':None}
+                # select the part to assign the FEM Coil condition
+                for ABC, UpDown in zip(l1,l2):
+                    count += 1 
+                    if dict_dir[UpDown] is None:
+                        # print 'Skip', ABC, UpDown
+                        continue
+                    which_phase = u"%d%s-Phase"%(poles,ABC)
+                    condition = study.GetCondition(which_phase)
+                    condition.CreateSubCondition(u"FEMCoilData", u"Coil Set %d"%(count))
+                    subcondition = condition.GetSubCondition(u"Coil Set %d"%(count))
+                    subcondition.ClearParts()
+                    subcondition.AddSet(model.GetSetList().GetSet(u"Coil%d%s%s %d"%(poles,ABC,UpDown,count)), 0)
+                    subcondition.SetValue(u"Direction2D", dict_dir[UpDown])
+                # clean up
+                for ABC in [u'A',u'B',u'C']:
+                    which_phase = u"%d%s-Phase"%(poles,ABC)
+                    condition = study.GetCondition(which_phase)
+                    condition.RemoveSubCondition(u"delete")
+            link_FEMCoils_2_CoilSet(self.DriveW_poles, 
+                                    self.dict_coil_connection[int(self.DriveW_poles*10+1)], # 40 for 4 poles, 1 for ABD, 2 for up or down,
+                                    self.dict_coil_connection[int(self.DriveW_poles*10+2)])
+            link_FEMCoils_2_CoilSet(self.BeariW_poles, 
+                                    self.dict_coil_connection[int(self.BeariW_poles*10+1)], # 20 for 2 poles.
+                                    self.dict_coil_connection[int(self.BeariW_poles*10+2)])
+        else: # 2 pole motor
+            # 两个改变，一个是激励大小的改变（本来是200A 和 5A，现在是205A和195A），
+            # 另一个绕组分组的改变，现在的A相是上层加下层为一相，以前是用俩单层绕组等效的。
 
-
-        # Link FEM Coils to Coil Set 
-        def link_FEMCoils_2_CoilSet(poles,l1,l2):
-            # link between FEM Coil Condition and Circuit FEM Coil
-            for ABC in [u'A',u'B',u'C']:
-                which_phase = u"%d%s-Phase"%(poles,ABC)
-                study.CreateCondition(u"FEMCoil", which_phase)
-                condition = study.GetCondition(which_phase)
-                condition.SetLink(u"Coil%d%s"%(poles,ABC))
-                condition.GetSubCondition(u"untitled").SetName(u"Coil Set 1")
-                condition.GetSubCondition(u"Coil Set 1").SetName(u"delete")
+            # Link FEM Coils to Coil Set as double layer short pitched winding
+            l_rightlayer1 = self.dict_coil_connection[int(40+1)] # 40 for 4 poles, 1 for ABD, 2 for up or down,
+            l_rightlayer2 = self.dict_coil_connection[int(40+2)]
+            l_leftlayer1  = self.dict_coil_connection[int(20+1)] # 20 for 2 poles.
+            l_leftlayer2  = self.dict_coil_connection[int(20+2)]
+            # Create FEM Coil Condition
+            # here we map circuit component `Coil2A' to FEM Coil Condition 'phaseAuauc
+            # here we map circuit component `Coil4A' to FEM Coil Condition 'phaseAubud
+            for suffix, poles in zip(['uauc', 'ubud'], [2, 4]): # 仍然需要考虑poles，是因为为Coil设置Set那里的代码还没有更新。这里的2和4等价于leftlayer和rightlayer。
+                for ABC in [u'A',u'B',u'C']:
+                    study.CreateCondition(u"FEMCoil", 'phase'+ABC+suffix)
+                    # link between FEM Coil Condition and Circuit FEM Coil
+                    condition = study.GetCondition('phase'+ABC+suffix)
+                    condition.SetLink(u"Coil%d%s"%(poles,ABC))
+                    condition.GetSubCondition(u"untitled").SetName(u"delete")
             count = 0
-            dict_dir = {'+':1, '-':0, 'o':None}
-            # select the part to assign the FEM Coil condition
-            for ABC, UpDown in zip(l1,l2):
+            index = 0
+            dict_dir = {'+':1, '-':0}
+            coil_pitch = self.dict_coil_connection[0]
+            # select the part (via `Set') to assign the FEM Coil condition
+            for ABC, UpDown in zip(l_rightlayer1, l_rightlayer2):
                 count += 1 
-                if dict_dir[UpDown] is None:
-                    # print 'Skip', ABC, UpDown
-                    continue
-                which_phase = u"%d%s-Phase"%(poles,ABC)
-                condition = study.GetCondition(which_phase)
+                if count <= self.Qs/2: # 能这么处理的底气是winding diagram的形式给的。
+                    suffix = 'uauc'
+                else:
+                    suffix = 'ubud'
+
+                condition = study.GetCondition('phase'+ABC+suffix)
+
                 condition.CreateSubCondition(u"FEMCoilData", u"Coil Set %d"%(count))
                 subcondition = condition.GetSubCondition(u"Coil Set %d"%(count))
                 subcondition.ClearParts()
-                subcondition.AddSet(model.GetSetList().GetSet(u"Coil%d%s%s %d"%(poles,ABC,UpDown,count)), 0)
+                subcondition.AddSet(model.GetSetList().GetSet(u"Coil%d%s%s %d"%(4,ABC,UpDown,count)), 0) # right layer (poles=4)
                 subcondition.SetValue(u"Direction2D", dict_dir[UpDown])
-            # clean up
-            for ABC in [u'A',u'B',u'C']:
-                which_phase = u"%d%s-Phase"%(poles,ABC)
-                condition = study.GetCondition(which_phase)
-                condition.RemoveSubCondition(u"delete")
-        link_FEMCoils_2_CoilSet(self.DriveW_poles, 
-                                self.dict_coil_connection[int(self.DriveW_poles*10+1)], # 40 for 4 poles, 1 for ABD, 2 for up or down,
-                                self.dict_coil_connection[int(self.DriveW_poles*10+2)])
-        link_FEMCoils_2_CoilSet(self.BeariW_poles, 
-                                self.dict_coil_connection[int(self.BeariW_poles*10+1)], # 20 for 2 poles.
-                                self.dict_coil_connection[int(self.BeariW_poles*10+2)])
 
+                if count+coil_pitch <= self.Qs:
+                    count_leftlayer = count+coil_pitch
+                    index_leftlayer = index+coil_pitch
+                else:
+                    count_leftlayer = int(count+coil_pitch - self.Qs)
+                    index_leftlayer = int(index+coil_pitch - self.Qs)
+                if UpDown == '+':
+                    UpDown = '-'
+                else:
+                    UpDown = '+'
+                condition.CreateSubCondition(u"FEMCoilData", u"Coil Set %d"%(count_leftlayer))
+                subcondition = condition.GetSubCondition(u"Coil Set %d"%(count_leftlayer))
+                subcondition.ClearParts()
+                subcondition.AddSet(model.GetSetList().GetSet(u"Coil%d%s%s %d"%(2,ABC,UpDown,count_leftlayer)), 0) # left layer (poles=2)
+                subcondition.SetValue(u"Direction2D", dict_dir[UpDown])
+                # print 'coil_pitch=', coil_pitch
+                # print l_rightlayer1[index], ABC
+                # print l_leftlayer1[index_leftlayer]
+                # print l_rightlayer1
+                # print l_leftlayer1
+                index += 1
+                # double check
+                if l_leftlayer1[index_leftlayer] != ABC:
+                    raise Exception('Bug in winding diagram.')
+            # clean up
+            for suffix in ['uauc', 'ubud']:
+                for ABC in [u'A',u'B',u'C']:
+                    condition = study.GetCondition('phase'+ABC+suffix)
+                    condition.RemoveSubCondition(u"delete")
+        # raise Exception('Test DPNV PE.')
 
 
 
@@ -3566,6 +3682,7 @@ class bearingless_induction_motor_design(object):
                 study.GetCondition(u"CdctCon %d"%(natural_i+self.no_slot_per_pole)).SetLink(u"Conductor%s2"%(rotor_phase_name_list[i]))
                 # study.GetCondition(u"CdctCon %d"%(natural_i+2*self.no_slot_per_pole)).SetLink(u"Conductor%s3"%(rotor_phase_name_list[i]))
                 # study.GetCondition(u"CdctCon %d"%(natural_i+3*self.no_slot_per_pole)).SetLink(u"Conductor%s4"%(rotor_phase_name_list[i]))
+        
         else: # Cage
             dyn_circuit = study.GetCircuit().CreateDynamicCircuit(u"Cage")
             dyn_circuit.SetValue(u"AntiPeriodic", False)
