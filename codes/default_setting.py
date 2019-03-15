@@ -111,7 +111,7 @@ reload(FEMM_Solver)
 reload(utility)
 
 run_list = [1,1,0,0,0] # use JMAG only
-run_list = [0,1,0,0,0] # use FEMM to search for breakdown slip
+# run_list = [0,1,0,0,0] # use FEMM to search for breakdown slip
 fea_config_dict['jmag_run_list'] = run_list
 def build_model_name_prefix(fea_config_dict):
     if fea_config_dict['flag_optimization'] == True:

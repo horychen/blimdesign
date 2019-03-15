@@ -250,7 +250,8 @@ class swarm(object):
                    or self.fea_config_dict['run_folder'] == r'run#185/'\
                    or self.fea_config_dict['run_folder'] == r'run#186/'\
                    or self.fea_config_dict['run_folder'] == r'run#187/'\
-                   or self.fea_config_dict['run_folder'] == r'run#188/':
+                   or self.fea_config_dict['run_folder'] == r'run#188/'\
+                   or self.fea_config_dict['run_folder'] == r'run#189/':
                     initial_design_denorm = np.array( utility.Pyrhonen_design(self.im).design_parameters_denorm )
                     initial_design = (initial_design_denorm - min_b) / diff
                     print initial_design_denorm.tolist()
@@ -2482,7 +2483,7 @@ class swarm(object):
             study.GetCircuit().CreateTerminalLabel(u"Terminal2C", 23, -9)
             # Export Stator Core's field results only for iron loss calculation (the csv file of iron loss will be clean with this setting)
                 # study.GetMaterial(u"Rotor Core").SetValue(u"OutputResult", 0) # at least one part on the rotor should be output or else a warning "the jplot file does not contains displacement results when you try to calc. iron loss on the moving part." will pop up, even though I don't add iron loss condition on the rotor.
-            study.GetMeshControl().SetValue(u"AirRegionOutputResult", 0)
+            # study.GetMeshControl().SetValue(u"AirRegionOutputResult", 0)
             study.GetMaterial(u"Shaft").SetValue(u"OutputResult", 0)
             study.GetMaterial(u"Cage").SetValue(u"OutputResult", 0)
             study.GetMaterial(u"Coil").SetValue(u"OutputResult", 0)
@@ -3478,7 +3479,11 @@ class bearingless_induction_motor_design(object):
             study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil1").SetName(u"Coil%dA"%(poles))
             study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil2").SetName(u"Coil%dB"%(poles))
             study.GetCircuit().GetSubCircuit(u"Star Connection %d"%(poles)).GetComponent(u"Coil3").SetName(u"Coil%dC"%(poles))
+
+
             study.GetCircuit().CreateComponent(u"3PhaseCurrentSource", u"CS%d"%(poles))
+
+
             study.GetCircuit().CreateInstance(u"CS%d"%(poles), x-4, y+1)
             study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Amplitude", amp)
             study.GetCircuit().GetComponent(u"CS%d"%(poles)).SetValue(u"Frequency", freq) # this is not needed for freq analysis
@@ -4233,7 +4238,7 @@ class bearingless_induction_motor_design(object):
         study.GetCircuit().CreateTerminalLabel(u"Terminal2C", 23, -9)
         # Export Stator Core's field results only for iron loss calculation (the csv file of iron loss will be clean with this setting)
             # study.GetMaterial(u"Rotor Core").SetValue(u"OutputResult", 0) # at least one part on the rotor should be output or else a warning "the jplot file does not contains displacement results when you try to calc. iron loss on the moving part." will pop up, even though I don't add iron loss condition on the rotor.
-        study.GetMeshControl().SetValue(u"AirRegionOutputResult", 0)
+        # study.GetMeshControl().SetValue(u"AirRegionOutputResult", 0)
         study.GetMaterial(u"Shaft").SetValue(u"OutputResult", 0)
         study.GetMaterial(u"Cage").SetValue(u"OutputResult", 0)
         study.GetMaterial(u"Coil").SetValue(u"OutputResult", 0)
