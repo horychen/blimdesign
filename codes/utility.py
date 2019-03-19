@@ -455,12 +455,12 @@ class data_manager(object):
     def unpack(self):
         return self.basic_info, self.time_list, self.TorCon_list, self.ForConX_list, self.ForConY_list, self.ForConAbs_list
 
-    def terminal_voltage(self, which='4C'): # 2A 2B 2C 4A 4B 4C
+    def terminal_voltage(self, which='4W'): # 2A 2B 2C 4A 4B 4C
         return self.Current_dict['Terminal%s [Case 1]'%(which)]
         # 端点电压是相电压吗？应该是，我们在中性点设置了地电位
 
-    def circuit_current(self, which='4C'): # 2A 2B 2C 4A 4B 4C
-        return self.Current_dict['Coil%s'%(which)]
+    def circuit_current(self, which='4W'): # 2A 2B 2C 4A 4B 4C
+        return self.Current_dict['CircuitCoil%s'%(which)]
 
     def get_voltage_and_current(self, number_of_steps_2ndTTS):
 

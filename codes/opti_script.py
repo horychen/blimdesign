@@ -41,7 +41,8 @@ else: # NineSigma
 
     run_folder = r'run#188/' # Run a sensitivity analysis.
 
-    run_folder = r'run#189/' # Test@Madison
+    run_folder = r'run#189/' # Test the generated four pole field and update the new implemenation of CurrentSource in circuit of JMAG.
+    run_folder = r'run#190/'
 
         # fea_config_dict['local_sensitivity_analysis'] = False
         # run_folder = r'run#182/' # optimize Qr=16 for O1

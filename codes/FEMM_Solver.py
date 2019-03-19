@@ -313,25 +313,31 @@ class FEMM_Solver(object):
             block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit='r%s'%(self.rotor_phase_name_list[0]), turns=-1) # However, this turns=-1 is not effective for PARALLEL_CONNECTED circuit
 
         # Stator Winding
+        number_parallel_branch = 2. # DPNV inherent parallel branch number 
         if self.flag_static_solver == True: #self.freq == 0: # static 
-                femm.mi_addcircprop('dA', self.dict_stator_current_function[3](0.0), SERIES_CONNECTED)
-                femm.mi_addcircprop('dB', self.dict_stator_current_function[4](0.0), SERIES_CONNECTED)
-                femm.mi_addcircprop('dC', self.dict_stator_current_function[5](0.0), SERIES_CONNECTED)
-                femm.mi_addcircprop('bA', self.dict_stator_current_function[0](0.0), SERIES_CONNECTED)
-                femm.mi_addcircprop('bB', self.dict_stator_current_function[1](0.0), SERIES_CONNECTED)
-                femm.mi_addcircprop('bC', self.dict_stator_current_function[2](0.0), SERIES_CONNECTED)
+                femm.mi_addcircprop('dU', self.dict_stator_current_function[3](0.0), SERIES_CONNECTED)
+                femm.mi_addcircprop('dV', self.dict_stator_current_function[4](0.0), SERIES_CONNECTED)
+                femm.mi_addcircprop('dW', self.dict_stator_current_function[5](0.0), SERIES_CONNECTED)
+                femm.mi_addcircprop('bU', self.dict_stator_current_function[0](0.0), SERIES_CONNECTED)
+                femm.mi_addcircprop('bV', self.dict_stator_current_function[1](0.0), SERIES_CONNECTED)
+                femm.mi_addcircprop('bW', self.dict_stator_current_function[2](0.0), SERIES_CONNECTED)
         else: # eddy current solver
-            femm.mi_addcircprop('dA', '%g'                            %(im.DriveW_CurrentAmp), SERIES_CONNECTED)
-            femm.mi_addcircprop('dB', '%g*(-0.5+I*0.8660254037844386)'%(im.DriveW_CurrentAmp), SERIES_CONNECTED)
-            femm.mi_addcircprop('dC', '%g*(-0.5-I*0.8660254037844386)'%(im.DriveW_CurrentAmp), SERIES_CONNECTED)
+            CommutatingSequence = ['-', '+'] # 2 pole
+            # CommutatingSequence = ['+', '-'] # 4 pole legacy
+            femm.mi_addcircprop('dU', '%g'                             %(im.DriveW_CurrentAmp/number_parallel_branch), SERIES_CONNECTED)
+            femm.mi_addcircprop('dV', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/number_parallel_branch, CommutatingSequence[0]), SERIES_CONNECTED)
+            femm.mi_addcircprop('dW', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/number_parallel_branch, CommutatingSequence[1]), SERIES_CONNECTED)
             if fraction == 1: # I thought PS can be realized in FEMM but I was wrong, this fraction==1 case should be deleted!
-                femm.mi_addcircprop('bA', '%g'                            %(im.BeariW_CurrentAmp), SERIES_CONNECTED)
-                femm.mi_addcircprop('bB', '%g*(-0.5+I*0.8660254037844386)'%(im.BeariW_CurrentAmp), SERIES_CONNECTED)
-                femm.mi_addcircprop('bC', '%g*(-0.5-I*0.8660254037844386)'%(im.BeariW_CurrentAmp), SERIES_CONNECTED)
+                # femm.mi_addcircprop('bA', '%g'                            %(im.BeariW_CurrentAmp), SERIES_CONNECTED)
+                # femm.mi_addcircprop('bB', '%g*(-0.5+I*0.8660254037844386)'%(im.BeariW_CurrentAmp), SERIES_CONNECTED)
+                # femm.mi_addcircprop('bC', '%g*(-0.5-I*0.8660254037844386)'%(im.BeariW_CurrentAmp), SERIES_CONNECTED)
+                femm.mi_addcircprop('bU', '%g'                             %(im.DriveW_CurrentAmp/number_parallel_branch), SERIES_CONNECTED)
+                femm.mi_addcircprop('bV', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/number_parallel_branch, CommutatingSequence[0]), SERIES_CONNECTED)
+                femm.mi_addcircprop('bW', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/number_parallel_branch, CommutatingSequence[1]), SERIES_CONNECTED)
             elif fraction == 4 or fraction == 2: # no bearing current
-                femm.mi_addcircprop('bA', 0, SERIES_CONNECTED)
-                femm.mi_addcircprop('bB', 0, SERIES_CONNECTED)
-                femm.mi_addcircprop('bC', 0, SERIES_CONNECTED)
+                femm.mi_addcircprop('bU', 0, SERIES_CONNECTED)
+                femm.mi_addcircprop('bV', 0, SERIES_CONNECTED)
+                femm.mi_addcircprop('bW', 0, SERIES_CONNECTED)
 
         # dict_dir = {'+':1, '-':-1} # wrong (not consistent with JMAG)
         dict_dir = {'+':-1, '-':1, 'o':0}
@@ -341,7 +347,8 @@ class FEMM_Solver(object):
         # torque winding's blocks
         THETA = - angle_per_slot + 0.5*angle_per_slot - 3.0/360 # This 3 deg must be less than 360/Qs/2
         count = 0
-        for phase, up_or_down in zip(im.l41,im.l42):
+        # for phase, up_or_down in zip(im.l41,im.l42):
+        for phase, up_or_down in zip(im.l_rightlayer1,im.l_rightlayer2):
             circuit_name = 'd' + phase
             THETA += angle_per_slot
             X = R*cos(THETA); Y = R*sin(THETA)
@@ -352,26 +359,28 @@ class FEMM_Solver(object):
             if fraction == 2:
                 if not (count > im.Qs*0.5+EPS): 
                     continue
-            block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.DriveW_turns*dict_dir[up_or_down])
+            block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.DriveW_turns/number_parallel_branch*dict_dir[up_or_down])
 
         # bearing winding's blocks
         if fraction == 1:
             THETA = - angle_per_slot + 0.5*angle_per_slot + 3.0/360
-            for phase, up_or_down in zip(im.l21,im.l22):
+            # for phase, up_or_down in zip(im.l21,im.l22):
+            for phase, up_or_down in zip(im.l_leftlayer1,im.l_leftlayer2):
                 circuit_name = 'b' + phase
                 THETA += angle_per_slot
                 X = R*cos(THETA); Y = R*sin(THETA)
 
                 # if self.im.fea_config_dict['DPNV'] == True: 
                 # else： # separate winding (e.g., Chiba's)
-                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns*dict_dir[up_or_down])
+                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns/number_parallel_branch*dict_dir[up_or_down])
 
         elif fraction == 4 or fraction == 2:
             # 危险！FEMM默认把没有设置incircuit的导体都在无限远短接在一起——也就是说，你可能把定子悬浮绕组也短接到鼠笼上去了！
             # 所以，一定要设置好悬浮绕组，而且要用serial-connected，电流给定为 0 A。
             THETA = - angle_per_slot + 0.5*angle_per_slot + 3.0/360
             count = 0
-            for phase, up_or_down in zip(im.l21,im.l22):
+            # for phase, up_or_down in zip(im.l21,im.l22):
+            for phase, up_or_down in zip(im.l_leftlayer1,im.l_leftlayer2):
                 circuit_name = 'b' + phase
                 THETA += angle_per_slot
                 X = R*cos(THETA); Y = R*sin(THETA)
@@ -382,7 +391,7 @@ class FEMM_Solver(object):
                 elif fraction == 2:
                     if not (count > im.Qs*0.5+EPS): 
                         continue
-                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns*dict_dir[up_or_down])
+                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns/number_parallel_branch*dict_dir[up_or_down])
 
         # Boundary Conditions 
         # femm.mi_makeABC() # open boundary
@@ -1872,8 +1881,8 @@ class FEMM_Solver(object):
         coil_pitch_slot_count = im.Qs / im.DriveW_poles # 整距！        
         length_endArcConductor = coil_pitch_slot_count/im.Qs * (0.5*(im.Radius_OuterRotor + im.Length_AirGap + im.Radius_InnerStatorYoke)) * 2*pi # [mm] arc length = pi * diameter  
         length_conductor = (im.stack_length + length_endArcConductor) * 1e-3 # mm to m  ## imagine: two conductors + two end conducotors = one loop (in and out)
+        number_parallel_branch = 2.
         area_conductor   = (stator_slot_area) * STATOR_SLOT_FILL_FACTOR / im.DriveW_turns # TODO: 这里绝缘用槽满率算进去了，但是没有考虑圆形导体之间的空隙？槽满率就是空隙，这里没有考虑绝缘的面积占用。
-        number_parallel_branch = 1
         resistance_per_conductor = rho_Copper * length_conductor / (area_conductor * number_parallel_branch)
         current_rms_value = im.DriveW_CurrentAmp / 1.4142135623730951 * (1./0.975) # 97.5 of stator current is for drive winding
         stator_copper_loss = resistance_per_conductor*im.DriveW_turns * current_rms_value**2 * im.Qs
