@@ -39,10 +39,20 @@ else: # NineSigma
     run_folder = r'run#186/' # New Initial Design but the force profile seems wrong (JMAG only run_list)
     run_folder = r'run#187/' # Run a sensitivity analysis anyway. (new codes in add_study, while wrong codes in add_Tran2TSS)
 
-    run_folder = r'run#188/' # Run a sensitivity analysis.
+    run_folder = r'run#188/' # Run a sensitivity analysis (bug exists)
 
     run_folder = r'run#189/' # Test the generated four pole field and update the new implemenation of CurrentSource in circuit of JMAG.
-    run_folder = r'run#190/'
+    run_folder = r'run#190/' # Success: local sensitivity analysis for NineSigma, but...
+                             # the initial design [4.484966, 1.60056, 1.130973, 6.238951254340352, 1.0, 3.0, 1.0] is not within the bounds:
+                             #         de_config_dict = {  'original_bounds':[ [   3, 5.6],#--# stator_tooth_width_b_ds
+                             #                                                 [ 0.8,   3],   # air_gap_length_delta
+                             #                                                 [5e-1,   3],   # Width_RotorSlotOpen 
+                             #                                                 [ 3.6,5.45],#--# rotor_tooth_width_b_dr 
+                             #                                                 [5e-1,   3],   # Length_HeadNeckRotorSlot
+                             #                                                 [   1,  10],   # Angle_StatorSlotOpen
+                             #                                                 [5e-1,   3] ], # Width_StatorTeethHeadThickness
+
+    run_folder = r'run#191/' # run again for the correct bounds
 
         # fea_config_dict['local_sensitivity_analysis'] = False
         # run_folder = r'run#182/' # optimize Qr=16 for O1
@@ -73,8 +83,7 @@ if fea_config_dict['flag_optimization'] == True:
             #                     'mut':        0.8,
             #                     'crossp':     0.7,
             #                     'popsize':    20,
-            #                     'iterations': 48 } # begin at 5
-        
+            #                     'iterations': 48 } # begin at 5     
         else: # based on Pyrhonen09
             # see Tran2TSS_PS_Opti_Qr=16_Btooth=1.5T.xlsx
             # de_config_dict = {  'bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
@@ -133,10 +142,10 @@ if fea_config_dict['flag_optimization'] == True:
                                                                 [] ],
                                     'bounds':[]}
     else: # 2 pole motor
-        de_config_dict = {  'original_bounds':[ [   3, 5.6],#--# stator_tooth_width_b_ds
+        de_config_dict = {  'original_bounds':[ [ 2.7, 5.8],#--# stator_tooth_width_b_ds
                                                 [ 0.8,   3],   # air_gap_length_delta
                                                 [5e-1,   3],   # Width_RotorSlotOpen 
-                                                [ 3.6,5.45],#--# rotor_tooth_width_b_dr 
+                                                [ 3.5, 6.3],#--# rotor_tooth_width_b_dr # It allows for large rotor tooth because we raise Jr and recall this is for less slots---Qr=16.
                                                 [5e-1,   3],   # Length_HeadNeckRotorSlot
                                                 [   1,  10],   # Angle_StatorSlotOpen
                                                 [5e-1,   3] ], # Width_StatorTeethHeadThickness
@@ -191,8 +200,8 @@ if fea_config_dict['flag_optimization'] == True:
         print de_config_dict['original_bounds']
     else:
         de_config_dict['bounds'] = de_config_dict['original_bounds']
-
 else:
+    raise
     de_config_dict = {  'bounds':     [ [   3, 9],   # stator_tooth_width_b_ds
                                         [ 0.8, 4],   # air_gap_length_delta
                                         [5e-1, 3],   # Width_RotorSlotOpen 

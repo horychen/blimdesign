@@ -68,7 +68,7 @@ fea_config_dict = {
     'TranRef-StepPerCycle':40,
     'OnlyTableResults':False, # modified later according to pc_name
         # multiple cpu (SMP=2)
-        # directSolver over ICCG Solver
+        # use directSolver over ICCG Solver
     'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
     'flag_optimization':True, # also use true for sensitivity analysis
     'FEMM_Coarse_Mesh':True,
@@ -87,6 +87,7 @@ fea_config_dict = {
     # Design Specifications
     ##########################
     'DPNV': True,
+    'DPNV_separate_winding_implementation': False,
     'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
 
     'Steel': 'M19Gauge29', 

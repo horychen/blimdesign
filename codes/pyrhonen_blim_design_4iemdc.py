@@ -11,17 +11,14 @@ print 'Guesses: alpha_i, efficiency, power_factor.'
 # model_name_prefix = 'Qr_loop_B' # longer solve time, less models, better mesh, higher turns for bearing winding.
 # model_name_prefix = 'EC_Rotate_PS' # longer solve time, less models, better mesh, higher turns for bearing winding.
 # model_name_prefix = 'ECRot_PS_Opti' # longer solve time, less models, better mesh, higher turns for bearing winding.
-# model_name_prefix = 'StaticFEA_PS_Opti' # Fix Bug for the rotor slot radius as half of rotor tooth width
+model_name_prefix = 'StaticFEA_PS_Opti' # Fix Bug for the rotor slot radius as half of rotor tooth width
 
-model_name_prefix = 'Tran2TSS_PS_Opti' # Qr=36
-model_name_prefix = 'Tran2TSS_PS_Opti_Qr16'
+# model_name_prefix = 'Tran2TSS_PS_Opti' # Qr=36
+# model_name_prefix = 'Tran2TSS_PS_Opti_Qr16'
 
-Qs = 24 # 18
-
-Qr = Qs+8 # 32
-Qr = Qs-8 # 16 or 10
-
-model_name_prefix = 'NineSigma_Qr%d' % (Qr)
+Qs = 24
+Qr = 36 # IEMDC
+# model_name_prefix = 'NineSigma_Qr%d' % (Qr)
 
 # delete existing file
 loc_txt_file = '../pop/%s.txt'%(model_name_prefix)
@@ -41,12 +38,12 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     THE_IM_DESIGN_ID = Qr
 
     print '''\n1. Initial Design Parameters '''
-    mec_power = 70e3 # W
-    no_pole_pairs = 1
-    rated_frequency = 750*no_pole_pairs # Hz
+    mec_power = 50e3 # W
+    no_pole_pairs = 2
+    rated_frequency = 500*no_pole_pairs # Hz
     speed_rpm = rated_frequency * 60 / no_pole_pairs # rpm
 
-    bool_standard_voltage_rating = True
+    bool_standard_voltage_rating = False
     if bool_standard_voltage_rating:
         U1_rms = 480. / sqrt(3) # V - Wye-connect #480 V is standarnd # 电压越高，意味着越厚的绝缘占去槽空间（Lipo2017书）
         # U1_rms = 480  # V - Delta-connect
@@ -734,6 +731,8 @@ for rotor_tooth_flux_density_B_dr in arange(1.1, 2.11, 0.1): #1.5–2.2 (rotor)
             if not bool_run_for_bounds:
                 rotor_tooth_flux_density_B_dr = 1.5
                 stator_tooth_flux_density_B_ds = 1.4
+                if Qr == 36:
+                    rotor_current_density_Jr = 6.4e6
                 if Qr == 32:
                     rotor_current_density_Jr = 6.4e6
                 if Qr == 16:

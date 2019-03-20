@@ -146,12 +146,12 @@ class VanGogh_FEMM(VanGogh):
 
 class FEMM_Solver(object):
 
-    def __init__(self, im, flag_read_from_jmag=True, freq=0):
-
+    def __init__(self, im, flag_read_from_jmag=True, freq=0, individual_index=None):
+        self.individual_index = individual_index
         self.vangogh = VanGogh_FEMM(im)
 
         self.deg_per_step = im.fea_config_dict['femm_deg_per_step'] # deg, we need this for show_results
-        self.flag_read_from_jmag = flag_read_from_jmag
+        self.flag_read_from_jmag = flag_read_from_jmag # read the pre-determined rotor currents from the eddy current FEA of jmag or femm
 
         self.freq = freq
         if freq == 0:
@@ -177,11 +177,17 @@ class FEMM_Solver(object):
                 os.makedirs(self.dir_run)
 
             if flag_read_from_jmag == True:
-                self.dir_run += 'static-jmag/'
+                if self.individual_index is not None:
+                    self.dir_run += 'static-jmag/' + 'ind%04d'%(self.individual_index)
+                else:
+                    self.dir_run += 'static-jmag/'
                 if not os.path.exists(self.dir_run):
                     os.makedirs(self.dir_run)
             else:
-                self.dir_run += 'static-femm/'
+                if self.individual_index is not None:
+                    self.dir_run += 'static-femm/' + 'ind%04d'%(self.individual_index)
+                else:
+                    self.dir_run += 'static-femm/'
                 if not os.path.exists(self.dir_run):
                     os.makedirs(self.dir_run)
         else:
@@ -313,7 +319,7 @@ class FEMM_Solver(object):
             block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit='r%s'%(self.rotor_phase_name_list[0]), turns=-1) # However, this turns=-1 is not effective for PARALLEL_CONNECTED circuit
 
         # Stator Winding
-        number_parallel_branch = 2. # DPNV inherent parallel branch number 
+        npb = im.number_parallel_branch # DPNV inherent parallel branch number 
         if self.flag_static_solver == True: #self.freq == 0: # static 
                 femm.mi_addcircprop('dU', self.dict_stator_current_function[3](0.0), SERIES_CONNECTED)
                 femm.mi_addcircprop('dV', self.dict_stator_current_function[4](0.0), SERIES_CONNECTED)
@@ -322,18 +328,20 @@ class FEMM_Solver(object):
                 femm.mi_addcircprop('bV', self.dict_stator_current_function[1](0.0), SERIES_CONNECTED)
                 femm.mi_addcircprop('bW', self.dict_stator_current_function[2](0.0), SERIES_CONNECTED)
         else: # eddy current solver
-            CommutatingSequence = ['-', '+'] # 2 pole
-            # CommutatingSequence = ['+', '-'] # 4 pole legacy
-            femm.mi_addcircprop('dU', '%g'                             %(im.DriveW_CurrentAmp/number_parallel_branch), SERIES_CONNECTED)
-            femm.mi_addcircprop('dV', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/number_parallel_branch, CommutatingSequence[0]), SERIES_CONNECTED)
-            femm.mi_addcircprop('dW', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/number_parallel_branch, CommutatingSequence[1]), SERIES_CONNECTED)
+            if im.CommutatingSequence == 1:
+                MyCommutatingSequence = ['-', '+'] # 2 pole
+            else:
+                MyCommutatingSequence = ['+', '-'] # 4 pole legacy
+            femm.mi_addcircprop('dU', '%g'                             %(im.DriveW_CurrentAmp/npb), SERIES_CONNECTED)
+            femm.mi_addcircprop('dV', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/npb, MyCommutatingSequence[0]), SERIES_CONNECTED)
+            femm.mi_addcircprop('dW', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/npb, MyCommutatingSequence[1]), SERIES_CONNECTED)
             if fraction == 1: # I thought PS can be realized in FEMM but I was wrong, this fraction==1 case should be deleted!
                 # femm.mi_addcircprop('bA', '%g'                            %(im.BeariW_CurrentAmp), SERIES_CONNECTED)
                 # femm.mi_addcircprop('bB', '%g*(-0.5+I*0.8660254037844386)'%(im.BeariW_CurrentAmp), SERIES_CONNECTED)
                 # femm.mi_addcircprop('bC', '%g*(-0.5-I*0.8660254037844386)'%(im.BeariW_CurrentAmp), SERIES_CONNECTED)
-                femm.mi_addcircprop('bU', '%g'                             %(im.DriveW_CurrentAmp/number_parallel_branch), SERIES_CONNECTED)
-                femm.mi_addcircprop('bV', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/number_parallel_branch, CommutatingSequence[0]), SERIES_CONNECTED)
-                femm.mi_addcircprop('bW', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/number_parallel_branch, CommutatingSequence[1]), SERIES_CONNECTED)
+                femm.mi_addcircprop('bU', '%g'                             %(im.DriveW_CurrentAmp/npb), SERIES_CONNECTED)
+                femm.mi_addcircprop('bV', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/npb, MyCommutatingSequence[0]), SERIES_CONNECTED)
+                femm.mi_addcircprop('bW', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/npb, MyCommutatingSequence[1]), SERIES_CONNECTED)
             elif fraction == 4 or fraction == 2: # no bearing current
                 femm.mi_addcircprop('bU', 0, SERIES_CONNECTED)
                 femm.mi_addcircprop('bV', 0, SERIES_CONNECTED)
@@ -347,8 +355,9 @@ class FEMM_Solver(object):
         # torque winding's blocks
         THETA = - angle_per_slot + 0.5*angle_per_slot - 3.0/360 # This 3 deg must be less than 360/Qs/2
         count = 0
-        # for phase, up_or_down in zip(im.l41,im.l42):
-        for phase, up_or_down in zip(im.l_rightlayer1,im.l_rightlayer2):
+        # if im.fea_config_dict['DPNV_separate_winding_implementation'] == True or im.fea_config_dict['DPNV'] == False:
+        # for phase, up_or_down in zip(im.l_rightlayer1,im.l_rightlayer2):
+        for phase, up_or_down in zip(im.l41,im.l42):
             circuit_name = 'd' + phase
             THETA += angle_per_slot
             X = R*cos(THETA); Y = R*sin(THETA)
@@ -359,28 +368,29 @@ class FEMM_Solver(object):
             if fraction == 2:
                 if not (count > im.Qs*0.5+EPS): 
                     continue
-            block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.DriveW_turns/number_parallel_branch*dict_dir[up_or_down])
+            block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.DriveW_turns/npb*dict_dir[up_or_down])
 
         # bearing winding's blocks
         if fraction == 1:
             THETA = - angle_per_slot + 0.5*angle_per_slot + 3.0/360
-            # for phase, up_or_down in zip(im.l21,im.l22):
-            for phase, up_or_down in zip(im.l_leftlayer1,im.l_leftlayer2):
+
+            # for phase, up_or_down in zip(im.l_leftlayer1,im.l_leftlayer2):
+            for phase, up_or_down in zip(im.l21,im.l22):
                 circuit_name = 'b' + phase
                 THETA += angle_per_slot
                 X = R*cos(THETA); Y = R*sin(THETA)
 
                 # if self.im.fea_config_dict['DPNV'] == True: 
                 # else： # separate winding (e.g., Chiba's)
-                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns/number_parallel_branch*dict_dir[up_or_down])
+                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns/npb*dict_dir[up_or_down])
 
         elif fraction == 4 or fraction == 2:
             # 危险！FEMM默认把没有设置incircuit的导体都在无限远短接在一起——也就是说，你可能把定子悬浮绕组也短接到鼠笼上去了！
             # 所以，一定要设置好悬浮绕组，而且要用serial-connected，电流给定为 0 A。
             THETA = - angle_per_slot + 0.5*angle_per_slot + 3.0/360
             count = 0
-            # for phase, up_or_down in zip(im.l21,im.l22):
-            for phase, up_or_down in zip(im.l_leftlayer1,im.l_leftlayer2):
+            # for phase, up_or_down in zip(im.l_leftlayer1,im.l_leftlayer2):
+            for phase, up_or_down in zip(im.l21,im.l22):
                 circuit_name = 'b' + phase
                 THETA += angle_per_slot
                 X = R*cos(THETA); Y = R*sin(THETA)
@@ -391,7 +401,7 @@ class FEMM_Solver(object):
                 elif fraction == 2:
                     if not (count > im.Qs*0.5+EPS): 
                         continue
-                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns/number_parallel_branch*dict_dir[up_or_down])
+                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns/npb*dict_dir[up_or_down])
 
         # Boundary Conditions 
         # femm.mi_makeABC() # open boundary

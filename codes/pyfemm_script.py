@@ -2,158 +2,51 @@
 #execfile('D:/OneDrive - UW-Madison/c/codes/pyfemm_script.py')
 #execfile(r'K:\jchen782\JMAG\c\codes/pyfemm_script.py')
 
-''' 0. Configuration
-'''
-# run_folder = r'run#13/'; deg_per_step = 6; run_list = [1,0,0,0,1]; # test StaticFEA in JMAG
-
-# 端环有的：TranRef 10 Steps Per Cycle
-# run_folder = r'run#12/'; deg_per_step = 0.5; run_list = [1,0,0,0,0]; # dense run: 0.1 deg
-# run_folder = r'run#14/'; deg_per_step = 0.5; run_list = [1,0,0,1,0]; # Qr=32
-
-# 验证FEMM和JMAG的结果匹配
-# run_folder = r'run#15/'; deg_per_step = 0.5; run_list = [1,0,0,0,0]; # Qr=32
-
-# 端环有的：TranRef 100 Steps Per Cycle
-# run_folder = r'run#12/'; deg_per_step = 0.5; run_list = [1,0,0,0,0]; # Qr=36 TranRef with 100 Steps per cycle
-# run_folder = r'run#16/'; deg_per_step = 6; run_list = [1,0,0,0,0]; # Qr=32 TranRef with 100 Steps per cycle
-
-# 端环没的：TranRef 40 Steps Per Cycle
-
-# No TranRef40 or 400 is ever needed again - 20180104
-
 ''' 1. General Information & Packages Loading
 '''
-import os
+execfile('D:/OneDrive - UW-Madison/c/codes/default_setting.py') # Absolute path is needed for running in JMAG
+
 # Debug
 # if os.path.exists('d:/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz'):
 #     os.system('bash -c "rm -r /mnt/d/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz"')
 # if os.path.exists('d:/OneDrive - UW-Madison/c/pop/Tran2TSS_PS_Opti.txt'):
 #     os.system('bash -c "mv /mnt/d/OneDrive\ -\ UW-Madison/c/pop/Tran2TSS_PS_Opti.txt /mnt/d/OneDrive\ -\ UW-Madison/c/pop/initial_design.txt"')
-def where_am_i(fea_config_dict):
-    dir_interpreter = os.path.abspath('')
-    print dir_interpreter
-    if os.path.exists('D:/'):
-        print 'you are on Legion Y730'
-        dir_parent = 'D:/OneDrive - UW-Madison/c/'
-        dir_codes = dir_parent + 'codes/'
-        dir_lib = dir_parent + 'codes/'
-        # dir_initial_design = dir_parent + 'pop/'
-        # dir_csv_output_folder = dir_parent + 'csv_opti/'
-        dir_femm_files = 'D:/femm42/' # .ans files are too large to store on OneDrive anymore
-        dir_project_files = 'D:/JMAG_Files/'
-        pc_name = 'Y730'
-    elif os.path.exists('I:/'):
-        print 'you are on Severson02'
-        dir_parent = 'I:/jchen782/JMAG/c/'
-        dir_codes = dir_parent + 'codes/'
-        dir_lib = dir_parent + 'codes/'
-        dir_femm_files = 'I:/jchen782/FEMM/'
-        dir_project_files = 'I:/jchen782/JMAG/'
-        pc_name = 'Seversion02'
-    elif os.path.exists('K:/'):
-        print 'you are on Severson01'
-        dir_parent = 'K:/jchen782/JMAG/c/'
-        dir_codes = dir_parent + 'codes/'
-        dir_lib = dir_parent + 'codes/'
-        dir_femm_files = 'K:/jchen782/FEMM/'
-        dir_project_files = 'K:/jchen782/JMAG/'
-        pc_name = 'Seversion01'
-    # elif 'chen' in 'dir_interpreter':
-    #     print 'you are on T440p'
-    #     dir_parent = 'C:/Users/Hory Chen/OneDrive - UW-Madison/'
-    #     dir_lib = dir_parent + 'codes2/'
-    #     dir_initial_design = dir_parent + 'pop/'
-    #     dir_csv_output_folder = dir_parent + 'csv_opti/'
-    #     dir_femm_files = 'C:/femm42/'
-    #     dir_project_files = 'C:/JMAG_Files/'
-    #     pc_name = 't440p'
-    else:
-        print 'where are you???'
-    os.chdir(dir_codes)
 
-    fea_config_dict['dir_parent']            = dir_parent
-    fea_config_dict['dir_lib']               = dir_lib
-    fea_config_dict['dir_codes']             = dir_codes
-    fea_config_dict['dir_femm_files']        = dir_femm_files
-    fea_config_dict['dir_project_files']     = dir_project_files
-    # fea_config_dict['dir_initial_design']    = dir_initial_design
-    # fea_config_dict['dir_csv_output_folder'] = dir_csv_output_folder
-    fea_config_dict['pc_name']               = pc_name
-    fea_config_dict['dir_interpreter']       = dir_interpreter
-
-    if pc_name == 'Y730':
-        if fea_config_dict['Restart'] == False:
-            fea_config_dict['OnlyTableResults'] = True  # save disk space for my PC
-    # However, we need field data for iron loss calculation
-    fea_config_dict['OnlyTableResults'] = False 
-
-fea_config_dict = {
-    ##########################
-    # Sysetm Controlc
-    ##########################
-    'Active_Qr':32, # 36
-    'TranRef-StepPerCycle':40,
-    'OnlyTableResults':False, # modified later according to pc_name
-        # multiple cpu (SMP=2)
-        # directSolver over ICCG Solver
-    'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
-    'flag_optimization':False,
-
-    ##########################
-    # Design Specifications
-    ##########################
-    'DPNV': True,
-    'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
-
-    'Steel': 'M19Gauge29', 
-    # 'Steel': 'M15',
-    # 'Steel': 'Arnon5', 
-    'Bar_Conductivity':1/((3.76*25+873)*1e-9/55.), # 40e6 for Aluminium; 1/((3.76*100+873)*1e-9/55.) for Copper
-    # 'Bar_Conductivity':40e6, # 40e6 for Aluminium; 1/((3.76*100+873)*1e-9/55.) for Copper
-}
-where_am_i(fea_config_dict)
-from sys import path as sys_path
-sys_path.append(fea_config_dict['dir_lib'])
-import population
-import FEMM_Solver
-import utility
-reload(population) 
-reload(FEMM_Solver)
 logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='iemdc_')
 
-run_list = [1,1,0,0,0] 
-run_folder = r'run#100/'
+fea_config_dict['flag_optimization'] = True # we need to generate and exploit sw.init_pop
+fea_config_dict['Active_Qr'] = 36
+
+run_list = [1,1,1,1,0] 
+run_folder = r'run#99/'
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
-if fea_config_dict['End_Ring_Resistance'] == 0:
-    fea_config_dict['model_name_prefix'] = 'PS_Qr%d_NoEndRing_%s'%(fea_config_dict['Active_Qr'], fea_config_dict['Steel'])
-if fea_config_dict['DPNV'] == True:
-    fea_config_dict['model_name_prefix'] += '_DPNV'
-if fea_config_dict['Restart'] == True:
-    fea_config_dict['model_name_prefix'] += '_Restart'
-print fea_config_dict['model_name_prefix']
+fea_config_dict['DPNV_separate_winding_implementation'] = True
+
+# rebuild the name
+build_model_name_prefix(fea_config_dict)
 
 # fea_config_dict['femm_deg_per_step'] = 0.25 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
-fea_config_dict['femm_deg_per_step'] = 1 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
-fea_config_dict['femm_deg_per_step'] = 0.1 #0.5 # deg
+# fea_config_dict['femm_deg_per_step'] = 1 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
+fea_config_dict['femm_deg_per_step'] = 0.5 #0.1 # deg
 print 'femm_deg_per_step is', fea_config_dict['femm_deg_per_step'], 'deg (Qs=24, p=2)'
 
 
 ''' 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG)
 ''' # 1e-1也还是太小了（第三次报错），至少0.5mm长吧 # 1e-1 is the least geometry value. a 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
-de_config_dict = {  'bounds':     [[3,9], [0.5,4], [5e-1,3], [1.5,8], [5e-1,3], [1,10], [5e-1,3]], 
+de_config_dict = {  'bounds':     [[3,9], [0.5,4], [5e-1,3], [2.5, 6], [5e-1,3], [1,10], [5e-1,3]], 
                     'mut':        0.8,
                     'crossp':     0.7,
-                    'popsize':    100,
+                    'popsize':    50, # 100
                     'iterations': 20 } # begin at 5
 # get initial design as im
-sw = population.swarm(fea_config_dict, de_config_dict=None)
+sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)
 # sw.show(which='all')
 # print sw.im.show()
 
 
 # generate the initial generation
-# sw.generate_pop()
+sw.generate_pop()
 
 im_initial = sw.im
 print im_initial.l21
@@ -196,14 +89,24 @@ solver_femm = FEMM_Solver.FEMM_Solver(im_initial, flag_read_from_jmag=False, fre
 
 
 
+# 50 Random Design Evaluation for IEMDC 2019
+import numpy as np
+min_b, max_b = np.asarray(sw.de_config_dict['bounds']).T 
+diff = np.fabs(min_b - max_b)
+pop_denorm = min_b + sw.init_pop * diff
 
+for ind, individual_denorm in enumerate(pop_denorm):
 
+    im_variant = population.bearingless_induction_motor_design.local_design_variant(im_initial, \
+                    0, ind, individual_denorm) # due to compatability issues: a new child class is used instead
 
+    solver_jmag = FEMM_Solver.FEMM_Solver(im_variant, individual_index=ind, flag_read_from_jmag=True, freq=0) # static
+    # solver_femm = FEMM_Solver.FEMM_Solver(im_variant, individual_index=ind, flag_read_from_jmag=False, freq=2.23) # eddy+static
 
+    sw.run(im_variant, individual_index=ind, run_list=run_list)
 
-
-
-
+    raise Exception('Testing')
+quit()
 
 
 
@@ -225,6 +128,7 @@ if False: # this generate plots for iemdc19
     sw.show_results_iemdc19(femm_solver_data=data, femm_rotor_current_function=solver_jmag.get_rotor_current_function())
     # sw.timeStepSensitivity()
 else:
+    # FEMM only
     # FEMM Static Solver with pre-determined rotor currents from FEMM
     if not solver_femm.has_results():
         solver_femm.run_frequency_sweeping(arange(0.5,5.1,0.5))
@@ -275,7 +179,7 @@ else:
 
 
 
-sw.write_to_file_fea_config_dict()
+# sw.write_to_file_fea_config_dict()
 from pylab import show; show()
 
 

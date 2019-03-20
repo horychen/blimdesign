@@ -895,9 +895,21 @@ class SwarmDataAnalyzer(object):
 
         with open(dir_run+'swarm_data.txt', 'r') as f:
             self.buf = f.readlines()[1:]
-            self.buf_length = len(self.buf)
 
         self.number_of_designs = self.buf_length / 21
+
+        if self.number_of_designs == 21*7:
+            print 'These are legacy results without the initial design within the swarm_data.txt.'
+
+        elif self.number_of_designs == 21*7 + 1:
+            print 'Initial design is among the pop and used as reference design.'
+            self.reference_design = self.buf[1:1+21]
+            self.buf = self.buf[1+21:]
+
+        else:
+            raise Exception('Please remove duplicate results in swarm_data.txt.')
+
+        self.buf_length = len(self.buf)
 
         logger = logging.getLogger(__name__)
         logger.debug('self.buf_length %% 21 = %d, / 21 = %d' % (self.buf_length % 21, self.number_of_designs))
@@ -1060,24 +1072,27 @@ def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ri
 
 # Basic information
 if __name__ == '__main__':
+    print 'Make sure your swarm_data.txt contains only 21x7 designs.'*3
     if False: # 4 pole motor
         required_torque = 15.9154943092 #Nm
         Radius_OuterRotor = 47.092753
         stack_length = 93.200295
         Omega = 30000 / 60. * 2*np.pi
+        Qr = 32 
 
     else: # 2 pole motor
         required_torque = 14.8544613552 #Nm
         Radius_OuterRotor = 28.8
         stack_length = 237.525815777
         Omega = 45000 / 60. * 2*np.pi
+        Qr = 16
 
     rotor_volume = math.pi*(Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
     rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
 
     print 'utility.py'
-    print 'Qr=32, rotor_volume=', rotor_volume, 'm^3'
-    print 'Qr=32, rotor_weight=', rotor_weight, 'N'
+    print 'Qr=%d, rotor_volume='%(Qr), rotor_volume, 'm^3'
+    print 'Qr=%d, rotor_weight='%(Qr), rotor_weight, 'N'
 
     if False: # 4 pole motor
         # run 115 and 116
@@ -1105,7 +1120,8 @@ if __name__ == '__main__':
         #                     'popsize':    50, # 50, # 100,
         #                     'iterations': 2*48 } # 148
 
-    else: # 2 pole motor 
+    else: # 2 pole motor denorm: [4.484966, 1.60056, 1.130973, 6.238951254340352, 1.0, 3.0, 1.0]
+        # run#190
         de_config_dict = {  'original_bounds':[ [   3, 5.6],#--# stator_tooth_width_b_ds
                                                 [ 0.8,   3],   # air_gap_length_delta
                                                 [5e-1,   3],   # Width_RotorSlotOpen 
@@ -1117,6 +1133,22 @@ if __name__ == '__main__':
                             'crossp':     0.7,
                             'popsize':    30, # 21*7,  # 50, # 100,
                             'iterations': 100}
+        # run#191
+        de_config_dict = {  'original_bounds':[ [ 2.7, 5.8],#--# stator_tooth_width_b_ds
+                                                [ 0.8,   3],   # air_gap_length_delta
+                                                [5e-1,   3],   # Width_RotorSlotOpen 
+                                                [ 3.5, 6.3],#--# rotor_tooth_width_b_dr # It allows for large rotor tooth because we raise Jr and recall this is for less slots---Qr=16.
+                                                [5e-1,   3],   # Length_HeadNeckRotorSlot
+                                                [   1,  10],   # Angle_StatorSlotOpen
+                                                [5e-1,   3] ], # Width_StatorTeethHeadThickness
+                            'mut':        0.8,
+                            'crossp':     0.7,
+                            'popsize':    30, # 21*7,  # 50, # 100,
+                            'iterations': 100}
+
+    # In fact, you can run a bounds-check from the swarm_data.txt
+    # In fact, you can run a bounds-check from the swarm_data.txt
+    # In fact, you can run a bounds-check from the swarm_data.txt
 
     original_bounds = de_config_dict['original_bounds']
     dimensions = len(original_bounds)
@@ -1338,7 +1370,9 @@ if __name__ == '__main__':
             # 7 [1817.22]  <-In population.py  [1353.49] <- from initial_design.txt
 
     else: # 2 pole motor
-        swda = SwarmDataAnalyzer(run_integer=184)
+        # swda = SwarmDataAnalyzer(run_integer=184)
+        # swda = SwarmDataAnalyzer(run_integer=190) # Wrong bounds
+        swda = SwarmDataAnalyzer(run_integer=191) # Correct bounds
         number_of_variant = 20 + 1
 
     fi, axeses = subplots(4, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
@@ -1407,8 +1441,15 @@ if __name__ == '__main__':
     for ind, el in enumerate(data_min):
         print ind, el
 
-    O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
-    O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+    if self.reference_design is None:
+        # add reference design results manually as follows:
+        O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+        O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+    else:
+        print swda.reference_design
+        quit()
+        # O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+        # O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)        
 
     print  'Objective function 1'
     O1 = fobj_list( list(swda.get_certain_objective_function(2)), 
@@ -1497,14 +1538,20 @@ if __name__ == '__main__':
     # fig_ecce.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\O2_vs_params.png', dpi=150)
     show()
     # quit() ###################################
-    ref[0] = O2_ref    / 8
-    ref[1] = O1_ref    / 3
-    ref[2] = 19.1197   / required_torque                # 100%
-    ref[3] = 0.0864712 / 0.1                            # 100%
-    ref[4] = 96.9263   / rotor_weight                   # 100% = FRW
-    ref[5] = 0.104915  / 0.2                            # 100%
-    ref[6] = 6.53137   / 10                             # deg
-    ref[7] = (1817.22+216.216+224.706) / 2500           # W
+
+    if swda.reference_design is not None:
+        # manually set this up
+        ref[0] = O2_ref    / 8
+        ref[1] = O1_ref    / 3
+        ref[2] = 19.1197   / required_torque                # 100%
+        ref[3] = 0.0864712 / 0.1                            # 100%
+        ref[4] = 96.9263   / rotor_weight                   # 100% = FRW
+        ref[5] = 0.104915  / 0.2                            # 100%
+        ref[6] = 6.53137   / 10                             # deg
+        ref[7] = (1817.22+216.216+224.706) / 2500           # W
+    else:
+        print swda.reference_design
+        quit()
 
     # Maximum
     data_max = array(data_max)
