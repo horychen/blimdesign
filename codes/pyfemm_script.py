@@ -17,8 +17,13 @@ logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='iemdc_')
 fea_config_dict['flag_optimization'] = True # we need to generate and exploit sw.init_pop
 fea_config_dict['Active_Qr'] = 36
 
-run_list = [1,1,1,1,0] 
-run_folder = r'run#99/'
+run_list = [1,1,1,1,0] # Static FEA with JMAG is too slow, so use FEMM to do that part
+run_list = [1,1,1,0,0] # TranRef is replaced by Tran2TSSProlong
+
+run_folder = r'run#99/' # Test 
+# run_folder = r'run#98/' # Test before send scripts to server
+
+
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
 fea_config_dict['DPNV_separate_winding_implementation'] = True
@@ -104,31 +109,25 @@ for ind, individual_denorm in enumerate(pop_denorm):
         sw.run(im_variant, individual_index=ind, run_list=run_list)
         # im_variant.csv_previous_solve = sw.dir_csv_output_folder + im_variant.get_individual_name() + u"Freq" + '_circuit_current.csv'
 
-
-    print 'Rotor current solved by JMAG is shown here:'
-    solver_jmag = FEMM_Solver.FEMM_Solver(im_variant, individual_index=ind, flag_read_from_jmag=True, freq=0) # static
-    solver_jmag.read_current_from_EC_FEA()
-    for key, item in solver_jmag.dict_rotor_current_from_EC_FEA.iteritems():
-        if '1' in key:
-            from math import sqrt
-            print key, sqrt(item[0]**2+item[1]**2)
-
     # FEMM Static Solver with pre-determined rotor currents from JMAG
+    solver_jmag = FEMM_Solver.FEMM_Solver(im_variant, individual_index=ind, flag_read_from_jmag=True, freq=0) # static
     if not solver_jmag.has_results():
         solver_jmag.run_rotating_static_FEA()
         solver_jmag.parallel_solve()
-
     data_jmag = solver_jmag.show_results_static(bool_plot=False)
-    if data_jmag is None:
-        print 'data_jmag is', data_jmag, 'try run again'
-    else:
-        from pylab import subplots, show
-        fig, axes = subplots(3, 1, sharex=True)
-        ax = axes[0]; ax.plot(data_jmag[0]*0.1, data_jmag[1], alpha=0.5, label='torque'); ax.legend(); ax.grid()
-        ax = axes[1]; ax.plot(data_jmag[0]*0.1, data_jmag[2], alpha=0.5, label='Fx'); ax.legend(); ax.grid()
-        ax = axes[2]; ax.plot(data_jmag[0]*0.1, data_jmag[3], alpha=0.5, label='Fy'); ax.legend(); ax.grid()
-        show()
+
+    # JMAG results (EC-Rotate and Tran2TSS and Tran2TSSProlongRef)
+    utility.collect_jmag_Tran2TSSProlong_results(im_variant, sw.dir_csv_output_folder, sw.fea_config_dict, sw.axeses, femm_solver_data=data_jmag)
+
+    # write to file for inspection
+
+    from pylab import show
+    show()
+    quit()
     raise Exception('Testing')
+
+# 绘制K线图表征最大误差和最小误差
+
 quit()
 
 

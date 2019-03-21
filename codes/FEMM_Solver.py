@@ -816,6 +816,9 @@ class FEMM_Solver(object):
         femm.mi_modifycircprop('bW', 1, self.dict_stator_current_function[2](time))
 
     def run_rotating_static_FEA(self): # deg_per_step is key parameter for this function
+        PERIOD = 180 # deg
+        PERIOD = 90 # deg
+
         self.flag_static_solver = True
         self.flag_eddycurrent_solver = False
 
@@ -863,7 +866,7 @@ class FEMM_Solver(object):
                 femm.mi_saveas(output_file_name + '.fem') # locked-rotor test
         else: # rotating static FEA
 
-            self.list_rotor_position_in_deg = np.arange(0, 180, self.deg_per_step)
+            self.list_rotor_position_in_deg = np.arange(0, PERIOD, self.deg_per_step)
             self.list_name = ['%04d'%(10*el) for el in self.list_rotor_position_in_deg] # with no suffix
 
             femm.mi_saveas(self.output_file_name + self.list_name[0] + '.fem')
