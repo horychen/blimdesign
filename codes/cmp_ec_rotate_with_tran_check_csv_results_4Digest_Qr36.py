@@ -5,8 +5,9 @@ from csv import reader as csv_reader
 # quit()
 
 number_current_generation = 0
-run_folder = r'run#36/'
+# run_folder = r'run#36/' # results for iemdc2019 digest
 # dir_csv_output_folder = u"D:/Users/horyc/OneDrive - UW-Madison/csv_opti/" # 2018
+run_folder = r'run#99/'
 dir_csv_output_folder = u"D:/OneDrive - UW-Madison/c_obsolete/csv_opti/" # 2019 
 dir_csv_output_folder = dir_csv_output_folder + run_folder
 

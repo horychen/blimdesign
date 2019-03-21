@@ -40,7 +40,7 @@ def pyrhonen_blim_design(rotor_tooth_flux_density_B_dr, stator_tooth_flux_densit
     print '''\n1. Initial Design Parameters '''
     mec_power = 50e3 # W
     no_pole_pairs = 2
-    rated_frequency = 500*no_pole_pairs # Hz
+    rated_frequency = 500 # 500*no_pole_pairs # Hz
     speed_rpm = rated_frequency * 60 / no_pole_pairs # rpm
 
     bool_standard_voltage_rating = False
@@ -732,7 +732,8 @@ for rotor_tooth_flux_density_B_dr in arange(1.1, 2.11, 0.1): #1.5–2.2 (rotor)
                 rotor_tooth_flux_density_B_dr = 1.5
                 stator_tooth_flux_density_B_ds = 1.4
                 if Qr == 36:
-                    rotor_current_density_Jr = 6.4e6
+                    rotor_current_density_Jr = 6.4e6 # for 1kHz
+                    # rotor_current_density_Jr = 4e6 # for 500 Hz???
                 if Qr == 32:
                     rotor_current_density_Jr = 6.4e6
                 if Qr == 16:

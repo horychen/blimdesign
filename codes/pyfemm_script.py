@@ -28,7 +28,7 @@ build_model_name_prefix(fea_config_dict)
 
 # fea_config_dict['femm_deg_per_step'] = 0.25 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
 # fea_config_dict['femm_deg_per_step'] = 1 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
-fea_config_dict['femm_deg_per_step'] = 0.5 #0.1 # deg
+fea_config_dict['femm_deg_per_step'] = 0.5 #0.1 # deg # 5 deg will cause error when DFT getting iron loss results
 print 'femm_deg_per_step is', fea_config_dict['femm_deg_per_step'], 'deg (Qs=24, p=2)'
 
 
@@ -100,11 +100,34 @@ for ind, individual_denorm in enumerate(pop_denorm):
     im_variant = population.bearingless_induction_motor_design.local_design_variant(im_initial, \
                     0, ind, individual_denorm) # due to compatability issues: a new child class is used instead
 
+    if not sw.has_results(im_variant):
+        sw.run(im_variant, individual_index=ind, run_list=run_list)
+        # im_variant.csv_previous_solve = sw.dir_csv_output_folder + im_variant.get_individual_name() + u"Freq" + '_circuit_current.csv'
+
+
+    print 'Rotor current solved by JMAG is shown here:'
     solver_jmag = FEMM_Solver.FEMM_Solver(im_variant, individual_index=ind, flag_read_from_jmag=True, freq=0) # static
-    # solver_femm = FEMM_Solver.FEMM_Solver(im_variant, individual_index=ind, flag_read_from_jmag=False, freq=2.23) # eddy+static
+    solver_jmag.read_current_from_EC_FEA()
+    for key, item in solver_jmag.dict_rotor_current_from_EC_FEA.iteritems():
+        if '1' in key:
+            from math import sqrt
+            print key, sqrt(item[0]**2+item[1]**2)
 
-    sw.run(im_variant, individual_index=ind, run_list=run_list)
+    # FEMM Static Solver with pre-determined rotor currents from JMAG
+    if not solver_jmag.has_results():
+        solver_jmag.run_rotating_static_FEA()
+        solver_jmag.parallel_solve()
 
+    data_jmag = solver_jmag.show_results_static(bool_plot=False)
+    if data_jmag is None:
+        print 'data_jmag is', data_jmag, 'try run again'
+    else:
+        from pylab import subplots, show
+        fig, axes = subplots(3, 1, sharex=True)
+        ax = axes[0]; ax.plot(data_jmag[0]*0.1, data_jmag[1], alpha=0.5, label='torque'); ax.legend(); ax.grid()
+        ax = axes[1]; ax.plot(data_jmag[0]*0.1, data_jmag[2], alpha=0.5, label='Fx'); ax.legend(); ax.grid()
+        ax = axes[2]; ax.plot(data_jmag[0]*0.1, data_jmag[3], alpha=0.5, label='Fy'); ax.legend(); ax.grid()
+        show()
     raise Exception('Testing')
 quit()
 
@@ -155,27 +178,27 @@ else:
             from math import sqrt
             print key, sqrt(item[0]**2+item[1]**2)
 
-    # # FEMM Static Solver with pre-determined rotor currents from JMAG
-    # if not solver_jmag.has_results():
-    #     solver_jmag.run_rotating_static_FEA()
-    #     solver_jmag.parallel_solve()
+    # FEMM Static Solver with pre-determined rotor currents from JMAG
+    if not solver_jmag.has_results():
+        solver_jmag.run_rotating_static_FEA()
+        solver_jmag.parallel_solve()
 
-    # # Compare JMAG and FEMM's rotor currents to see DPNV is implemented correctly in bot JMAG and FEMM    
-    # data_femm = solver_femm.show_results_static(bool_plot=False)
-    # data_jmag = solver_jmag.show_results_static(bool_plot=False)
+    # Compare JMAG and FEMM's rotor currents to see DPNV is implemented correctly in bot JMAG and FEMM    
+    data_femm = solver_femm.show_results_static(bool_plot=False)
+    data_jmag = solver_jmag.show_results_static(bool_plot=False)
 
-    # if data_femm is None or data_jmag is None:
-    #     if data_femm is None:
-    #         print 'data_femm is', data_femm, 'try run again'
-    #     if data_jmag is None:
-    #         print 'data_jmag is', data_jmag, 'try run again'
-    # else:
-    #     from pylab import subplots
-    #     fig, axes = subplots(3, 1, sharex=True)
-    #     for data in [data_femm, data_jmag]:
-    #         ax = axes[0]; ax.plot(data[0]*0.1, data[1], alpha=0.5, label='torque'); ax.legend(); ax.grid()
-    #         ax = axes[1]; ax.plot(data[0]*0.1, data[2], alpha=0.5, label='Fx'); ax.legend(); ax.grid()
-    #         ax = axes[2]; ax.plot(data[0]*0.1, data[3], alpha=0.5, label='Fy'); ax.legend(); ax.grid()
+    if data_femm is None or data_jmag is None:
+        if data_femm is None:
+            print 'data_femm is', data_femm, 'try run again'
+        if data_jmag is None:
+            print 'data_jmag is', data_jmag, 'try run again'
+    else:
+        from pylab import subplots
+        fig, axes = subplots(3, 1, sharex=True)
+        for data in [data_femm, data_jmag]:
+            ax = axes[0]; ax.plot(data[0]*0.1, data[1], alpha=0.5, label='torque'); ax.legend(); ax.grid()
+            ax = axes[1]; ax.plot(data[0]*0.1, data[2], alpha=0.5, label='Fx'); ax.legend(); ax.grid()
+            ax = axes[2]; ax.plot(data[0]*0.1, data[3], alpha=0.5, label='Fy'); ax.legend(); ax.grid()
 
 
 

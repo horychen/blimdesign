@@ -506,7 +506,7 @@ class data_manager(object):
 from VanGogh import csv_row_reader
 def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict, femm_solver):
 
-    logging.getLogger(__name__).debug('Look into: ' + path_prefix)
+    # logging.getLogger(__name__).debug('Look into: ' + path_prefix)
 
     # Torque
     basic_info = []
@@ -896,23 +896,26 @@ class SwarmDataAnalyzer(object):
         with open(dir_run+'swarm_data.txt', 'r') as f:
             self.buf = f.readlines()[1:]
 
-        self.number_of_designs = self.buf_length / 21
+        self.number_of_designs = len(self.buf) / 21
 
         if self.number_of_designs == 21*7:
             print 'These are legacy results without the initial design within the swarm_data.txt.'
 
         elif self.number_of_designs == 21*7 + 1:
             print 'Initial design is among the pop and used as reference design.'
-            self.reference_design = self.buf[1:1+21]
-            self.buf = self.buf[1+21:]
+            self.reference_design = self.buf[:21]
+            self.buf = self.buf[21:]
 
         else:
             raise Exception('Please remove duplicate results in swarm_data.txt.')
 
+        # now we have the actual pop size
         self.buf_length = len(self.buf)
+        self.number_of_designs = len(self.buf) / 21
 
+        msg = 'self.buf_length %% 21 = %d, / 21 = %d' % (self.buf_length % 21, self.number_of_designs)
         logger = logging.getLogger(__name__)
-        logger.debug('self.buf_length %% 21 = %d, / 21 = %d' % (self.buf_length % 21, self.number_of_designs))
+        logger.debug(msg)
 
     def design_display_generator(self):
         for i in range(self.number_of_designs):
@@ -987,7 +990,11 @@ class SwarmDataAnalyzer(object):
     def get_certain_objective_function(self, which):
         for i in range(self.number_of_designs):
             individual = self.buf[i*21:(1+i)*21]
-            yield [float(el) for el in individual[3].split(',')][which]
+            try:
+                yield [float(el) for el in individual[3].split(',')][which]
+            except Exception as e:
+                print [float(el) for el in individual[3].split(',')], which, i, individual
+                raise e
 
 
 def autolabel(ax, rects, xpos='center', bias=0.0):
@@ -1441,12 +1448,14 @@ if __name__ == '__main__':
     for ind, el in enumerate(data_min):
         print ind, el
 
-    if self.reference_design is None:
+    if swda.reference_design is None:
         # add reference design results manually as follows:
         O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
         O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
     else:
-        print swda.reference_design
+        print '-------------------- Here goes the reference design:'
+        for el in swda.reference_design[1:]:
+            print el,
         quit()
         # O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
         # O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)        

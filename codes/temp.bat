@@ -1,1 +1,1 @@
-python "D:/OneDrive - UW-Madison/c/codes/method_parallel_solve_4jmag.py" D:/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz/static-femm/sweeping/ 5
+python "D:/OneDrive - UW-Madison/c/codes/method_parallel_solve_4jmag.py" D:/femm42/run#99/ind#0000/ 5

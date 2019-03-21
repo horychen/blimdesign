@@ -168,7 +168,7 @@ class FEMM_Solver(object):
         self.im = im
         self.dir_codes = im.fea_config_dict['dir_codes']
 
-        # evaluation only or otimiazation 
+        # evaluate initial design only or optimize
         if im.bool_initial_design == True:
             self.dir_run = im.fea_config_dict['dir_femm_files'] + im.fea_config_dict['model_name_prefix'] + '/'
 
@@ -178,20 +178,23 @@ class FEMM_Solver(object):
 
             if flag_read_from_jmag == True:
                 if self.individual_index is not None:
-                    self.dir_run += 'static-jmag/' + 'ind%04d'%(self.individual_index)
+                    self.dir_run += 'static-jmag/' + 'ind#%04d/'%(self.individual_index)
                 else:
                     self.dir_run += 'static-jmag/'
                 if not os.path.exists(self.dir_run):
                     os.makedirs(self.dir_run)
             else:
                 if self.individual_index is not None:
-                    self.dir_run += 'static-femm/' + 'ind%04d'%(self.individual_index)
+                    self.dir_run += 'static-femm/' + 'ind#%04d/'%(self.individual_index)
                 else:
                     self.dir_run += 'static-femm/'
                 if not os.path.exists(self.dir_run):
                     os.makedirs(self.dir_run)
         else:
-            self.dir_run = im.fea_config_dict['dir_femm_files'] + im.fea_config_dict['run_folder']
+            if self.individual_index is not None:
+                self.dir_run = im.fea_config_dict['dir_femm_files'] + im.fea_config_dict['run_folder'] +  'ind#%04d/'%(self.individual_index)
+            else:
+                self.dir_run = im.fea_config_dict['dir_femm_files'] + im.fea_config_dict['run_folder']
 
             if not os.path.exists(self.dir_run):
                 logger = logging.getLogger(__name__)
@@ -319,29 +322,40 @@ class FEMM_Solver(object):
             block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit='r%s'%(self.rotor_phase_name_list[0]), turns=-1) # However, this turns=-1 is not effective for PARALLEL_CONNECTED circuit
 
         # Stator Winding
-        npb = im.number_parallel_branch # DPNV inherent parallel branch number 
-        if self.flag_static_solver == True: #self.freq == 0: # static 
-                femm.mi_addcircprop('dU', self.dict_stator_current_function[3](0.0), SERIES_CONNECTED)
-                femm.mi_addcircprop('dV', self.dict_stator_current_function[4](0.0), SERIES_CONNECTED)
-                femm.mi_addcircprop('dW', self.dict_stator_current_function[5](0.0), SERIES_CONNECTED)
-                femm.mi_addcircprop('bU', self.dict_stator_current_function[0](0.0), SERIES_CONNECTED)
-                femm.mi_addcircprop('bV', self.dict_stator_current_function[1](0.0), SERIES_CONNECTED)
-                femm.mi_addcircprop('bW', self.dict_stator_current_function[2](0.0), SERIES_CONNECTED)
+        npb = im.number_parallel_branch # DPNV inherent parallel branch number（如果是用双绕组等效DPNV，那么
+        if self.flag_static_solver == True: #self.freq == 0: 
+            # static solver
+            femm.mi_addcircprop('dU', self.dict_stator_current_function[3](0.0), SERIES_CONNECTED)
+            femm.mi_addcircprop('dV', self.dict_stator_current_function[4](0.0), SERIES_CONNECTED)
+            femm.mi_addcircprop('dW', self.dict_stator_current_function[5](0.0), SERIES_CONNECTED)
+            femm.mi_addcircprop('bU', self.dict_stator_current_function[0](0.0), SERIES_CONNECTED)
+            femm.mi_addcircprop('bV', self.dict_stator_current_function[1](0.0), SERIES_CONNECTED)
+            femm.mi_addcircprop('bW', self.dict_stator_current_function[2](0.0), SERIES_CONNECTED)
         else: # eddy current solver
-            if im.CommutatingSequence == 1:
+            if im.fea_config_dict['DPNV_separate_winding_implementation'] == True or im.fea_config_dict['DPNV'] == False:
+                # either a separate winding or a DPNV winding implemented as a separate winding
+                ampD = im.DriveW_CurrentAmp/npb
+                ampB = im.BeariW_CurrentAmp
+            else:
+                # case: DPNV as an actual two layer winding
+                ampD = im.DriveW_CurrentAmp/npb
+                ampB = ampD
+
+            if im.CommutatingSequenceD == 1:
                 MyCommutatingSequence = ['-', '+'] # 2 pole
             else:
                 MyCommutatingSequence = ['+', '-'] # 4 pole legacy
-            femm.mi_addcircprop('dU', '%g'                             %(im.DriveW_CurrentAmp/npb), SERIES_CONNECTED)
-            femm.mi_addcircprop('dV', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/npb, MyCommutatingSequence[0]), SERIES_CONNECTED)
-            femm.mi_addcircprop('dW', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/npb, MyCommutatingSequence[1]), SERIES_CONNECTED)
+
+            femm.mi_addcircprop('dU', '%g'                             %(ampD), SERIES_CONNECTED)
+            femm.mi_addcircprop('dV', '%g*(-0.5%sI*0.8660254037844386)'%(ampD, MyCommutatingSequence[0]), SERIES_CONNECTED)
+            femm.mi_addcircprop('dW', '%g*(-0.5%sI*0.8660254037844386)'%(ampD, MyCommutatingSequence[1]), SERIES_CONNECTED)
             if fraction == 1: # I thought PS can be realized in FEMM but I was wrong, this fraction==1 case should be deleted!
                 # femm.mi_addcircprop('bA', '%g'                            %(im.BeariW_CurrentAmp), SERIES_CONNECTED)
                 # femm.mi_addcircprop('bB', '%g*(-0.5+I*0.8660254037844386)'%(im.BeariW_CurrentAmp), SERIES_CONNECTED)
                 # femm.mi_addcircprop('bC', '%g*(-0.5-I*0.8660254037844386)'%(im.BeariW_CurrentAmp), SERIES_CONNECTED)
-                femm.mi_addcircprop('bU', '%g'                             %(im.DriveW_CurrentAmp/npb), SERIES_CONNECTED)
-                femm.mi_addcircprop('bV', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/npb, MyCommutatingSequence[0]), SERIES_CONNECTED)
-                femm.mi_addcircprop('bW', '%g*(-0.5%sI*0.8660254037844386)'%(im.DriveW_CurrentAmp/npb, MyCommutatingSequence[1]), SERIES_CONNECTED)
+                femm.mi_addcircprop('bU', '%g'                             %(ampB), SERIES_CONNECTED)
+                femm.mi_addcircprop('bV', '%g*(-0.5%sI*0.8660254037844386)'%(ampB, MyCommutatingSequence[0]), SERIES_CONNECTED)
+                femm.mi_addcircprop('bW', '%g*(-0.5%sI*0.8660254037844386)'%(ampB, MyCommutatingSequence[1]), SERIES_CONNECTED)
             elif fraction == 4 or fraction == 2: # no bearing current
                 femm.mi_addcircprop('bU', 0, SERIES_CONNECTED)
                 femm.mi_addcircprop('bV', 0, SERIES_CONNECTED)
@@ -355,7 +369,6 @@ class FEMM_Solver(object):
         # torque winding's blocks
         THETA = - angle_per_slot + 0.5*angle_per_slot - 3.0/360 # This 3 deg must be less than 360/Qs/2
         count = 0
-        # if im.fea_config_dict['DPNV_separate_winding_implementation'] == True or im.fea_config_dict['DPNV'] == False:
         # for phase, up_or_down in zip(im.l_rightlayer1,im.l_rightlayer2):
         for phase, up_or_down in zip(im.l41,im.l42):
             circuit_name = 'd' + phase
@@ -795,12 +808,12 @@ class FEMM_Solver(object):
             femm.mi_modifycircprop(circuit_name, 1, self.dict_rotor_current_function[i](time))
 
         # stator current
-        femm.mi_modifycircprop('dA', 1, self.dict_stator_current_function[3](time))
-        femm.mi_modifycircprop('dB', 1, self.dict_stator_current_function[4](time))
-        femm.mi_modifycircprop('dC', 1, self.dict_stator_current_function[5](time))
-        femm.mi_modifycircprop('bA', 1, self.dict_stator_current_function[0](time))
-        femm.mi_modifycircprop('bB', 1, self.dict_stator_current_function[1](time))
-        femm.mi_modifycircprop('bC', 1, self.dict_stator_current_function[2](time))
+        femm.mi_modifycircprop('dU', 1, self.dict_stator_current_function[3](time))
+        femm.mi_modifycircprop('dV', 1, self.dict_stator_current_function[4](time))
+        femm.mi_modifycircprop('dW', 1, self.dict_stator_current_function[5](time))
+        femm.mi_modifycircprop('bU', 1, self.dict_stator_current_function[0](time))
+        femm.mi_modifycircprop('bV', 1, self.dict_stator_current_function[1](time))
+        femm.mi_modifycircprop('bW', 1, self.dict_stator_current_function[2](time))
 
     def run_rotating_static_FEA(self): # deg_per_step is key parameter for this function
         self.flag_static_solver = True
@@ -976,12 +989,12 @@ class FEMM_Solver(object):
 
         dict_stator_current_function = []
         print '[FEMM] Stator Current'                                # -1j is added to be consistent with JMAG
-        self.dict_stator_current_from_EC_FEA = [ ('bA', complex(eval( '-1j*%g'                             %(self.im.BeariW_CurrentAmp) ))  ),
-                                                 ('bB', complex(eval( '-1j*%g*(-0.5+1j*0.8660254037844386)'%(self.im.BeariW_CurrentAmp) ))  ),
-                                                 ('bC', complex(eval( '-1j*%g*(-0.5-1j*0.8660254037844386)'%(self.im.BeariW_CurrentAmp) ))  ),
-                                                 ('dA', complex(eval( '-1j*%g'                             %(self.im.DriveW_CurrentAmp) ))  ),
-                                                 ('dB', complex(eval( '-1j*%g*(-0.5+1j*0.8660254037844386)'%(self.im.DriveW_CurrentAmp) ))  ),
-                                                 ('dC', complex(eval( '-1j*%g*(-0.5-1j*0.8660254037844386)'%(self.im.DriveW_CurrentAmp) ))  )]
+        self.dict_stator_current_from_EC_FEA = [ ('bU', complex(eval( '-1j*%g'                             %(self.im.BeariW_CurrentAmp) ))  ),
+                                                 ('bV', complex(eval( '-1j*%g*(-0.5+1j*0.8660254037844386)'%(self.im.BeariW_CurrentAmp) ))  ),
+                                                 ('bW', complex(eval( '-1j*%g*(-0.5-1j*0.8660254037844386)'%(self.im.BeariW_CurrentAmp) ))  ),
+                                                 ('dU', complex(eval( '-1j*%g'                             %(self.im.DriveW_CurrentAmp) ))  ),
+                                                 ('dV', complex(eval( '-1j*%g*(-0.5+1j*0.8660254037844386)'%(self.im.DriveW_CurrentAmp) ))  ),
+                                                 ('dW', complex(eval( '-1j*%g*(-0.5-1j*0.8660254037844386)'%(self.im.DriveW_CurrentAmp) ))  )]
 
         self.dict_stator_current_from_EC_FEA = OrderedDict(self.dict_stator_current_from_EC_FEA)
         dict_stator_current_function = []
@@ -1637,12 +1650,12 @@ class FEMM_Solver(object):
                 # i1_re,i1_im, v1_re,v1_im, flux1_re,flux1_im = femm.mo_getcircuitproperties("dA")
                 # i2_re,i2_im, v2_re,v2_im, flux2_re,flux2_im = femm.mo_getcircuitproperties("bA")
                 # i3_re,i3_im, v3_re,v3_im, flux3_re,flux3_im = femm.mo_getcircuitproperties("rA")
-            dict_circuits['dA'] = femm.mo_getcircuitproperties("dA")
-            dict_circuits['dB'] = femm.mo_getcircuitproperties("dB")
-            dict_circuits['dC'] = femm.mo_getcircuitproperties("dC")
-            dict_circuits['bA'] = femm.mo_getcircuitproperties("bA")
-            dict_circuits['bB'] = femm.mo_getcircuitproperties("bB")
-            dict_circuits['bC'] = femm.mo_getcircuitproperties("bC")
+            dict_circuits['dU'] = femm.mo_getcircuitproperties("dU")
+            dict_circuits['dV'] = femm.mo_getcircuitproperties("dV")
+            dict_circuits['dW'] = femm.mo_getcircuitproperties("dW")
+            dict_circuits['bU'] = femm.mo_getcircuitproperties("bU")
+            dict_circuits['bV'] = femm.mo_getcircuitproperties("bV")
+            dict_circuits['bW'] = femm.mo_getcircuitproperties("bW")
             for i in range(self.rotor_slot_per_pole):
                 circuit_name = 'r%s'%(self.rotor_phase_name_list[i])
                 dict_circuits[circuit_name] = femm.mo_getcircuitproperties(circuit_name)
@@ -1652,12 +1665,12 @@ class FEMM_Solver(object):
             with open(self.dir_run_sweeping + "results.txt", "a") as f:
 
                 results_circuits = "[DW] %g + j%g A. %g + j%g V. %g + j%g Wb. [BW] %g + j%g A. %g + j%g V. %g + j%g Wb. [BAR] %g + j%g A. %g + j%g V. %g + j%g Wb. " \
-                    % ( np.real(dict_circuits['dA'][0]), np.imag(dict_circuits['dA'][0]),
-                        np.real(dict_circuits['dA'][1]), np.imag(dict_circuits['dA'][1]),
-                        np.real(dict_circuits['dA'][2]), np.imag(dict_circuits['dA'][2]),
-                        np.real(dict_circuits['bA'][0]), np.imag(dict_circuits['bA'][0]),
-                        np.real(dict_circuits['bA'][1]), np.imag(dict_circuits['bA'][1]),
-                        np.real(dict_circuits['bA'][2]), np.imag(dict_circuits['bA'][2]),
+                    % ( np.real(dict_circuits['dU'][0]), np.imag(dict_circuits['dU'][0]),
+                        np.real(dict_circuits['dU'][1]), np.imag(dict_circuits['dU'][1]),
+                        np.real(dict_circuits['dU'][2]), np.imag(dict_circuits['dU'][2]),
+                        np.real(dict_circuits['bU'][0]), np.imag(dict_circuits['bU'][0]),
+                        np.real(dict_circuits['bU'][1]), np.imag(dict_circuits['bU'][1]),
+                        np.real(dict_circuits['bU'][2]), np.imag(dict_circuits['bU'][2]),
                         np.real(dict_circuits['rA'][0]), np.imag(dict_circuits['rA'][0]),
                         np.real(dict_circuits['rA'][1]), np.imag(dict_circuits['rA'][1]),
                         np.real(dict_circuits['rA'][2]), np.imag(dict_circuits['rA'][2]))

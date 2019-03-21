@@ -249,42 +249,43 @@ if True:
     # write FEA config to disk
     sw.write_to_file_fea_config_dict()
 
-    try: 
+    if True:
+    # try: 
         de_generator = sw.de()
         # run
         # result = list(de_generator)
         for result in de_generator:
             print result
-    except Exception as e:
-        print 'See log file for the error msg.'
-        logger.error(u'Optimization aborted.', exc_info=True)
+    # except Exception as e:
+    #     print 'See log file for the error msg.'
+    #     logger.error(u'Optimization aborted.', exc_info=True)
 
-        raise e
+    #     raise e
 
-        # # 避免死循环
-        # count_abort+1
-        # if count_abort > 10:
-        #     quit()
+    #     # # 避免死循环
+    #     # count_abort+1
+    #     # if count_abort > 10:
+    #     #     quit()
 
-        # # quit()
-        # try:
-        #     # reload for changed codes
-        #     reload(population) # relaod for JMAG's python environment
-        #     reload(FEMM_Solver)
-        #     reload(utility)
+    #     # # quit()
+    #     # try:
+    #     #     # reload for changed codes
+    #     #     reload(population) # relaod for JMAG's python environment
+    #     #     reload(FEMM_Solver)
+    #     #     reload(utility)
 
-        #     # notification via email
-        #     # utility.send_notification(u'Optimization aborted.')
+    #     #     # notification via email
+    #     #     # utility.send_notification(u'Optimization aborted.')
         
-        #     # msg = 'Pop status report\n------------------------\n'
-        #     # msg += '\n'.join('%.16f'%(x) for x in sw.fitness) + '\n'
-        #     # msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)    
-        #     # logger.debug(msg)
+    #     #     # msg = 'Pop status report\n------------------------\n'
+    #     #     # msg += '\n'.join('%.16f'%(x) for x in sw.fitness) + '\n'
+    #     #     # msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)    
+    #     #     # logger.debug(msg)
 
-        #     # sw.bool_auto_recovered_run = True
-        # except:
-        #     pass
-    else:
-        logger.info('Done.')
-        utility.send_notification('Done.')
+    #     #     # sw.bool_auto_recovered_run = True
+    #     # except:
+    #     #     pass
+    # else:
+    #     logger.info('Done.')
+    #     utility.send_notification('Done.')
 
