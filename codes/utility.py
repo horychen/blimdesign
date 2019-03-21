@@ -312,6 +312,7 @@ def add_plots(axeses, dm, title=None, label=None, zorder=None, time_list=None, s
     info += '\n\tTorque Ripple (Peak-to-Peak) %g Nm'% ( max(torque[-range_ss:]) - min(torque[-range_ss:]))
     info += '\n\tForce Mag Ripple (Peak-to-Peak) %g N'% (sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1])
 
+    # plot for torque and force
     ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
     ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs, alpha=alpha, label=label, zorder=zorder)
     ax = axeses[1][0]; ax.plot(time_list, 100*sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
@@ -552,6 +553,8 @@ def read_csv_results_4_comparison_eddycurrent(study_name, path_prefix):
 
 def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dict, axeses, femm_solver_data=None):
 
+    data_results = []
+
     ################################################################
     # TranRef
     ################################################################   
@@ -561,7 +564,7 @@ def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dic
     # t,T,Fx,Fy,Fabs = time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list
     end_time = time_list[-1]
 
-    sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=10*fea_config_dict['number_of_steps_2ndTTS']) # samples in the tail that are in steady state
+    sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=1*fea_config_dict['number_of_steps_2ndTTS']) # samples in the tail that are in steady state
     str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
         add_plots( axeses, dm,
                       title='TranRef',#tran_study_name,
@@ -572,8 +575,8 @@ def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dic
                       torque=TorCon_list,
                       range_ss=sfv.range_ss)
     str_results += '\n\tbasic info:' +   ''.join(  [str(el) for el in basic_info])
-    print str_results
-    print torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
+    # print str_results
+    data_results.extend(torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle)
 
     ################################################################
     # Tran2TSS
@@ -591,8 +594,8 @@ def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dic
                       torque=TorCon_list,
                       range_ss=sfv.range_ss)
     str_results += '\n\tbasic info:' +   ''.join(  [str(el) for el in basic_info])
-    print str_results
-    print torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
+    # print str_results
+    data_results.extend(torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle)
 
 
     ################################################################
@@ -625,8 +628,8 @@ def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dic
               sfv=sfv,
               torque=ec_torque,
               range_ss=sfv.range_ss) # samples in the tail that are in steady state
-    print str_results
-    print torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
+    # print str_results
+    data_results.extend(torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle)
 
 
     ################################################################
@@ -659,8 +662,8 @@ def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dic
               torque=femm_torque,
               range_ss=sfv.range_ss,
               alpha=0.5) 
-    print str_results
-    print torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
+    # print str_results
+    data_results.extend(torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle)
 
 
     # # for easy access to codes
@@ -668,7 +671,7 @@ def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dic
     # str_machine_results = ','.join('%g'%(el) for el in machine_results if el is not None) # note that femm_loss_list can be None called by release_design.py
     # return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
 
-
+    return data_results
 
 
 class data_manager(object):

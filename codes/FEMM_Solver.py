@@ -146,7 +146,8 @@ class VanGogh_FEMM(VanGogh):
 
 class FEMM_Solver(object):
 
-    def __init__(self, im, flag_read_from_jmag=True, freq=0, individual_index=None):
+    def __init__(self, im, flag_read_from_jmag=True, freq=0, individual_index=None, bool_static_fea_loss=False):
+        self.bool_static_fea_loss = bool_static_fea_loss
         self.individual_index = individual_index
         self.vangogh = VanGogh_FEMM(im)
 
@@ -816,8 +817,8 @@ class FEMM_Solver(object):
         femm.mi_modifycircprop('bW', 1, self.dict_stator_current_function[2](time))
 
     def run_rotating_static_FEA(self): # deg_per_step is key parameter for this function
-        PERIOD = 180 # deg
-        PERIOD = 90 # deg
+        # STATIC_RUN_PERIOD = 180 # deg
+        STATIC_RUN_PERIOD = 90 # deg
 
         self.flag_static_solver = True
         self.flag_eddycurrent_solver = False
@@ -866,7 +867,7 @@ class FEMM_Solver(object):
                 femm.mi_saveas(output_file_name + '.fem') # locked-rotor test
         else: # rotating static FEA
 
-            self.list_rotor_position_in_deg = np.arange(0, PERIOD, self.deg_per_step)
+            self.list_rotor_position_in_deg = np.arange(0, STATIC_RUN_PERIOD, self.deg_per_step)
             self.list_name = ['%04d'%(10*el) for el in self.list_rotor_position_in_deg] # with no suffix
 
             femm.mi_saveas(self.output_file_name + self.list_name[0] + '.fem')
@@ -1814,42 +1815,43 @@ class FEMM_Solver(object):
 
         femm.closefemm()
         handle_torque.close()
+        logger.debug('FEMM with %g deg per .fem file takes %g sec.'%(self.deg_per_step, clock_time() - time_init))
 
-        if False: 
-            from pylab import subplots, show
-            def test(Bx_data, base_freq):
-                print 'There are in total', len(Bx_data), 'elements per step.'
-                print 'There are in total', len(Bx_data[0]), 'steps.'
+        if self.bool_static_fea_loss == True:
+            if False: 
+                from pylab import subplots, show
+                def test(Bx_data, base_freq):
+                    print 'There are in total', len(Bx_data), 'elements per step.'
+                    print 'There are in total', len(Bx_data[0]), 'steps.'
 
-                fig_dft, axes_dft = subplots(2,1)
-                fig, ax = subplots()
-                for id_element in range(0, len(Bx_data), 200): # typical id
-                    Bx_waveform = Bx_data[id_element]
-                    ax.plot(np.arange(0, 180, self.deg_per_step), Bx_waveform, label=id_element, alpha=0.3)
+                    fig_dft, axes_dft = subplots(2,1)
+                    fig, ax = subplots()
+                    for id_element in range(0, len(Bx_data), 200): # typical id
+                        Bx_waveform = Bx_data[id_element]
+                        ax.plot(np.arange(0, 180, self.deg_per_step), Bx_waveform, label=id_element, alpha=0.3)
 
-                    # DFT
-                    samp_freq = 1. / (self.deg_per_step/180.*pi / self.im.Omega)
-                    utility.basefreqDFT(Bx_waveform, samp_freq, ax_time_domain=axes_dft[0], ax_freq_domain=axes_dft[1], base_freq=base_freq)
-                ax.legend()
-            test(self.stator_Bx_data, 500)
-            test(self.stator_By_data, 500)
-            test(self.rotor_Bx_data, 1)
-            test(self.rotor_By_data, 1)
-            show()
+                        # DFT
+                        samp_freq = 1. / (self.deg_per_step/180.*pi / self.im.Omega)
+                        utility.basefreqDFT(Bx_waveform, samp_freq, ax_time_domain=axes_dft[0], ax_freq_domain=axes_dft[1], base_freq=base_freq)
+                    ax.legend()
+                test(self.stator_Bx_data, 500)
+                test(self.stator_By_data, 500)
+                test(self.rotor_Bx_data, 1)
+                test(self.rotor_By_data, 1)
+                show()
 
-        temp = self.get_iron_loss()
-        print 'iron loss', temp
-        temp = self.get_copper_loss(self.stator_slot_area, self.rotor_slot_area)
-        print 'copper loss', temp
+            temp = self.get_iron_loss()
+            print 'iron loss', temp
+            temp = self.get_copper_loss(self.stator_slot_area, self.rotor_slot_area)
+            print 'copper loss', temp
 
-        # np.savetxt(f, np.c_[self.stator_Bx_data])
-        np.savetxt(self.dir_run + 'stator_Bx_data.txt', self.stator_Bx_data)
-        np.savetxt(self.dir_run + 'stator_By_data.txt', self.stator_By_data)
-        np.savetxt(self.dir_run + 'stator_Area_data.txt', self.stator_Area_data)
-        np.savetxt(self.dir_run + 'rotor_Bx_data.txt', self.rotor_Bx_data)
-        np.savetxt(self.dir_run + 'rotor_By_data.txt', self.rotor_By_data)
-        np.savetxt(self.dir_run + 'rotor_Area_data.txt', self.rotor_Area_data)
-
+            # np.savetxt(f, np.c_[self.stator_Bx_data])
+            np.savetxt(self.dir_run + 'stator_Bx_data.txt', self.stator_Bx_data)
+            np.savetxt(self.dir_run + 'stator_By_data.txt', self.stator_By_data)
+            np.savetxt(self.dir_run + 'stator_Area_data.txt', self.stator_Area_data)
+            np.savetxt(self.dir_run + 'rotor_Bx_data.txt', self.rotor_Bx_data)
+            np.savetxt(self.dir_run + 'rotor_By_data.txt', self.rotor_By_data)
+            np.savetxt(self.dir_run + 'rotor_Area_data.txt', self.rotor_Area_data)
 
 
     def read_Torque_and_B_data(self, ans_file, rotation_operator, handle_torque):

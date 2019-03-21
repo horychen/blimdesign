@@ -20,9 +20,12 @@ fea_config_dict['Active_Qr'] = 36
 run_list = [1,1,1,1,0] # Static FEA with JMAG is too slow, so use FEMM to do that part
 run_list = [1,1,1,0,0] # TranRef is replaced by Tran2TSSProlong
 
-run_folder = r'run#99/' # Test 
-# run_folder = r'run#98/' # Test before send scripts to server
+run_folder = r'run#99/' # Test run for single one design
+run_folder = r'run#98/' # Test run for the loop
+run_folder = r'run#97/' # Test run for the loop
+run_folder = r'run#96/' # Test run for the loop
 
+# run_folder = r'run#90/' # turn off plots in add_plots and check number_cycles_prolonged is applied in number_of_total_steps
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -33,8 +36,8 @@ build_model_name_prefix(fea_config_dict)
 
 # fea_config_dict['femm_deg_per_step'] = 0.25 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
 # fea_config_dict['femm_deg_per_step'] = 1 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
-fea_config_dict['femm_deg_per_step'] = 0.5 #0.1 # deg # 5 deg will cause error when DFT getting iron loss results
-print 'femm_deg_per_step is', fea_config_dict['femm_deg_per_step'], 'deg (Qs=24, p=2)'
+fea_config_dict['femm_deg_per_step'] = 2 #0.5 #0.1 # deg # 5 deg will cause error when DFT getting iron loss results
+logger.info('femm_deg_per_step is %g deg (Qs=24, p=2).'%(fea_config_dict['femm_deg_per_step']))
 
 
 ''' 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG)
@@ -54,8 +57,8 @@ sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)
 sw.generate_pop()
 
 im_initial = sw.im
-print im_initial.l21
-print im_initial.l22
+# print im_initial.l21
+# print im_initial.l22
 
 ''' 3. Initialize FEMM Solver
 '''
@@ -95,6 +98,8 @@ solver_femm = FEMM_Solver.FEMM_Solver(im_initial, flag_read_from_jmag=False, fre
 
 
 # 50 Random Design Evaluation for IEMDC 2019
+from time import time as clock_time
+from time import sleep
 import numpy as np
 min_b, max_b = np.asarray(sw.de_config_dict['bounds']).T 
 diff = np.fabs(min_b - max_b)
@@ -110,21 +115,33 @@ for ind, individual_denorm in enumerate(pop_denorm):
         # im_variant.csv_previous_solve = sw.dir_csv_output_folder + im_variant.get_individual_name() + u"Freq" + '_circuit_current.csv'
 
     # FEMM Static Solver with pre-determined rotor currents from JMAG
-    solver_jmag = FEMM_Solver.FEMM_Solver(im_variant, individual_index=ind, flag_read_from_jmag=True, freq=0) # static
+    solver_jmag = FEMM_Solver.FEMM_Solver(im_variant, individual_index=ind, flag_read_from_jmag=True, freq=0, bool_static_fea_loss=False) # static
     if not solver_jmag.has_results():
+        utility.blockPrint()
         solver_jmag.run_rotating_static_FEA()
         solver_jmag.parallel_solve()
-    data_jmag = solver_jmag.show_results_static(bool_plot=False)
+        utility.enablePrint()
+    # while True:
+    #     try:
+    #         solver_jmag.time_spent_femm_static
+    #     except:
+    #         print 'Sleep...'
+    #         sleep(1)
+    #     else:
+    #         break
+    data_solver_jmag = solver_jmag.show_results_static(bool_plot=False)
 
     # JMAG results (EC-Rotate and Tran2TSS and Tran2TSSProlongRef)
-    utility.collect_jmag_Tran2TSSProlong_results(im_variant, sw.dir_csv_output_folder, sw.fea_config_dict, sw.axeses, femm_solver_data=data_jmag)
+    data_results = utility.collect_jmag_Tran2TSSProlong_results(im_variant, sw.dir_csv_output_folder, sw.fea_config_dict, sw.axeses, femm_solver_data=data_solver_jmag)
 
     # write to file for inspection
+    with open(self.dir_run + 'iemdc_data.txt', 'a') as f:
+        f.write(','.join(['%g'%(el) for el in [ind] + data_results]))
 
-    from pylab import show
-    show()
-    quit()
-    raise Exception('Testing')
+    # from pylab import show
+    # show()
+    # quit()
+    # raise Exception('Testing')
 
 # 绘制K线图表征最大误差和最小误差
 

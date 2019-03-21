@@ -65,7 +65,7 @@ fea_config_dict = {
     # Sysetm Control
     ##########################
     'Active_Qr':16, #16, #32,
-    'TranRef-StepPerCycle':40,
+    'TranRef-StepPerCycle':80, # FEMM: 5 deg   # 360 to be precise as FEMM: 0.5 deg 
     'OnlyTableResults':False, # modified later according to pc_name
         # multiple cpu (SMP=2)
         # use directSolver over ICCG Solver
@@ -129,10 +129,10 @@ def build_model_name_prefix(fea_config_dict):
 print build_model_name_prefix(fea_config_dict)
 
 # FEMM Static FEA
-fea_config_dict['femm_deg_per_step'] = 0.25 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
+fea_config_dict['femm_deg_per_step'] = None # 0.25 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
 # fea_config_dict['femm_deg_per_step'] = 1 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period
 # fea_config_dict['femm_deg_per_step'] = 0.1 #0.5 # deg
-print 'femm_deg_per_step is', fea_config_dict['femm_deg_per_step'], 'deg (Qs=24, p=2)'
+# print 'femm_deg_per_step is', fea_config_dict['femm_deg_per_step'], 'deg (Qs=24, p=2)'
 
 
 # Debug

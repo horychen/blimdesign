@@ -12,7 +12,7 @@ print 'Guesses: alpha_i, efficiency, power_factor.'
 # model_name_prefix = 'Qr_loop_B' # longer solve time, less models, better mesh, higher turns for bearing winding.
 # model_name_prefix = 'EC_Rotate_PS' # longer solve time, less models, better mesh, higher turns for bearing winding.
 # model_name_prefix = 'ECRot_PS_Opti' # longer solve time, less models, better mesh, higher turns for bearing winding.
-model_name_prefix = 'StaticFEA_PS_Opti' # Fix Bug for the rotor slot radius as half of rotor tooth width
+model_name_prefix = 'StaticFEA_PS_Opti_iemdc_digest' # Fix Bug for the rotor slot radius as half of rotor tooth width
 
 loc_txt_file = '../pop/%s.txt'%(model_name_prefix)
 f=open(loc_txt_file, 'w')
