@@ -24,6 +24,7 @@ run_folder = r'run#99/' # Test run for single one design
 run_folder = r'run#98/' # Test run for the loop
 run_folder = r'run#97/' # Test run for the loop
 run_folder = r'run#96/' # Test run for the loop
+run_folder = r'run#95/' # Test run for the loop
 
 # run_folder = r'run#90/' # turn off plots in add_plots and check number_cycles_prolonged is applied in number_of_total_steps
 

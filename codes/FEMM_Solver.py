@@ -1905,37 +1905,72 @@ class FEMM_Solver(object):
         
         rho_Copper = (3.76*TEMPERATURE_OF_COIL+873)*1e-9/55.
 
-        # Copper Loss - Stator Slot
-        coil_pitch_slot_count = im.Qs / im.DriveW_poles # 整距！        
-        length_endArcConductor = coil_pitch_slot_count/im.Qs * (0.5*(im.Radius_OuterRotor + im.Length_AirGap + im.Radius_InnerStatorYoke)) * 2*pi # [mm] arc length = pi * diameter  
-        length_conductor = (im.stack_length + length_endArcConductor) * 1e-3 # mm to m  ## imagine: two conductors + two end conducotors = one loop (in and out)
-        number_parallel_branch = 2.
-        area_conductor   = (stator_slot_area) * STATOR_SLOT_FILL_FACTOR / im.DriveW_turns # TODO: 这里绝缘用槽满率算进去了，但是没有考虑圆形导体之间的空隙？槽满率就是空隙，这里没有考虑绝缘的面积占用。
-        resistance_per_conductor = rho_Copper * length_conductor / (area_conductor * number_parallel_branch)
-        current_rms_value = im.DriveW_CurrentAmp / 1.4142135623730951 * (1./0.975) # 97.5 of stator current is for drive winding
-        stator_copper_loss = resistance_per_conductor*im.DriveW_turns * current_rms_value**2 * im.Qs
-        print 'stator_copper_loss', stator_copper_loss
-        # im.DriveW_Rs = resistance_per_conductor * im.DriveW_turns * im.Qs / 3. # resistance per phase
+        if False: # 4 pole motor (full pitch)
+            # Copper Loss - Stator Slot
+            coil_pitch_by_slot_count = im.Qs / im.DriveW_poles # 整距！        
+            length_endArcConductor = coil_pitch_by_slot_count/im.Qs * (0.5*(im.Radius_OuterRotor + im.Length_AirGap + im.Radius_InnerStatorYoke)) * 2*pi # [mm] arc length = pi * diameter  
+            length_conductor = (im.stack_length + length_endArcConductor) * 1e-3 # mm to m  ## imagine: two conductors + two end conducotors = one loop (in and out)
+            number_parallel_branch = 2.
+            area_conductor   = (stator_slot_area) * STATOR_SLOT_FILL_FACTOR / im.DriveW_turns # TODO: 这里绝缘用槽满率算进去了，但是没有考虑圆形导体之间的空隙？槽满率就是空隙，这里没有考虑绝缘的面积占用。
+            resistance_per_conductor = rho_Copper * length_conductor / (area_conductor * number_parallel_branch)
+            current_rms_value = im.DriveW_CurrentAmp / 1.4142135623730951 * (1./0.975) # 97.5 of stator current is for drive winding
+            stator_copper_loss = resistance_per_conductor*im.DriveW_turns * current_rms_value**2 * im.Qs
+            print 'stator_copper_loss', stator_copper_loss
+            # im.DriveW_Rs = resistance_per_conductor * im.DriveW_turns * im.Qs / 3. # resistance per phase
 
-        # Copper Loss - Rotor Slot
-        rotor_copper_loss = 0.0
-        bar_pitch_slot_count = im.Qr / im.DriveW_poles # 整距！
-        length_endArcBar = bar_pitch_slot_count/im.Qr * (im.Radius_OuterRotor - im.Radius_of_RotorSlot) * 2*pi
-        length_bar = (im.stack_length + length_endArcBar) * 1e-3 # mm to m
-        area_bar   = rotor_slot_area * ROTOR_SLOT_FILL_FACTOR 
-        resistance_per_bar = rho_Copper * length_bar / area_bar
-        try:
-            self.list_rotor_current_amp
-        except:
-            if self.flag_read_from_jmag == True:
-                self.read_current_conditions_from_JMAG()
-            else:
-                self.read_current_conditions_from_FEMM()
-        print 'list_rotor_current_amp', self.list_rotor_current_amp
-        for amp in self.list_rotor_current_amp: 
-            current_rms_value = amp / 1.4142135623730951
-            rotor_copper_loss += resistance_per_bar * current_rms_value**2 * im.DriveW_turns # pole-specific rotor winding
-            print 'rotor_copper_loss', rotor_copper_loss
+            # Copper Loss - Rotor Slot
+            rotor_copper_loss = 0.0
+            bar_pitch_by_slot_count = im.Qr / im.DriveW_poles # 整距！
+            length_endArcBar = bar_pitch_by_slot_count/im.Qr * (im.Radius_OuterRotor - im.Radius_of_RotorSlot) * 2*pi
+            length_bar = (im.stack_length + length_endArcBar) * 1e-3 # mm to m
+            area_bar   = rotor_slot_area * ROTOR_SLOT_FILL_FACTOR 
+            resistance_per_bar = rho_Copper * length_bar / area_bar
+            try:
+                self.list_rotor_current_amp
+            except:
+                if self.flag_read_from_jmag == True:
+                    self.read_current_conditions_from_JMAG()
+                else:
+                    self.read_current_conditions_from_FEMM()
+            print 'list_rotor_current_amp', self.list_rotor_current_amp
+            for amp in self.list_rotor_current_amp: 
+                current_rms_value = amp / 1.4142135623730951
+                rotor_copper_loss += resistance_per_bar * current_rms_value**2 * im.DriveW_turns # pole-specific rotor winding
+                print 'rotor_copper_loss', rotor_copper_loss
+
+        else: # 2 pole motor (short pitch)
+            # Copper Loss - Stator Slot
+            coil_pitch_by_slot_count = 9 # 12 = im.Qs / im.DriveW_poles
+            length_endArcConductor = coil_pitch_by_slot_count/im.Qs * (0.5*(im.Radius_OuterRotor + im.Length_AirGap + im.Radius_InnerStatorYoke)) * 2*pi # [mm] arc length = pi * diameter  
+            length_conductor = (im.stack_length + length_endArcConductor) * 1e-3 # mm to m  ## imagine: two conductors + two end conducotors = one loop (in and out)
+            number_parallel_branch = 2.
+            area_conductor   = (stator_slot_area) * STATOR_SLOT_FILL_FACTOR / im.DriveW_turns # Turns per slot
+            resistance_per_conductor = rho_Copper * length_conductor / (area_conductor * number_parallel_branch)
+            current_rms_value = im.DriveW_CurrentAmp / 1.4142135623730951 * (1./0.975) # 97.5 of stator current is for drive winding
+            stator_copper_loss = resistance_per_conductor * current_rms_value**2 * im.DriveW_turns*im.Qs
+            print 'stator_copper_loss', stator_copper_loss
+            # im.DriveW_Rs = resistance_per_conductor * im.DriveW_turns * im.Qs / 3. # resistance per phase
+
+            # Copper Loss - Rotor Slot
+            rotor_copper_loss = 0.0
+            bar_pitch_by_slot_count = im.Qr / im.DriveW_poles # 整距！
+            length_endArcBar = bar_pitch_by_slot_count/im.Qr * (im.Radius_OuterRotor - im.Radius_of_RotorSlot) * 2*pi
+            length_bar = (im.stack_length + length_endArcBar) * 1e-3 # mm to m，这里我们假设端环的导电面积和转子槽面积是一样的，这可能是不准确的。
+            area_bar   = rotor_slot_area * ROTOR_SLOT_FILL_FACTOR 
+            resistance_per_bar = rho_Copper * length_bar / area_bar
+            try:
+                self.list_rotor_current_amp
+            except:
+                if self.flag_read_from_jmag == True:
+                    self.read_current_conditions_from_JMAG()
+                else:
+                    self.read_current_conditions_from_FEMM()
+            print 'list_rotor_current_amp', self.list_rotor_current_amp
+            for amp in self.list_rotor_current_amp: 
+                current_rms_value = amp / 1.4142135623730951
+                rotor_copper_loss += resistance_per_bar * current_rms_value**2 # pole-specific rotor winding
+                # rotor_copper_loss += resistance_per_bar * current_rms_value**2 * im.DriveW_turns # pole-specific rotor winding <- There is a bug! 3/22/2019
+                print 'rotor_copper_loss', rotor_copper_loss        
         print 'stator slot area', stator_slot_area, 'm^2'
         print 'rotor slot area', rotor_slot_area, 'm^2'
 

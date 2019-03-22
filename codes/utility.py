@@ -372,7 +372,7 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
                 copper_loss  = dm.jmag_loss_list[0] + dm.jmag_loss_list[1] 
             else:
                 copper_loss  = dm.femm_loss_list[0] + dm.femm_loss_list[1]
-            iron_loss    = dm.jmag_loss_list[2] 
+            iron_loss = dm.jmag_loss_list[2] 
 
         # some factor to account for rotor iron loss?
         # iron_loss *= 1
@@ -1288,7 +1288,7 @@ def compute_list_cost(weights, rotor_volume, rotor_weight, torque_average, norma
 
 
 def fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, 
-                weights=[ 1,1,1,1,1,  0 ], rotor_volume=None, rotor_weight=None):
+                weights=None, rotor_volume=None, rotor_weight=None):
 
     list_cost = [   30e3 / ( torque_average/rotor_volume ),
                     normalized_torque_ripple         *  20, #       / 0.05 * 0.1
@@ -1300,7 +1300,7 @@ def fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple
     return cost_function
 
 def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss,
-                weights=[ 1,1,1,1,1,  0 ], rotor_volume=None, rotor_weight=None):
+                weights=None, rotor_volume=None, rotor_weight=None):
 
     l_cost_function = []
     for torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss in zip(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ripple, l_normalized_force_error_magnitude, l_force_error_angle, l_total_loss):
@@ -1309,7 +1309,7 @@ def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ri
                         1.0 / ( ss_avg_force_magnitude/rotor_weight ),
                         normalized_force_error_magnitude *  20,
                         force_error_angle                * 0.2,
-                        total_loss                     / 2500. ]
+                        total_loss                       / 2500. ]
         cost_function = np.dot(np.array(list_cost), np.array(weights))
         l_cost_function.append(cost_function)
     return np.array(l_cost_function)
@@ -1363,21 +1363,21 @@ if __name__ == '__main__':
         #                     'crossp':     0.7,
         #                     'popsize':    50, # 50, # 100,
         #                     'iterations': 2*48 } # 148
-
     else: # 2 pole motor denorm: [4.484966, 1.60056, 1.130973, 6.238951254340352, 1.0, 3.0, 1.0]
-        # run#190
-        de_config_dict = {  'original_bounds':[ [   3, 5.6],#--# stator_tooth_width_b_ds
-                                                [ 0.8,   3],   # air_gap_length_delta
-                                                [5e-1,   3],   # Width_RotorSlotOpen 
-                                                [ 3.6,5.45],#--# rotor_tooth_width_b_dr 
-                                                [5e-1,   3],   # Length_HeadNeckRotorSlot
-                                                [   1,  10],   # Angle_StatorSlotOpen
-                                                [5e-1,   3] ], # Width_StatorTeethHeadThickness
-                            'mut':        0.8,
-                            'crossp':     0.7,
-                            'popsize':    30, # 21*7,  # 50, # 100,
-                            'iterations': 100}
-        # run#191
+        # # run#190
+        # de_config_dict = {  'original_bounds':[ [   3, 5.6],#--# stator_tooth_width_b_ds
+        #                                         [ 0.8,   3],   # air_gap_length_delta
+        #                                         [5e-1,   3],   # Width_RotorSlotOpen 
+        #                                         [ 3.6,5.45],#--# rotor_tooth_width_b_dr 
+        #                                         [5e-1,   3],   # Length_HeadNeckRotorSlot
+        #                                         [   1,  10],   # Angle_StatorSlotOpen
+        #                                         [5e-1,   3] ], # Width_StatorTeethHeadThickness
+        #                     'mut':        0.8,
+        #                     'crossp':     0.7,
+        #                     'popsize':    30, # 21*7,  # 50, # 100,
+        #                     'iterations': 100}
+
+        # run#191 # initial design: 4.48497,1.60056,1.13097,6.23895,1,3,1
         de_config_dict = {  'original_bounds':[ [ 2.7, 5.8],#--# stator_tooth_width_b_ds
                                                 [ 0.8,   3],   # air_gap_length_delta
                                                 [5e-1,   3],   # Width_RotorSlotOpen 
@@ -1389,6 +1389,12 @@ if __name__ == '__main__':
                             'crossp':     0.7,
                             'popsize':    30, # 21*7,  # 50, # 100,
                             'iterations': 100}
+
+    O1_weights = [ 1, 0.1,   1, 0.1, 0.1,   0 ]
+    O2_weights = [ 1, 1.0,   1, 1.0, 1.0,   0 ]
+    # O1_weights = [ 1, 0.1,   1, 0.1, 0.1,   0.1 ]
+    # O2_weights = [ 1, 1.0,   1, 1.0, 1.0,   1 ]
+    # O2_weights = [ 0, 0,   0, 0, 0,   1.0 ]
 
     # In fact, you can run a bounds-check from the swarm_data.txt
     # In fact, you can run a bounds-check from the swarm_data.txt
@@ -1429,12 +1435,12 @@ if __name__ == '__main__':
                         list(swda.get_certain_objective_function(5)), #normalized_force_error_magnitude, 
                         list(swda.get_certain_objective_function(6)), #force_error_angle, 
                         array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))), #total_loss, 
-                        weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+                        weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
         # print O2
         # print array(swda.list_cost_function()) - array(O2) # they are the same
         O2 = O2.tolist()
 
-        O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+        O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
         print 'O2_ref=', O2_ref
 
         def my_scatter_plot(x,y,O,xy_ref,O_ref, fig=None, ax=None, s=15):
@@ -1612,7 +1618,6 @@ if __name__ == '__main__':
             # 5 [0.104915] <-In population.py   [0.159409] <- from initial_design.txt
             # 6 [6.53137]  <-In population.py  [10.1256] <- from initial_design.txt
             # 7 [1817.22]  <-In population.py  [1353.49] <- from initial_design.txt
-
     else: # 2 pole motor
         # swda = SwarmDataAnalyzer(run_integer=184)
         # swda = SwarmDataAnalyzer(run_integer=190) # Wrong bounds
@@ -1687,15 +1692,25 @@ if __name__ == '__main__':
 
     if swda.reference_design is None:
         # add reference design results manually as follows:
-        O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
-        O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+        O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+        O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=O1_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
     else:
         print '-------------------- Here goes the reference design:'
         for el in swda.reference_design[1:]:
             print el,
-        quit()
-        # O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
-        # O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)        
+        swda.reference_data = [float(el) for el in swda.reference_design[3].split(',')]
+        O2_ref = fobj_scalar(swda.reference_data[2],
+                             swda.reference_data[4],
+                             swda.reference_data[3],
+                             swda.reference_data[5],
+                             swda.reference_data[6], (swda.reference_data[-5]+swda.reference_data[-1]+swda.reference_data[-2]), 
+                             weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+        O1_ref = fobj_scalar(swda.reference_data[2],
+                             swda.reference_data[4],
+                             swda.reference_data[3],
+                             swda.reference_data[5],
+                             swda.reference_data[6], (swda.reference_data[-5]+swda.reference_data[-1]+swda.reference_data[-2]), 
+                             weights=O1_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
 
     print  'Objective function 1'
     O1 = fobj_list( list(swda.get_certain_objective_function(2)), 
@@ -1704,7 +1719,7 @@ if __name__ == '__main__':
                     list(swda.get_certain_objective_function(5)), 
                     list(swda.get_certain_objective_function(6)), 
                     array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))),
-                    weights=[ 1, 0.1,   1, 0.1, 0.1,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+                    weights=O1_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
     O1_max = []
     O1_min = []
     O1_ax  = figure().gca()
@@ -1728,7 +1743,7 @@ if __name__ == '__main__':
                     list(swda.get_certain_objective_function(5)), 
                     list(swda.get_certain_objective_function(6)), 
                     array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))),
-                    weights=[ 1, 1.0,   1, 1.0, 1.0,   0 ], rotor_volume=rotor_volume, rotor_weight=rotor_weight )
+                    weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight )
     O2_max = []
     O2_min = []
     O2_ax  = figure().gca()
@@ -1777,7 +1792,7 @@ if __name__ == '__main__':
     O2_ecce_ax.annotate('Lower bound', xytext=(0.5, 5.5), xy=(0, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
     O2_ecce_ax.annotate('Upper bound', xytext=(18.0, 5.5),  xy=(20, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
     O2_ecce_ax.set_xlim((-0.5,20.5))
-    O2_ecce_ax.set_ylim((4,14))
+    O2_ecce_ax.set_ylim((0,14)) # 4,14
     O2_ecce_ax.set_xlabel(r'Number of design variant', fontsize=myfontsize)
     O2_ecce_ax.set_ylabel(r'$O_2(x)$ [1]', fontsize=myfontsize)
     fig_ecce.tight_layout()
@@ -1785,19 +1800,27 @@ if __name__ == '__main__':
     show()
     # quit() ###################################
 
-    if swda.reference_design is not None:
+    if swda.reference_design is None:
+        list_plotting_weights = [8, 3, required_torque, 0.1, rotor_weight, 0.2, 10, 2500]
         # manually set this up
-        ref[0] = O2_ref    / 8
-        ref[1] = O1_ref    / 3
-        ref[2] = 19.1197   / required_torque                # 100%
-        ref[3] = 0.0864712 / 0.1                            # 100%
-        ref[4] = 96.9263   / rotor_weight                   # 100% = FRW
-        ref[5] = 0.104915  / 0.2                            # 100%
-        ref[6] = 6.53137   / 10                             # deg
-        ref[7] = (1817.22+216.216+224.706) / 2500           # W
+        ref[0] = O2_ref    / list_plotting_weights[0]
+        ref[1] = O1_ref    / list_plotting_weights[1]
+        ref[2] = 19.1197   / list_plotting_weights[2]                   # 100%
+        ref[3] = 0.0864712 / list_plotting_weights[3]                   # 100%
+        ref[4] = 96.9263   / list_plotting_weights[4]                   # 100% = FRW
+        ref[5] = 0.104915  / list_plotting_weights[5]                   # 100%
+        ref[6] = 6.53137   / list_plotting_weights[6]                   # deg
+        ref[7] = (1817.22+216.216+224.706) / list_plotting_weights[7]   # W
     else:
-        print swda.reference_design
-        quit()
+        list_plotting_weights = [8, 3, required_torque, 0.1, rotor_weight, 0.2, 10, 2100]
+        ref[0] = O2_ref                                                                   / list_plotting_weights[0] 
+        ref[1] = O1_ref                                                                   / list_plotting_weights[1] 
+        ref[2] = swda.reference_data[2]                                                   / list_plotting_weights[2]  # 100%
+        ref[3] = swda.reference_data[3]                                                   / list_plotting_weights[3]  # 100%
+        ref[4] = swda.reference_data[4]                                                   / list_plotting_weights[4]  # 100% = FRW
+        ref[5] = swda.reference_data[5]                                                   / list_plotting_weights[5]  # 100%
+        ref[6] = swda.reference_data[6]                                                   / list_plotting_weights[6]  # deg
+        ref[7] = (swda.reference_data[-5]+swda.reference_data[-1]+swda.reference_data[-2])/ list_plotting_weights[7]  # W
 
     # Maximum
     data_max = array(data_max)
@@ -1806,14 +1829,14 @@ if __name__ == '__main__':
         # data_max[0] = (data_max[0])                   # PF
         # data_max[1] = (data_max[1])                   # eta
         # data_max[1] = efficiency_at_50kW(data_max[7]) # eta@50kW # should use data_min[7] because less loss, higher efficiency
-    data_max[0] = O2_max / 8
-    data_max[1] = O1_max / 3
-    data_max[2] = (data_max[2])/ required_torque  # 100%
-    data_max[3] = (data_max[3])/ 0.1              # 100%
-    data_max[4] = (data_max[4])/ rotor_weight     # 100% = FRW
-    data_max[5] = (data_max[5])/ 0.2              # 100%
-    data_max[6] = (data_max[6])/ 10               # deg
-    data_max[7] = (data_max[7])/ 2500             # W
+    data_max[0] = O2_max       / list_plotting_weights[0]  
+    data_max[1] = O1_max       / list_plotting_weights[1]  
+    data_max[2] = (data_max[2])/ list_plotting_weights[2]  # 100%
+    data_max[3] = (data_max[3])/ list_plotting_weights[3]  # 100%
+    data_max[4] = (data_max[4])/ list_plotting_weights[4]  # 100% = FRW
+    data_max[5] = (data_max[5])/ list_plotting_weights[5]  # 100%
+    data_max[6] = (data_max[6])/ list_plotting_weights[6]  # deg
+    data_max[7] = (data_max[7])/ list_plotting_weights[7]  # W
     y_max_vs_design_parameter_0 = [el[0] for el in data_max]
     y_max_vs_design_parameter_1 = [el[1] for el in data_max]
     y_max_vs_design_parameter_2 = [el[2] for el in data_max]
@@ -1829,14 +1852,14 @@ if __name__ == '__main__':
         # data_min[0] = (data_min[0])                    # PF
         # data_min[1] = (data_min[1])                    # eta
         # data_min[1] = efficiency_at_50kW(data_min[7])  # eta@50kW
-    data_min[0] = O2_min / 8
-    data_min[1] = O1_min / 3
-    data_min[2] = (data_min[2]) / required_torque  # 100%
-    data_min[3] = (data_min[3]) / 0.1              # 100%
-    data_min[4] = (data_min[4]) / rotor_weight     # 100% = FRW
-    data_min[5] = (data_min[5]) / 0.2              # 100%
-    data_min[6] = (data_min[6]) / 10               # deg
-    data_min[7] = (data_min[7]) / 2500             # W
+    data_min[0] = O2_min        / list_plotting_weights[0] 
+    data_min[1] = O1_min        / list_plotting_weights[1] 
+    data_min[2] = (data_min[2]) / list_plotting_weights[2] # 100%
+    data_min[3] = (data_min[3]) / list_plotting_weights[3] # 100%
+    data_min[4] = (data_min[4]) / list_plotting_weights[4] # 100% = FRW
+    data_min[5] = (data_min[5]) / list_plotting_weights[5] # 100%
+    data_min[6] = (data_min[6]) / list_plotting_weights[6] # deg
+    data_min[7] = (data_min[7]) / list_plotting_weights[7] # W
     y_min_vs_design_parameter_0 = [el[0] for el in data_min]
     y_min_vs_design_parameter_1 = [el[1] for el in data_min]
     y_min_vs_design_parameter_2 = [el[2] for el in data_min]
@@ -1904,7 +1927,14 @@ if __name__ == '__main__':
     ax.set_xticks(count)
     # ax.set_xticklabels(('Power Factor [100%]', r'$\eta$@$T_{em}$ [100%]', r'$T_{em}$ [15.9 N]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]')))
     # ax.set_xticklabels(('Power Factor [100%]', r'$O_1$ [3]', r'$T_{em}$ [15.9 N]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]'))
-    ax.set_xticklabels((r'$O_2$ [8]', r'$O_1$ [3]', r'$T_{em}$ [15.9 Nm]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]'))
+    ax.set_xticklabels(('$O_2$ [%g]'               %(list_plotting_weights[0]), 
+                        '$O_1$ [%g]'               %(list_plotting_weights[1]), 
+                        '$T_{em}$ [%g Nm]'         %(list_plotting_weights[2]), 
+                        '$T_{rip}$ [%g%%]'         %(list_plotting_weights[3]*100), 
+                        '$|F|$ [%g N]'             %(list_plotting_weights[4]), 
+                        '    $E_m$ [%g%%]'         %(list_plotting_weights[5]*100), 
+                        '      $E_a$ [%g deg]'     %(list_plotting_weights[6]), 
+                        '$P_{\\rm Cu,Fe}$ [%g kW]' %(list_plotting_weights[7]*1e-3) ))
     ax.grid()
     fig.tight_layout()
     # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\sensitivity_results.png', dpi=150)
