@@ -1136,7 +1136,7 @@ class SwarmDataAnalyzer(object):
 
         self.number_of_designs = len(self.buf) / 21 # 此21是指每个个体的结果占21行，非彼20+1哦。
 
-        if bool_sensitivity_analysis:
+        if bool_sensitivity_analysis:            
             if self.number_of_designs == 21*7:
                 print 'These are legacy results without the initial design within the swarm_data.txt. '
 
@@ -1317,7 +1317,7 @@ def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ri
 
 # Basic information
 if __name__ == '__main__':
-    print 'Make sure your swarm_data.txt contains only 21x7 designs.'*3
+    
     if False: # 4 pole motor
         required_torque = 15.9154943092 #Nm
         Radius_OuterRotor = 47.092753
@@ -1428,10 +1428,12 @@ if __name__ == '__main__':
     # Pareto Plot or Correlation Plot
     if True:
         # swda = SwarmDataAnalyzer(run_integer=121, bool_sensitivity_analysis=False) # 4 pole Qr=32 motor for ecce19 digest
-        # O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+        # torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss = 19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706)
+        # O2_ref = fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
 
         swda = SwarmDataAnalyzer(run_integer=193, bool_sensitivity_analysis=False) # 2 pole Qr=16 motor for NineSigma
-        O2_ref = fobj_scalar(13.8431,107.522,0.046109,0.035044,2.17509, (1388.12+433.332+251.127), weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight) # reference design is the same from the sensitivty analysis
+        torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss = 13.8431,107.522,0.046109,0.035044,2.17509, (1388.12+433.332+251.127)
+        O2_ref = fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight) # reference design is the same from the sensitivty analysis
 
         print 'O2_ref=', O2_ref
         # print swda.list_cost_function()
@@ -1479,11 +1481,11 @@ if __name__ == '__main__':
         # fig, axeses = subplots(2, 2, sharex=False, dpi=150, figsize=(10, 8), facecolor='w', edgecolor='k')
         fig.subplots_adjust(right=0.9, hspace=0.21, wspace=0.11) # won't work after I did something. just manual adjust!
 
-
+        # Use FRW and TRV
         if True:
             # TRV vs Torque Ripple
             ax = axeses[0][0]
-            xy_ref = (19.1197/rotor_volume/1e3, 0.0864712) # from run#117
+            xy_ref = (torque_average/rotor_volume/1e3, normalized_torque_ripple) # from run#117
             x, y = array(list(swda.get_certain_objective_function(2)))/rotor_volume/1e3, list(swda.get_certain_objective_function(3))
             x = x.tolist()
             my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
@@ -1492,7 +1494,7 @@ if __name__ == '__main__':
 
             # FRW vs Ea
             ax = axeses[0][1]
-            xy_ref = (96.9263/rotor_weight, 6.53137)
+            xy_ref = (ss_avg_force_magnitude/rotor_weight, force_error_angle)
             x, y = array(list(swda.get_certain_objective_function(4)))/rotor_weight, list(swda.get_certain_objective_function(6))
             x = x.tolist()
             my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
@@ -1501,7 +1503,7 @@ if __name__ == '__main__':
 
             # FRW vs Em
             ax = axeses[1][0]
-            xy_ref = (96.9263/rotor_weight, 0.104915)
+            xy_ref = (ss_avg_force_magnitude/rotor_weight, normalized_force_error_magnitude)
             x, y = array(list(swda.get_certain_objective_function(4)))/rotor_weight, list(swda.get_certain_objective_function(5))
             x = x.tolist()
             my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
@@ -1510,7 +1512,7 @@ if __name__ == '__main__':
 
             # Em vs Ea
             ax = axeses[1][1]
-            xy_ref = (0.104915, 6.53137)
+            xy_ref = (normalized_force_error_magnitude, force_error_angle)
             x, y = list(swda.get_certain_objective_function(5)), list(swda.get_certain_objective_function(6))
             scatter_handle = my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
             ax.set_xlabel('$E_m$ [100%]\n(d)')
@@ -1527,12 +1529,8 @@ if __name__ == '__main__':
             # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
 
 
-            fig.tight_layout()
-            # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
-            # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\pareto_plot.png', dpi=150, bbox_inches='tight')
-            show()
-            quit()
 
+        # Use Torque and Force
         if False:
 
             # Torque vs Torque Ripple
@@ -1594,7 +1592,41 @@ if __name__ == '__main__':
 
 
 
+        # Efficiency vs Rated power stack length
+        fig, ax = subplots(1, 1, sharex=False, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
+        def get_rated_values(l_torque_average, l_total_loss):
+            l_rated_stack_length = []
+            l_rated_total_loss = []
+            for torque_average, total_loss in zip(l_torque_average, l_total_loss):
+                rated_stack_length = stack_length / torque_average * required_torque
+                l_rated_stack_length.append(rated_stack_length)
 
+                rated_total_loss   = total_loss / stack_length * rated_stack_length
+                l_rated_total_loss.append(rated_total_loss)
+
+            return l_rated_stack_length, l_rated_total_loss
+        a, b = get_rated_values([torque_average], [total_loss])
+        rated_stack_length = a[0]
+        rated_total_loss = b[0]
+        print 'stack_length=', stack_length, 'mm, rated_stack_length=', rated_stack_length, 'mm'
+        print 'total_loss=', total_loss, 'W, rated_total_loss=', rated_total_loss, 'W'
+        xy_ref = (rated_stack_length, 1 - rated_total_loss/70e3)
+
+        x, y = get_rated_values(list(swda.get_certain_objective_function(2)), 
+                                array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))))
+        y = 1 - array(y)/70e3
+        y = y.tolist()
+        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
+        ax.set_xlabel('Stack length [mm]')
+        ax.set_ylabel(r'Efficiency at 70 kW [1]')
+
+
+
+        fig.tight_layout()
+        # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
+        # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\pareto_plot.png', dpi=150, bbox_inches='tight')
+        show()
+        quit()
 
 
     # ------------------------------------ Sensitivity Analysis Bar Chart Scripts

@@ -366,6 +366,7 @@ class swarm(object):
                 import win32com.client
                 self.app = win32com.client.Dispatch('designer.Application.171')
                 # self.app.Show()
+                self.app.Hide()
                 # self.app.Quit()
 
 
@@ -1027,10 +1028,10 @@ class swarm(object):
             logger.debug('The last execution is interrupted with a clean slate.')
             # self.ongoing_pop_denorm不存在。
             # 这种情况，说明优化脚本中断的点，刚好是上一代刚好跑完的时候，这个时候dir_run下的ongoing文件都被删掉了。那么我们就以上一代的living_pop作为这一代的ongoing_pop。
-            self.ongoing_pop_denorm        = last_generation_pop_denorm
+            self.ongoing_pop_denorm        = np.array(last_generation_pop_denorm)
             self.ongoing_living_pop_denorm = last_living_pop_denorm
 
-        msg += 'ongoing-gen:------\n\t' + '\n\t'.join([str(el) for el in self.ongoing_pop_denorm]) + '\n'
+        msg += 'ongoing-gen:------\n\t' + '\n\t'.join([str(el) for el in self.ongoing_pop_denorm.tolist()]) + '\n'
         msg += 'ongoing-liv:------\n\t' + '\n\t'.join([str(el) for el in self.ongoing_living_pop_denorm]) + '\n'
 
         if size_living < size_last:
