@@ -107,7 +107,6 @@ class swarm(object):
             if 'ongoing' in file:
                 # remove gen and fit files
                 # os.remove(self.dir_run + file) 
-
                 if 'gen#' in file:
                     print file,
                     self.ongoing_pop_denorm = []
@@ -359,8 +358,16 @@ class swarm(object):
                 import designer
                 self.app = designer.GetApplication() 
         except:
-            import designer
-            self.app = designer.GetApplication() 
+            if False:
+                # run inside JMAG Designer 
+                import designer
+                self.app = designer.GetApplication() 
+            else:
+                import win32com.client
+                self.app = win32com.client.Dispatch('designer.Application.171')
+                # self.app.Show()
+                # self.app.Quit()
+
 
         def add_steel(self):
             if 'M15' in self.fea_config_dict['Steel']:
@@ -1014,7 +1021,16 @@ class swarm(object):
         msg += 'last-gen(%d):------\n\t'%(size_last)   + '\n\t'.join([str(el) for el in last_generation_pop_denorm]) + '\n'
         msg += 'last-liv(%d):------\n\t'%(size_living) + '\n\t'.join([str(el) for el in last_living_pop_denorm]) + '\n'
 
-        msg += 'ongoing-gen:------\n\t' + '\n\t'.join([str(el) for el in self.ongoing_pop_denorm.tolist()]) + '\n'
+        try: 
+            self.ongoing_pop_denorm
+        except:
+            logger.debug('The last execution is interrupted with a clean slate.')
+            # self.ongoing_pop_denorm不存在。
+            # 这种情况，说明优化脚本中断的点，刚好是上一代刚好跑完的时候，这个时候dir_run下的ongoing文件都被删掉了。那么我们就以上一代的living_pop作为这一代的ongoing_pop。
+            self.ongoing_pop_denorm        = last_generation_pop_denorm
+            self.ongoing_living_pop_denorm = last_living_pop_denorm
+
+        msg += 'ongoing-gen:------\n\t' + '\n\t'.join([str(el) for el in self.ongoing_pop_denorm]) + '\n'
         msg += 'ongoing-liv:------\n\t' + '\n\t'.join([str(el) for el in self.ongoing_living_pop_denorm]) + '\n'
 
         if size_living < size_last:
@@ -3265,7 +3281,7 @@ class bearingless_induction_motor_design(object):
         else:
             # case: DPNV as an actual two layer winding
             ampD = self.DriveW_CurrentAmp/npb
-            ampB = ampD
+            ampB = self.BeariW_CurrentAmp
             if bool_3PhaseCurrentSource != False:
                 raise Exception('Logic Error Detected.')
 

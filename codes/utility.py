@@ -576,7 +576,7 @@ def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dic
                       range_ss=sfv.range_ss)
     str_results += '\n\tbasic info:' +   ''.join(  [str(el) for el in basic_info])
     # print str_results
-    data_results.extend(torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle)
+    data_results.extend([torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle])
 
     ################################################################
     # Tran2TSS
@@ -595,7 +595,7 @@ def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dic
                       range_ss=sfv.range_ss)
     str_results += '\n\tbasic info:' +   ''.join(  [str(el) for el in basic_info])
     # print str_results
-    data_results.extend(torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle)
+    data_results.extend([torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle])
 
 
     ################################################################
@@ -629,41 +629,42 @@ def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dic
               torque=ec_torque,
               range_ss=sfv.range_ss) # samples in the tail that are in steady state
     # print str_results
-    data_results.extend(torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle)
+    data_results.extend([torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle])
 
 
     ################################################################
     # FEMM
     ################################################################
-    study_name = 'FEMM'
-    rotor_position_in_deg = femm_solver_data[0]*0.1 
-    time_list = rotor_position_in_deg/180.*math.pi / im_variant.Omega
-    number_of_repeat = int(end_time / time_list[-1]) + 2
-    femm_force_x = femm_solver_data[2].tolist()
-    femm_force_y = femm_solver_data[3].tolist()        
-    femm_force_abs = np.sqrt(np.array(femm_force_x)**2 + np.array(femm_force_y)**2 )
+    if femm_solver_data is not None:
+        study_name = 'FEMM'
+        rotor_position_in_deg = femm_solver_data[0]*0.1 
+        time_list = rotor_position_in_deg/180.*math.pi / im_variant.Omega
+        number_of_repeat = int(end_time / time_list[-1]) + 2
+        femm_force_x = femm_solver_data[2].tolist()
+        femm_force_y = femm_solver_data[3].tolist()        
+        femm_force_abs = np.sqrt(np.array(femm_force_x)**2 + np.array(femm_force_y)**2 )
 
-    # 延拓
-    femm_torque  = number_of_repeat * femm_solver_data[1].tolist()
-    time_one_step = time_list[1]
-    time_list    = [i*time_one_step for i in range(len(femm_torque))]
-    femm_force_x = number_of_repeat * femm_solver_data[2].tolist()
-    femm_force_y = number_of_repeat * femm_solver_data[3].tolist()
-    femm_force_abs = number_of_repeat * femm_force_abs.tolist()
+        # 延拓
+        femm_torque  = number_of_repeat * femm_solver_data[1].tolist()
+        time_one_step = time_list[1]
+        time_list    = [i*time_one_step for i in range(len(femm_torque))]
+        femm_force_x = number_of_repeat * femm_solver_data[2].tolist()
+        femm_force_y = number_of_repeat * femm_solver_data[3].tolist()
+        femm_force_abs = number_of_repeat * femm_force_abs.tolist()
 
-    sfv = suspension_force_vector(femm_force_x, femm_force_y, range_ss=len(rotor_position_in_deg)) # samples in the tail that are in steady state
-    str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
-        add_plots( axeses, dm,
-              title=study_name,
-              label='Static FEA', #'StaticFEAwiRR',
-              zorder=3,
-              time_list=time_list,
-              sfv=sfv,
-              torque=femm_torque,
-              range_ss=sfv.range_ss,
-              alpha=0.5) 
-    # print str_results
-    data_results.extend(torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle)
+        sfv = suspension_force_vector(femm_force_x, femm_force_y, range_ss=len(rotor_position_in_deg)) # samples in the tail that are in steady state
+        str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
+            add_plots( axeses, dm,
+                  title=study_name,
+                  label='Static FEA', #'StaticFEAwiRR',
+                  zorder=3,
+                  time_list=time_list,
+                  sfv=sfv,
+                  torque=femm_torque,
+                  range_ss=sfv.range_ss,
+                  alpha=0.5) 
+        # print str_results
+        data_results.extend([torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle])
 
 
     # # for easy access to codes
@@ -1126,25 +1127,25 @@ def max_indices(arr, k):
 
 class SwarmDataAnalyzer(object):
     """docstring for SwarmDataAnalyzer"""
-    def __init__(self, dir_run=None, run_integer=None):
+    def __init__(self, dir_run=None, run_integer=None, bool_sensitivity_analysis=True):
         if run_integer is not None:
             dir_run = r'D:\OneDrive - UW-Madison\c\pop\run#%d/'%(run_integer)
 
         with open(dir_run+'swarm_data.txt', 'r') as f:
             self.buf = f.readlines()[1:]
 
-        self.number_of_designs = len(self.buf) / 21
+        self.number_of_designs = len(self.buf) / 21 # 此21是指每个个体的结果占21行，非彼20+1哦。
 
-        if self.number_of_designs == 21*7:
-            print 'These are legacy results without the initial design within the swarm_data.txt.'
+        if bool_sensitivity_analysis:
+            if self.number_of_designs == 21*7:
+                print 'These are legacy results without the initial design within the swarm_data.txt. '
 
-        elif self.number_of_designs == 21*7 + 1:
-            print 'Initial design is among the pop and used as reference design.'
-            self.reference_design = self.buf[:21]
-            self.buf = self.buf[21:]
-
-        else:
-            raise Exception('Please remove duplicate results in swarm_data.txt.')
+            elif self.number_of_designs == 21*7 + 1:
+                print 'Initial design is among the pop and used as reference design.'
+                self.reference_design = self.buf[:21]
+                self.buf = self.buf[21:]
+            else:
+                raise Exception('Please remove duplicate results in swarm_data.txt.')
 
         # now we have the actual pop size
         self.buf_length = len(self.buf)
@@ -1425,10 +1426,16 @@ if __name__ == '__main__':
 
 
     # Pareto Plot or Correlation Plot
-    if False:
-        swda = SwarmDataAnalyzer(run_integer=121)
+    if True:
+        # swda = SwarmDataAnalyzer(run_integer=121, bool_sensitivity_analysis=False) # 4 pole Qr=32 motor for ecce19 digest
+        # O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
+
+        swda = SwarmDataAnalyzer(run_integer=193, bool_sensitivity_analysis=False) # 2 pole Qr=16 motor for NineSigma
+        O2_ref = fobj_scalar(13.8431,107.522,0.046109,0.035044,2.17509, (1388.12+433.332+251.127), weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight) # reference design is the same from the sensitivty analysis
+
+        print 'O2_ref=', O2_ref
         # print swda.list_cost_function()
-        # 
+
         O2 = fobj_list( list(swda.get_certain_objective_function(2)), #torque_average, 
                         list(swda.get_certain_objective_function(4)), #ss_avg_force_magnitude, 
                         list(swda.get_certain_objective_function(3)), #normalized_torque_ripple, 
@@ -1439,9 +1446,6 @@ if __name__ == '__main__':
         # print O2
         # print array(swda.list_cost_function()) - array(O2) # they are the same
         O2 = O2.tolist()
-
-        O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
-        print 'O2_ref=', O2_ref
 
         def my_scatter_plot(x,y,O,xy_ref,O_ref, fig=None, ax=None, s=15):
             # O is a copy of your list rather than array or the adress of the list

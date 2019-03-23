@@ -26,6 +26,8 @@ run_folder = r'run#97/' # Test run for the loop
 run_folder = r'run#96/' # Test run for the loop
 run_folder = r'run#95/' # Test run for the loop
 
+run_folder = r'run#94/' # Test run for the loop
+
 # run_folder = r'run#90/' # turn off plots in add_plots and check number_cycles_prolonged is applied in number_of_total_steps
 
 fea_config_dict['run_folder'] = run_folder
@@ -118,18 +120,14 @@ for ind, individual_denorm in enumerate(pop_denorm):
     # FEMM Static Solver with pre-determined rotor currents from JMAG
     solver_jmag = FEMM_Solver.FEMM_Solver(im_variant, individual_index=ind, flag_read_from_jmag=True, freq=0, bool_static_fea_loss=False) # static
     if not solver_jmag.has_results():
+        print 'run_rotating_static_FEA'
         utility.blockPrint()
         solver_jmag.run_rotating_static_FEA()
         solver_jmag.parallel_solve()
         utility.enablePrint()
-    # while True:
-    #     try:
-    #         solver_jmag.time_spent_femm_static
-    #     except:
-    #         print 'Sleep...'
-    #         sleep(1)
-    #     else:
-    #         break
+
+    quit()
+
     data_solver_jmag = solver_jmag.show_results_static(bool_plot=False)
 
     # JMAG results (EC-Rotate and Tran2TSS and Tran2TSSProlongRef)
@@ -139,9 +137,9 @@ for ind, individual_denorm in enumerate(pop_denorm):
     with open(self.dir_run + 'iemdc_data.txt', 'a') as f:
         f.write(','.join(['%g'%(el) for el in [ind] + data_results]))
 
-    # from pylab import show
-    # show()
-    # quit()
+    from pylab import show
+    show()
+    quit()
     # raise Exception('Testing')
 
 # 绘制K线图表征最大误差和最小误差

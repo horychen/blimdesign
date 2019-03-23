@@ -912,7 +912,8 @@ class FEMM_Solver(object):
 
         # To collct static results, use while instead, it is more straightforward
         if self.flag_static_solver == True:
-            self.keep_collecting_static_results_for_optimization(self.list_name, self.list_rotor_position_in_deg)
+            if self.im.fea_config_dict['flag_optimization'] == False: # 优化的话，还是不要用这种看门狗的后处理了，直接求解完就并行后处理。
+                self.keep_collecting_static_results_for_optimization(self.list_name, self.list_rotor_position_in_deg)
         return 
 
         # TODO: loop for post_process results

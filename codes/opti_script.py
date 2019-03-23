@@ -1,5 +1,5 @@
 # coding:utf-8
-#execfile('D:/OneDrive - UW-Madison/c/codes/opti_script.py')
+#execfile("D:/OneDrive - UW-Madison/c/codes/opti_script.py")
 #execfile(r'K:\jchen782\JMAG\c\codes/opti_script.py')
 #execfile('C:/Users/Hory Chen/OneDrive - UW-Madison/c/codes/opti_script.py')
 
@@ -24,7 +24,7 @@ if False: # ECCE
 else: # NineSigma
 
     # fea_config_dict['Active_Qr'] = 16
-    fea_config_dict['use_weights'] = 'O1'
+    fea_config_dict['use_weights'] = 'O2'
 
     fea_config_dict['local_sensitivity_analysis'] = True
     # Separate winding
@@ -54,9 +54,11 @@ else: # NineSigma
 
     run_folder = r'run#191/' # run again for the correct bounds
 
-        # fea_config_dict['local_sensitivity_analysis'] = False
-        # run_folder = r'run#182/' # optimize Qr=16 for O1
+    fea_config_dict['local_sensitivity_analysis'] = False
+    fea_config_dict['bool_refined_bounds'] = True
+    run_folder = r'run#192/' # optimize Qr=16 for O2 : 跑了一代了才发现悬浮绕组电流都加错了，悬浮力900多牛。
 
+    run_folder = r'run#193/' # optimize Qr=16 for O2
 
 fea_config_dict['run_folder'] = run_folder
 logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_'+run_folder[:-1])
@@ -163,10 +165,11 @@ if fea_config_dict['flag_optimization'] == True:
                             'bounds':[]}
 
     # Sensitivity Analysis based narrowing bounds
-    if False:
+    if fea_config_dict['bool_refined_bounds'] == True:
         # data acquired from run#116
         numver_of_variants = 20.0
-        if fea_config_dict['Active_Qr'] == 32: # O1 is already from utility.py
+        if fea_config_dict['Active_Qr'] == 32: # O1 is already 
+            # from utility.py
             raw_narrow_bounds = [   [9, 10],
                                     [5, 6, 7], #[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
                                     [0, 1, 2, 3],
@@ -175,7 +178,8 @@ if fea_config_dict['flag_optimization'] == True:
                                     [5, 6, 7],
                                     [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
 
-        if fea_config_dict['Active_Qr'] == 16: # O2 is already from utility_run140.py
+        if fea_config_dict['Active_Qr'] == 16: # O2 is already 
+            # from utility.py:run140
             raw_narrow_bounds = [   [3, 4, 7, 9, 12, 14, 15, 16, 19, 20],
                                     [1, 2, 7, 8, 9, 12, 13, 14, 15, 16, 18],
                                     [1, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16, 19],
@@ -184,20 +188,30 @@ if fea_config_dict['flag_optimization'] == True:
                                     [2, 4, 5, 6, 8, 10, 11, 12, 13, 16, 18, 19],
                                     [0, 1, 3, 4, 6, 7, 8, 9, 10, 12, 15, 17, 18, 20]]
 
+            # from utility.py:run140
+            raw_narrow_bounds = [   [12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                    [8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+                                    [19, 20],
+                                    [19, 20],
+                                    [12, 13],
+                                    [11, 13, 14, 15, 16, 17, 18],
+                                    [9, 10] ]
+
         for ind, bound in enumerate(raw_narrow_bounds):
             de_config_dict['narrow_bounds_normalized'][ind].append(bound[0] /numver_of_variants)
             de_config_dict['narrow_bounds_normalized'][ind].append(bound[-1]/numver_of_variants)
             if de_config_dict['narrow_bounds_normalized'][ind][0] == de_config_dict['narrow_bounds_normalized'][ind][1]:
+                raise Exception('Take a check here.')
                 print 'ind=',ind, '---manually set the proper bounds based on the initial design: 7.00075,1.26943,0.924664,4.93052,1,3,1'
                 de_config_dict['narrow_bounds_normalized'][ind][0] = 4.93052 / 5
-        print de_config_dict['narrow_bounds_normalized']
+        print 'narrow_bounds_normalized:', de_config_dict['narrow_bounds_normalized']
 
         for bnd1, bnd2 in zip(de_config_dict['original_bounds'], de_config_dict['narrow_bounds_normalized']):
             diff = bnd1[1] - bnd1[0]
             de_config_dict['bounds'].append( [ bnd1[0]+diff*bnd2[0] , bnd1[0]+diff*bnd2[1] ]) # 注意，都是乘以original_bounds的上限哦！
 
-        print de_config_dict['bounds']
-        print de_config_dict['original_bounds']
+        print 'bounds:', de_config_dict['bounds']
+        print 'original_bounds:', de_config_dict['original_bounds']
     else:
         de_config_dict['bounds'] = de_config_dict['original_bounds']
 else:
@@ -250,42 +264,42 @@ if True:
     sw.write_to_file_fea_config_dict()
 
     if True:
-    # try: 
-        de_generator = sw.de()
-        # run
-        # result = list(de_generator)
-        for result in de_generator:
-            print result
-    # except Exception as e:
-    #     print 'See log file for the error msg.'
-    #     logger.error(u'Optimization aborted.', exc_info=True)
+        try:
+            de_generator = sw.de()
+            # run
+            # result = list(de_generator)
+            for result in de_generator:
+                print result
+        except Exception as e:
+            print 'See log file for the error msg.'
+            logger.error(u'Optimization aborted.', exc_info=True)
 
-    #     raise e
+            raise e
 
-    #     # # 避免死循环
-    #     # count_abort+1
-    #     # if count_abort > 10:
-    #     #     quit()
+            # # 避免死循环
+            # count_abort+1
+            # if count_abort > 10:
+            #     quit()
 
-    #     # # quit()
-    #     # try:
-    #     #     # reload for changed codes
-    #     #     reload(population) # relaod for JMAG's python environment
-    #     #     reload(FEMM_Solver)
-    #     #     reload(utility)
+            # # quit()
+            # try:
+            #     # reload for changed codes
+            #     reload(population) # relaod for JMAG's python environment
+            #     reload(FEMM_Solver)
+            #     reload(utility)
 
-    #     #     # notification via email
-    #     #     # utility.send_notification(u'Optimization aborted.')
-        
-    #     #     # msg = 'Pop status report\n------------------------\n'
-    #     #     # msg += '\n'.join('%.16f'%(x) for x in sw.fitness) + '\n'
-    #     #     # msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)    
-    #     #     # logger.debug(msg)
+            #     # notification via email
+            #     # utility.send_notification(u'Optimization aborted.')
+            
+            #     # msg = 'Pop status report\n------------------------\n'
+            #     # msg += '\n'.join('%.16f'%(x) for x in sw.fitness) + '\n'
+            #     # msg += '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.pop_denorm)    
+            #     # logger.debug(msg)
 
-    #     #     # sw.bool_auto_recovered_run = True
-    #     # except:
-    #     #     pass
-    # else:
-    #     logger.info('Done.')
-    #     utility.send_notification('Done.')
+            #     # sw.bool_auto_recovered_run = True
+            # except:
+            #     pass
+        else:
+            logger.info('Done.')
+            utility.send_notification('Done.')
 

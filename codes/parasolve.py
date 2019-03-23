@@ -89,7 +89,7 @@ number_of_instances = int(sys.argv[2])
 dir_run = sys.argv[3]
 print 'ParaSolve', id_solver
 
-# handle_torque = open(dir_run + "static_results_%d.txt"%(id_solver), 'a')
+handle_torque = open(dir_run + "static_results_%d.txt"%(id_solver), 'a')
 # handle_stator_B_data = open(dir_run + "static_results_stator_B_data_%d.txt"%(id_solver), 'a') # use 'ab' for np.savetxt https://stackoverflow.com/questions/27786868/python3-numpy-appending-to-a-file-using-numpy-savetxt
 # handle_rotor_B_data = open(dir_run + "static_results_rotor_B_data_%d.txt"%(id_solver), 'a')
 
@@ -115,7 +115,21 @@ for i in range(id_solver, len(fem_file_list), number_of_instances):
             femm.mi_analyze(1) # None for inherited. 1 for a minimized window,
                 # print '[debug]', deg_per_step*i*number_of_instances, 'deg'
                 # rotor_position = deg_per_step*i*number_of_instances / 180. * pi
-                # write_Torque_and_B_data_to_file(output_file_name[-4:], exp(1j*rotor_position))
+                # write_Torque_and_B_data_to_file(output_file_name[-4:], exp(1j*rotor_position)) # this function is moved to FEMM_Solver.py as keep...
+            if True:
+                # call this after mi_analyze
+                femm.mi_loadsolution()
+                # Physical Amount on the Rotor
+                femm.mo_groupselectblock(100) # rotor iron
+                femm.mo_groupselectblock(101) # rotor bars
+                Fx = femm.mo_blockintegral(18) #-- 18 x (or r) part of steady-state weighted stress tensor force
+                Fy = femm.mo_blockintegral(19) #--19 y (or z) part of steady-state weighted stress tensor force
+                torque = femm.mo_blockintegral(22) #-- 22 = Steady-state weighted stress tensor torque
+                femm.mo_clearblock()
+                # write results to a data file (write to partial files to avoid compete between parallel instances)
+                handle_torque.write("%s %g %g %g\n" % ( output_file_name[-4:], torque, Fx, Fy )) # output_file_name[-4:] = str_rotor_position
+                # close post-process
+                femm.mo_close()
         except Exception as error:
                 error.args
                 raise
@@ -126,7 +140,7 @@ for i in range(id_solver, len(fem_file_list), number_of_instances):
         print i, fem_file_list[i], toc - tic, 's'
 femm.closefemm()
 
-# handle_torque.close()
+handle_torque.close()
 # handle_B_data.close()
 
 

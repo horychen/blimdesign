@@ -54,6 +54,7 @@ list_torque    = []
 list_slipfreq  = []
 list_solver_id = [] 
 list_done_id   = []
+count_loop = 0
 while True:
     # freq_step can be negative!
     freq_step  = (freq_end - freq_begin) / (number_of_instantces-1)
@@ -142,6 +143,9 @@ while True:
 
     else:
         print 'not yet'
+        count_loop += 1
+        if count_loop > 100:
+            os.system('pause')
 
         # not found yet, try new frequencies.
         if breakdown_slipfreq_1st > breakdown_slipfreq_2nd:
