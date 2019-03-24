@@ -65,7 +65,7 @@ fea_config_dict = {
     # Sysetm Control
     ##########################
     'Active_Qr':16, #16, #32,
-    'TranRef-StepPerCycle':80, # FEMM: 5 deg   # 360 to be precise as FEMM: 0.5 deg 
+    'TranRef-StepPerCycle':40, # FEMM: 5 deg   # 360 to be precise as FEMM: 0.5 deg 
     'OnlyTableResults':False, # modified later according to pc_name
         # multiple cpu (SMP=2)
         # use directSolver over ICCG Solver

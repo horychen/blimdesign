@@ -1260,6 +1260,8 @@ def use_weights(which='O1'):
         return [ 1, 0.1,   1, 0.1, 0.1,   0 ]
     if which == 'O2':
         return [ 1,1,1,1,1,  0 ]
+    if which == 'O3':
+        return [ 1,0,1,0,0,  1 ]
     return None
 
 def compute_list_cost(weights, rotor_volume, rotor_weight, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss):
@@ -1391,13 +1393,16 @@ if __name__ == '__main__':
                             'popsize':    30, # 21*7,  # 50, # 100,
                             'iterations': 100}
 
-    O1_weights = [ 1, 0.1,   1, 0.1, 0.1,   0 ]
-    O2_weights = [ 1, 1.0,   1, 1.0, 1.0,   0 ]
+    
+    O1_weights = use_weights(which='O1') # [ 1, 0.1,   1, 0.1, 0.1,   0 ]
+    O2_weights = use_weights(which='O2') # [ 1, 1.0,   1, 1.0, 1.0,   0 ]
     # O1_weights = [ 1, 0.1,   1, 0.1, 0.1,   0.1 ]
     # O2_weights = [ 1, 1.0,   1, 1.0, 1.0,   1 ]
     # O2_weights = [ 0, 0,   0, 0, 0,   1.0 ]
 
-    # In fact, you can run a bounds-check from the swarm_data.txt
+    O2_weights = use_weights(which='O3')
+
+    # In fact, you can run a bounds-check from the swarm_data.txt (whether the initial design falls within given bounds)
     # In fact, you can run a bounds-check from the swarm_data.txt
     # In fact, you can run a bounds-check from the swarm_data.txt
 
@@ -1426,7 +1431,7 @@ if __name__ == '__main__':
 
 
     # Pareto Plot or Correlation Plot
-    if True:
+    if False:
         # swda = SwarmDataAnalyzer(run_integer=121, bool_sensitivity_analysis=False) # 4 pole Qr=32 motor for ecce19 digest
         # torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss = 19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706)
         # O2_ref = fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
@@ -1455,14 +1460,14 @@ if __name__ == '__main__':
             # O is a copy of your list rather than array or the adress of the list
             x += [xy_ref[0]]
             y += [xy_ref[1]]
-            O += [O2_ref]
+            O += [O_ref]
             if ax is None or fig is None:
                 fig = figure()
                 ax = fig.gca()
-            # O2_mix = np.concatenate([[O2_ref], O2], axis=0) # # https://stackoverflow.com/questions/46106912/one-colorbar-for-multiple-scatter-plots
+            # O2_mix = np.concatenate([[O_ref], O2], axis=0) # # https://stackoverflow.com/questions/46106912/one-colorbar-for-multiple-scatter-plots
             # min_, max_ = O2_mix.min(), O2_mix.max()
-            ax.annotate('Initial design', xytext=(xy_ref[0]*0.95, xy_ref[1]*0.9), xy=xy_ref, xycoords='data', arrowprops=dict(arrowstyle="->"))
-            # scatter(*xy_ref, marker='s', c=O2_ref, s=20, alpha=0.75, cmap='viridis')
+            ax.annotate('Initial design', xytext=(xy_ref[0]*0.95, xy_ref[1]*1.0), xy=xy_ref, xycoords='data', arrowprops=dict(arrowstyle="->"))
+            # scatter(*xy_ref, marker='s', c=O_ref, s=20, alpha=0.75, cmap='viridis')
             # clim(min_, max_)
             scatter_handle = ax.scatter(x, y, c=O, s=s, alpha=0.5, cmap='viridis')
             # clim(min_, max_)
@@ -1632,7 +1637,6 @@ if __name__ == '__main__':
     # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
     # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
     # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
-
     if False: # 4 pole motor
         # swda = SwarmDataAnalyzer(run_integer=113)
         # swda = SwarmDataAnalyzer(run_integer=200)
@@ -1788,9 +1792,10 @@ if __name__ == '__main__':
         O2_vs_design_parameter = O2[j*number_of_variant:(j+1)*number_of_variant]
         O2_ecce_data.append(O2_vs_design_parameter)
 
+        # narrow bounds (refine bounds)
         O2_ax.plot(O2_vs_design_parameter, 'o-', label=str(j)+' '+param_list[j], alpha=0.5)
         print '\t', j, param_list[j], '\t\t', max(O2_vs_design_parameter) - min(O2_vs_design_parameter), '\t\t',
-        print [ind for ind, el in enumerate(O2_vs_design_parameter) if el < O2_ref] #'<- to derive new original_bounds.'
+        print [ind for ind, el in enumerate(O2_vs_design_parameter) if el < O2_ref*1.005] #'<- to derive new original_bounds.'
 
         O2_max.append(max(O2_vs_design_parameter))
         O2_min.append(min(O2_vs_design_parameter))            
@@ -1808,8 +1813,8 @@ if __name__ == '__main__':
     O2_ecce_ax.plot(O2_ecce_data[3], 's-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,r}$')
     O2_ecce_ax.plot(O2_ecce_data[5], '^-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,s}$')
     O2_ecce_ax.plot(O2_ecce_data[2], 'd-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,r}$')
-    O2_ecce_ax.plot(O2_ecce_data[4], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
-    O2_ecce_ax.plot(O2_ecce_data[6], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
+    O2_ecce_ax.plot(O2_ecce_data[6], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
+    O2_ecce_ax.plot(O2_ecce_data[4], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
 
     myfontsize = 12.5
     rcParams.update({'font.size': myfontsize})

@@ -1401,11 +1401,11 @@ class swarm(object):
 
             # 2 sections of different time step
             # IEMDC
-            number_cycles_prolonged = 150 # 50
+            number_cycles_prolonged = 1 #150
             number_of_steps_2ndTTS = self.fea_config_dict['number_of_steps_2ndTTS'] 
             DM = app.GetDataManager()
             DM.CreatePointArray(u"point_array/timevsdivision", u"SectionStepTable")
-            refarray = [[0 for i in range(3)] for j in range(4)]
+            refarray = [[0 for i in range(3)] for j in range(5)]
             refarray[0][0] = 0
             refarray[0][1] =    1
             refarray[0][2] =        50
@@ -1418,8 +1418,10 @@ class swarm(object):
             refarray[3][0] = refarray[2][0] + number_cycles_prolonged/im.DriveW_Freq # =50*0.002 sec = 0.1 sec is needed to converge to TranRef
             refarray[3][1] =    number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] # =50*40, every 0.002 sec takes 40 steps 
             refarray[3][2] =        50
-            # number_of_total_steps = 1 + 16 + number_of_steps_2ndTTS + number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] # [Double Check] don't forget to modify here!
-            number_of_total_steps = 1 + 16 + number_of_steps_2ndTTS + 1*self.fea_config_dict['TranRef-StepPerCycle'] # [Double Check] don't forget to modify here!
+            refarray[4][0] = refarray[3][0] + 0.5/im.DriveW_Freq # 最后来一个超密的半周期400步
+            refarray[4][1] =    400
+            refarray[4][2] =        50
+            number_of_total_steps = 1 + 16 + number_of_steps_2ndTTS + number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] + 400 # [Double Check] don't forget to modify here!
             DM.GetDataSet(u"SectionStepTable").SetTable(refarray)
             study.GetStep().SetValue(u"Step", number_of_total_steps)
             study.GetStep().SetValue(u"StepType", 3)

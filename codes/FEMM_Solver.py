@@ -1294,7 +1294,7 @@ class FEMM_Solver(object):
             yield row[:]
 
     def has_results(self, dir_run=None):
-        print 'self.freq', self.freq
+        # print 'self.freq', self.freq
         if dir_run == None:
             dir_run = self.dir_run
 
@@ -1438,6 +1438,8 @@ class FEMM_Solver(object):
 
 
     def show_results_static(self, bool_plot=True):
+        # Collect results from all the .ans file in the dir_run folder of FEMM.
+
         # recall that for static FEA, you call show_results once when half .ans files are generated from watchdog
         self.freq = 0 # needed for 
 
@@ -1640,7 +1642,7 @@ class FEMM_Solver(object):
             self.probdef()        
             femm.mi_saveas(self.output_file_name + '.fem')
 
-        self.parallel_solve(dir_run=self.dir_run_sweeping, number_of_instantces=4) # subprocess will wait for cmd but not the pytho script
+        self.parallel_solve(dir_run=self.dir_run_sweeping, number_of_instantces=5) # subprocess will wait for cmd but not the pytho script
         self.wait(list_ans_file)
 
         # flux and current of circuit can be used for parameter identification
