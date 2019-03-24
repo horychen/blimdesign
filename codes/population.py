@@ -1463,89 +1463,89 @@ class swarm(object):
             #     study.GetDesignTable().SetValue(case_no+1, 0, DriveW_Freq)
             #     study.GetDesignTable().SetValue(case_no+1, 1, slip)
 
+            if False: # to save some time: you study is prolonged!
+                # # Iron Loss Calculation Condition (Legacy Codes)
+                # # Stator 
+                # cond = study.CreateCondition(u"Ironloss", u"IronLossConStator")
+                # cond.SetValue(u"RevolutionSpeed", u"freq*60/%d"%(0.5*(im.DriveW_poles)))
+                # cond.ClearParts()
+                # sel = cond.GetSelection()
+                # sel.SelectPartByPosition(-im.Radius_OuterStatorYoke+1e-2, 0 ,0)
+                # cond.AddSelected(sel)
+                # # Use FFT for hysteresis to be consistent with FEMM's results
+                # cond.SetValue(u"HysteresisLossCalcType", 1)
+                # cond.SetValue(u"PresetType", 3)
+                # # Rotor
+                # cond = study.CreateCondition(u"Ironloss", u"IronLossConRotor")
+                # cond.SetValue(u"BasicFrequencyType", 2)
+                # cond.SetValue(u"BasicFrequency", u"slip*freq")
+                # cond.ClearParts()
+                # sel = cond.GetSelection()
+                # sel.SelectPartByPosition(-im.Radius_Shaft-1e-2, 0 ,0)
+                # cond.AddSelected(sel)
+                # # Use FFT for hysteresis to be consistent with FEMM's results
+                # cond.SetValue(u"HysteresisLossCalcType", 1)
+                # cond.SetValue(u"PresetType", 3)
 
-            # # Iron Loss Calculation Condition (Legacy Codes)
-            # # Stator 
-            # cond = study.CreateCondition(u"Ironloss", u"IronLossConStator")
-            # cond.SetValue(u"RevolutionSpeed", u"freq*60/%d"%(0.5*(im.DriveW_poles)))
-            # cond.ClearParts()
-            # sel = cond.GetSelection()
-            # sel.SelectPartByPosition(-im.Radius_OuterStatorYoke+1e-2, 0 ,0)
-            # cond.AddSelected(sel)
-            # # Use FFT for hysteresis to be consistent with FEMM's results
-            # cond.SetValue(u"HysteresisLossCalcType", 1)
-            # cond.SetValue(u"PresetType", 3)
-            # # Rotor
-            # cond = study.CreateCondition(u"Ironloss", u"IronLossConRotor")
-            # cond.SetValue(u"BasicFrequencyType", 2)
-            # cond.SetValue(u"BasicFrequency", u"slip*freq")
-            # cond.ClearParts()
-            # sel = cond.GetSelection()
-            # sel.SelectPartByPosition(-im.Radius_Shaft-1e-2, 0 ,0)
-            # cond.AddSelected(sel)
-            # # Use FFT for hysteresis to be consistent with FEMM's results
-            # cond.SetValue(u"HysteresisLossCalcType", 1)
-            # cond.SetValue(u"PresetType", 3)
-
-            # Iron Loss Calculation Condition (Working codes from optimization)
-            # Stator 
-            im_variant = im
-            if True:
-                cond = study.CreateCondition(u"Ironloss", u"IronLossConStator")
-                cond.SetValue(u"RevolutionSpeed", u"freq*60/%d"%(0.5*(im_variant.DriveW_poles)))
-                cond.ClearParts()
-                sel = cond.GetSelection()
-                sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+1e-2, 0 ,0)
-                cond.AddSelected(sel)
-                # Use FFT for hysteresis to be consistent with FEMM's results and to have a FFT plot
-                cond.SetValue(u"HysteresisLossCalcType", 1)
-                cond.SetValue(u"PresetType", 3) # 3:Custom
-                # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
-                cond.SetValue(u"StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
-                cond.SetValue(u"EndReferenceStep", number_of_total_steps)
-                cond.SetValue(u"UseStartReferenceStep", 1)
-                cond.SetValue(u"UseEndReferenceStep", 1)
-                cond.SetValue(u"Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
-                cond.SetValue(u"UseFrequencyOrder", 1)
-                cond.SetValue(u"FrequencyOrder", u"1-50") # Harmonics up to 50th orders 
-            # Check CSV reults for iron loss (You cannot check this for Freq study) # CSV and save space
-            study.GetStudyProperties().SetValue(u"CsvOutputPath", self.dir_csv_output_folder) # it's folder rather than file!
-            study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;LineCurrent;TerminalVoltage;JouleLoss;TotalDisplacementAngle;JouleLoss_IronLoss;IronLoss_IronLoss;HysteresisLoss_IronLoss")
-            study.GetStudyProperties().SetValue(u"DeleteResultFiles", self.fea_config_dict['delete_results_after_calculation'])
-            # Terminal Voltage/Circuit Voltage: Check for outputing CSV results 
-            study.GetCircuit().CreateTerminalLabel(u"Terminal4U", 8, -13)
-            study.GetCircuit().CreateTerminalLabel(u"Terminal4V", 8, -11)
-            study.GetCircuit().CreateTerminalLabel(u"Terminal4W", 8, -9)
-            study.GetCircuit().CreateTerminalLabel(u"Terminal2U", 23, -13)
-            study.GetCircuit().CreateTerminalLabel(u"Terminal2V", 23, -11)
-            study.GetCircuit().CreateTerminalLabel(u"Terminal2W", 23, -9)
-            # Export Stator Core's field results only for iron loss calculation (the csv file of iron loss will be clean with this setting)
-                # study.GetMaterial(u"Rotor Core").SetValue(u"OutputResult", 0) # at least one part on the rotor should be output or else a warning "the jplot file does not contains displacement results when you try to calc. iron loss on the moving part." will pop up, even though I don't add iron loss condition on the rotor.
-            # study.GetMeshControl().SetValue(u"AirRegionOutputResult", 0)
-            study.GetMaterial(u"Shaft").SetValue(u"OutputResult", 0)
-            study.GetMaterial(u"Cage").SetValue(u"OutputResult", 0)
-            study.GetMaterial(u"Coil").SetValue(u"OutputResult", 0)
-            # Rotor
-            if True:
-                cond = study.CreateCondition(u"Ironloss", u"IronLossConRotor")
-                cond.SetValue(u"BasicFrequencyType", 2)
-                cond.SetValue(u"BasicFrequency", u"freq")
-                    # cond.SetValue(u"BasicFrequency", u"slip*freq") # this require the signal length to be at least 1/4 of slip period, that's too long!
-                cond.ClearParts()
-                sel = cond.GetSelection()
-                sel.SelectPartByPosition(-im_variant.Radius_Shaft-1e-2, 0 ,0)
-                cond.AddSelected(sel)
-                # Use FFT for hysteresis to be consistent with FEMM's results
-                cond.SetValue(u"HysteresisLossCalcType", 1)
-                cond.SetValue(u"PresetType", 3)
-                # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
-                cond.SetValue(u"StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
-                cond.SetValue(u"EndReferenceStep", number_of_total_steps)
-                cond.SetValue(u"UseStartReferenceStep", 1)
-                cond.SetValue(u"UseEndReferenceStep", 1)
-                cond.SetValue(u"Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
-                cond.SetValue(u"UseFrequencyOrder", 1)
-                cond.SetValue(u"FrequencyOrder", u"1-50") # Harmonics up to 50th orders 
+                # Iron Loss Calculation Condition (Working codes from optimization)
+                # Stator 
+                im_variant = im
+                if True:
+                    cond = study.CreateCondition(u"Ironloss", u"IronLossConStator")
+                    cond.SetValue(u"RevolutionSpeed", u"freq*60/%d"%(0.5*(im_variant.DriveW_poles)))
+                    cond.ClearParts()
+                    sel = cond.GetSelection()
+                    sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+1e-2, 0 ,0)
+                    cond.AddSelected(sel)
+                    # Use FFT for hysteresis to be consistent with FEMM's results and to have a FFT plot
+                    cond.SetValue(u"HysteresisLossCalcType", 1)
+                    cond.SetValue(u"PresetType", 3) # 3:Custom
+                    # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
+                    cond.SetValue(u"StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
+                    cond.SetValue(u"EndReferenceStep", number_of_total_steps)
+                    cond.SetValue(u"UseStartReferenceStep", 1)
+                    cond.SetValue(u"UseEndReferenceStep", 1)
+                    cond.SetValue(u"Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
+                    cond.SetValue(u"UseFrequencyOrder", 1)
+                    cond.SetValue(u"FrequencyOrder", u"1-50") # Harmonics up to 50th orders 
+                # Check CSV reults for iron loss (You cannot check this for Freq study) # CSV and save space
+                study.GetStudyProperties().SetValue(u"CsvOutputPath", self.dir_csv_output_folder) # it's folder rather than file!
+                study.GetStudyProperties().SetValue(u"CsvResultTypes", u"Torque;Force;LineCurrent;TerminalVoltage;JouleLoss;TotalDisplacementAngle;JouleLoss_IronLoss;IronLoss_IronLoss;HysteresisLoss_IronLoss")
+                study.GetStudyProperties().SetValue(u"DeleteResultFiles", self.fea_config_dict['delete_results_after_calculation'])
+                # Terminal Voltage/Circuit Voltage: Check for outputing CSV results 
+                study.GetCircuit().CreateTerminalLabel(u"Terminal4U", 8, -13)
+                study.GetCircuit().CreateTerminalLabel(u"Terminal4V", 8, -11)
+                study.GetCircuit().CreateTerminalLabel(u"Terminal4W", 8, -9)
+                study.GetCircuit().CreateTerminalLabel(u"Terminal2U", 23, -13)
+                study.GetCircuit().CreateTerminalLabel(u"Terminal2V", 23, -11)
+                study.GetCircuit().CreateTerminalLabel(u"Terminal2W", 23, -9)
+                # Export Stator Core's field results only for iron loss calculation (the csv file of iron loss will be clean with this setting)
+                    # study.GetMaterial(u"Rotor Core").SetValue(u"OutputResult", 0) # at least one part on the rotor should be output or else a warning "the jplot file does not contains displacement results when you try to calc. iron loss on the moving part." will pop up, even though I don't add iron loss condition on the rotor.
+                # study.GetMeshControl().SetValue(u"AirRegionOutputResult", 0)
+                study.GetMaterial(u"Shaft").SetValue(u"OutputResult", 0)
+                study.GetMaterial(u"Cage").SetValue(u"OutputResult", 0)
+                study.GetMaterial(u"Coil").SetValue(u"OutputResult", 0)
+                # Rotor
+                if True:
+                    cond = study.CreateCondition(u"Ironloss", u"IronLossConRotor")
+                    cond.SetValue(u"BasicFrequencyType", 2)
+                    cond.SetValue(u"BasicFrequency", u"freq")
+                        # cond.SetValue(u"BasicFrequency", u"slip*freq") # this require the signal length to be at least 1/4 of slip period, that's too long!
+                    cond.ClearParts()
+                    sel = cond.GetSelection()
+                    sel.SelectPartByPosition(-im_variant.Radius_Shaft-1e-2, 0 ,0)
+                    cond.AddSelected(sel)
+                    # Use FFT for hysteresis to be consistent with FEMM's results
+                    cond.SetValue(u"HysteresisLossCalcType", 1)
+                    cond.SetValue(u"PresetType", 3)
+                    # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
+                    cond.SetValue(u"StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
+                    cond.SetValue(u"EndReferenceStep", number_of_total_steps)
+                    cond.SetValue(u"UseStartReferenceStep", 1)
+                    cond.SetValue(u"UseEndReferenceStep", 1)
+                    cond.SetValue(u"Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
+                    cond.SetValue(u"UseFrequencyOrder", 1)
+                    cond.SetValue(u"FrequencyOrder", u"1-50") # Harmonics up to 50th orders 
 
 
             # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
