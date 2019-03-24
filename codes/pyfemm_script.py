@@ -31,7 +31,7 @@ run_folder = r'run#94/' # Test run for the loop
 
 if 'Severson' in fea_config_dict['pc_name']:
     # check number_cycles_prolonged is applied in number_of_total_steps (o)
-    self.fea_config_dict['number_cycles_prolonged'] = 150 # 1
+    fea_config_dict['number_cycles_prolonged'] = 150 # 1
     # app.Show() (o)
     fea_config_dict['designer.Show'] = True
 

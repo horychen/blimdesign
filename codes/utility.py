@@ -1534,8 +1534,6 @@ if __name__ == '__main__':
             clb.ax.set_ylabel(r'Cost function $O_2$', rotation=270)
             # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
 
-
-
         # Use Torque and Force
         if False:
 
@@ -1595,8 +1593,6 @@ if __name__ == '__main__':
             ylabel(r'$E_a$ [deg]')
 
             quit()   
-
-
 
         # Efficiency vs Rated power stack length
         fig, ax = subplots(1, 1, sharex=False, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
