@@ -896,7 +896,10 @@ class FEMM_Solver(object):
         if True: # for running script in JMAG
             # os.system('python "%smethod_parallel_solve_4jmag.py" %s' % (self.dir_codes, dir_run))
             with open('temp.bat', 'w') as f:
-                f.write('python "%smethod_parallel_solve_4jmag.py" %s %d' % (self.dir_codes, dir_run, number_of_instantces))
+                if '01' in self.im.fea_config_dict['pc_name']: # python is not added to path in Severson01
+                    f.write('"C:/Program Files/JMAG-Designer17.1/python2.7/python" "%smethod_parallel_solve_4jmag.py" %s %d' % (self.dir_codes, dir_run, number_of_instantces))
+                else:
+                    f.write('python "%smethod_parallel_solve_4jmag.py" %s %d' % (self.dir_codes, dir_run, number_of_instantces))
             os.startfile('temp.bat')
             # os.remove('temp.bat')
 
