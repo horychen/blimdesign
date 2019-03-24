@@ -1400,7 +1400,7 @@ if __name__ == '__main__':
     # O2_weights = [ 1, 1.0,   1, 1.0, 1.0,   1 ]
     # O2_weights = [ 0, 0,   0, 0, 0,   1.0 ]
 
-    O2_weights = use_weights(which='O3')
+    O2_weights = use_weights(which='O3') # run#194
 
     # In fact, you can run a bounds-check from the swarm_data.txt (whether the initial design falls within given bounds)
     # In fact, you can run a bounds-check from the swarm_data.txt
@@ -1431,12 +1431,13 @@ if __name__ == '__main__':
 
 
     # Pareto Plot or Correlation Plot
-    if False:
+    if True:
         # swda = SwarmDataAnalyzer(run_integer=121, bool_sensitivity_analysis=False) # 4 pole Qr=32 motor for ecce19 digest
         # torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss = 19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706)
         # O2_ref = fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
 
-        swda = SwarmDataAnalyzer(run_integer=193, bool_sensitivity_analysis=False) # 2 pole Qr=16 motor for NineSigma
+        # swda = SwarmDataAnalyzer(run_integer=193, bool_sensitivity_analysis=False) # 2 pole Qr=16 motor for NineSigma - O2
+        swda = SwarmDataAnalyzer(run_integer=194, bool_sensitivity_analysis=False) # 2 pole Qr=16 motor for NineSigma - O3
         torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss = 13.8431,107.522,0.046109,0.035044,2.17509, (1388.12+433.332+251.127)
         O2_ref = fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight) # reference design is the same from the sensitivty analysis
 
@@ -1533,8 +1534,6 @@ if __name__ == '__main__':
             clb.ax.set_ylabel(r'Cost function $O_2$', rotation=270)
             # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
 
-
-
         # Use Torque and Force
         if False:
 
@@ -1594,8 +1593,6 @@ if __name__ == '__main__':
             ylabel(r'$E_a$ [deg]')
 
             quit()   
-
-
 
         # Efficiency vs Rated power stack length
         fig, ax = subplots(1, 1, sharex=False, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')

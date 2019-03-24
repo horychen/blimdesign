@@ -18,7 +18,7 @@ def where_am_i(fea_config_dict):
         dir_lib = dir_parent + 'codes/'
         dir_femm_files = 'I:/jchen782/FEMM/'
         dir_project_files = 'I:/jchen782/JMAG/'
-        pc_name = 'Seversion02'
+        pc_name = 'Severson02'
     elif dir_interpreter[0] == 'K':
         print 'you are on Severson01'
         dir_parent = 'K:/jchen782/c/'
@@ -26,7 +26,7 @@ def where_am_i(fea_config_dict):
         dir_lib = dir_parent + 'codes/'
         dir_femm_files = 'K:/jchen782/FEMM/'
         dir_project_files = 'K:/jchen782/JMAG/'
-        pc_name = 'Seversion01'
+        pc_name = 'Severson01'
     else:
         # elif 'Chen' in 'dir_interpreter':
         print 'you are on T440p'
@@ -60,21 +60,22 @@ fea_config_dict = {
     ##########################
     # Sysetm Control
     ##########################
-    'Active_Qr':16, #16, #32,
     'TranRef-StepPerCycle':40, # FEMM: 5 deg   # 360 to be precise as FEMM: 0.5 deg 
+    # 'FrequencyRange':range(1,6), # the first generation for PSO
+    'number_of_steps_2ndTTS':32, # use a multiples of 4! # 8*32 # steps for half period (0.5). That is, we implement two time sections, the 1st section lasts half slip period and the 2nd section lasts half fandamental period.
+    'number_cycles_prolonged':1, # 150
     'OnlyTableResults':False, # modified later according to pc_name
         # multiple cpu (SMP=2)
         # use directSolver over ICCG Solver
     'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
     'flag_optimization':True, # also use true for sensitivity analysis
-    'FEMM_Coarse_Mesh':True,
     'local_sensitivity_analysis':False,
+    'FEMM_Coarse_Mesh':True,
+    'designer.Show':False,
 
     ##########################
     # Optimization
     ##########################
-    # 'FrequencyRange':range(1,6), # the first generation for PSO
-    'number_of_steps_2ndTTS':32, # use a multiples of 4! # 8*32 # steps for half period (0.5). That is, we implement two time sections, the 1st section lasts half slip period and the 2nd section lasts half fandamental period.
     'JMAG_Scheduler':False, # multi-cores run
     'delete_results_after_calculation': False, # check if True can we still export Terminal Voltage? 如果是True，那么就得不到Terminal Voltage了！
     'use_weights':None,
@@ -82,14 +83,12 @@ fea_config_dict = {
     ##########################
     # Design Specifications
     ##########################
+    'Active_Qr':16, #16, #32,
     'DPNV': True,
     'DPNV_separate_winding_implementation': False,
     'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
-
-    'Steel': 'M19Gauge29', 
-    # 'Steel': 'M15',
-    # 'Steel': 'Arnon5', 
-                                # If you modify the temperature here, you should update the initial design (the im.DriveW_Rs should be updated and it used in JMAG FEM Coil)
+    'Steel': 'M19Gauge29', #'M15','Arnon5', 
+                              # 75 deg Celsus: If you modify the temperature here, you should update the initial design (the im.DriveW_Rs should be updated and it used in JMAG FEM Coil)
     'Bar_Conductivity':1/((3.76*75+873)*1e-9/55.), # @75 Degree Celsius # 1/((3.76*100+873)*1e-9/55.) for Copper, where temperature is 25 or 100 deg Celsius.
     # 'Bar_Conductivity':40e6, # 40e6 for Aluminium; 
 }

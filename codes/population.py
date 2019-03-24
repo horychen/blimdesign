@@ -365,8 +365,10 @@ class swarm(object):
             else:
                 import win32com.client
                 self.app = win32com.client.Dispatch('designer.Application.171')
-                self.app.Show()
-                # self.app.Hide()
+                if self.fea_config_dict['designer.Show'] == True:
+                    self.app.Show()
+                else:
+                    self.app.Hide()
                 # self.app.Quit()
 
 
@@ -1401,7 +1403,7 @@ class swarm(object):
 
             # 2 sections of different time step
             # IEMDC
-            number_cycles_prolonged = 150 # 1
+            number_cycles_prolonged = self.fea_config_dict['number_cycles_prolonged'] # 150 or 1
             number_of_steps_2ndTTS = self.fea_config_dict['number_of_steps_2ndTTS'] 
             DM = app.GetDataManager()
             DM.CreatePointArray(u"point_array/timevsdivision", u"SectionStepTable")
@@ -2402,7 +2404,7 @@ class bearingless_induction_motor_design(object):
                 self.bool_3PhaseCurrentSource = True
             else:
                 # combined winding
-                if fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False: 
+                if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False: 
                     # DPNV winding implemented as separate winding
                     if self.DriveW_poles != 4:
                         # You may see this msg because there are more than one designs in the initial_design.txt file.
@@ -2478,6 +2480,9 @@ class bearingless_induction_motor_design(object):
         self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975 # extra 2.5% as bearing current
         self.BeariW_Freq       = self.DriveW_Freq
         self.dict_coil_connection = {41:self.l41, 42:self.l42, 21:self.l21, 22:self.l22}
+
+        if self.fea_config_dict['mimic_separate_winding_with_DPNV_winding'] == True:
+            self.DriveW_CurrentAmp *= 0.6
 
         #06 Meshing & Solver Properties
         self.max_nonlinear_iteration = 50 # 30 for transient solve
