@@ -2481,6 +2481,9 @@ class bearingless_induction_motor_design(object):
         self.BeariW_Freq       = self.DriveW_Freq
         self.dict_coil_connection = {41:self.l41, 42:self.l42, 21:self.l21, 22:self.l22}
 
+        if self.fea_config_dict['mimic_separate_winding_with_DPNV_winding'] == True:
+            self.DriveW_CurrentAmp *= 0.6
+
         #06 Meshing & Solver Properties
         self.max_nonlinear_iteration = 50 # 30 for transient solve
         self.meshSize_Rotor = 1.8 #1.2 0.6 # mm
