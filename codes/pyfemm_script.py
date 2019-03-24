@@ -139,16 +139,17 @@ for ind, individual_denorm in enumerate(pop_denorm):
     solver_jmag = FEMM_Solver.FEMM_Solver(im_variant, individual_index=ind, flag_read_from_jmag=True, freq=0, bool_static_fea_loss=False) # static
     if not solver_jmag.has_results():
         print 'run_rotating_static_FEA'
-        utility.blockPrint()
+        # utility.blockPrint()
         solver_jmag.run_rotating_static_FEA()
         solver_jmag.parallel_solve()
-        utility.enablePrint()
+        # utility.enablePrint()
 
     # collecting parasolve with post-process
     # wait for .ans files
     # data_solver_jmag = solver_jmag.show_results_static(bool_plot=False) # this will wait as well?
     while not solver_jmag.has_results():
-        sleep(1)
+        print clock_time()
+        sleep(3)
     results_dict = {}
     for f in [f for f in os.listdir(solver_jmag.dir_run) if 'static_results' in f]:
         data = np.loadtxt(solver_jmag.dir_run + f, unpack=True, usecols=(0,1,2,3))
