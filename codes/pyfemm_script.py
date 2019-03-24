@@ -34,8 +34,15 @@ if 'Severson' in fea_config_dict['pc_name']:
     self.fea_config_dict['number_cycles_prolonged'] = 150 # 1
     # app.Show() (o)
     fea_config_dict['designer.Show'] = True
-    # serverson01
-    run_folder = r'run#299/' 
+
+    # serverson01    
+    if '01' in fea_config_dict['pc_name']:
+        run_folder = r'run#299/' 
+    # serverson02 
+    elif '02' in fea_config_dict['pc_name']:
+        run_folder = r'run#399/' 
+    else:
+        raise Exception('Where are you?')
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -162,8 +169,8 @@ for ind, individual_denorm in enumerate(pop_denorm):
 
     # JMAG results (EC-Rotate and Tran2TSS and Tran2TSSProlongRef)
     data_results = utility.collect_jmag_Tran2TSSProlong_results(im_variant, sw.dir_csv_output_folder, sw.fea_config_dict, sw.axeses, femm_solver_data=data_solver_jmag)
-    show()
-    quit()
+    # show()
+    # quit()
     sw.fig_main.savefig(sw.dir_run + im_variant.get_individual_name() + 'results.png', dpi=150)
     utility.pyplot_clear(sw.axeses)
 
