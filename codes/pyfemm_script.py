@@ -4,7 +4,8 @@
 
 ''' 1. General Information & Packages Loading
 '''
-execfile('D:/OneDrive - UW-Madison/c/codes/default_setting.py') # Absolute path is needed for running in JMAG
+# execfile('D:/OneDrive - UW-Madison/c/codes/default_setting.py') # Absolute path is needed for running in JMAG
+execfile('./default_setting.py') # Relative path is enough if run outside JMAG
 
 # Debug
 # if os.path.exists('d:/femm42/PS_Qr32_NoEndRing_M19Gauge29_DPNV_1e3Hz'):
@@ -28,7 +29,10 @@ run_folder = r'run#95/' # Test run for the loop
 
 run_folder = r'run#94/' # Test run for the loop
 
-# run_folder = r'run#90/' # turn off plots in add_plots and check number_cycles_prolonged is applied in number_of_total_steps
+# turn off plots in add_plots (x) 
+# check number_cycles_prolonged is applied in number_of_total_steps (o)
+# app.Show() (o)
+run_folder = r'run#299/' # serverson01
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list

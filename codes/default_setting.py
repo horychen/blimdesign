@@ -3,17 +3,15 @@ import os
 def where_am_i(fea_config_dict):
     dir_interpreter = os.path.abspath('')
     print dir_interpreter
-    if os.path.exists('D:/'):
+    if dir_interpreter[0] == 'D':
         print 'you are on Legion Y730'
         dir_parent = 'D:/OneDrive - UW-Madison/c/'
         dir_codes = dir_parent + 'codes/'
         dir_lib = dir_parent + 'codes/'
-        # dir_initial_design = dir_parent + 'pop/'
-        # dir_csv_output_folder = dir_parent + 'csv_opti/'
         dir_femm_files = 'D:/femm42/' # .ans files are too large to store on OneDrive anymore
         dir_project_files = 'D:/JMAG_Files/'
         pc_name = 'Y730'
-    elif os.path.exists('I:/'):
+    elif dir_interpreter[0] == 'I':
         print 'you are on Severson02'
         dir_parent = 'I:/jchen782/c/'
         dir_codes = dir_parent + 'codes/'
@@ -21,7 +19,7 @@ def where_am_i(fea_config_dict):
         dir_femm_files = 'I:/jchen782/FEMM/'
         dir_project_files = 'I:/jchen782/JMAG/'
         pc_name = 'Seversion02'
-    elif os.path.exists('K:/'):
+    elif dir_interpreter[0] == 'K':
         print 'you are on Severson01'
         dir_parent = 'K:/jchen782/c/'
         dir_codes = dir_parent + 'codes/'
@@ -35,8 +33,6 @@ def where_am_i(fea_config_dict):
         dir_parent = 'C:/Users/Hory Chen/OneDrive - UW-Madison/c/'
         dir_codes = dir_parent + 'codes/'
         dir_lib = dir_parent + 'codes/'
-        # dir_initial_design = dir_parent + 'pop/'
-        # dir_csv_output_folder = dir_parent + 'csv_opti/'
         dir_femm_files = 'C:/femm42/'
         dir_project_files = 'C:/JMAG_Files/'
         pc_name = 'T440p'

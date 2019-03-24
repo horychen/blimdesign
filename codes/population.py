@@ -365,8 +365,8 @@ class swarm(object):
             else:
                 import win32com.client
                 self.app = win32com.client.Dispatch('designer.Application.171')
-                # self.app.Show()
-                self.app.Hide()
+                self.app.Show()
+                # self.app.Hide()
                 # self.app.Quit()
 
 
@@ -1401,7 +1401,7 @@ class swarm(object):
 
             # 2 sections of different time step
             # IEMDC
-            number_cycles_prolonged = 1 #150
+            number_cycles_prolonged = 150 # 1
             number_of_steps_2ndTTS = self.fea_config_dict['number_of_steps_2ndTTS'] 
             DM = app.GetDataManager()
             DM.CreatePointArray(u"point_array/timevsdivision", u"SectionStepTable")
