@@ -104,6 +104,9 @@ solver_femm = FEMM_Solver.FEMM_Solver(im_initial, flag_read_from_jmag=False, fre
 from time import time as clock_time
 from time import sleep
 import numpy as np
+from pylab import show
+from collections import OrderedDict
+
 min_b, max_b = np.asarray(sw.de_config_dict['bounds']).T 
 diff = np.fabs(min_b - max_b)
 pop_denorm = min_b + sw.init_pop * diff
@@ -118,6 +121,7 @@ for ind, individual_denorm in enumerate(pop_denorm):
         # im_variant.csv_previous_solve = sw.dir_csv_output_folder + im_variant.get_individual_name() + u"Freq" + '_circuit_current.csv'
 
     # FEMM Static Solver with pre-determined rotor currents from JMAG
+    tic = clock_time()
     solver_jmag = FEMM_Solver.FEMM_Solver(im_variant, individual_index=ind, flag_read_from_jmag=True, freq=0, bool_static_fea_loss=False) # static
     if not solver_jmag.has_results():
         print 'run_rotating_static_FEA'
@@ -126,21 +130,37 @@ for ind, individual_denorm in enumerate(pop_denorm):
         solver_jmag.parallel_solve()
         utility.enablePrint()
 
-    quit()
-
-    data_solver_jmag = solver_jmag.show_results_static(bool_plot=False)
+    # collecting parasolve with post-process
+    # wait for .ans files
+    # data_solver_jmag = solver_jmag.show_results_static(bool_plot=False) # this will wait as well?
+    while not solver_jmag.has_results():
+        sleep(1)
+    results_dict = {}
+    for f in [f for f in os.listdir(solver_jmag.dir_run) if 'static_results' in f]:
+        data = np.loadtxt(solver_jmag.dir_run + f, unpack=True, usecols=(0,1,2,3))
+        for i in range(len(data[0])):
+            results_dict[data[0][i]] = (data[1][i], data[2][i], data[3][i]) 
+    keys_without_duplicates = [key for key, item in results_dict.iteritems()]
+    keys_without_duplicates.sort()
+    with open(solver_jmag.dir_run + "no_duplicates.txt", 'w') as fw:
+        for key in keys_without_duplicates:
+            fw.writelines('%g %g %g %g\n' % (key, results_dict[key][0], results_dict[key][1], results_dict[key][2]))
+    data_solver_jmag = np.array([ keys_without_duplicates, 
+                                     [results_dict[key][0] for key in keys_without_duplicates], 
+                                     [results_dict[key][1] for key in keys_without_duplicates], 
+                                     [results_dict[key][2] for key in keys_without_duplicates]])
+    # print data_solver_jmag
+    toc = clock_time()
+    print ind, 'tic: %g. toc: %g. diff:%g' % (tic, toc, toc-tic)
 
     # JMAG results (EC-Rotate and Tran2TSS and Tran2TSSProlongRef)
     data_results = utility.collect_jmag_Tran2TSSProlong_results(im_variant, sw.dir_csv_output_folder, sw.fea_config_dict, sw.axeses, femm_solver_data=data_solver_jmag)
+    sw.fig_main.savefig(sw.dir_run + im_variant.individual_name + 'results.png', dpi=150)
+    utility.pyplot_clear(sw.axeses)
 
     # write to file for inspection
-    with open(self.dir_run + 'iemdc_data.txt', 'a') as f:
-        f.write(','.join(['%g'%(el) for el in [ind] + data_results]))
-
-    from pylab import show
-    show()
-    quit()
-    # raise Exception('Testing')
+    with open(sw.dir_run + 'iemdc_data.txt', 'a') as f:
+        f.write(','.join(['%g'%(el) for el in [ind] + data_results]) + '\n')
 
 # 绘制K线图表征最大误差和最小误差
 

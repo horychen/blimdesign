@@ -58,7 +58,10 @@ else: # NineSigma
     fea_config_dict['bool_refined_bounds'] = True
     run_folder = r'run#192/' # optimize Qr=16 for O2 : 跑了一代了才发现悬浮绕组电流都加错了，悬浮力900多牛。
 
-    run_folder = r'run#193/' # optimize Qr=16 for O2
+    run_folder = r'run#193/' # optimize Qr=16 for O2：优化的结果使得电机在效率没有明显提高的情况下，额定轴向长度变长了。。。
+
+    fea_config_dict['use_weights'] = 'O3'
+    run_folder = r'run#194/' # optimize Qr=16 for O3
 
 fea_config_dict['run_folder'] = run_folder
 logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_'+run_folder[:-1])
@@ -168,8 +171,8 @@ if fea_config_dict['flag_optimization'] == True:
     if fea_config_dict['bool_refined_bounds'] == True:
         # data acquired from run#116
         numver_of_variants = 20.0
-        if fea_config_dict['Active_Qr'] == 32: # O1 is already 
-            # from utility.py
+        if fea_config_dict['Active_Qr'] == 32: # O1 is already best
+            # from utility.py O2
             raw_narrow_bounds = [   [9, 10],
                                     [5, 6, 7], #[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
                                     [0, 1, 2, 3],
@@ -178,8 +181,8 @@ if fea_config_dict['flag_optimization'] == True:
                                     [5, 6, 7],
                                     [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
 
-        if fea_config_dict['Active_Qr'] == 16: # O2 is already 
-            # from utility.py:run140
+        if fea_config_dict['Active_Qr'] == 16: 
+            # from utility.py:run140 O2
             raw_narrow_bounds = [   [3, 4, 7, 9, 12, 14, 15, 16, 19, 20],
                                     [1, 2, 7, 8, 9, 12, 13, 14, 15, 16, 18],
                                     [1, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16, 19],
@@ -188,7 +191,7 @@ if fea_config_dict['flag_optimization'] == True:
                                     [2, 4, 5, 6, 8, 10, 11, 12, 13, 16, 18, 19],
                                     [0, 1, 3, 4, 6, 7, 8, 9, 10, 12, 15, 17, 18, 20]]
 
-            # from utility.py:run140
+            # from utility.py:run191 O2
             raw_narrow_bounds = [   [12, 13, 14, 15, 16, 17, 18, 19, 20],
                                     [8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
                                     [19, 20],
@@ -197,13 +200,24 @@ if fea_config_dict['flag_optimization'] == True:
                                     [11, 13, 14, 15, 16, 17, 18],
                                     [9, 10] ]
 
+            # from utility.py:run191 O3
+            raw_narrow_bounds = [   [9, 10, 11, 12, 13],
+                                    [0, 1, 2, 3, 4, 5, 6, 7],
+                                    [0, 1, 2, 3, 4, 5, 6, 7],
+                                    [16, 17, 19, 20],
+                                    [0, 1, 2, 3, 4, 5, 6],
+                                    [0, 1, 2, 3, 4, 5],
+                                    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
+
         for ind, bound in enumerate(raw_narrow_bounds):
             de_config_dict['narrow_bounds_normalized'][ind].append(bound[0] /numver_of_variants)
             de_config_dict['narrow_bounds_normalized'][ind].append(bound[-1]/numver_of_variants)
+
             if de_config_dict['narrow_bounds_normalized'][ind][0] == de_config_dict['narrow_bounds_normalized'][ind][1]:
                 raise Exception('Take a check here.')
                 print 'ind=',ind, '---manually set the proper bounds based on the initial design: 7.00075,1.26943,0.924664,4.93052,1,3,1'
                 de_config_dict['narrow_bounds_normalized'][ind][0] = 4.93052 / 5
+
         print 'narrow_bounds_normalized:', de_config_dict['narrow_bounds_normalized']
 
         for bnd1, bnd2 in zip(de_config_dict['original_bounds'], de_config_dict['narrow_bounds_normalized']):
