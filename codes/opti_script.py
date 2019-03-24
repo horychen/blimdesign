@@ -63,7 +63,7 @@ else: # NineSigma
     fea_config_dict['use_weights'] = 'O3'
     run_folder = r'run#194/' # optimize Qr=16 for O3
 
-    fea_config_dict['mimic_separate_winding_with_DPNV_winding'] == True:
+    fea_config_dict['mimic_separate_winding_with_DPNV_winding'] = True
     run_folder = r'run#195/' # optimize Qr=16 for O3 - separate winding (with a reduced torque current down to 60%)
 
 fea_config_dict['run_folder'] = run_folder

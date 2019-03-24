@@ -2404,7 +2404,7 @@ class bearingless_induction_motor_design(object):
                 self.bool_3PhaseCurrentSource = True
             else:
                 # combined winding
-                if fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False: 
+                if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False: 
                     # DPNV winding implemented as separate winding
                     if self.DriveW_poles != 4:
                         # You may see this msg because there are more than one designs in the initial_design.txt file.
