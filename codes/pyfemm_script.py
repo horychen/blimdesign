@@ -29,10 +29,13 @@ run_folder = r'run#95/' # Test run for the loop
 
 run_folder = r'run#94/' # Test run for the loop
 
-# turn off plots in add_plots (x) 
-# check number_cycles_prolonged is applied in number_of_total_steps (o)
-# app.Show() (o)
-run_folder = r'run#299/' # serverson01
+if 'Severson' in fea_config_dict['pc_name']:
+    # check number_cycles_prolonged is applied in number_of_total_steps (o)
+    self.fea_config_dict['number_cycles_prolonged'] = 150 # 1
+    # app.Show() (o)
+    fea_config_dict['designer.Show'] = True
+    # serverson01
+    run_folder = r'run#299/' 
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['jmag_run_list'] = run_list
@@ -159,12 +162,15 @@ for ind, individual_denorm in enumerate(pop_denorm):
 
     # JMAG results (EC-Rotate and Tran2TSS and Tran2TSSProlongRef)
     data_results = utility.collect_jmag_Tran2TSSProlong_results(im_variant, sw.dir_csv_output_folder, sw.fea_config_dict, sw.axeses, femm_solver_data=data_solver_jmag)
-    sw.fig_main.savefig(sw.dir_run + im_variant.individual_name + 'results.png', dpi=150)
+    show()
+    quit()
+    sw.fig_main.savefig(sw.dir_run + im_variant.get_individual_name() + 'results.png', dpi=150)
     utility.pyplot_clear(sw.axeses)
 
     # write to file for inspection
     with open(sw.dir_run + 'iemdc_data.txt', 'a') as f:
         f.write(','.join(['%g'%(el) for el in [ind] + data_results]) + '\n')
+
 
 # 绘制K线图表征最大误差和最小误差
 
