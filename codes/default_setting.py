@@ -86,6 +86,7 @@ fea_config_dict = {
     'Active_Qr':16, #16, #32,
     'DPNV': True,
     'DPNV_separate_winding_implementation': False,
+    'mimic_separate_winding_with_DPNV_winding':False,
     'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
     'Steel': 'M19Gauge29', #'M15','Arnon5', 
                               # 75 deg Celsus: If you modify the temperature here, you should update the initial design (the im.DriveW_Rs should be updated and it used in JMAG FEM Coil)

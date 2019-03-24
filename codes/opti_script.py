@@ -65,7 +65,7 @@ else: # NineSigma
 
     fea_config_dict['mimic_separate_winding_with_DPNV_winding'] = True
     run_folder = r'run#195/' # optimize Qr=16 for O3 - separate winding (with a reduced torque current down to 60%) - Wrong implementation that only 0.6*0.6 current is left...
-    run_folder = r'run#196/' # optimize Qr=16 for O3 - separate winding (with a reduced torque current down to 60%) - Wrong implementation that only 0.6*0.6 current is left...
+    run_folder = r'run#196/' # optimize Qr=16 for O3 - separate winding (with a reduced torque current down to 60%) - Correct implementation 
 
 fea_config_dict['run_folder'] = run_folder
 logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ecce_'+run_folder[:-1])
