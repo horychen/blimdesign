@@ -131,6 +131,7 @@ for ind, individual_denorm in enumerate(pop_denorm):
                     0, ind, individual_denorm) # due to compatability issues: a new child class is used instead
 
     if not sw.has_results(im_variant):
+        # break
         sw.run(im_variant, individual_index=ind, run_list=run_list)
         # im_variant.csv_previous_solve = sw.dir_csv_output_folder + im_variant.get_individual_name() + u"Freq" + '_circuit_current.csv'
 
@@ -179,7 +180,7 @@ for ind, individual_denorm in enumerate(pop_denorm):
     with open(sw.dir_run + 'iemdc_data.txt', 'a') as f:
         f.write(','.join(['%g'%(el) for el in [ind] + data_results]) + '\n')
 
-    break
+    # break
 
 # 绘制K线图表征最大误差和最小误差
 execfile('./iemdc_random_design_plot.py')

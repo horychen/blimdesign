@@ -1412,7 +1412,7 @@ class swarm(object):
             refarray[0][1] =    1
             refarray[0][2] =        50
             refarray[1][0] = 0.5/slip_freq_breakdown_torque
-            refarray[1][1] =    16 
+            refarray[1][1] =    number_of_steps_2ndTTS
             refarray[1][2] =        50
             refarray[2][0] = refarray[1][0] + 0.5/im.DriveW_Freq
             refarray[2][1] =    number_of_steps_2ndTTS  # also modify range_ss! # don't forget to modify below!
@@ -1421,9 +1421,9 @@ class swarm(object):
             refarray[3][1] =    number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] # =50*40, every 0.002 sec takes 40 steps 
             refarray[3][2] =        50
             refarray[4][0] = refarray[3][0] + 0.5/im.DriveW_Freq # 最后来一个超密的半周期400步
-            refarray[4][1] =    400 # range_ss=400 in collect_jmag_Tran2TSSProlong_results()
+            refarray[4][1] =    400
             refarray[4][2] =        50
-            number_of_total_steps = 1 + 16 + number_of_steps_2ndTTS + number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] + 400 # [Double Check] don't forget to modify here!
+            number_of_total_steps = 1 + 2 * number_of_steps_2ndTTS + number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] + 400 # [Double Check] don't forget to modify here!
             DM.GetDataSet(u"SectionStepTable").SetTable(refarray)
             study.GetStep().SetValue(u"Step", number_of_total_steps)
             study.GetStep().SetValue(u"StepType", 3)
@@ -2087,13 +2087,13 @@ class swarm(object):
                 refarray[0][1] =    1
                 refarray[0][2] =        50
                 refarray[1][0] = 0.5/slip_freq_breakdown_torque #0.5 for 17.1.03l # 1 for 17.1.02y
-                refarray[1][1] =    16                          # 16 for 17.1.03l #32 for 17.1.02y
+                refarray[1][1] =    number_of_steps_2ndTTS                          # 16 for 17.1.03l #32 for 17.1.02y
                 refarray[1][2] =        50
                 refarray[2][0] = refarray[1][0] + 0.5/im_variant.DriveW_Freq #0.5 for 17.1.03l 
                 refarray[2][1] =    number_of_steps_2ndTTS  # also modify range_ss! # don't forget to modify below!
                 refarray[2][2] =        50
                 DM.GetDataSet(u"SectionStepTable").SetTable(refarray)
-                number_of_total_steps = 1 + 16 + number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
+                number_of_total_steps = 1 + 2 * number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
                 study.GetStep().SetValue(u"Step", number_of_total_steps)
                 study.GetStep().SetValue(u"StepType", 3)
                 study.GetStep().SetTableProperty(u"Division", DM.GetDataSet(u"SectionStepTable"))
@@ -3589,13 +3589,13 @@ class bearingless_induction_motor_design(object):
             refarray[0][1] =    1
             refarray[0][2] =        50
             refarray[1][0] = 0.5/slip_freq_breakdown_torque #0.5 for 17.1.03l # 1 for 17.1.02y
-            refarray[1][1] =    16                          # 16 for 17.1.03l #32 for 17.1.02y
+            refarray[1][1] =    number_of_steps_2ndTTS                          # 16 for 17.1.03l #32 for 17.1.02y
             refarray[1][2] =        50
             refarray[2][0] = refarray[1][0] + 0.5/im_variant.DriveW_Freq #0.5 for 17.1.03l 
             refarray[2][1] =    number_of_steps_2ndTTS  # also modify range_ss! # don't forget to modify below!
             refarray[2][2] =        50
             DM.GetDataSet(u"SectionStepTable").SetTable(refarray)
-            number_of_total_steps = 1 + 16 + number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
+            number_of_total_steps = 1 + 2 * number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
             study.GetStep().SetValue(u"Step", number_of_total_steps)
             study.GetStep().SetValue(u"StepType", 3)
             study.GetStep().SetTableProperty(u"Division", DM.GetDataSet(u"SectionStepTable"))

@@ -22,7 +22,7 @@ for key, item in d.iteritems():
 
 # torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
 list_ylabel = ['Torque [Nm]', 'Torque Ripple [%]', 'Force Mag. [N]', 'Force Mag. Err. [%]', 'Force Angle Err [deg]']
-list_label = ['Tran. Ref.', 'Tran w/ 2 Sect.', 'Rot. Eddy Current', 'Rot. Static']
+list_label = ['Tran. Ref.', 'Tran. w/ 2 Time Sect.', 'Rot. Eddy Current', 'Rot. Static']
 list_color = ['k', 'tomato', 'limegreen', 'cornflowerblue']
 
 def data_as_list(fea_model, performance, d):
@@ -36,7 +36,7 @@ for i, ax in zip(range(5), axes):
     # torque_ECRotate = 
     # torque_FEMMStat = 
 
-    print data_as_list(1,i,d)[15]
+    # print data_as_list(1,i,d)[15]
 
     ax.plot( data_as_list(0,i,d), label=list_label[0], color=list_color[0], alpha=1.00 )
     ax.plot( data_as_list(1,i,d), label=list_label[1], color=list_color[1], alpha=1.00 )
@@ -58,25 +58,39 @@ for i in range(5):
     temp = [None]*4
     if i == 4:
         temp = list_label
-    ax.plot( (i-0.1)*myones, (ref - array(data_as_list(1,i,d))) / ref, label=temp[1], marker='_', color=list_color[1], alpha=1.00 )
-    ax.plot( (i+0.0)*myones, (ref - array(data_as_list(2,i,d))) / ref, label=temp[2], marker='_', color=list_color[2], alpha=1.00 )
-    ax.plot( (i+0.1)*myones, (ref - array(data_as_list(3,i,d))) / ref, label=temp[3], marker='_', color=list_color[3], alpha=1.00 )
+    ax.plot( (i-0.1)*myones, (array(data_as_list(1,i,d)) - ref) / ref, label=temp[1], marker='_', color=list_color[1], alpha=1.00 )
+    ax.plot( (i+0.0)*myones, (array(data_as_list(2,i,d)) - ref) / ref, label=temp[2], marker='_', color=list_color[2], alpha=1.00 )
+    ax.plot( (i+0.1)*myones, (array(data_as_list(3,i,d)) - ref) / ref, label=temp[3], marker='_', color=list_color[3], alpha=1.00 )
 ax.legend()
 xticks(range(5), list_ylabel)
 ax.set_ylabel('Normalized Performance Error with respect to Transient FEA Reference')
 
+
 print 'Error plot'
 fig, axes = subplots(1, 5, sharex=True, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
+subplots_adjust(left=None, bottom=0.25, right=None, top=None, wspace=0.8, hspace=None)
+list_ylabel = ['Torque Difference [Nm]', 'Torque Ripple Difference [%]', 'Force Mag. Difference [N]', 'Force Mag. Err. Difference [%]', 'Force Angle Err Difference [deg]']
 for i, ax in enumerate(axes):
     ref = array(data_as_list(0,i,d))
     myones = ones(len(ref))
-    ax.plot( (-0.1)*myones, (ref - array(data_as_list(1,i,d))) / ref, label=temp[1], marker='_', color=list_color[1], alpha=1.00 )
-    ax.plot( (+0.0)*myones, (ref - array(data_as_list(2,i,d))) / ref, label=temp[2], marker='_', color=list_color[2], alpha=1.00 )
-    ax.plot( (+0.1)*myones, (ref - array(data_as_list(3,i,d))) / ref, label=temp[3], marker='_', color=list_color[3], alpha=1.00 )
+    ax.plot( (-0.1)*myones, (array(data_as_list(1,i,d)) - ref), label=temp[1], marker='_', color=list_color[1], alpha=1.00 )
+    ax.plot( (+0.0)*myones, (array(data_as_list(2,i,d)) - ref), label=temp[2], marker='_', color=list_color[2], alpha=1.00 )
+    ax.plot( (+0.1)*myones, (array(data_as_list(3,i,d)) - ref), label=temp[3], marker='_', color=list_color[3], alpha=1.00 )
     ax.set_ylabel(list_ylabel[i])
-ax.legend()
-# xticks(range(5), list_ylabel)
+    ax.grid()
+    # Remove xticks
+    # ax.tick_params(
+    #     axis='x',          # changes apply to the x-axis
+    #     which='both',      # both major and minor ticks are affected
+    #     bottom=False,      # ticks along the bottom edge are off
+    #     top=False,         # ticks along the top edge are off
+    #     labelbottom=False) # labels along the bottom edge are off
+# ax.legend()
+xticks([-0.1, 0, 0.1], list_label[1:])
 # ax.set_ylabel('')
 
+for ax in fig.axes:
+    matplotlib.pyplot.sca(ax)
+    plt.xticks(rotation=60)
 
 show()
