@@ -34,7 +34,7 @@ if DEBUG_MODE == False:
     number_of_instantces = int(sys.argv[1])
     dir_femm_temp        = sys.argv[2]
     stack_length         = float(sys.argv[3])
-    VAREPSILON = 0.25 # difference between 1st and 2nd max torque slip frequencies
+    VAREPSILON = 0.255 # difference between 1st and 2nd max torque slip frequencies
 else:
     #debug 
     number_of_instantces = 5

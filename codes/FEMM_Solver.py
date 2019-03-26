@@ -1304,7 +1304,10 @@ class FEMM_Solver(object):
         a = [f for f in os.listdir(dir_run) if '.ans' in f].__len__()
         b = [f for f in os.listdir(dir_run) if '.fem' in f].__len__()
         if a == 0:
-            return False
+            if 'no_duplicates.txt' in os.listdir(dir_run):
+                return True # 直接把femm的结果从服务器上拷过来也行
+            else:
+                return False
         print '[FEMM.has_results] ans count: %d. fem count: %d.' % (a, b)
         return a == b
 

@@ -356,7 +356,7 @@ class VanGogh(object):
             # self.Pr_list = [P1,P2,P3,P4,P5,P6,P7,P8,P_Bar]
             self.Pr_list = [np.array(P) for P in [P1,P2,P3,P4,P5,P6,P7,P8]]
             for P in self.Pr_list:
-                self.ax.scatter(*P, c='k')
+                self.ax.scatter(*P, c='k', marker='None')
 
             # rotor objects
             self.rotor_object_list = self.plot_object_list
@@ -455,7 +455,7 @@ class VanGogh(object):
             # self.Ps_list = [P1,P2,P3,P4,P5,P6,P7,P8,P_Coil]
             self.Ps_list = [np.array(P) for P in [P1,P2,P3,P4,P5,P6,P7,P8]]
             for P in self.Ps_list:
-                self.ax.scatter(*P, c='k')
+                self.ax.scatter(*P, c='k', marker='None')
 
             # stator objects
             self.stator_object_list = self.plot_object_list
@@ -566,7 +566,7 @@ class VanGogh_Plotter(VanGogh):
         self.ax = self.fig.add_subplot(111, aspect='equal')
         # self.ax = self.fig.gca()
         # self.ax.set_xlim([-100,0])
-        self.ax.set_ylim([-10,20])
+        self.ax.set_ylim([-10,25])
 
         # plt.gcf().gca().invert_yaxis()
 
@@ -636,6 +636,597 @@ def get_tangent_points_of_two_circles(center1, radius1, center2, radius2):
     x4, y4 = x2 + R*cos(0.5*pi - alpha), y2 + R*sin(0.5*pi - alpha), 
 
     return (x3, y3), (x4, y4)
+
+# Eric required plot geometry with LaTeX labels
+if __name__ == '__main__':
+    import matplotlib.patches as mpatches
+    import matplotlib.pyplot as plt
+    import numpy as np
+    plt.rcParams["font.family"] = "Times New Roman"
+
+    myfontsize = 13.5
+    plt.rcParams.update({'font.size': myfontsize})
+
+    from population import *
+    im_list = []
+    with open(r'D:\OneDrive - UW-Madison\c\pop\initial_design.txt', 'r') as f: 
+        for row in csv_row_reader(f):
+            im = bearingless_induction_motor_design([row[0]]+[float(el) for el in row[1:]], None)
+            im_list.append(im)
+    # print im.show(toString=True)
+
+    # 示意图而已，改改尺寸吧
+    im.Radius_OuterStatorYoke -= 35
+    im.Radius_InnerStatorYoke -= 20
+    im.Radius_Shaft += 20
+
+    vg = VanGogh_Plotter(im, CUSTOM)
+    vg.draw_model()
+
+    # 
+    BIAS = 1
+    Stator_Sector_Angle = 2*pi/im.Qs*0.5
+    Rotor_Sector_Angle = 2*pi/im.Qr*0.5
+
+    # draw the mirrored slot
+    new_objs = []
+    for obj in vg.rotor_object_list:
+        xy_data = obj.get_xydata().T
+        new_obj = vg.ax.plot(xy_data[0], -array(xy_data[1]), 'k-', zorder=0) # 'k--'
+        new_objs.append(new_obj[0])
+    vg.rotor_object_list += new_objs
+
+    new_objs = []
+    for obj in vg.stator_object_list:
+        xy_data = obj.get_xydata().T
+        new_obj = vg.ax.plot(xy_data[0], -array(xy_data[1]), 'k-', zorder=0) # 'k--'
+        new_objs.append(new_obj[0])
+    vg.stator_object_list += new_objs
+
+    # draw the rotated slot
+    # rotor 
+    angle = Rotor_Sector_Angle*2
+    TR = array( [ [cos(angle), sin(angle)],
+                 [-sin(angle), cos(angle)] ] )
+    for obj in vg.rotor_object_list:
+        xy_data = obj.get_xydata().T
+        xy_data_rot = np.dot( TR, xy_data )
+        # xy_data_rot = xy_data_rot.T
+        vg.ax.plot(xy_data_rot[0], xy_data_rot[1], 'k-', zorder=0) # 'k--'
+    # stator
+    angle = Stator_Sector_Angle*2
+    TS = array( [ [cos(angle), sin(angle)],
+                 [-sin(angle), cos(angle)] ] )
+    for obj in vg.stator_object_list:
+        xy_data = obj.get_xydata().T
+        xy_data_rot = np.dot( TS, xy_data )
+        # xy_data_rot = xy_data_rot.T
+        vg.ax.plot(xy_data_rot[0], xy_data_rot[1], 'k-', zorder=0) # 'k--'
+
+    ################################################################
+    # add labels to geometry
+    ################################################################
+    # xy = (-0.5*(im.Location_RotorBarCenter+im.Location_RotorBarCenter2), 2.5)
+    # vg.ax.annotate('Parallel tooth', xytext=(xy[0],-(xy[1]+5)), xy=(xy[0],-xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->"))
+
+    xy = (-im.Radius_OuterStatorYoke, 0)
+    vg.ax.annotate(r'$D_{os}$', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+    xy = (-im.Radius_OuterRotor, -4)
+    vg.ax.annotate(r'$D_{or}$', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+
+    def add_label_inside(vg, label, PA, PB):
+        # vector_AB = (PB[0]-PA[0], PB[1]-PA[1])
+        xy, xytext = PA, PB 
+        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+        xy, xytext = xytext, xy
+        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+        vg.ax.text(0.5+0.5*(xy[0]+xytext[0]), 0.+0.5*(xy[1]+xytext[1]), label,
+                    bbox=dict(facecolor='w', edgecolor='w',boxstyle='round,pad=0',alpha=0.9))
+
+
+    def add_label_outside(vg, label, PA, PB, ext_factor=1):
+        vector_AB = np.array((PB[0]-PA[0], PB[1]-PA[1]))
+        xy, xytext = PB, PB + vector_AB * ext_factor
+        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+        xy, xytext = PA, PA - vector_AB * ext_factor
+        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+        vg.ax.text(0.5+PB[0], -1.75+PB[1], label,
+                    bbox=dict(facecolor='w', edgecolor='w',boxstyle='round,pad=0',alpha=0.9))
+
+
+    def add_extension_line(vg, P, vector_ext, distance_factor=1):
+
+        distance = sqrt(vector_ext[0]**2 + vector_ext[1]**2)
+        vector_ext /= distance/distance_factor # a unit vector * distance_factor
+
+        x = [ P[0], P[0]+vector_ext[0] ]
+        y = [ P[1], P[1]+vector_ext[1] ]
+        vg.ax.plot(x, y, 'k-', lw=0.6)
+
+        return vector_ext
+
+    #1
+    Ps2 = vg.Ps_list[2-BIAS] * array((1,-1)) # mirror
+    Ptemp1 = Ps2[0], Ps2[1]-5
+    Ptemp1 = vg.park_transform(Ptemp1, -Stator_Sector_Angle) # this is not exact but close enough, you can find the exact point by solve a triangle with Radius_OuterRotor + Length_AirGap from Pr3
+    vector_ext = np.array((Ptemp1[0] - Ps2[0], Ptemp1[1] - Ps2[1]))
+    vector_ext = add_extension_line(vg, Ps2, vector_ext, distance_factor=2.5)
+    Ptemp1 = (Ps2 + 0.5*vector_ext)
+
+    Pr3 = vg.Pr_list[3-BIAS] * array((1,-1)) # mirror
+    Ptemp2 = array((Pr3[0], Pr3[1]-5))
+    Ptemp2 = vg.park_transform(Ptemp2, -Rotor_Sector_Angle)
+    vector_ext = np.array((Ptemp2[0] - Pr3[0], Ptemp2[1] - Pr3[1]))
+    vector_ext = add_extension_line(vg, Pr3, vector_ext, distance_factor=2.5)
+    Ptemp2 = (Pr3 + 0.8*vector_ext) # change this factor before vector_ext to rotate the label
+
+    add_label_outside(vg, r'$L_g$', Ptemp1, Ptemp2, ext_factor=2)
+
+    #2
+    Ps4 = vg.Ps_list[4-BIAS]
+    Ps5 = vg.Ps_list[5-BIAS]
+    Ptemp = 0.5*(Ps4 + Ps5)
+    add_label_inside(vg, r'$W_{\rm st}$', (Ptemp[0],-Ptemp[1]), Ptemp)
+
+    #3
+    Pr6 = array(vg.Pr_list[6-BIAS])
+    Pr7 = array(vg.Pr_list[7-BIAS])
+    Ptemp2 = 0.5*(Pr6 + Pr7) # middle point
+    Ptemp1 = Ptemp2[0], -Ptemp2[1] # mirror
+    Ptemp1 = np.dot( TR, Ptemp1 ) # rotate
+    # vector_r67 = Pr7 - Pr6
+    # vector_r67_perpendi = (-vector_r67[1], vector_r67[0])
+    # some_angle = atan2(vector_r67[1], vector_r67[0])
+    add_label_inside(vg, r'$W_{\rm rt}$', Ptemp1, Ptemp2)
+
+    #4 (This one is angle, so we add text independently)
+    Ps3 = vg.Ps_list[3-BIAS]
+    Ptemp1 = Ps3 * np.array((1,-1)) # mirror
+    Ptemp2 = np.dot( TS, Ptemp1 ) # rotate
+    if False: # treat it as width
+        add_label_inside(vg, r'$w_{\rm open,s}$', Ps3, Ptemp2)
+    else: # it is an angle, ok.
+        Ps2 = vg.Ps_list[2-BIAS]
+        vector_ext = Ps3 - Ps2
+        vector_ext = add_extension_line(vg, Ps3, vector_ext, distance_factor=3)
+        Ptemp1 = (Ps3 + 0.5*vector_ext)
+
+        vector_ext *= array([1,-1]) # mirror
+        vector_ext = np.dot( TS, vector_ext ) # rotate
+        vector_ext = add_extension_line(vg, Ptemp2, vector_ext, distance_factor=3)
+        Ptemp2 = (Ptemp2 + 0.5*vector_ext)
+
+        some_angle = atan2(vector_ext[1], vector_ext[0])
+        print some_angle/pi*180, 180 - Stator_Sector_Angle/pi*180
+        vg.pyplot_arc(im.Radius_OuterRotor+im.Length_AirGap+im.Width_StatorTeethHeadThickness+2, 
+            angle_span=0.95*im.Angle_StatorSlotOpen/180*pi, rotation=some_angle-0.475*im.Angle_StatorSlotOpen/180*pi, center=(0,0), lw=0.6)
+        # vg.ax.text(Ptemp1[0], Ptemp1[1], r'$w_{\rm open,s}$',
+        #             bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
+        vg.ax.text(0.5*(Ptemp1[0]+Ptemp2[0])-5, 0.5*(Ptemp1[1]+Ptemp2[1]), r'$\theta_{\rm ops}$',
+                    bbox=dict(facecolor='w', edgecolor='w',boxstyle='round,pad=0',alpha=0.9))
+
+
+
+    #5
+    Pr4 = vg.Pr_list[4-BIAS]
+    Pr5 = vg.Pr_list[5-BIAS]
+    Ptemp1 = 0.5*(Pr4+Pr5)
+    Ptemp2 = Ptemp1 * np.array((1,-1)) # mirror
+    add_label_outside(vg, r'$W_{\rm opr}$', Ptemp1, Ptemp2, ext_factor=2)
+
+    #6
+    Ps2 = vg.Ps_list[2-BIAS]
+    Ps3 = vg.Ps_list[3-BIAS] 
+    Ptemp1 = np.dot( TS, Ps2 )
+    Ptemp11 = np.dot( TS, Ps3 )
+    vector_ext = -np.array((Ptemp11[0] - Ptemp1[0], Ptemp11[1] - Ptemp1[1]))
+    vector_ext = np.array((-vector_ext[1], vector_ext[0]))
+    vector_ext = add_extension_line(vg, Ptemp1, vector_ext, distance_factor=1)
+    Ptemp1 = (Ptemp1 + 0.5*vector_ext)
+
+    Ptemp2 = np.dot( TS, Ps3 )
+    Ptemp22 = np.dot( TS, Ps2 )
+    vector_ext = np.array((Ptemp22[0] - Ptemp2[0], Ptemp22[1] - Ptemp2[1]))
+    vector_ext = np.array((-vector_ext[1], vector_ext[0]))
+    vector_ext = add_extension_line(vg, Ptemp2, vector_ext, distance_factor=1)
+    Ptemp2 = (Ptemp2 + 0.5*vector_ext)
+
+    add_label_outside(vg, r'$d_{\rm so}$', Ptemp1, Ptemp2, ext_factor=3)
+
+
+    #7
+    Pr4 = vg.Pr_list[4-BIAS]
+    Ptemp1 = np.dot( TR, Pr4 )
+    Ptemp11 = np.array((Pr4[0], Pr4[1]+5))
+    Ptemp11 = np.dot( TR, Ptemp11 )
+    vector_ext = np.array((Ptemp11[0] - Ptemp1[0], Ptemp11[1] - Ptemp1[1]))
+    vector_ext = add_extension_line(vg, Ptemp1, vector_ext, distance_factor=6)
+    Ptemp1 = (Ptemp1 + 0.5*vector_ext)
+
+    Pr5 = vg.Pr_list[5-BIAS] 
+    Ptemp2 = np.dot( TR, Pr5 )
+    Ptemp22 = np.array((Pr5[0], Pr5[1]+5))
+    Ptemp22 = np.dot( TR, Ptemp22 )
+    vector_ext = np.array((Ptemp22[0] - Ptemp2[0], Ptemp22[1] - Ptemp2[1]))
+    vector_ext = add_extension_line(vg, Ptemp2, vector_ext, distance_factor=6)
+    Ptemp2 = (Ptemp2 + 0.5*vector_ext)
+
+    add_label_outside(vg, r'$d_{\rm ro}$', Ptemp1, Ptemp2, ext_factor=3)
+
+
+
+    vg.ax.get_xaxis().set_visible(False)
+    vg.ax.get_yaxis().set_visible(False)
+    vg.fig.tight_layout()
+    # vg.fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\CAD_CrossSection.png')
+    show()
+    quit()
+
+# My plot geometry with LaTeX labels
+if __name__ == '__main__':
+    import matplotlib.patches as mpatches
+    import matplotlib.pyplot as plt
+    import numpy as np
+    plt.rcParams["font.family"] = "Times New Roman"
+
+    myfontsize = 13.5
+    plt.rcParams.update({'font.size': myfontsize})
+
+    from population import *
+    im_list = []
+    with open(r'D:\OneDrive - UW-Madison\c\pop\initial_design.txt', 'r') as f: 
+        for row in csv_row_reader(f):
+            im = bearingless_induction_motor_design([row[0]]+[float(el) for el in row[1:]], None)
+            im_list.append(im)
+    # print im.show(toString=True)
+
+    # 示意图而已，改改尺寸吧
+    im.Radius_OuterStatorYoke -= 25
+    im.Radius_InnerStatorYoke -= 20
+    im.Radius_Shaft += 10
+
+    vg = VanGogh_Plotter(im, CUSTOM)
+    vg.draw_model()
+
+    # 
+    BIAS = 1
+    Stator_Sector_Angle = 2*pi/im.Qs*0.5
+    Rotor_Sector_Angle = 2*pi/im.Qr*0.5
+
+    # draw the mirrored slot
+    new_objs = []
+    for obj in vg.rotor_object_list:
+        xy_data = obj.get_xydata().T
+        new_obj = vg.ax.plot(xy_data[0], -array(xy_data[1]), 'k-', zorder=0) # 'k--'
+        new_objs.append(new_obj[0])
+    vg.rotor_object_list += new_objs
+
+    new_objs = []
+    for obj in vg.stator_object_list:
+        xy_data = obj.get_xydata().T
+        new_obj = vg.ax.plot(xy_data[0], -array(xy_data[1]), 'k-', zorder=0) # 'k--'
+        new_objs.append(new_obj[0])
+    vg.stator_object_list += new_objs
+
+    # draw the rotated slot
+    # rotor 
+    angle = Rotor_Sector_Angle*2
+    TR = array( [ [cos(angle), sin(angle)],
+                 [-sin(angle), cos(angle)] ] )
+    for obj in vg.rotor_object_list:
+        xy_data = obj.get_xydata().T
+        xy_data_rot = np.dot( TR, xy_data )
+        # xy_data_rot = xy_data_rot.T
+        vg.ax.plot(xy_data_rot[0], xy_data_rot[1], 'k-', zorder=0) # 'k--'
+    # stator
+    angle = Stator_Sector_Angle*2
+    TS = array( [ [cos(angle), sin(angle)],
+                 [-sin(angle), cos(angle)] ] )
+    for obj in vg.stator_object_list:
+        xy_data = obj.get_xydata().T
+        xy_data_rot = np.dot( TS, xy_data )
+        # xy_data_rot = xy_data_rot.T
+        vg.ax.plot(xy_data_rot[0], xy_data_rot[1], 'k-', zorder=0) # 'k--'
+
+    ################################################################
+    # add labels to geometry
+    ################################################################
+    # xy = (-0.5*(im.Location_RotorBarCenter+im.Location_RotorBarCenter2), 2.5)
+    # vg.ax.annotate('Parallel tooth', xytext=(xy[0],-(xy[1]+5)), xy=(xy[0],-xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->"))
+
+    xy = (-im.Radius_OuterStatorYoke, 0)
+    vg.ax.annotate(r'$r_{so}=86.9$ mm', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+    xy = (-im.Radius_OuterRotor, -4)
+    vg.ax.annotate(r'$r_{ro}=47.1$ mm', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+
+    def add_label_inside(vg, label, PA, PB):
+        # vector_AB = (PB[0]-PA[0], PB[1]-PA[1])
+        xy, xytext = PA, PB 
+        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+        xy, xytext = xytext, xy
+        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+        vg.ax.text(0.5+0.5*(xy[0]+xytext[0]), 0.+0.5*(xy[1]+xytext[1]), label,
+                    bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
+
+
+    def add_label_outside(vg, label, PA, PB, ext_factor=1):
+        vector_AB = np.array((PB[0]-PA[0], PB[1]-PA[1]))
+        xy, xytext = PB, PB + vector_AB * ext_factor
+        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+        xy, xytext = PA, PA - vector_AB * ext_factor
+        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+        vg.ax.text(0.5+PB[0], -1.75+PB[1], label,
+                    bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
+
+
+    def add_extension_line(vg, P, vector_ext, distance_factor=1):
+
+        distance = sqrt(vector_ext[0]**2 + vector_ext[1]**2)
+        vector_ext /= distance/distance_factor # a unit vector * distance_factor
+
+        x = [ P[0], P[0]+vector_ext[0] ]
+        y = [ P[1], P[1]+vector_ext[1] ]
+        vg.ax.plot(x, y, 'k-', lw=0.6)
+
+        return vector_ext
+
+    #1
+    Ps2 = vg.Ps_list[2-BIAS] * array((1,-1)) # mirror
+    Ptemp1 = Ps2[0], Ps2[1]-5
+    Ptemp1 = vg.park_transform(Ptemp1, -Stator_Sector_Angle) # this is not exact but close enough, you can find the exact point by solve a triangle with Radius_OuterRotor + Length_AirGap from Pr3
+    vector_ext = np.array((Ptemp1[0] - Ps2[0], Ptemp1[1] - Ps2[1]))
+    vector_ext = add_extension_line(vg, Ps2, vector_ext, distance_factor=2.5)
+    Ptemp1 = (Ps2 + 0.5*vector_ext)
+
+    Pr3 = vg.Pr_list[3-BIAS] * array((1,-1)) # mirror
+    Ptemp2 = array((Pr3[0], Pr3[1]-5))
+    Ptemp2 = vg.park_transform(Ptemp2, -Rotor_Sector_Angle)
+    vector_ext = np.array((Ptemp2[0] - Pr3[0], Ptemp2[1] - Pr3[1]))
+    vector_ext = add_extension_line(vg, Pr3, vector_ext, distance_factor=2.5)
+    Ptemp2 = (Pr3 + 0.5*vector_ext)
+
+    add_label_outside(vg, r'$\delta$', Ptemp1, Ptemp2, ext_factor=2)
+
+    #2
+    Ps4 = vg.Ps_list[4-BIAS]
+    Ps5 = vg.Ps_list[5-BIAS]
+    Ptemp = 0.5*(Ps4 + Ps5)
+    add_label_inside(vg, r'$b_{\rm tooth,s}$', (Ptemp[0],-Ptemp[1]), Ptemp)
+
+    #3
+    Pr6 = array(vg.Pr_list[6-BIAS])
+    Pr7 = array(vg.Pr_list[7-BIAS])
+    Ptemp2 = 0.5*(Pr6 + Pr7) # middle point
+    Ptemp1 = Ptemp2[0], -Ptemp2[1] # mirror
+    Ptemp1 = np.dot( TR, Ptemp1 ) # rotate
+    # vector_r67 = Pr7 - Pr6
+    # vector_r67_perpendi = (-vector_r67[1], vector_r67[0])
+    # some_angle = atan2(vector_r67[1], vector_r67[0])
+    add_label_inside(vg, r'$b_{\rm tooth,r}$', Ptemp1, Ptemp2)
+
+    #4 (This one is angle)
+    Ps3 = vg.Ps_list[3-BIAS]
+    Ptemp1 = Ps3 * np.array((1,-1)) # mirror
+    Ptemp2 = np.dot( TS, Ptemp1 ) # rotate
+    if False: # treat it as width
+        add_label_inside(vg, r'$w_{\rm open,s}$', Ps3, Ptemp2)
+    else: # it is an angle, ok.
+        Ps2 = vg.Ps_list[2-BIAS]
+        vector_ext = Ps3 - Ps2
+        vector_ext = add_extension_line(vg, Ps3, vector_ext, distance_factor=3)
+        Ptemp1 = (Ps3 + 0.5*vector_ext)
+
+        vector_ext *= array([1,-1]) # mirror
+        vector_ext = np.dot( TS, vector_ext ) # rotate
+        vector_ext = add_extension_line(vg, Ptemp2, vector_ext, distance_factor=3)
+        Ptemp2 = (Ptemp2 + 0.5*vector_ext)
+
+        some_angle = atan2(vector_ext[1], vector_ext[0])
+        print some_angle/pi*180, 180 - Stator_Sector_Angle/pi*180
+        vg.pyplot_arc(im.Radius_OuterRotor+im.Length_AirGap+im.Width_StatorTeethHeadThickness+2, 
+            angle_span=0.95*im.Angle_StatorSlotOpen/180*pi, rotation=some_angle-0.475*im.Angle_StatorSlotOpen/180*pi, center=(0,0), lw=0.6)
+        # vg.ax.text(Ptemp1[0], Ptemp1[1], r'$w_{\rm open,s}$',
+        #             bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
+        vg.ax.text(0.5*(Ptemp1[0]+Ptemp2[0])-5, 0.5*(Ptemp1[1]+Ptemp2[1]), r'$w_{\rm open,s}$',
+                    bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
+
+
+
+    #5
+    Pr4 = vg.Pr_list[4-BIAS]
+    Pr5 = vg.Pr_list[5-BIAS]
+    Ptemp1 = 0.5*(Pr4+Pr5)
+    Ptemp2 = Ptemp1 * np.array((1,-1)) # mirror
+    add_label_outside(vg, r'$w_{\rm open,r}$', Ptemp1, Ptemp2, ext_factor=2)
+
+    #6
+    Ps2 = vg.Ps_list[2-BIAS]
+    Ps3 = vg.Ps_list[3-BIAS] 
+    Ptemp1 = np.dot( TS, Ps2 )
+    Ptemp11 = np.dot( TS, Ps3 )
+    vector_ext = -np.array((Ptemp11[0] - Ptemp1[0], Ptemp11[1] - Ptemp1[1]))
+    vector_ext = np.array((-vector_ext[1], vector_ext[0]))
+    vector_ext = add_extension_line(vg, Ptemp1, vector_ext, distance_factor=1)
+    Ptemp1 = (Ptemp1 + 0.5*vector_ext)
+
+    Ptemp2 = np.dot( TS, Ps3 )
+    Ptemp22 = np.dot( TS, Ps2 )
+    vector_ext = np.array((Ptemp22[0] - Ptemp2[0], Ptemp22[1] - Ptemp2[1]))
+    vector_ext = np.array((-vector_ext[1], vector_ext[0]))
+    vector_ext = add_extension_line(vg, Ptemp2, vector_ext, distance_factor=1)
+    Ptemp2 = (Ptemp2 + 0.5*vector_ext)
+
+    add_label_outside(vg, r'$h_{\rm head,s}$', Ptemp1, Ptemp2, ext_factor=3)
+
+
+    #7
+    Pr4 = vg.Pr_list[4-BIAS]
+    Ptemp1 = np.dot( TR, Pr4 )
+    Ptemp11 = np.array((Pr4[0], Pr4[1]+5))
+    Ptemp11 = np.dot( TR, Ptemp11 )
+    vector_ext = np.array((Ptemp11[0] - Ptemp1[0], Ptemp11[1] - Ptemp1[1]))
+    vector_ext = add_extension_line(vg, Ptemp1, vector_ext, distance_factor=6)
+    Ptemp1 = (Ptemp1 + 0.5*vector_ext)
+
+    Pr5 = vg.Pr_list[5-BIAS] 
+    Ptemp2 = np.dot( TR, Pr5 )
+    Ptemp22 = np.array((Pr5[0], Pr5[1]+5))
+    Ptemp22 = np.dot( TR, Ptemp22 )
+    vector_ext = np.array((Ptemp22[0] - Ptemp2[0], Ptemp22[1] - Ptemp2[1]))
+    vector_ext = add_extension_line(vg, Ptemp2, vector_ext, distance_factor=6)
+    Ptemp2 = (Ptemp2 + 0.5*vector_ext)
+
+    add_label_outside(vg, r'$h_{\rm head,r}$', Ptemp1, Ptemp2, ext_factor=3)
+
+
+
+    vg.ax.get_xaxis().set_visible(False)
+    vg.ax.get_yaxis().set_visible(False)
+    vg.fig.tight_layout()
+    # vg.fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\CAD_CrossSection.png')
+    show()
+    quit()
+
+    # obsolete
+    def perpendi_label(vg, label, PA, PB, distance=3, distance_factor=1, mirror=False):
+        if mirror == True:
+            PA = PA[0], -PA[1]
+            PB = PB[0], -PB[1]
+            distance *= -1
+
+        new_PA = PA[0], PA[1]+distance + PB[1]-PA[1]
+        new_PB = PB[0], PB[1]+distance 
+
+        x = [ PA[0], new_PA[0] ]
+        y = [ PA[1], new_PA[1] ]
+        # x = [ PA[0] ]*2
+        # y = [ PA[1], PA[1]+distance + PB[1]-PA[1] ]
+        vg.ax.plot(x, y, 'k', lw=0.5)
+
+        x = [ PB[0], new_PB[0] ]
+        y = [ PB[1], new_PB[1] ]
+        # x = [ PB[0] ]*2
+        # y = [ PB[1], PB[1]+distance ]
+        vg.ax.plot(x, y, 'k', lw=0.5)
+
+        distance = sqrt((PA[0]-new_PA[0])**2 + (PA[1]-new_PA[1])**2)*distance_factor
+        xy = array([0.5*(PA[0]+new_PA[0]), 0.5*(PA[1]+new_PA[1])])
+        vector = array([new_PA[0]-PA[0], new_PA[1]-PA[1]])
+        xytext = array([-vector[1], vector[0]]) / distance # perpendicular vector
+        xytext = xy + xytext
+        vg.ax.annotate(label, xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+    def parallel_label(vg, label, PA, PB, vector_extendion=None, translation=0, rotation=0, distance_factor=2, mirror=False):
+
+        if vector_extendion is None:
+            pass
+        else:
+            if mirror == True:
+                PA = PA[0], -PA[1]
+                PB = PB[0], -PB[1]
+            if translation == 0:
+                new_PA = vg.park_transform((PA[0],PA[1]), rotation)
+                new_PB = vg.park_transform((PB[0],PB[1]), rotation)
+            elif translation == 1:
+                new_PA = PA[0], PA[1]+translation
+                new_PB = PB[0], PB[1]+translation
+            elif translation == -1:
+                new_PA = PA[0]+translation, PA[1]
+                new_PB = PB[0]+translation, PB[1]
+
+            distance = sqrt((PA[0]-new_PA[0])**2 + (PA[1]-new_PA[1])**2)
+            if distance == 0: # rotation == 0
+                distance = 1
+            unit_vector = array([new_PA[0]-PA[0], new_PA[1]-PA[1]])/distance
+            new_PA = array([PA[0] + unit_vector[0] * distance_factor, PA[1] + unit_vector[1] * distance_factor])
+            new_PB = array([PB[0] + unit_vector[0] * distance_factor, PB[1] + unit_vector[1] * distance_factor]) 
+
+            # A
+            x = [ PA[0], new_PA[0] ]
+            y = [ PA[1], new_PA[1] ]
+            vg.ax.plot(x, y, 'k-', lw=0.6)
+
+            # B
+            x = [ PB[0], new_PB[0] ]
+            y = [ PB[1], new_PB[1] ]
+            vg.ax.plot(x, y, 'k-', lw=0.6)
+
+            xy = array([0.5*(PA[0]+new_PA[0]), 0.5*(PA[1]+new_PA[1])])
+            xytext = distance_factor * array([-unit_vector[1], unit_vector[0]]) # perpendicular vector
+            xytext = xy + xytext
+            vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+            vg.ax.text(xytext[0]+0.5, xytext[1]-0.5, label,
+                        bbox=dict(facecolor='w', edgecolor='w',boxstyle='round,pad=0',alpha=1))
+
+
+
+    # print '---Unit Test of VanGogh.'
+    # # >>> c2 = Point(0.5,0).buffer(1).boundary
+    # # >>> i = c.intersection(c2)
+    # # >>> i.geoms[0].coords[0]
+    # # (0.24999999999999994, -0.967031122079967)
+    # # >>> i.geoms[1].coords[0]
+    # # (0.24999999999999997, 0.967031122079967)
+
+    # vg = VanGogh(None, 1)
+    # from numpy import arccos
+    # theta = arccos(0.25) * 2
+    # print theta / pi * 180, 'deg'
+    # print vg.find_center_of_a_circle_using_2_points_and_arc_angle((0.24999999999999994, -0.967031122079967),
+    #                                                               (0.24999999999999994, 0.967031122079967),
+    #                                                               theta)
+    # print vg.find_center_of_a_circle_using_2_points_and_arc_angle((0.24999999999999994, 0.967031122079967),
+    #                                                               (0.24999999999999994, -0.967031122079967),
+    #                                                               theta)
+
+
+    # quit()
+
+
+    # import itertools
+    # import matplotlib.patches as patches
+    # import matplotlib.pyplot as plt
+    # import numpy as np
+    # import sys
+
+    # fig, ax = plt.subplots()
+
+    # npoints = 5
+
+    # # Calculate the xy coords for each point on the circle
+    # s = 2 * np.pi / npoints
+    # verts = np.zeros((npoints, 2))
+    # for i in np.arange(npoints):
+    #     angle = s * i
+    #     x = npoints * np.cos(angle)
+    #     y = npoints * np.sin(angle)
+    #     verts[i] = [x, y]
+
+    # # Plot the Bezier curves
+    # numbers = [i for i in xrange(npoints)]
+    # bezier_path = np.arange(0, 1.01, 0.01)
+    # for a, b in itertools.product(numbers, repeat=2):
+    #     if a == b:
+    #         continue
+
+    #     x1y1 = x1, y1 = verts[a]
+    #     x2y2 = x2, y2 = verts[b]
+
+    #     xbyb = xb, yb = [0, 0]
+
+    #     # Compute and store the Bezier curve points
+    #     x = (1 - bezier_path)** 2 * x1 + 2 * (1 - bezier_path) * bezier_path * xb + bezier_path** 2 * x2
+    #     y = (1 - bezier_path)** 2 * y1 + 2 * (1 - bezier_path) * bezier_path * yb + bezier_path** 2 * y2
+
+    #     ax.plot(x, y, 'k-')
+
+    # x, y = verts.T
+    # ax.scatter(x, y, marker='o', s=50, c='r')
+
+    # ax.set_xlim(-npoints - 5, npoints + 6)
+    # ax.set_ylim(-npoints - 5, npoints + 6)
+    # ax.set(aspect=1)
+    # plt.show()
+    # quit()
 
 
 
@@ -966,7 +1557,7 @@ if __name__ == '__main__':
     show()
     quit()
 
-# test tengent points of circles
+# test tangent points of circles
 if __name__ == '__main__':
 
     c1 = (-48,0)
@@ -989,368 +1580,3 @@ if __name__ == '__main__':
     show()
     quit()
 
-# plot geometry with LaTeX labels
-if __name__ == '__main__':
-    import matplotlib.patches as mpatches
-    import matplotlib.pyplot as plt
-    import numpy as np
-    plt.rcParams["font.family"] = "Times New Roman"
-
-    myfontsize = 13.5
-    plt.rcParams.update({'font.size': myfontsize})
-
-    from population import *
-    im_list = []
-    with open(r'D:\OneDrive - UW-Madison\c\pop\initial_design.txt', 'r') as f: 
-        for row in csv_row_reader(f):
-            im = bearingless_induction_motor_design([row[0]]+[float(el) for el in row[1:]], None)
-            im_list.append(im)
-    # print im.show(toString=True)
-
-    # 示意图而已，改改尺寸吧
-    im.Radius_OuterStatorYoke -= 25
-    im.Radius_InnerStatorYoke -= 20
-    im.Radius_Shaft += 10
-
-    vg = VanGogh_Plotter(im, CUSTOM)
-    vg.draw_model()
-
-    # 
-    BIAS = 1
-    Stator_Sector_Angle = 2*pi/im.Qs*0.5
-    Rotor_Sector_Angle = 2*pi/im.Qr*0.5
-
-    # draw the mirrored slot
-    new_objs = []
-    for obj in vg.rotor_object_list:
-        xy_data = obj.get_xydata().T
-        new_obj = vg.ax.plot(xy_data[0], -array(xy_data[1]), 'k--', zorder=0)
-        new_objs.append(new_obj[0])
-    vg.rotor_object_list += new_objs
-
-    new_objs = []
-    for obj in vg.stator_object_list:
-        xy_data = obj.get_xydata().T
-        new_obj = vg.ax.plot(xy_data[0], -array(xy_data[1]), 'k--', zorder=0)
-        new_objs.append(new_obj[0])
-    vg.stator_object_list += new_objs
-
-    # draw the rotated slot
-    # rotor 
-    angle = Rotor_Sector_Angle*2
-    TR = array( [ [cos(angle), sin(angle)],
-                 [-sin(angle), cos(angle)] ] )
-    for obj in vg.rotor_object_list:
-        xy_data = obj.get_xydata().T
-        xy_data_rot = np.dot( TR, xy_data )
-        # xy_data_rot = xy_data_rot.T
-        vg.ax.plot(xy_data_rot[0], xy_data_rot[1], 'k--', zorder=0)
-    # stator
-    angle = Stator_Sector_Angle*2
-    TS = array( [ [cos(angle), sin(angle)],
-                 [-sin(angle), cos(angle)] ] )
-    for obj in vg.stator_object_list:
-        xy_data = obj.get_xydata().T
-        xy_data_rot = np.dot( TS, xy_data )
-        # xy_data_rot = xy_data_rot.T
-        vg.ax.plot(xy_data_rot[0], xy_data_rot[1], 'k--', zorder=0)
-
-    ################################################################
-    # add labels to geometry
-    ################################################################
-    # xy = (-0.5*(im.Location_RotorBarCenter+im.Location_RotorBarCenter2), 2.5)
-    # vg.ax.annotate('Parallel tooth', xytext=(xy[0],-(xy[1]+5)), xy=(xy[0],-xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->"))
-
-    xy = (-im.Radius_OuterStatorYoke, 0)
-    vg.ax.annotate(r'$r_{so}=86.9$ mm', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
-    xy = (-im.Radius_OuterRotor, -4)
-    vg.ax.annotate(r'$r_{ro}=47.1$ mm', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
-
-    def add_label_inside(vg, label, PA, PB):
-        # vector_AB = (PB[0]-PA[0], PB[1]-PA[1])
-        xy, xytext = PA, PB 
-        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
-        xy, xytext = xytext, xy
-        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
-        vg.ax.text(0.5+0.5*(xy[0]+xytext[0]), 0.+0.5*(xy[1]+xytext[1]), label,
-                    bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
-
-
-    def add_label_outside(vg, label, PA, PB, ext_factor=1):
-        vector_AB = np.array((PB[0]-PA[0], PB[1]-PA[1]))
-        xy, xytext = PB, PB + vector_AB * ext_factor
-        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
-        xy, xytext = PA, PA - vector_AB * ext_factor
-        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
-        vg.ax.text(0.5+PB[0], -1.75+PB[1], label,
-                    bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
-
-
-    def add_extension_line(vg, P, vector_ext, distance_factor=1):
-
-        distance = sqrt(vector_ext[0]**2 + vector_ext[1]**2)
-        vector_ext /= distance/distance_factor # a unit vector * distance_factor
-
-        x = [ P[0], P[0]+vector_ext[0] ]
-        y = [ P[1], P[1]+vector_ext[1] ]
-        vg.ax.plot(x, y, 'k-', lw=0.6)
-
-        return vector_ext
-
-    #1
-    Ps2 = vg.Ps_list[2-BIAS] * array((1,-1)) # mirror
-    Ptemp1 = Ps2[0], Ps2[1]-5
-    Ptemp1 = vg.park_transform(Ptemp1, -Stator_Sector_Angle) # this is not exact but close enough, you can find the exact point by solve a triangle with Radius_OuterRotor + Length_AirGap from Pr3
-    vector_ext = np.array((Ptemp1[0] - Ps2[0], Ptemp1[1] - Ps2[1]))
-    vector_ext = add_extension_line(vg, Ps2, vector_ext, distance_factor=2.5)
-    Ptemp1 = (Ps2 + 0.5*vector_ext)
-
-    Pr3 = vg.Pr_list[3-BIAS] * array((1,-1)) # mirror
-    Ptemp2 = array((Pr3[0], Pr3[1]-5))
-    Ptemp2 = vg.park_transform(Ptemp2, -Rotor_Sector_Angle)
-    vector_ext = np.array((Ptemp2[0] - Pr3[0], Ptemp2[1] - Pr3[1]))
-    vector_ext = add_extension_line(vg, Pr3, vector_ext, distance_factor=2.5)
-    Ptemp2 = (Pr3 + 0.5*vector_ext)
-
-    add_label_outside(vg, r'$\delta$', Ptemp1, Ptemp2, ext_factor=2)
-
-    #2
-    Ps4 = vg.Ps_list[4-BIAS]
-    Ps5 = vg.Ps_list[5-BIAS]
-    Ptemp = 0.5*(Ps4 + Ps5)
-    add_label_inside(vg, r'$b_{\rm tooth,s}$', (Ptemp[0],-Ptemp[1]), Ptemp)
-
-    #3
-    Pr6 = array(vg.Pr_list[6-BIAS])
-    Pr7 = array(vg.Pr_list[7-BIAS])
-    Ptemp2 = 0.5*(Pr6 + Pr7) # middle point
-    Ptemp1 = Ptemp2[0], -Ptemp2[1] # mirror
-    Ptemp1 = np.dot( TR, Ptemp1 ) # rotate
-    # vector_r67 = Pr7 - Pr6
-    # vector_r67_perpendi = (-vector_r67[1], vector_r67[0])
-    # some_angle = atan2(vector_r67[1], vector_r67[0])
-    add_label_inside(vg, r'$b_{\rm tooth,r}$', Ptemp1, Ptemp2)
-
-    #4 (This one is angle)
-    Ps3 = vg.Ps_list[3-BIAS]
-    Ptemp1 = Ps3 * np.array((1,-1)) # mirror
-    Ptemp2 = np.dot( TS, Ptemp1 ) # rotate
-    if False: # treat it as width
-        add_label_inside(vg, r'$w_{\rm open,s}$', Ps3, Ptemp2)
-    else: # it is an angle, ok.
-        Ps2 = vg.Ps_list[2-BIAS]
-        vector_ext = Ps3 - Ps2
-        vector_ext = add_extension_line(vg, Ps3, vector_ext, distance_factor=3)
-        Ptemp1 = (Ps3 + 0.5*vector_ext)
-
-        vector_ext *= array([1,-1]) # mirror
-        vector_ext = np.dot( TS, vector_ext ) # rotate
-        vector_ext = add_extension_line(vg, Ptemp2, vector_ext, distance_factor=3)
-        Ptemp2 = (Ptemp2 + 0.5*vector_ext)
-
-        some_angle = atan2(vector_ext[1], vector_ext[0])
-        print some_angle/pi*180, 180 - Stator_Sector_Angle/pi*180
-        vg.pyplot_arc(im.Radius_OuterRotor+im.Length_AirGap+im.Width_StatorTeethHeadThickness+2, 
-            angle_span=0.95*im.Angle_StatorSlotOpen/180*pi, rotation=some_angle-0.475*im.Angle_StatorSlotOpen/180*pi, center=(0,0), lw=0.6)
-        # vg.ax.text(Ptemp1[0], Ptemp1[1], r'$w_{\rm open,s}$',
-        #             bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
-        vg.ax.text(0.5*(Ptemp1[0]+Ptemp2[0])-5, 0.5*(Ptemp1[1]+Ptemp2[1]), r'$w_{\rm open,s}$',
-                    bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
-
-
-
-    #5
-    Pr4 = vg.Pr_list[4-BIAS]
-    Pr5 = vg.Pr_list[5-BIAS]
-    Ptemp1 = 0.5*(Pr4+Pr5)
-    Ptemp2 = Ptemp1 * np.array((1,-1)) # mirror
-    add_label_outside(vg, r'$w_{\rm open,r}$', Ptemp1, Ptemp2, ext_factor=2)
-
-    #6
-    Ps2 = vg.Ps_list[2-BIAS]
-    Ps3 = vg.Ps_list[3-BIAS] 
-    Ptemp1 = np.dot( TS, Ps2 )
-    Ptemp11 = np.dot( TS, Ps3 )
-    vector_ext = -np.array((Ptemp11[0] - Ptemp1[0], Ptemp11[1] - Ptemp1[1]))
-    vector_ext = np.array((-vector_ext[1], vector_ext[0]))
-    vector_ext = add_extension_line(vg, Ptemp1, vector_ext, distance_factor=1)
-    Ptemp1 = (Ptemp1 + 0.5*vector_ext)
-
-    Ptemp2 = np.dot( TS, Ps3 )
-    Ptemp22 = np.dot( TS, Ps2 )
-    vector_ext = np.array((Ptemp22[0] - Ptemp2[0], Ptemp22[1] - Ptemp2[1]))
-    vector_ext = np.array((-vector_ext[1], vector_ext[0]))
-    vector_ext = add_extension_line(vg, Ptemp2, vector_ext, distance_factor=1)
-    Ptemp2 = (Ptemp2 + 0.5*vector_ext)
-
-    add_label_outside(vg, r'$h_{\rm head,s}$', Ptemp1, Ptemp2, ext_factor=3)
-
-
-    #7
-    Pr4 = vg.Pr_list[4-BIAS]
-    Ptemp1 = np.dot( TR, Pr4 )
-    Ptemp11 = np.array((Pr4[0], Pr4[1]+5))
-    Ptemp11 = np.dot( TR, Ptemp11 )
-    vector_ext = np.array((Ptemp11[0] - Ptemp1[0], Ptemp11[1] - Ptemp1[1]))
-    vector_ext = add_extension_line(vg, Ptemp1, vector_ext, distance_factor=6)
-    Ptemp1 = (Ptemp1 + 0.5*vector_ext)
-
-    Pr5 = vg.Pr_list[5-BIAS] 
-    Ptemp2 = np.dot( TR, Pr5 )
-    Ptemp22 = np.array((Pr5[0], Pr5[1]+5))
-    Ptemp22 = np.dot( TR, Ptemp22 )
-    vector_ext = np.array((Ptemp22[0] - Ptemp2[0], Ptemp22[1] - Ptemp2[1]))
-    vector_ext = add_extension_line(vg, Ptemp2, vector_ext, distance_factor=6)
-    Ptemp2 = (Ptemp2 + 0.5*vector_ext)
-
-    add_label_outside(vg, r'$h_{\rm head,r}$', Ptemp1, Ptemp2, ext_factor=3)
-
-
-
-    vg.ax.get_xaxis().set_visible(False)
-    vg.ax.get_yaxis().set_visible(False)
-    vg.fig.tight_layout()
-    vg.fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\CAD_CrossSection.png')
-    show()
-    quit()
-
-    # obsolete
-    def perpendi_label(vg, label, PA, PB, distance=3, distance_factor=1, mirror=False):
-        if mirror == True:
-            PA = PA[0], -PA[1]
-            PB = PB[0], -PB[1]
-            distance *= -1
-
-        new_PA = PA[0], PA[1]+distance + PB[1]-PA[1]
-        new_PB = PB[0], PB[1]+distance 
-
-        x = [ PA[0], new_PA[0] ]
-        y = [ PA[1], new_PA[1] ]
-        # x = [ PA[0] ]*2
-        # y = [ PA[1], PA[1]+distance + PB[1]-PA[1] ]
-        vg.ax.plot(x, y, 'k', lw=0.5)
-
-        x = [ PB[0], new_PB[0] ]
-        y = [ PB[1], new_PB[1] ]
-        # x = [ PB[0] ]*2
-        # y = [ PB[1], PB[1]+distance ]
-        vg.ax.plot(x, y, 'k', lw=0.5)
-
-        distance = sqrt((PA[0]-new_PA[0])**2 + (PA[1]-new_PA[1])**2)*distance_factor
-        xy = array([0.5*(PA[0]+new_PA[0]), 0.5*(PA[1]+new_PA[1])])
-        vector = array([new_PA[0]-PA[0], new_PA[1]-PA[1]])
-        xytext = array([-vector[1], vector[0]]) / distance # perpendicular vector
-        xytext = xy + xytext
-        vg.ax.annotate(label, xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
-    def parallel_label(vg, label, PA, PB, vector_extendion=None, translation=0, rotation=0, distance_factor=2, mirror=False):
-
-        if vector_extendion is None:
-            pass
-        else:
-            if mirror == True:
-                PA = PA[0], -PA[1]
-                PB = PB[0], -PB[1]
-            if translation == 0:
-                new_PA = vg.park_transform((PA[0],PA[1]), rotation)
-                new_PB = vg.park_transform((PB[0],PB[1]), rotation)
-            elif translation == 1:
-                new_PA = PA[0], PA[1]+translation
-                new_PB = PB[0], PB[1]+translation
-            elif translation == -1:
-                new_PA = PA[0]+translation, PA[1]
-                new_PB = PB[0]+translation, PB[1]
-
-            distance = sqrt((PA[0]-new_PA[0])**2 + (PA[1]-new_PA[1])**2)
-            if distance == 0: # rotation == 0
-                distance = 1
-            unit_vector = array([new_PA[0]-PA[0], new_PA[1]-PA[1]])/distance
-            new_PA = array([PA[0] + unit_vector[0] * distance_factor, PA[1] + unit_vector[1] * distance_factor])
-            new_PB = array([PB[0] + unit_vector[0] * distance_factor, PB[1] + unit_vector[1] * distance_factor]) 
-
-            # A
-            x = [ PA[0], new_PA[0] ]
-            y = [ PA[1], new_PA[1] ]
-            vg.ax.plot(x, y, 'k-', lw=0.6)
-
-            # B
-            x = [ PB[0], new_PB[0] ]
-            y = [ PB[1], new_PB[1] ]
-            vg.ax.plot(x, y, 'k-', lw=0.6)
-
-            xy = array([0.5*(PA[0]+new_PA[0]), 0.5*(PA[1]+new_PA[1])])
-            xytext = distance_factor * array([-unit_vector[1], unit_vector[0]]) # perpendicular vector
-            xytext = xy + xytext
-            vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
-            vg.ax.text(xytext[0]+0.5, xytext[1]-0.5, label,
-                        bbox=dict(facecolor='w', edgecolor='w',boxstyle='round,pad=0',alpha=1))
-
-
-
-    # print '---Unit Test of VanGogh.'
-    # # >>> c2 = Point(0.5,0).buffer(1).boundary
-    # # >>> i = c.intersection(c2)
-    # # >>> i.geoms[0].coords[0]
-    # # (0.24999999999999994, -0.967031122079967)
-    # # >>> i.geoms[1].coords[0]
-    # # (0.24999999999999997, 0.967031122079967)
-
-    # vg = VanGogh(None, 1)
-    # from numpy import arccos
-    # theta = arccos(0.25) * 2
-    # print theta / pi * 180, 'deg'
-    # print vg.find_center_of_a_circle_using_2_points_and_arc_angle((0.24999999999999994, -0.967031122079967),
-    #                                                               (0.24999999999999994, 0.967031122079967),
-    #                                                               theta)
-    # print vg.find_center_of_a_circle_using_2_points_and_arc_angle((0.24999999999999994, 0.967031122079967),
-    #                                                               (0.24999999999999994, -0.967031122079967),
-    #                                                               theta)
-
-
-    # quit()
-
-
-    # import itertools
-    # import matplotlib.patches as patches
-    # import matplotlib.pyplot as plt
-    # import numpy as np
-    # import sys
-
-    # fig, ax = plt.subplots()
-
-    # npoints = 5
-
-    # # Calculate the xy coords for each point on the circle
-    # s = 2 * np.pi / npoints
-    # verts = np.zeros((npoints, 2))
-    # for i in np.arange(npoints):
-    #     angle = s * i
-    #     x = npoints * np.cos(angle)
-    #     y = npoints * np.sin(angle)
-    #     verts[i] = [x, y]
-
-    # # Plot the Bezier curves
-    # numbers = [i for i in xrange(npoints)]
-    # bezier_path = np.arange(0, 1.01, 0.01)
-    # for a, b in itertools.product(numbers, repeat=2):
-    #     if a == b:
-    #         continue
-
-    #     x1y1 = x1, y1 = verts[a]
-    #     x2y2 = x2, y2 = verts[b]
-
-    #     xbyb = xb, yb = [0, 0]
-
-    #     # Compute and store the Bezier curve points
-    #     x = (1 - bezier_path)** 2 * x1 + 2 * (1 - bezier_path) * bezier_path * xb + bezier_path** 2 * x2
-    #     y = (1 - bezier_path)** 2 * y1 + 2 * (1 - bezier_path) * bezier_path * yb + bezier_path** 2 * y2
-
-    #     ax.plot(x, y, 'k-')
-
-    # x, y = verts.T
-    # ax.scatter(x, y, marker='o', s=50, c='r')
-
-    # ax.set_xlim(-npoints - 5, npoints + 6)
-    # ax.set_ylim(-npoints - 5, npoints + 6)
-    # ax.set(aspect=1)
-    # plt.show()
-    # quit()

@@ -283,6 +283,72 @@ def send_notification(text='Hello'):
     mail.close()
     print "Notificaiont sent."
 
+def get_windage_loss(im_variant):
+
+    # %Air friction loss calculation
+    nu_0_Air  = 13.3e-6#;  %[m^2/s] kinematic viscosity of air at 0
+    rho_0_Air = 1.29#;     %[kg/m^3] Air density at 0
+    Shaft = [im_variant.stack_length,                               #1;         %End position of the sections mm (Absolut)
+             im_variant.Radius_OuterRotor+im_variant.Length_AirGap, #1;         %Inner Radius in mm
+             1,                                                     #0;         %Shrouded (1) or free surface (0)
+             im_variant.Length_AirGap]                              #0];        %Airgap in mm
+    Num_shaft_section = 1
+    T_Air = 75 #20:(120-20)/((SpeedMax-SpeedMin)/SpeedStep):120         #; % Air temperature []
+    
+    nu_Air  = nu_0_Air*((T_Air+273)/(0+273))**1.76
+    rho_Air = rho_0_Air*(0+273)/(T_Air+273)
+    windage_loss_radial = 0 
+
+    # Calculation of the section length ...
+    L = Shaft[0]*1e-3;    # in meter
+    R     = Shaft[1]*1e-3 # radius of air gap
+    delta = Shaft[3]*1e-3 # length of air gap
+    
+    Omega = 2*np.pi*im_variant.the_speed/60.
+    if abs(Omega - im_variant.Omega) < 0.1:
+        pass
+    else:
+        print Omega, im_variant.Omega, im_variant.the_speed
+        raise Exception('Check speed calc. resutls.')
+
+    # Reynolds number
+    Rey = R**2 * (Omega)/nu_Air
+
+    if Shaft[2] == 0: # free running cylinder
+        if Rey <= 170:
+            c_W = 8. / Rey
+        elif Rey>170 and Rey<4000:
+            c_W = 0.616*Rey**(-0.5)
+        else:
+            c_W = 6.3e-2*Rey**(-0.225)
+        windage_loss_radial = c_W*np.pi*rho_Air* Omega**3 * R**5 * (1.+L/R)
+
+    else: # shrouded cylinder by air gap from <Loss measurement of a 30 kW High Speed Permanent Magnet Synchronous Machine with Active Magnetic Bearings>
+        Tay = R*(Omega)*(delta/nu_Air)*np.sqrt(delta/R) # Taylor number 
+        if Rey <= 170:
+            c_W = 8. / Rey
+        elif Rey>170 and Tay<41.3:
+            c_W = 1.8 * Rey**(-1) * delta/R**(-0.25) * (R+delta)**2 / ((R+delta)**2 - R**2)
+        else:
+            c_W = 7e-3
+        windage_loss_radial = c_W*np.pi*rho_Air* Omega**3 * R**4 * L
+        
+    # end friction loss added - 05192018.yegu
+    # the friction coefficients from <Rotor Design of a High-Speed Permanent Magnet Synchronous Machine rating 100,000 rpm at 10 kW>
+    Rer = rho_Air * (im_variant.Radius_OuterRotor * 1e-3)**2 * Omega/nu_Air
+    if Rer <= 30:
+        c_f = 64/3. / Rer
+    elif Rer>30 and Rer<3*10**5:
+        c_f = 3.87 * Rer**(-0.5)
+    else:
+        c_f = 0.146 * Rer**(-0.2)
+
+    windage_loss_axial = 0.5 * c_f * rho_Air * Omega**3 * (im_variant.Radius_OuterRotor*1e-3)**5
+    
+    windage_loss_total = windage_loss_radial + windage_loss_axial
+    return windage_loss_total
+
+
 # @staticmethod
 def add_plots(axeses, dm, title=None, label=None, zorder=None, time_list=None, sfv=None, torque=None, range_ss=None, alpha=0.7):
 
@@ -369,7 +435,7 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
         else:
             # by JMAG for iron loss and FEMM for copper loss
             if dm.femm_loss_list[0] is None: # this will happen for running release_design.py
-                copper_loss  = dm.jmag_loss_list[0] + dm.jmag_loss_list[1] 
+                copper_loss  = dm.jmag_loss_list[0] + dm.jmag_loss_list[1]
             else:
                 copper_loss  = dm.femm_loss_list[0] + dm.femm_loss_list[1]
             iron_loss = dm.jmag_loss_list[2] 
@@ -377,11 +443,12 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
         # some factor to account for rotor iron loss?
         # iron_loss *= 1
 
-    # 这样计算效率，输出转矩大的，铁耗大一倍也没关系了，总之就是气隙变得最小。。。要不就不要优化气隙了。。。
+    windage_loss = get_windage_loss(im_variant)
 
-    total_loss   = copper_loss + iron_loss
+    # 这样计算效率，输出转矩大的，铁耗大一倍也没关系了，总之就是气隙变得最小。。。要不就不要优化气隙了。。。
+    total_loss   = copper_loss + iron_loss + windage_loss
     efficiency   = shaft_power / (total_loss + shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
-    str_results  += '\n\teta: %g' % (efficiency)
+    str_results  += '\n\teta, windage, total_loss: %g, %g, %g' % (efficiency, windage_loss, total_loss)
 
     # for easy access to codes
     machine_results = [power_factor, efficiency, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle]
@@ -390,6 +457,8 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
         machine_results.extend(dm.femm_loss_list)
     else:
         machine_results.extend([0.0, 0.0])
+    machine_results.extend([windage_loss, total_loss])
+
     str_machine_results = ','.join('%g'%(el) for el in machine_results if el is not None) # note that femm_loss_list can be None called by release_design.py
     
     cost_function, list_cost = compute_list_cost(use_weights(fea_config_dict['use_weights']), rotor_volume, rotor_weight, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list, power_factor, total_loss)
@@ -564,7 +633,7 @@ def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dic
     # t,T,Fx,Fy,Fabs = time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list
     end_time = time_list[-1]
 
-    sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=1*fea_config_dict['number_of_steps_2ndTTS']) # samples in the tail that are in steady state
+    sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=400) # samples in the tail that are in steady state
     str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
         add_plots( axeses, dm,
                       title='TranRef',#tran_study_name,
@@ -1413,8 +1482,7 @@ if __name__ == '__main__':
     # pop_denorm = min_b + pop * diff
     # pop[j] = (pop_denorm[j] - min_b) / diff
 
-def pareto_plot():
-    pass
+
 
 
 # plot sensitivity bar chart, Oj v.s. geometry parameters, pareto plot for ecce paper
@@ -1429,15 +1497,18 @@ if __name__ == '__main__':
     # ax = sns.barplot(y= "Deaths", x = "Causes", data = deaths_pd, palette=("Blues_d"))
     # sns.set_context("poster")
 
-
+    # if True:
     # Pareto Plot or Correlation Plot
-    if True:
+    def pareto_plot(run_integer, fig, ax, fig2, axeses, marker='.'):
         # swda = SwarmDataAnalyzer(run_integer=121, bool_sensitivity_analysis=False) # 4 pole Qr=32 motor for ecce19 digest
         # torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss = 19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706)
         # O2_ref = fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
 
         # swda = SwarmDataAnalyzer(run_integer=193, bool_sensitivity_analysis=False) # 2 pole Qr=16 motor for NineSigma - O2
-        swda = SwarmDataAnalyzer(run_integer=194, bool_sensitivity_analysis=False) # 2 pole Qr=16 motor for NineSigma - O3
+        # swda = SwarmDataAnalyzer(run_integer=194, bool_sensitivity_analysis=False) # 2 pole Qr=16 motor for NineSigma - O3
+        # swda = SwarmDataAnalyzer(run_integer=196, bool_sensitivity_analysis=False) # 2 pole Qr=16 motor for NineSigma - O3 (0.6 torque current)
+
+        swda = SwarmDataAnalyzer(run_integer=run_integer, bool_sensitivity_analysis=False) 
         torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss = 13.8431,107.522,0.046109,0.035044,2.17509, (1388.12+433.332+251.127)
         O2_ref = fobj_scalar(torque_average, ss_avg_force_magnitude, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle, total_loss, weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight) # reference design is the same from the sensitivty analysis
 
@@ -1455,183 +1526,252 @@ if __name__ == '__main__':
         # print array(swda.list_cost_function()) - array(O2) # they are the same
         O2 = O2.tolist()
 
-        def my_scatter_plot(x,y,O,xy_ref,O_ref, fig=None, ax=None, s=15):
+        def my_scatter_plot(x,y,O,xy_ref,O_ref, fig=None, ax=None, s=15, marker='.', index_list=None): # index_list is for filtered case
             # O is a copy of your list rather than array or the adress of the list
             # O is a copy of your list rather than array or the adress of the list
             # O is a copy of your list rather than array or the adress of the list
+
             x += [xy_ref[0]]
             y += [xy_ref[1]]
             O += [O_ref]
             if ax is None or fig is None:
                 fig = figure()
                 ax = fig.gca()
-            # O2_mix = np.concatenate([[O_ref], O2], axis=0) # # https://stackoverflow.com/questions/46106912/one-colorbar-for-multiple-scatter-plots
-            # min_, max_ = O2_mix.min(), O2_mix.max()
-            ax.annotate('Initial design', xytext=(xy_ref[0]*0.95, xy_ref[1]*1.0), xy=xy_ref, xycoords='data', arrowprops=dict(arrowstyle="->"))
-            # scatter(*xy_ref, marker='s', c=O_ref, s=20, alpha=0.75, cmap='viridis')
-            # clim(min_, max_)
-            scatter_handle = ax.scatter(x, y, c=O, s=s, alpha=0.5, cmap='viridis')
-            # clim(min_, max_)
-            ax.grid()
+            # add initial design to the plot
+            # ax.annotate('Initial design', xytext=(xy_ref[0]*0.95, xy_ref[1]*1.0), xy=xy_ref, xycoords='data', arrowprops=dict(arrowstyle="->"))
+            scatter_handle = ax.scatter(x, y, c=O, s=s, alpha=0.5, cmap='viridis', marker=marker)
+            print '---------------------For plotting in Matlab:'
+            for a, b in zip(x, y):
+                print a, b
+                # O2_mix = np.concatenate([[O_ref], O2], axis=0) # # https://stackoverflow.com/questions/46106912/one-colorbar-for-multiple-scatter-plots
+                # min_, max_ = O2_mix.min(), O2_mix.max()
+                # scatter(*xy_ref, marker='s', c=O_ref, s=20, alpha=0.75, cmap='viridis')
+                # clim(min_, max_)
+                # clim(min_, max_)
+                # ax.grid()
+            print '---------------------End for plotting in Matlab:'
 
             if True:
-                best_index, best_O = get_min_and_index(O)
-                print best_index, best_O
+                # best_index, best_O = get_min_and_index(O)
+                best_index, best_O = get_max_and_index(y[:-1]) # the last one is initial design
+                print 'BEST metrics:', best_index, best_O
+                print 'Best design:'  #[best_index]
+                print x[best_index], y[best_index]
+                for ind, el in enumerate(swda.design_display_generator()):
+                    # # not filtered
+                    # if ind == best_index:
+                    # filtered
+                    if index_list is not None:
+                        if ind == index_list[best_index]:
+                            print ind, el
+                # quit()
                 xy_best = (x[best_index], y[best_index])
                 handle_best = ax.scatter(*xy_best, s=s*3, marker='s', facecolors='none', edgecolors='r')
                 ax.legend((handle_best,), ('Best',))
 
             return scatter_handle
         
-        fig, axeses = subplots(2, 2, sharex=False, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
-        # fig, axeses = subplots(2, 2, sharex=False, dpi=150, figsize=(10, 8), facecolor='w', edgecolor='k')
-        fig.subplots_adjust(right=0.9, hspace=0.21, wspace=0.11) # won't work after I did something. just manual adjust!
-
-        # Use FRW and TRV
-        if True:
-            # TRV vs Torque Ripple
-            ax = axeses[0][0]
-            xy_ref = (torque_average/rotor_volume/1e3, normalized_torque_ripple) # from run#117
-            x, y = array(list(swda.get_certain_objective_function(2)))/rotor_volume/1e3, list(swda.get_certain_objective_function(3))
-            x = x.tolist()
-            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-            ax.set_xlabel('TRV [kNm/m^3]\n(a)')
-            ax.set_ylabel(r'$T_{\rm rip}$ [100%]')
-
-            # FRW vs Ea
-            ax = axeses[0][1]
-            xy_ref = (ss_avg_force_magnitude/rotor_weight, force_error_angle)
-            x, y = array(list(swda.get_certain_objective_function(4)))/rotor_weight, list(swda.get_certain_objective_function(6))
-            x = x.tolist()
-            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-            ax.set_xlabel('FRW [1]\n(b)')
-            ax.set_ylabel(r'$E_a$ [deg]')
-
-            # FRW vs Em
-            ax = axeses[1][0]
-            xy_ref = (ss_avg_force_magnitude/rotor_weight, normalized_force_error_magnitude)
-            x, y = array(list(swda.get_certain_objective_function(4)))/rotor_weight, list(swda.get_certain_objective_function(5))
-            x = x.tolist()
-            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-            ax.set_xlabel('FRW [1]\n(c)')
-            ax.set_ylabel(r'$E_m$ [100%]')
-
-            # Em vs Ea
-            ax = axeses[1][1]
-            xy_ref = (normalized_force_error_magnitude, force_error_angle)
-            x, y = list(swda.get_certain_objective_function(5)), list(swda.get_certain_objective_function(6))
-            scatter_handle = my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-            ax.set_xlabel('$E_m$ [100%]\n(d)')
-            ax.set_ylabel(r'$E_a$ [deg]')
-
-            # fig.subplots_adjust(right=0.8)
-            # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7]) # left, bottom, width, height
-            # fig.subplots_adjust(right=0.9)
-            # cbar_ax = fig.add_axes([0.925, 0.15, 0.025, 0.7])
-            cbar_ax = fig.add_axes([0.925, 0.15, 0.02, 0.7])
-            cbar_ax.get_yaxis().labelpad = 10
-            clb = fig.colorbar(scatter_handle, cax=cbar_ax)
-            clb.ax.set_ylabel(r'Cost function $O_2$', rotation=270)
-            # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
-
-        # Use Torque and Force
+        # Torque and Force
         if False:
+            # fig, axeses = subplots(2, 2, sharex=False, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
+            # # fig, axeses = subplots(2, 2, sharex=False, dpi=150, figsize=(10, 8), facecolor='w', edgecolor='k')
+            # fig.subplots_adjust(right=0.9, hspace=0.21, wspace=0.11) # won't work after I did something. just manual adjust!
 
-            # Torque vs Torque Ripple
-            ax = axeses[0][0]
-            xy_ref = (19.1197, 0.0864712) # from run#117
-            x, y = list(swda.get_certain_objective_function(2)), list(swda.get_certain_objective_function(3))
-            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-            ax.set_xlabel('$T_{em}$ [Nm]\n(a)')
-            ax.set_ylabel(r'$T_{\rm rip}$ [100%]')
+            # Use FRW and TRV
+            if True:
+                # TRV vs Torque Ripple
+                ax = axeses[0][0]
+                xy_ref = (torque_average/rotor_volume/1e3, normalized_torque_ripple) # from run#117
+                x, y = array(list(swda.get_certain_objective_function(2)))/rotor_volume/1e3, list(swda.get_certain_objective_function(3))
+                x = x.tolist()
+                my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig2, ax=ax, marker=marker)
+                ax.set_xlabel('TRV [kNm/m^3]\n(a)')
+                ax.set_ylabel(r'$T_{\rm rip}$ [100%]')
 
-            # Force vs Ea
-            ax = axeses[0][1]
-            xy_ref = (96.9263, 6.53137)
-            x, y = list(swda.get_certain_objective_function(4)), list(swda.get_certain_objective_function(6))
-            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-            ax.set_xlabel('$|F|$ [N]\n(b)')
-            ax.set_ylabel(r'$E_a$ [deg]')
+                # FRW vs Ea
+                ax = axeses[0][1]
+                xy_ref = (ss_avg_force_magnitude/rotor_weight, force_error_angle)
+                x, y = array(list(swda.get_certain_objective_function(4)))/rotor_weight, list(swda.get_certain_objective_function(6))
+                x = x.tolist()
+                my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig2, ax=ax, marker=marker)
+                ax.set_xlabel('FRW [1]\n(b)')
+                ax.set_ylabel(r'$E_a$ [deg]')
 
-            # Force vs Em
-            ax = axeses[1][0]
-            xy_ref = (96.9263, 0.104915)
-            x, y = list(swda.get_certain_objective_function(4)), list(swda.get_certain_objective_function(5))
-            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-            ax.set_xlabel('$|F|$ [N]\n(c)')
-            ax.set_ylabel(r'$E_m$ [100%]')
+                # FRW vs Em
+                ax = axeses[1][0]
+                xy_ref = (ss_avg_force_magnitude/rotor_weight, normalized_force_error_magnitude)
+                x, y = array(list(swda.get_certain_objective_function(4)))/rotor_weight, list(swda.get_certain_objective_function(5))
+                x = x.tolist()
+                my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig2, ax=ax, marker=marker)
+                ax.set_xlabel('FRW [1]\n(c)')
+                ax.set_ylabel(r'$E_m$ [100%]')
 
-            # Em vs Ea
-            ax = axeses[1][1]
-            xy_ref = (0.104915, 6.53137)
-            x, y = list(swda.get_certain_objective_function(5)), list(swda.get_certain_objective_function(6))
-            scatter_handle = my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-            ax.set_xlabel('$E_m$ [100%]\n(d)')
-            ax.set_ylabel(r'$E_a$ [deg]')
+                # Em vs Ea
+                ax = axeses[1][1]
+                xy_ref = (normalized_force_error_magnitude, force_error_angle)
+                x, y = list(swda.get_certain_objective_function(5)), list(swda.get_certain_objective_function(6))
+                scatter_handle = my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig2, ax=ax, marker=marker)
+                ax.set_xlabel('$E_m$ [100%]\n(d)')
+                ax.set_ylabel(r'$E_a$ [deg]')
 
-            # fig.subplots_adjust(right=0.8)
-            # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7]) # left, bottom, width, height
-            # fig.subplots_adjust(right=0.9)
-            # cbar_ax = fig.add_axes([0.925, 0.15, 0.025, 0.7])
-            cbar_ax = fig.add_axes([0.925, 0.15, 0.02, 0.7])
-            cbar_ax.get_yaxis().labelpad = 10
-            clb = fig.colorbar(scatter_handle, cax=cbar_ax)
-            clb.ax.set_ylabel(r'Cost function $O_2$', rotation=270)
-            # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
+                # fig.subplots_adjust(right=0.8)
+                # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7]) # left, bottom, width, height
+                # fig.subplots_adjust(right=0.9)
+                # cbar_ax = fig.add_axes([0.925, 0.15, 0.025, 0.7])
+                cbar_ax = fig2.add_axes([0.925, 0.15, 0.02, 0.7])
+                cbar_ax.get_yaxis().labelpad = 10
+                clb = fig2.colorbar(scatter_handle, cax=cbar_ax)
+                clb.ax.set_ylabel(r'Cost function $O_2$', rotation=270)
+                # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
 
+            # Use Torque and Force
+            if False:
 
-            fig.tight_layout()
-            # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
-            show()
+                # Torque vs Torque Ripple
+                ax = axeses[0][0]
+                xy_ref = (19.1197, 0.0864712) # from run#117
+                x, y = list(swda.get_certain_objective_function(2)), list(swda.get_certain_objective_function(3))
+                my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig2, ax=ax)
+                ax.set_xlabel('$T_{em}$ [Nm]\n(a)')
+                ax.set_ylabel(r'$T_{\rm rip}$ [100%]')
 
-            # Loss vs Ea
-            xy_ref = ((1817.22+216.216+224.706), 6.53137)
-            x, y = array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))), list(swda.get_certain_objective_function(6))
-            x = x.tolist()
-            my_scatter_plot(x,y,O2[::],xy_ref,O2_ref)
-            xlabel(r'$P_{\rm Cu,Fe}$ [W]')
-            ylabel(r'$E_a$ [deg]')
+                # Force vs Ea
+                ax = axeses[0][1]
+                xy_ref = (96.9263, 6.53137)
+                x, y = list(swda.get_certain_objective_function(4)), list(swda.get_certain_objective_function(6))
+                my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig2, ax=ax)
+                ax.set_xlabel('$|F|$ [N]\n(b)')
+                ax.set_ylabel(r'$E_a$ [deg]')
 
-            quit()   
+                # Force vs Em
+                ax = axeses[1][0]
+                xy_ref = (96.9263, 0.104915)
+                x, y = list(swda.get_certain_objective_function(4)), list(swda.get_certain_objective_function(5))
+                my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig2, ax=ax)
+                ax.set_xlabel('$|F|$ [N]\n(c)')
+                ax.set_ylabel(r'$E_m$ [100%]')
 
-        # Efficiency vs Rated power stack length
-        fig, ax = subplots(1, 1, sharex=False, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
-        def get_rated_values(l_torque_average, l_total_loss):
-            l_rated_stack_length = []
-            l_rated_total_loss = []
-            for torque_average, total_loss in zip(l_torque_average, l_total_loss):
-                rated_stack_length = stack_length / torque_average * required_torque
-                l_rated_stack_length.append(rated_stack_length)
+                # Em vs Ea
+                ax = axeses[1][1]
+                xy_ref = (0.104915, 6.53137)
+                x, y = list(swda.get_certain_objective_function(5)), list(swda.get_certain_objective_function(6))
+                scatter_handle = my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig2, ax=ax)
+                ax.set_xlabel('$E_m$ [100%]\n(d)')
+                ax.set_ylabel(r'$E_a$ [deg]')
 
-                rated_total_loss   = total_loss / stack_length * rated_stack_length
-                l_rated_total_loss.append(rated_total_loss)
-
-            return l_rated_stack_length, l_rated_total_loss
-        a, b = get_rated_values([torque_average], [total_loss])
-        rated_stack_length = a[0]
-        rated_total_loss = b[0]
-        print 'stack_length=', stack_length, 'mm, rated_stack_length=', rated_stack_length, 'mm'
-        print 'total_loss=', total_loss, 'W, rated_total_loss=', rated_total_loss, 'W'
-        xy_ref = (rated_stack_length, 1 - rated_total_loss/70e3)
-
-        x, y = get_rated_values(list(swda.get_certain_objective_function(2)), 
-                                array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))))
-        y = 1 - array(y)/70e3
-        y = y.tolist()
-        my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax)
-        ax.set_xlabel('Stack length [mm]')
-        ax.set_ylabel(r'Efficiency at 70 kW [1]')
-
-
-
-        fig.tight_layout()
-        # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
-        # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\pareto_plot.png', dpi=150, bbox_inches='tight')
-        show()
-        quit()
+                # fig.subplots_adjust(right=0.8)
+                # cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7]) # left, bottom, width, height
+                # fig.subplots_adjust(right=0.9)
+                # cbar_ax = fig.add_axes([0.925, 0.15, 0.025, 0.7])
+                cbar_ax = fig2.add_axes([0.925, 0.15, 0.02, 0.7])
+                cbar_ax.get_yaxis().labelpad = 10
+                clb = fig2.colorbar(scatter_handle, cax=cbar_ax)
+                clb.ax.set_ylabel(r'Cost function $O_2$', rotation=270)
+                # clb.ax.set_title(r'Cost function $O_2$', rotation=0)
 
 
-    # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
+                fig2.tight_layout()
+                # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
+                show()
+
+                # Loss vs Ea
+                xy_ref = ((1817.22+216.216+224.706), 6.53137)
+                x, y = array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))), list(swda.get_certain_objective_function(6))
+                x = x.tolist()
+                my_scatter_plot(x,y,O2[::],xy_ref,O2_ref)
+                xlabel(r'$P_{\rm Cu,Fe}$ [W]')
+                ylabel(r'$E_a$ [deg]')
+
+                quit()   
+        else:
+            # Efficiency vs Rated power stack length
+            def get_rated_values(l_torque_average, l_total_loss):
+                l_rated_stack_length = []
+                l_rated_total_loss = []
+                for torque_average, total_loss in zip(l_torque_average, l_total_loss):
+                    rated_stack_length = stack_length / torque_average * required_torque
+                    l_rated_stack_length.append(rated_stack_length)
+
+                    rated_total_loss   = total_loss / stack_length * rated_stack_length
+                    l_rated_total_loss.append(rated_total_loss)
+
+                return l_rated_stack_length, l_rated_total_loss
+            a, b = get_rated_values([torque_average], [total_loss])
+            rated_stack_length = a[0]
+            rated_total_loss = b[0]
+            print 'stack_length=', stack_length, 'mm, rated_stack_length=', rated_stack_length, 'mm'
+            print 'total_loss=', total_loss, 'W, rated_total_loss=', rated_total_loss, 'W'
+            xy_ref = (rated_stack_length, 1 - rated_total_loss/70e3)
+
+            if False: # no filter
+                x, y = get_rated_values(list(swda.get_certain_objective_function(2)), 
+                                        array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))))
+                y = 1 - array(y)/70e3
+                y = y.tolist()
+                my_scatter_plot(x,y,O2[::],xy_ref,O2_ref, fig=fig, ax=ax, marker=marker)
+            else:
+                filtered_torque_list = []
+                filtered_loss_list = []
+                filtered_O2_list = []
+                index_list = []
+                for torque, loss, err_angle, err_mag, o2, index in zip(list(swda.get_certain_objective_function(2)),
+                                                            array(list(swda.get_certain_objective_function(9))) + array(list(swda.get_certain_objective_function(12))) + array(list(swda.get_certain_objective_function(13))),
+                                                            list(swda.get_certain_objective_function(6)),
+                                                            list(swda.get_certain_objective_function(5)),
+                                                            O2,
+                                                            range(len(O2))):
+                    if err_angle<5 and err_mag<0.25:
+                        print err_angle, err_mag
+                        filtered_torque_list.append(torque)
+                        filtered_loss_list.append(loss)
+                        filtered_O2_list.append(o2)
+                        index_list.append(index)
+
+
+                x, y = get_rated_values(filtered_torque_list, filtered_loss_list)
+                filtered_x = []
+                filtered_y = []
+                filtered_filtered_O2_list = []
+                for x_el, y_el, O2_el in zip(x, y, filtered_O2_list):
+                    if x_el < 400:
+                        filtered_x.append(x_el)
+                        filtered_y.append(y_el)
+                        filtered_filtered_O2_list.append(O2_el)
+
+                filtered_y = 1 - array(filtered_y)/70e3
+                filtered_y = filtered_y.tolist()
+                my_scatter_plot(filtered_x, filtered_y, filtered_filtered_O2_list[::],
+                                xy_ref,O2_ref, fig=fig, ax=ax, marker=marker,index_list=index_list)
+
+            ax.set_xlabel('Stack length [mm]')
+            ax.set_ylabel(r'Efficiency at 70 kW [1]')
+            ax.grid()
+
+    # eta vs stack length
+    fig, ax = subplots(1, 1, sharex=False, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
+    axeses = None
+    fig2 = None
+
+    # torque and force
+    # fig2, axeses = subplots(2, 2, sharex=False, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
+    # fig2.subplots_adjust(right=0.9, hspace=0.21, wspace=0.11) # won't work after I did something. just manual adjust!
+
+
+    # pareto_plot(193, fig, ax, fig2, axeses, marker='o') # DPNV O2
+    pareto_plot(194, fig, ax, fig2, axeses, marker='o') # DPNV O3
+    # pareto_plot(196, fig, ax, fig2, axeses, marker='v') # Separate O3
+    # pareto_plot(199, fig, ax, fig2, axeses, marker='o') # DPNV O1
+
+    fig.tight_layout()
+    # fig2.tight_layout()
+    # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
+    # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\pareto_plot.png', dpi=150, bbox_inches='tight')
+    show()
+    quit()
+
+# ------------------------------------ Sensitivity Analysis Bar Chart Scripts
+if __name__ == '__main__':
+    
     # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
     # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
     if False: # 4 pole motor
@@ -1740,13 +1880,13 @@ if __name__ == '__main__':
                              swda.reference_data[4],
                              swda.reference_data[3],
                              swda.reference_data[5],
-                             swda.reference_data[6], (swda.reference_data[-5]+swda.reference_data[-1]+swda.reference_data[-2]), 
+                             swda.reference_data[6], (swda.reference_data[9]+swda.reference_data[12]+swda.reference_data[13]), 
                              weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
         O1_ref = fobj_scalar(swda.reference_data[2],
                              swda.reference_data[4],
                              swda.reference_data[3],
                              swda.reference_data[5],
-                             swda.reference_data[6], (swda.reference_data[-5]+swda.reference_data[-1]+swda.reference_data[-2]), 
+                             swda.reference_data[6], (swda.reference_data[9]+swda.reference_data[12]+swda.reference_data[13]), 
                              weights=O1_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
 
     print  'Objective function 1'
@@ -1858,7 +1998,7 @@ if __name__ == '__main__':
         ref[4] = swda.reference_data[4]                                                   / list_plotting_weights[4]  # 100% = FRW
         ref[5] = swda.reference_data[5]                                                   / list_plotting_weights[5]  # 100%
         ref[6] = swda.reference_data[6]                                                   / list_plotting_weights[6]  # deg
-        ref[7] = (swda.reference_data[-5]+swda.reference_data[-1]+swda.reference_data[-2])/ list_plotting_weights[7]  # W
+        ref[7] = (swda.reference_data[9]+swda.reference_data[12]+swda.reference_data[13])/ list_plotting_weights[7]  # W
 
     # Maximum
     data_max = array(data_max)

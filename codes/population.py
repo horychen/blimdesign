@@ -1421,7 +1421,7 @@ class swarm(object):
             refarray[3][1] =    number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] # =50*40, every 0.002 sec takes 40 steps 
             refarray[3][2] =        50
             refarray[4][0] = refarray[3][0] + 0.5/im.DriveW_Freq # 最后来一个超密的半周期400步
-            refarray[4][1] =    400
+            refarray[4][1] =    400 # range_ss=400 in collect_jmag_Tran2TSSProlong_results()
             refarray[4][2] =        50
             number_of_total_steps = 1 + 16 + number_of_steps_2ndTTS + number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] + 400 # [Double Check] don't forget to modify here!
             DM.GetDataSet(u"SectionStepTable").SetTable(refarray)
@@ -5069,6 +5069,8 @@ def add_Arnon5(app, dir_parent):
     app.GetMaterialLibrary().GetUserMaterial(u"Arnon5-final").SetValue(u"LossConstantKhX", 186.6)
     app.GetMaterialLibrary().GetUserMaterial(u"Arnon5-final").SetValue(u"LossConstantKeX", 0.07324)
 
+def add_Arnon7(app, dir_parent):
+    pass
 
 if __name__ == '__main__':
     pass
