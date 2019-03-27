@@ -1389,6 +1389,42 @@ class swarm(object):
 
 
 
+        # EC Rotate
+        tic = clock_time()
+        ecrot_study_name = original_study_name + u"-FFVRC"
+        if model.NumStudies()<3:
+            # EC Rotate: Rotate the rotor to find the ripples in force and torque # 不关掉这些云图，跑第二个study的时候，JMAG就挂了：app.View().SetVectorView(False); app.View().SetFluxLineView(False); app.View().SetContourView(False)
+            casearray = [0 for i in range(1)]
+            casearray[0] = 1
+            model.DuplicateStudyWithCases(original_study_name, ecrot_study_name, casearray)
+
+            app.SetCurrentStudy(ecrot_study_name)
+            study = app.GetCurrentStudy()
+            divisions_per_slot_pitch = 24
+            study.GetStep().SetValue(u"Step", divisions_per_slot_pitch) 
+            study.GetStep().SetValue(u"StepType", 0)
+            study.GetStep().SetValue(u"FrequencyStep", 0)
+            study.GetStep().SetValue(u"Initialfrequency", slip_freq_breakdown_torque)
+
+                # study.GetCondition(u"RotCon").SetValue(u"MotionGroupType", 1)
+            study.GetCondition(u"RotCon").SetValue(u"Displacement", + 360.0/im.Qr/divisions_per_slot_pitch)
+
+            # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
+            study.GetStudyProperties().SetValue(u"DirectSolverType", 1)
+
+            if run_list[2] == True:
+                # model.RestoreCadLink()
+                study.Run()
+                app.Save()
+                # model.CloseCadLink()
+            else:
+                pass # if the jcf file already exists, it pops a msg window
+                # study.WriteAllSolidJcf(self.dir_jcf, im.model_name+study.GetName()+'Solid', True) # True : Outputs cases that do not have results 
+                # study.WriteAllMeshJcf(self.dir_jcf, im.model_name+study.GetName()+'Mesh', True)
+        logger.debug('EC-Rotate spent %g sec.'%(clock_time() - tic))
+
+
+
         # Transient FEA wi 2 Time Step Section
         tic = clock_time()
         tran2tss_study_name = original_study_name[:-4] + u"Tran2TSS"
@@ -1559,41 +1595,6 @@ class swarm(object):
                 # study.WriteAllSolidJcf(self.dir_jcf, im.model_name+study.GetName()+'Solid', True) # True : Outputs cases that do not have results 
                 # study.WriteAllMeshJcf(self.dir_jcf, im.model_name+study.GetName()+'Mesh', True)
         logger.debug('Tran2TSSProlong spent %g sec.'%(clock_time() - tic))
-
-
-        # EC Rotate
-        tic = clock_time()
-        ecrot_study_name = original_study_name + u"-FFVRC"
-        if model.NumStudies()<3:
-            # EC Rotate: Rotate the rotor to find the ripples in force and torque # 不关掉这些云图，跑第二个study的时候，JMAG就挂了：app.View().SetVectorView(False); app.View().SetFluxLineView(False); app.View().SetContourView(False)
-            casearray = [0 for i in range(1)]
-            casearray[0] = 1
-            model.DuplicateStudyWithCases(original_study_name, ecrot_study_name, casearray)
-
-            app.SetCurrentStudy(ecrot_study_name)
-            study = app.GetCurrentStudy()
-            divisions_per_slot_pitch = 24
-            study.GetStep().SetValue(u"Step", divisions_per_slot_pitch) 
-            study.GetStep().SetValue(u"StepType", 0)
-            study.GetStep().SetValue(u"FrequencyStep", 0)
-            study.GetStep().SetValue(u"Initialfrequency", slip_freq_breakdown_torque)
-
-                # study.GetCondition(u"RotCon").SetValue(u"MotionGroupType", 1)
-            study.GetCondition(u"RotCon").SetValue(u"Displacement", + 360.0/im.Qr/divisions_per_slot_pitch)
-
-            # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
-            study.GetStudyProperties().SetValue(u"DirectSolverType", 1)
-
-            if run_list[2] == True:
-                # model.RestoreCadLink()
-                study.Run()
-                app.Save()
-                # model.CloseCadLink()
-            else:
-                pass # if the jcf file already exists, it pops a msg window
-                # study.WriteAllSolidJcf(self.dir_jcf, im.model_name+study.GetName()+'Solid', True) # True : Outputs cases that do not have results 
-                # study.WriteAllMeshJcf(self.dir_jcf, im.model_name+study.GetName()+'Mesh', True)
-        logger.debug('EC-Rotate spent %g sec.'%(clock_time() - tic))
 
 
         # These two studies are not needed after iemdc

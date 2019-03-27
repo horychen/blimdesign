@@ -35,12 +35,14 @@ if 'Severson' in fea_config_dict['pc_name']:
     # app.Show() (o)
     fea_config_dict['designer.Show'] = True
 
-    # serverson01    
     if '01' in fea_config_dict['pc_name']:
+        # serverson01    
         run_folder = r'run#299/' 
-    # serverson02 
+        run_folder = r'run#298/'# first section 32 steps
     elif '02' in fea_config_dict['pc_name']:
+        # serverson02 
         run_folder = r'run#399/' 
+        run_folder = r'run#398/' # first section 32 steps
     else:
         raise Exception('Where are you?')
 
