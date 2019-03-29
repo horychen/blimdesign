@@ -1,8 +1,14 @@
 from pylab import *
+mpl.rcParams['legend.fontsize'] = 14
+font = {'family' : 'Times New Roman', #'serif',
+        'weight' : 'normal',
+        'size'   : 14}
+mpl.rcParams['font.family'] = ['serif'] # default is sans-serif
+mpl.rcParams['font.serif'] = ['Times New Roman']
 
 d = {}
 
-run_integer = 94
+# run_integer = 94
 run_integer = 299
 with open('../pop/run#%d/iemdc_data.txt'%(run_integer), 'r') as f:
     buf = f.readlines()
@@ -10,12 +16,12 @@ for line in buf:
     l = [float(el) for el in line[:-1].split(',')]
     d[l[0]+100] = (l[1:6], l[6:11], l[11:16], l[16:21])
 
-# run_integer = 399
-# with open('../pop/run#%d/iemdc_data.txt'%(run_integer), 'r') as f:
-#     buf = f.readlines()
-# for line in buf:
-#     l = [float(el) for el in line[:-1].split(',')]
-#     d[l[0]+200] = (l[1:6], l[6:11], l[11:16], l[16:21])
+run_integer = 399
+with open('../pop/run#%d/iemdc_data.txt'%(run_integer), 'r') as f:
+    buf = f.readlines()
+for line in buf:
+    l = [float(el) for el in line[:-1].split(',')]
+    d[l[0]+200] = (l[1:6], l[6:11], l[11:16], l[16:21])
 
 for key, item in d.iteritems():
     print key, item
@@ -26,6 +32,8 @@ list_label = ['Tran. Ref.', 'Tran. w/ 2 Time Sect.', 'Rot. Eddy Current', 'Rot. 
 list_color = ['k', 'tomato', 'limegreen', 'cornflowerblue']
 
 def data_as_list(fea_model, performance, d):
+    if performance == 1 or performance == 3: # [%]
+        return [item[fea_model][performance]*100 for key, item in d.iteritems()]
     # print [item[fea_model][performance] for key, item in d.iteritems()]
     return [item[fea_model][performance] for key, item in d.iteritems()]
 
@@ -93,4 +101,9 @@ for ax in fig.axes:
     matplotlib.pyplot.sca(ax)
     plt.xticks(rotation=60)
 
+fig.tight_layout()
+fig.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\random_design_plots.png', dpi=150)
+
 show()
+
+

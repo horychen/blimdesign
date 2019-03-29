@@ -1,14 +1,25 @@
 #coding:u8
 import numpy as np
 from csv import reader as csv_reader
+from pylab import *
+# mpl.rcParams['legend.fontsize'] = 14
+# font = {'family' : 'Times New Roman', #'serif',
+#         'weight' : 'normal',
+#         'size'   : 14}
+mpl.rcParams['font.family'] = ['serif'] # default is sans-serif
+mpl.rcParams['font.serif'] = ['Times New Roman']
+
 
 # quit()
 
 number_current_generation = 0
-# run_folder = r'run#36/' # results for iemdc2019 digest
-# dir_csv_output_folder = u"D:/Users/horyc/OneDrive - UW-Madison/csv_opti/" # 2018
-run_folder = r'run#99/'
-dir_csv_output_folder = u"D:/OneDrive - UW-Madison/c_obsolete/csv_opti/" # 2019 
+
+run_folder = r'run#36/' # results for iemdc2019 digest
+dir_csv_output_folder = u"D:/OneDrive - UW-Madison/c_obsolete/csv_opti/" # 2018
+
+# run_folder = r'run#99/'
+# dir_csv_output_folder = u"D:/OneDrive - UW-Madison/c_obsolete/csv_opti/" # 2019 
+
 dir_csv_output_folder = dir_csv_output_folder + run_folder
 
 dir_project_files = 'D:/JMAG_Files/'
@@ -367,13 +378,13 @@ for individual_index in range(1):
 
     # quit()
 
-
     tranFEA_end_angle = angle[-1]
 
 
-    # this part of codes only works with case123, a case4 will ruin the csv file format...
-    # Transient FEA-TwoStepSection
 
+
+    # # this part of codes only works with case123, a case4 will ruin the csv file format...
+    # # Transient FEA-TwoStepSection
     # # read csv data
     # number_of_total_cases = 3
     #     # tran_study_name += '-ori'
@@ -486,8 +497,6 @@ for individual_index in range(1):
     #     plt.xlim([0,200])
     #     plt.ylim([0,200])
     #     break
-
-
 
 
 

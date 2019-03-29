@@ -19,15 +19,16 @@ fea_config_dict['flag_optimization'] = True # we need to generate and exploit sw
 fea_config_dict['Active_Qr'] = 36
 
 run_list = [1,1,1,1,0] # Static FEA with JMAG is too slow, so use FEMM to do that part
-run_list = [1,1,1,0,0] # TranRef is replaced by Tran2TSSProlong
+# run_list = [1,1,1,0,0] # TranRef is replaced by Tran2TSSProlong
 
 run_folder = r'run#99/' # Test run for single one design
 run_folder = r'run#98/' # Test run for the loop
 run_folder = r'run#97/' # Test run for the loop
 run_folder = r'run#96/' # Test run for the loop
 run_folder = r'run#95/' # Test run for the loop
-
 run_folder = r'run#94/' # Test run for the loop
+
+run_folder = r'run#93/' # get TranRef back and build rotor current plot
 
 if 'Severson' in fea_config_dict['pc_name']:
     # check number_cycles_prolonged is applied in number_of_total_steps (o)
@@ -170,6 +171,14 @@ for ind, individual_denorm in enumerate(pop_denorm):
     # print data_solver_jmag
     toc = clock_time()
     print ind, 'tic: %g. toc: %g. diff:%g' % (tic, toc, toc-tic)
+
+
+    # for iemdc 2019 Qr36rotor_current 
+    sw.show_results(femm_solver_data=data_solver_jmag)
+    from pylab import show
+    show()
+    quit()
+
 
     # JMAG results (EC-Rotate and Tran2TSS and Tran2TSSProlongRef)
     data_results = utility.collect_jmag_Tran2TSSProlong_results(im_variant, sw.dir_csv_output_folder, sw.fea_config_dict, sw.axeses, femm_solver_data=data_solver_jmag)

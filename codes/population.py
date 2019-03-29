@@ -1388,11 +1388,10 @@ class swarm(object):
         im.update_mechanical_parameters(slip_freq_breakdown_torque, syn_freq=im.DriveW_Freq)
 
 
-
         # EC Rotate
         tic = clock_time()
         ecrot_study_name = original_study_name + u"-FFVRC"
-        if model.NumStudies()<3:
+        if model.NumStudies()<2:
             # EC Rotate: Rotate the rotor to find the ripples in force and torque # 不关掉这些云图，跑第二个study的时候，JMAG就挂了：app.View().SetVectorView(False); app.View().SetFluxLineView(False); app.View().SetContourView(False)
             casearray = [0 for i in range(1)]
             casearray[0] = 1
@@ -1424,11 +1423,10 @@ class swarm(object):
         logger.debug('EC-Rotate spent %g sec.'%(clock_time() - tic))
 
 
-
         # Transient FEA wi 2 Time Step Section
         tic = clock_time()
         tran2tss_study_name = original_study_name[:-4] + u"Tran2TSS"
-        if model.NumStudies()<2:
+        if model.NumStudies()<3:
             model.DuplicateStudyWithType(original_study_name, u"Transient2D", tran2tss_study_name)
             app.SetCurrentStudy(tran2tss_study_name)
             study = app.GetCurrentStudy()
@@ -1597,8 +1595,9 @@ class swarm(object):
         logger.debug('Tran2TSSProlong spent %g sec.'%(clock_time() - tic))
 
 
+
         # These two studies are not needed after iemdc
-        if False:
+        if True:
             # Transient Reference
             tranRef_study_name = u"TranRef"
             if model.NumStudies()<4:
@@ -1782,7 +1781,7 @@ class swarm(object):
 
         ''' TranRef '''
         study_name = 'TranRef'
-        dm = self.read_csv_results_4_comparison__transient(study_name)
+        dm = utility.read_csv_results_4_comparison__transient(study_name, path_prefix=self.dir_csv_output_folder)
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
         end_time = time_list[-1]
 
@@ -1791,18 +1790,20 @@ class swarm(object):
         ax.plot(time_list, ForConAbs_list, alpha=0.7, label=study_name+'-Abs')
 
 
-        Avg_ForCon_Vector, _, Max_ForCon_Err_Angle = self.get_force_error_angle(ForConX_list[-48:], ForConY_list[-48:])
-        print '---------------\nTranRef-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]'
-        # print ForCon_Angle_List, 'deg'
-        print 'Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]'
-        print '\tbasic info:', basic_info
+        # Avg_ForCon_Vector, _, Max_ForCon_Err_Angle = self.get_force_error_angle(ForConX_list[-400:], ForConY_list[-400:])
+        # sfv = utilily.suspension_force_vector(ForConX_list, ForConY_list, range_ss=400)
+
+        # print '---------------\nTranRef-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]'
+        # # print ForCon_Angle_List, 'deg'
+        # print 'Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]'
+        # print '\tbasic info:', basic_info
 
 
 
 
         ''' Tran2TSS '''
         study_name = 'Tran2TSS'
-        dm = self.read_csv_results_4_comparison__transient(study_name)
+        dm = utility.read_csv_results_4_comparison__transient(study_name, path_prefix=self.dir_csv_output_folder)
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
 
         ax = axes[0]; ax.plot(time_list, TorCon_list, alpha=0.7, label=study_name); ax.set_xlabel('Time [s]'); ax.set_ylabel('Torque [Nm]')
@@ -1810,11 +1811,12 @@ class swarm(object):
         ax.plot(time_list, ForConAbs_list, alpha=0.7, label=study_name+'-Abs')
 
 
-        Avg_ForCon_Vector, _, Max_ForCon_Err_Angle = self.get_force_error_angle(ForConX_list[-48:], ForConY_list[-48:])
-        print '---------------\nTran2TSS-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]'
-        # print ForCon_Angle_List, 'deg'
-        print 'Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]'
-        print '\tbasic info:', basic_info
+        # Avg_ForCon_Vector, _, Max_ForCon_Err_Angle = self.get_force_error_angle(ForConX_list[-48:], ForConY_list[-48:])
+        # sfv = utilily.suspension_force_vector(ForConX_list, ForConY_list, range_ss=400)
+        # print '---------------\nTran2TSS-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]'
+        # # print ForCon_Angle_List, 'deg'
+        # print 'Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]'
+        # print '\tbasic info:', basic_info
 
 
 
@@ -1828,33 +1830,33 @@ class swarm(object):
         femm_force_y = femm_solver_data[3].tolist()        
         femm_force_abs = np.sqrt(np.array(femm_force_x)**2 + np.array(femm_force_y)**2 )
 
-        # Vector plot
-        ax = figure().gca()
-        ax.text(0,0,'FEMM')
-        for x, y in zip(femm_force_x, femm_force_y):
-            ax.arrow(0,0, x,y)
-        xlim([0,220])
-        ylim([0,220])
+        # # Vector plot
+        # ax = figure().gca()
+        # ax.text(0,0,'FEMM')
+        # for x, y in zip(femm_force_x, femm_force_y):
+        #     ax.arrow(0,0, x,y)
+        # xlim([0,220])
+        # ylim([0,220])
 
-        # Force Error Angle
-        Avg_ForCon_Vector, _, Max_ForCon_Err_Angle = self.get_force_error_angle(femm_force_x, femm_force_y)
-        print '---------------\nFEMM-Static-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]'
-        # print ForCon_Angle_List, 'deg'
-        print 'Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]'
+        # # # Force Error Angle
+        # # Avg_ForCon_Vector, _, Max_ForCon_Err_Angle = self.get_force_error_angle(femm_force_x, femm_force_y)
+        # # print '---------------\nFEMM-Static-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]'
+        # # # print ForCon_Angle_List, 'deg'
+        # # print 'Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]'
 
-        femm_torque  = number_of_repeat * femm_solver_data[1].tolist()
-        time_one_step = time_list[1]
-        time_list    = [i*time_one_step for i in range(len(femm_torque))]
-        femm_force_x = number_of_repeat * femm_solver_data[2].tolist()
-        femm_force_y = number_of_repeat * femm_solver_data[3].tolist()
-        femm_force_abs = number_of_repeat * femm_force_abs.tolist()
-        # print len(time_list), len(femm_force_abs)
-        if not femm_solver_data is None:
-            ax = axes[0]; ax.plot(time_list, femm_torque,label='FEMM', zorder=1)
-            ax = axes[1]; 
-            ax.plot(time_list, femm_force_x,label='FEMM-X', zorder=1)
-            ax.plot(time_list, femm_force_y,label='FEMM-Y', zorder=1)
-            ax.plot(time_list, femm_force_abs,label='FEMM-Abs', zorder=1)
+        # femm_torque  = number_of_repeat * femm_solver_data[1].tolist()
+        # time_one_step = time_list[1]
+        # time_list    = [i*time_one_step for i in range(len(femm_torque))]
+        # femm_force_x = number_of_repeat * femm_solver_data[2].tolist()
+        # femm_force_y = number_of_repeat * femm_solver_data[3].tolist()
+        # femm_force_abs = number_of_repeat * femm_force_abs.tolist()
+        # # print len(time_list), len(femm_force_abs)
+        # if not femm_solver_data is None:
+        #     ax = axes[0]; ax.plot(time_list, femm_torque,label='FEMM', zorder=1)
+        #     ax = axes[1]; 
+        #     ax.plot(time_list, femm_force_x,label='FEMM-X', zorder=1)
+        #     ax.plot(time_list, femm_force_y,label='FEMM-Y', zorder=1)
+        #     ax.plot(time_list, femm_force_abs,label='FEMM-Abs', zorder=1)
 
 
 
@@ -1877,7 +1879,7 @@ class swarm(object):
 
         ''' Super TranRef '''
         path_prefix = r'D:\JMAG_Files\TimeStepSensitivity/'
-        dm = self.read_csv_results_4_comparison__transient('TranRef', path_prefix=path_prefix+self.run_folder)
+        dm = utility.read_csv_results_4_comparison__transient('TranRef', path_prefix=path_prefix+self.run_folder)
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
 
         study_name = 'SuperTranRef'
@@ -1895,7 +1897,7 @@ class swarm(object):
 
         ''' TranRef '''
         study_name = 'TranRef'
-        dm = self.read_csv_results_4_comparison__transient(study_name)
+        dm = utility.read_csv_results_4_comparison__transient(study_name)
         basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
         end_time = time_list[-1]
 

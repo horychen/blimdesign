@@ -1,1 +1,1 @@
-"C:/Program Files/JMAG-Designer17.1/python2.7/python" "K:/jchen782/c/codes/method_parallel_solve_4jmag.py" K:/jchen782/FEMM/run#299/ind#0000/ 5
+python "D:/OneDrive - UW-Madison/c/codes/method_parallel_solve_4jmag.py" D:/femm42/run#93/ind#0000/ 5
