@@ -32,18 +32,20 @@ run_folder = r'run#93/' # get TranRef back and build rotor current plot
 
 if 'Severson' in fea_config_dict['pc_name']:
     # check number_cycles_prolonged is applied in number_of_total_steps (o)
-    fea_config_dict['number_cycles_prolonged'] = 150 # 1
+    fea_config_dict['number_cycles_prolonged'] = 0 #150 # 1
     # app.Show() (o)
     fea_config_dict['designer.Show'] = True
 
+    # serverson01    
     if '01' in fea_config_dict['pc_name']:
-        # serverson01    
-        run_folder = r'run#299/' 
-        run_folder = r'run#298/'# first section 32 steps
+        run_folder = r'run#299/' # some bug
+        run_folder = r'run#298/' # 2 deg, 24 steps, 32 steps
+        run_folder = r'run#297/' # sensitivity of solving steps (fine step case): 0.5 deg, 48 steps, 400 steps
+    # serverson02 
     elif '02' in fea_config_dict['pc_name']:
-        # serverson02 
-        run_folder = r'run#399/' 
-        run_folder = r'run#398/' # first section 32 steps
+        run_folder = r'run#399/' # some bug
+        run_folder = r'run#398/' # 2 deg, 24 steps, 32 steps
+        run_folder = r'run#397/' # sensitivity of solving steps (coarse step case): 5 deg, 12 steps, 16 steps
     else:
         raise Exception('Where are you?')
 
@@ -59,6 +61,8 @@ build_model_name_prefix(fea_config_dict)
 fea_config_dict['femm_deg_per_step'] = 2 #0.5 #0.1 # deg # 5 deg will cause error when DFT getting iron loss results
 logger.info('femm_deg_per_step is %g deg (Qs=24, p=2).'%(fea_config_dict['femm_deg_per_step']))
 
+fea_config_dict['ec_rotate_divisions_per_slot_pitch'] = 24
+logger.info('ec_rotate_divisions_per_slot_pitch is %g deg (Qs=24, p=2).'%(fea_config_dict['ec_rotate_divisions_per_slot_pitch']))
 
 ''' 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG)
 ''' # 1e-1也还是太小了（第三次报错），至少0.5mm长吧 # 1e-1 is the least geometry value. a 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
@@ -110,8 +114,6 @@ solver_femm = FEMM_Solver.FEMM_Solver(im_initial, flag_read_from_jmag=False, fre
     # # # # # load Arnon5 from file
     # # # # sw.print_array()
     # # # # quit()
-
-
 
 
 

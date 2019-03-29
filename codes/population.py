@@ -1279,7 +1279,7 @@ class swarm(object):
 
         return bool_temp
 
-    def run(self, im, individual_index=0, run_list=[1,1,0,0,0]): 
+    def run(self, im, individual_index=0, run_list=[1,1,0,0,0]):
         ''' run_list: toggle solver for Freq, Tran2TSS, Freq-FFVRC, TranRef, Static'''
         self.im = None
         logger = logging.getLogger(__name__)
@@ -1399,7 +1399,7 @@ class swarm(object):
 
             app.SetCurrentStudy(ecrot_study_name)
             study = app.GetCurrentStudy()
-            divisions_per_slot_pitch = 24
+            divisions_per_slot_pitch = self.fea_config_dict['ec_rotate_divisions_per_slot_pitch']  # 24
             study.GetStep().SetValue(u"Step", divisions_per_slot_pitch) 
             study.GetStep().SetValue(u"StepType", 0)
             study.GetStep().SetValue(u"FrequencyStep", 0)
@@ -1438,26 +1438,40 @@ class swarm(object):
             # 2 sections of different time step
             # IEMDC
             number_cycles_prolonged = self.fea_config_dict['number_cycles_prolonged'] # 150 or 1
+            number_of_steps_1stTTS = self.fea_config_dict['number_of_steps_1stTTS'] 
             number_of_steps_2ndTTS = self.fea_config_dict['number_of_steps_2ndTTS'] 
             DM = app.GetDataManager()
             DM.CreatePointArray(u"point_array/timevsdivision", u"SectionStepTable")
-            refarray = [[0 for i in range(3)] for j in range(5)]
-            refarray[0][0] = 0
-            refarray[0][1] =    1
-            refarray[0][2] =        50
-            refarray[1][0] = 0.5/slip_freq_breakdown_torque
-            refarray[1][1] =    number_of_steps_2ndTTS
-            refarray[1][2] =        50
-            refarray[2][0] = refarray[1][0] + 0.5/im.DriveW_Freq
-            refarray[2][1] =    number_of_steps_2ndTTS  # also modify range_ss! # don't forget to modify below!
-            refarray[2][2] =        50
-            refarray[3][0] = refarray[2][0] + number_cycles_prolonged/im.DriveW_Freq # =50*0.002 sec = 0.1 sec is needed to converge to TranRef
-            refarray[3][1] =    number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] # =50*40, every 0.002 sec takes 40 steps 
-            refarray[3][2] =        50
-            refarray[4][0] = refarray[3][0] + 0.5/im.DriveW_Freq # 最后来一个超密的半周期400步
-            refarray[4][1] =    400
-            refarray[4][2] =        50
-            number_of_total_steps = 1 + 2 * number_of_steps_2ndTTS + number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] + 400 # [Double Check] don't forget to modify here!
+            if number_cycles_prolonged == 0: # 不延长了，就是普通的Tran2TSS
+                refarray = [[0 for i in range(3)] for j in range(5)]
+                refarray[0][0] = 0
+                refarray[0][1] =    1
+                refarray[0][2] =        50
+                refarray[1][0] = 0.5/slip_freq_breakdown_torque
+                refarray[1][1] =    number_of_steps_1stTTS
+                refarray[1][2] =        50
+                refarray[2][0] = refarray[1][0] + 0.5/im.DriveW_Freq
+                refarray[2][1] =    number_of_steps_2ndTTS  # also modify range_ss! # don't forget to modify below!
+                refarray[2][2] =        50
+                number_of_total_steps = 1 + number_of_steps_1stTTS + number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
+            else:
+                refarray = [[0 for i in range(3)] for j in range(5)]
+                refarray[0][0] = 0
+                refarray[0][1] =    1
+                refarray[0][2] =        50
+                refarray[1][0] = 0.5/slip_freq_breakdown_torque
+                refarray[1][1] =    number_of_steps_1stTTS
+                refarray[1][2] =        50
+                refarray[2][0] = refarray[1][0] + 0.5/im.DriveW_Freq
+                refarray[2][1] =    number_of_steps_2ndTTS  # also modify range_ss! # don't forget to modify below!
+                refarray[2][2] =        50
+                refarray[3][0] = refarray[2][0] + number_cycles_prolonged/im.DriveW_Freq # =50*0.002 sec = 0.1 sec is needed to converge to TranRef
+                refarray[3][1] =    number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] # =50*40, every 0.002 sec takes 40 steps 
+                refarray[3][2] =        50
+                refarray[4][0] = refarray[3][0] + 0.5/im.DriveW_Freq # 最后来一个超密的半周期400步
+                refarray[4][1] =    400
+                refarray[4][2] =        50
+                number_of_total_steps = 1 + number_of_steps_1stTTS + number_of_steps_2ndTTS + number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] + 400 # [Double Check] don't forget to modify here!
             DM.GetDataSet(u"SectionStepTable").SetTable(refarray)
             study.GetStep().SetValue(u"Step", number_of_total_steps)
             study.GetStep().SetValue(u"StepType", 3)
@@ -2173,14 +2187,15 @@ class swarm(object):
         ax_cur.legend()
         ax_cur.grid()
         ax_cur.set_xlabel('Time [s]'); 
-        ax_cur.set_ylabel('Rotor Current (of One Bar) [A]')
+        ax_cur.set_ylabel('Rotor slot current [A]')
         # plt.figtext(0.5, 0.01, txt, wrap=True, horizontalalignment='center', fontsize=12)
 
         ax_cur2.legend()
         ax_cur2.grid()
         ax_cur2.set_xlabel('Time [s]'); 
-        ax_cur2.set_ylabel('Rotor current (of one conductor) [A]')
+        ax_cur2.set_ylabel('Rotor slot current [A]')
         ax_cur2.set_xlim([0, 0.09]); 
+        fig_cur2.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\Qr36_rotor_current_1000A.png', dpi=150)
 
 
         fig_main.tight_layout()

@@ -16,12 +16,12 @@ for line in buf:
     l = [float(el) for el in line[:-1].split(',')]
     d[l[0]+100] = (l[1:6], l[6:11], l[11:16], l[16:21])
 
-run_integer = 399
-with open('../pop/run#%d/iemdc_data.txt'%(run_integer), 'r') as f:
-    buf = f.readlines()
-for line in buf:
-    l = [float(el) for el in line[:-1].split(',')]
-    d[l[0]+200] = (l[1:6], l[6:11], l[11:16], l[16:21])
+# run_integer = 399
+# with open('../pop/run#%d/iemdc_data.txt'%(run_integer), 'r') as f:
+#     buf = f.readlines()
+# for line in buf:
+#     l = [float(el) for el in line[:-1].split(',')]
+#     d[l[0]+200] = (l[1:6], l[6:11], l[11:16], l[16:21])
 
 for key, item in d.iteritems():
     print key, item

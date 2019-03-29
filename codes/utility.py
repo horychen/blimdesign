@@ -498,10 +498,10 @@ class suspension_force_vector(object):
         self.ss_max_force_err_abs = max(self.force_err_abs[-range_ss:]), min(self.force_err_abs[-range_ss:])
 
         # method 1 
-        # self.force_error_angle = 0.5*(sfv.ss_max_force_err_ang[0]-sfv.ss_max_force_err_ang[1])
+        # self.force_error_angle = 0.5*(self.ss_max_force_err_ang[0]-self.ss_max_force_err_ang[1])
         # method 2 suggested by Eric 
-        self.force_error_angle = max( [ abs(sfv.ss_max_force_err_ang[0]), 
-                                        abs(sfv.ss_max_force_err_ang[1]) ] )
+        self.force_error_angle = max( [ abs(self.ss_max_force_err_ang[0]), 
+                                        abs(self.ss_max_force_err_ang[1]) ] )
 
 def pyplot_clear(axeses):
     # self.fig_main.clf()
