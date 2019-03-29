@@ -1443,7 +1443,7 @@ class swarm(object):
             DM = app.GetDataManager()
             DM.CreatePointArray(u"point_array/timevsdivision", u"SectionStepTable")
             if number_cycles_prolonged == 0: # 不延长了，就是普通的Tran2TSS
-                refarray = [[0 for i in range(3)] for j in range(5)]
+                refarray = [[0 for i in range(3)] for j in range(3)]
                 refarray[0][0] = 0
                 refarray[0][1] =    1
                 refarray[0][2] =        50
