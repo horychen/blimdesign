@@ -637,27 +637,35 @@ def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dic
     study_name = im_variant.get_individual_name() + 'Tran2TSS'
     dm = read_csv_results_4_comparison__transient(study_name, path_prefix)
     basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
-    # t,T,Fx,Fy,Fabs = time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list
     end_time = time_list[-1]
-
-    sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=400) # samples in the tail that are in steady state
-    str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
-        add_plots( axeses, dm,
-                      title='TranRef',#tran_study_name,
-                      label='Transient FEA w/ 2 Time Step Sections',
-                      zorder=8,
-                      time_list=time_list,
-                      sfv=sfv,
-                      torque=TorCon_list,
-                      range_ss=sfv.range_ss)
-    str_results += '\n\tbasic info:' +   ''.join(  [str(el) for el in basic_info])
-    # print str_results
-    data_results.extend([torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle])
+    
+    if fea_config_dict['number_cycles_prolonged'] != 0:
+        sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=400) # samples in the tail that are in steady state
+        str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
+            add_plots( axeses, dm,
+                          title='TranRef',#tran_study_name,
+                          label='Reference Transient FEA',
+                          zorder=8,
+                          time_list=time_list,
+                          sfv=sfv,
+                          torque=TorCon_list,
+                          range_ss=sfv.range_ss)
+        str_results += '\n\tbasic info:' +   ''.join(  [str(el) for el in basic_info])
+        # print str_results
+        data_results.extend([torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle])
+    else:
+        data_results.extend([0, 0, 0, 0, 0])
+        
 
     ################################################################
     # Tran2TSS
     ################################################################
-    time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = time_list[:49], TorCon_list[:49], ForConX_list[:49], ForConY_list[:49], ForConAbs_list[:49]
+    number_of_total_steps = 1 + fea_config_dict['number_of_steps_1stTTS'] + fea_config_dict['number_of_steps_2ndTTS']
+    time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = time_list[:number_of_total_steps], \
+                                                                        TorCon_list[:number_of_total_steps], \
+                                                                        ForConX_list[:number_of_total_steps], \
+                                                                        ForConY_list[:number_of_total_steps], \
+                                                                        ForConAbs_list[:number_of_total_steps]
 
     sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=fea_config_dict['number_of_steps_2ndTTS']) # samples in the tail that are in steady state
     str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
@@ -670,40 +678,6 @@ def collect_jmag_Tran2TSSProlong_results(im_variant, path_prefix, fea_config_dic
                       torque=TorCon_list,
                       range_ss=sfv.range_ss)
     str_results += '\n\tbasic info:' +   ''.join(  [str(el) for el in basic_info])
-    # print str_results
-    data_results.extend([torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle])
-
-
-    ################################################################
-    # EddyCurrent-Rotate
-    ################################################################
-    study_name = im_variant.get_individual_name() + 'Freq-FFVRC'
-    dm = read_csv_results_4_comparison_eddycurrent(study_name, path_prefix)
-    _, _, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
-
-    rotor_position_in_deg = 360./im_variant.Qr / len(TorCon_list) * np.arange(0, len(TorCon_list))
-    # print rotor_position_in_deg
-    time_list = rotor_position_in_deg/180.*math.pi / im_variant.Omega
-    number_of_repeat = int(end_time / time_list[-1])
-
-    # 延拓
-    ec_torque        = number_of_repeat*TorCon_list
-    time_one_step = time_list[1]
-    time_list     = [i*time_one_step for i in range(len(ec_torque))]
-    ec_force_abs     = number_of_repeat*ForConAbs_list.tolist()
-    ec_force_x       = number_of_repeat*ForConX_list
-    ec_force_y       = number_of_repeat*ForConY_list
-
-    sfv = suspension_force_vector(ec_force_x, ec_force_y, range_ss=len(rotor_position_in_deg))
-    str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
-        add_plots( axeses, dm,
-              title='Eddy Current Rotate',
-              label='Eddy Current FEA', #'EddyCurFEAwiRR',
-              zorder=2,
-              time_list=time_list,
-              sfv=sfv,
-              torque=ec_torque,
-              range_ss=sfv.range_ss) # samples in the tail that are in steady state
     # print str_results
     data_results.extend([torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle])
 
