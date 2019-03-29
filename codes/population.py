@@ -1606,7 +1606,7 @@ class swarm(object):
                 study = app.GetCurrentStudy()
 
                 # 将一个滑差周期和十个同步周期，分成 400 * end_point / (1.0/im.DriveW_Freq) 份。
-                end_point = 1.0/slip_freq_breakdown_torque + 10.0/im.DriveW_Freq
+                end_point = 0.5/slip_freq_breakdown_torque + 10.0/im.DriveW_Freq
                 # Pavel Ponomarev 推荐每个电周期400~600个点来捕捉槽效应。
                 division = self.fea_config_dict['TranRef-StepPerCycle'] * end_point / (1.0/im.DriveW_Freq)  # int(end_point * 1e4)
                                                                         # end_point = division * 1e-4
@@ -1870,6 +1870,325 @@ class swarm(object):
 
     # IEMDC19
     # show_results_iemdc19 is removed here
+    def show_results_iemdc19(self, im_variant, femm_solver_data=None, femm_rotor_current_function=None):
+        print 'show results!'
+        mpl.rcParams['font.family'] = ['serif'] # default is sans-serif
+        mpl.rcParams['font.serif'] = ['Times New Roman']
+        
+        Fs = 500.*400.
+        def basefreqFFT(x, Fs, base_freq=500, ax=None, ax_time_domain=None): #频域横坐标除以基频，即以基频为单位
+            def nextpow2(L):
+                n = 0
+                while 2**n < L:
+                    n += 1
+                return n
+            L = len(x)
+            Ts = 1.0/Fs
+            t = [el*Ts for el in range(0,L)]
+            if ax_time_domain != None:
+                ax_time_domain.plot(t, x)
+
+            # NFFT = 2**nextpow2(L) # this causes incorrect dc bin (too large)
+            NFFT = L
+            y = np.fft.fft(x,NFFT) # y is a COMPLEX defined in numpy
+            Y = [2 * el.__abs__() / L for el in y] # /L for spectrum aplitude consistent with actual signal. 2* for single-sided. abs for amplitude of complem number.
+            Y[0] *= 0.5 # DC does not need to be times 2
+            if base_freq==None:
+                # f = np.fft.fftfreq(NFFT, t[1]-t[0]) # for double-sided
+                f = Fs/2.0*np.linspace(0,1,NFFT/2+1) # unit is Hz
+            else:
+                f = Fs/2.0/base_freq*np.linspace(0,1,NFFT/2+1) # unit is base_freq Hz
+
+            if ax == None:
+                fig, ax = subplots()
+            # ax.bar(f,Y[0:int(NFFT/2)+1], width=1.5)
+            ax.plot(f,Y[0:int(NFFT/2)+1])
+
+            # fig.title('Single-Sided Amplitude Spectrum of x(t)')
+            # ax.xlabel('Frequency divided by base_freq / base freq * Hz')
+            #ylabel('|Y(f)|')
+            # ax.ylabel('Amplitude / 1')
+
+            # # 计算频谱
+            # fft_parameters = np.fft.fft(y_data) / len(y_data)
+            # # 计算各个频率的振幅
+            # fft_data = np.clip(20*np.log10(np.abs(fft_parameters))[:self.fftsize/2+1], -120, 120)
+        def FFT_another_implementation(TorCon_list, Fs):
+            # 这个FFT的结果和上面那个差不多，但是会偏小一点！不知道为什么！
+
+            # Number of samplepoints
+            N = len(TorCon_list)
+            # Sample spacing
+            T = 1.0 / Fs
+            yf = np.fft.fft(TorCon_list)
+            yf[0] *= 0.5
+            xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
+            fig, ax = subplots()
+            ax.plot(xf, 2.0/N * np.abs(yf[:N//2]))
+        global count_plot
+        count_plot = 0
+        def add_plot(axeses, title=None, label=None, zorder=None, time_list=None, sfv=None, torque=None, range_ss=None, alpha=0.7):
+
+            # # Avg_ForCon_Vector, Avg_ForCon_Magnitude, Avg_ForCon_Angle, ForCon_Angle_List, Max_ForCon_Err_Angle = self.get_force_error_angle(force_x[-range_ss:], force_y[-range_ss:])
+            # print '\n\n---------------%s' % (title)
+            # print 'Average Force Mag:', sfv.ss_avg_force_magnitude, '[N]'
+            # print 'Average Torque:', sum(torque[-range_ss:])/len(torque[-range_ss:]), '[Nm]'
+            # print 'Normalized Force Error Mag: %g%%, (+)%g%% (-)%g%%' % (0.5*(sfv.ss_max_force_err_abs[0]-sfv.ss_max_force_err_abs[1])/sfv.ss_avg_force_magnitude*100,
+            #                                                               sfv.ss_max_force_err_abs[0]/sfv.ss_avg_force_magnitude*100,
+            #                                                               sfv.ss_max_force_err_abs[1]/sfv.ss_avg_force_magnitude*100)
+            # print 'Maximum Force Error Angle: %g [deg], (+)%g deg (-)%g deg' % (0.5*(sfv.ss_max_force_err_ang[0]-sfv.ss_max_force_err_ang[1]),
+            #                                                              sfv.ss_max_force_err_ang[0],
+            #                                                              sfv.ss_max_force_err_ang[1])
+            # print 'Extra Information:'
+            # print '\tAverage Force Vecotr:', sfv.ss_avg_force_vector, '[N]'
+            # print '\tTorque Ripple (Peak-to-Peak)', max(torque[-range_ss:]) - min(torque[-range_ss:]), 'Nm'
+            # print '\tForce Mag Ripple (Peak-to-Peak)', sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1], 'N'
+
+            ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
+            ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs, alpha=alpha, label=label, zorder=zorder)
+            ax = axeses[1][0]; ax.plot(time_list, 100*sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
+            ax = axeses[1][1]; ax.plot(time_list, np.arctan2(sfv.force_y, sfv.force_x)/pi*180. - sfv.ss_avg_force_angle, label=label, alpha=alpha, zorder=zorder)
+
+            global count_plot
+            count_plot += 1
+            # This is used for table in latex
+            print '''
+            \\newcommand\\torqueAvg%s{%s}
+            \\newcommand\\torqueRipple%s{%s}
+            \\newcommand\\forceAvg%s{%s}
+            \\newcommand\\forceErrMag%s{%s}
+            \\newcommand\\forceErrAng%s{%s}
+            ''' % (chr(64+count_plot), utility.to_precision(sum(torque[-range_ss:])/len(torque[-range_ss:])),
+                   chr(64+count_plot), utility.to_precision(0.5*(max(torque[-range_ss:]) - min(torque[-range_ss:]))),
+                   chr(64+count_plot), utility.to_precision(sfv.ss_avg_force_magnitude),
+                   chr(64+count_plot), utility.to_precision(0.5*(sfv.ss_max_force_err_abs[0]-sfv.ss_max_force_err_abs[1])/sfv.ss_avg_force_magnitude*100),
+                   chr(64+count_plot), utility.to_precision(0.5*(sfv.ss_max_force_err_ang[0]-sfv.ss_max_force_err_ang[1])))
+
+        fig_main, axeses = subplots(2, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+        ax = axeses[0][0]; ax.set_xlabel('(a)',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)
+        ax = axeses[0][1]; ax.set_xlabel('(b)',fontsize=14.5); ax.set_ylabel('Force Amplitude [N]',fontsize=14.5)
+        ax = axeses[1][0]; ax.set_xlabel('Time [s]\n(c)',fontsize=14.5); ax.set_ylabel('Normalized Force Error Magnitude [%]',fontsize=14.5)
+        ax = axeses[1][1]; ax.set_xlabel('Time [s]\n(d)',fontsize=14.5); ax.set_ylabel('Force Error Angle [deg]',fontsize=14.5)
+
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # TranRef400
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        study_name = 'TranRef'
+        # dm = utility.read_csv_results_4_comparison__transient(study_name, path_prefix=r'D:\JMAG_Files\TimeStepSensitivity/'+'PS_Qr%d_NoEndRing_M15_17303l/'%(int(self.im.Qr)))
+        dm = utility.read_csv_results_4_comparison__transient(study_name, path_prefix=self.dir_csv_output_folder)
+        basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
+        sfv = utility.suspension_force_vector(ForConX_list, ForConY_list, range_ss=400) # samples in the tail that are in steady state
+        add_plot( axeses,
+                  title=study_name,
+                  label='Transient FEA', #'TranFEARef', #400',
+                  zorder=1,
+                  time_list=time_list,
+                  sfv=sfv,
+                  torque=TorCon_list,
+                  range_ss=sfv.range_ss) 
+        print '\tbasic info:', basic_info
+
+        # Current of TranRef
+        fig_cur, axes_cur = subplots(2,1)
+        fig_cur2, ax_cur2 = subplots(1,1)
+        ax_cur = axes_cur[0]
+        # for key in dm.key_list:
+        #     if 'A1' in key: # e.g., ConductorA1
+        #         ax_cur.plot(dm.Current_dict['Time(s)'], 
+        #                 dm.Current_dict[key], 
+        #                 label=study_name, #+'40',
+        #                 alpha=0.7)
+        # Current of TranRef400
+        for key in dm.key_list:
+            # if 'Coil' in key:
+            #     ax_cur.plot(dm.Current_dict['Time(s)'], 
+            #             dm.Current_dict[key], 
+            #             label=key,
+            #             alpha=0.7)
+            if 'A1' in key: # e.g., ConductorA1
+                ax_cur.plot(dm.Current_dict['Time(s)'], 
+                        dm.Current_dict[key], 
+                        label=study_name+'400',
+                        alpha=0.7,
+                        color='blue') #'purple')
+                ax_cur2.plot(dm.Current_dict['Time(s)'], 
+                        dm.Current_dict[key], 
+                        label='Reference Transient FEA',
+                        alpha=0.5,
+                        color='k',
+                        lw='0.5') #'purple')
+                basefreqFFT(dm.Current_dict[key], Fs, ax=axes_cur[1])
+                print '\tcheck time step', time_list[1], '=',  1./Fs
+                break
+
+        # basefreqFFT(np.sin(2*pi*1500*np.arange(0,0.1,1./Fs)), Fs)
+        fig, axes = subplots(2,1)
+        basefreqFFT(TorCon_list[int(len(TorCon_list)/2):], Fs, base_freq=500., ax=axes[1], ax_time_domain=axes[0])
+        fig, axes = subplots(2,1)
+        basefreqFFT(ForConAbs_list[int(len(TorCon_list)/2):], Fs, ax=axes[1], ax_time_domain=axes[0])
+
+
+        # ''' TranRef '''
+        # study_name = 'TranRef'
+        # dm = utility.read_csv_results_4_comparison__transient(study_name)        
+        # basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
+        # add_plot( axeses,
+        #           title=study_name,
+        #           label='TranFEARef40',
+        #           zorder=5,
+        #           time_list=time_list,
+        #           force_x=ForConX_list,
+        #           force_y=ForConY_list,
+        #           force_abs=ForConAbs_list,
+        #           torque=TorCon_list,
+        #           range_ss=480) # samples in the tail that are in steady state
+        # print '\tbasic info:', basic_info
+
+
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # Tran2TSS
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        study_name = im_variant.get_individual_name() + 'Tran2TSS'
+        dm = utility.read_csv_results_4_comparison__transient(study_name, self.dir_csv_output_folder)
+        basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
+        end_time = time_list[-1]
+        sfv = utility.suspension_force_vector(ForConX_list, ForConY_list, range_ss=48) # samples in the tail that are in steady state
+        add_plot( axeses,
+                  title=study_name,
+                  label='Transient FEA w/ 2 Time Step Sections',
+                  zorder=8,
+                  time_list=time_list,
+                  sfv=sfv,
+                  torque=TorCon_list,
+                  range_ss=sfv.range_ss)
+        print '\tbasic info:', basic_info
+
+        # Current of Tran2TSS
+        for key in dm.key_list:
+            if 'A1' in key: # e.g., ConductorA1
+                ax_cur.plot(dm.Current_dict['Time(s)'], 
+                        dm.Current_dict[key], 
+                        label=study_name,
+                        alpha=0.7)
+                ax_cur2.plot(dm.Current_dict['Time(s)'], 
+                        dm.Current_dict[key], 
+                        label='Transient FEA with 2 Time Step Section',
+                        alpha=0.7,
+                        color='r')
+                break
+
+        # Current of FEMM
+        if femm_rotor_current_function!=None:
+            ax_cur.plot(dm.Current_dict['Time(s)'], 
+                    [femm_rotor_current_function(t) for t in dm.Current_dict['Time(s)']], 
+                    label='FEMM',
+                    alpha=1,
+                    c='r')
+            ax_cur2.plot(dm.Current_dict['Time(s)'], 
+                    [femm_rotor_current_function(t) for t in dm.Current_dict['Time(s)']], 
+                    label='Static FEA',
+                    alpha=1,
+                    c='b')
+
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # Static FEA with FEMM
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        study_name = 'FEMM'
+        rotor_position_in_deg = femm_solver_data[0]*0.1 
+        time_list = rotor_position_in_deg/180.*pi / self.im.Omega
+        number_of_repeat = int(end_time / time_list[-1]) + 2
+        femm_force_x = femm_solver_data[2].tolist()
+        femm_force_y = femm_solver_data[3].tolist()        
+        femm_force_abs = np.sqrt(np.array(femm_force_x)**2 + np.array(femm_force_y)**2 )
+
+        # 延拓
+        femm_torque  = number_of_repeat * femm_solver_data[1].tolist()
+        time_one_step = time_list[1]
+        time_list    = [i*time_one_step for i in range(len(femm_torque))]
+        femm_force_x = number_of_repeat * femm_solver_data[2].tolist()
+        femm_force_y = number_of_repeat * femm_solver_data[3].tolist()
+        femm_force_abs = number_of_repeat * femm_force_abs.tolist()
+
+        sfv = utility.suspension_force_vector(femm_force_x, femm_force_y, range_ss=len(rotor_position_in_deg)) # samples in the tail that are in steady state
+        add_plot( axeses,
+                  title=study_name,
+                  label='Static FEA', #'StaticFEAwiRR',
+                  zorder=3,
+                  time_list=time_list,
+                  sfv=sfv,
+                  torque=femm_torque,
+                  range_ss=sfv.range_ss,
+                  alpha=0.5) 
+
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # EddyCurrent
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        study_name = im_variant.get_individual_name() + 'Freq-FFVRC'
+        dm = utility.read_csv_results_4_comparison_eddycurrent(study_name, self.dir_csv_output_folder)
+        _, _, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
+
+        rotor_position_in_deg = 360./self.im.Qr / len(TorCon_list) * np.arange(0, len(TorCon_list))
+        # print rotor_position_in_deg
+        time_list = rotor_position_in_deg/180.*pi / self.im.Omega
+        number_of_repeat = int(end_time / time_list[-1])
+
+        # 延拓
+        ec_torque        = number_of_repeat*TorCon_list
+        time_one_step = time_list[1]
+        time_list     = [i*time_one_step for i in range(len(ec_torque))]
+        ec_force_abs     = number_of_repeat*ForConAbs_list.tolist()
+        ec_force_x       = number_of_repeat*ForConX_list
+        ec_force_y       = number_of_repeat*ForConY_list
+
+        sfv = utility.suspension_force_vector(ec_force_x, ec_force_y, range_ss=len(rotor_position_in_deg))
+        add_plot( axeses,
+                  title=study_name,
+                  label='Eddy Current FEA', #'EddyCurFEAwiRR',
+                  zorder=2,
+                  time_list=time_list,
+                  sfv=sfv,
+                  torque=ec_torque,
+                  range_ss=sfv.range_ss) # samples in the tail that are in steady state
+
+        # Force Vector plot
+        ax = figure().gca()
+        # ax.text(0,0,'FEMM')
+        for x, y in zip(femm_force_x, femm_force_y):
+            ax.arrow(0,0, x,y)
+        # ax.set_xlim([0,220])
+        # ax.set_ylim([0,220])
+        ax.grid()
+        ax.set_xlabel('Force X (FEMM) [N]'); 
+        ax.set_ylabel('Force Y (FEMM) [N]')
+
+        for ax in [axeses[0][0],axeses[0][1],axeses[1][0],axeses[1][1]]:
+            ax.grid()
+            ax.legend(loc='lower center')
+            # ax.set_xlim([0,0.35335])
+
+
+        # axeses[0][1].set_ylim([260, 335])
+        # axeses[1][0].set_ylim([-0.06, 0.06])
+
+        ax_cur.legend()
+        ax_cur.grid()
+        ax_cur.set_xlabel('Time [s]'); 
+        ax_cur.set_ylabel('Rotor Current (of One Bar) [A]')
+        # plt.figtext(0.5, 0.01, txt, wrap=True, horizontalalignment='center', fontsize=12)
+
+        ax_cur2.legend()
+        ax_cur2.grid()
+        ax_cur2.set_xlabel('Time [s]'); 
+        ax_cur2.set_ylabel('Rotor current (of one conductor) [A]')
+        ax_cur2.set_xlim([0, 0.09]); 
+
+
+        fig_main.tight_layout()
+        if int(self.im.Qr) == 36:
+            fig_main.savefig('FEA_Model_Comparisons.png', dpi=150)
+            # fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 BlessIMDesign\p2019_iemdc_bearingless_induction full paper\images\FEA_Model_Comparisons.png', dpi=150)
+            fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\New_FEA_Model_Comparisons.png', dpi=150)
+            
 
     def timeStepSensitivity(self):
         from pylab import figure, show, subplots, xlim, ylim
@@ -2068,6 +2387,8 @@ class swarm(object):
         dm.jmag_loss_list    = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
         dm.femm_loss_list = [s, r]
         return dm
+
+
 
     def duplicate_TranFEAwi2TSS_from_frequency_study(self, im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger):
         if model.NumStudies()<2:

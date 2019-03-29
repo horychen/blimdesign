@@ -173,8 +173,13 @@ for ind, individual_denorm in enumerate(pop_denorm):
     print ind, 'tic: %g. toc: %g. diff:%g' % (tic, toc, toc-tic)
 
 
+
     # for iemdc 2019 Qr36rotor_current 
-    sw.show_results(femm_solver_data=data_solver_jmag)
+    # sw.show_results(femm_solver_data=data_solver_jmag)
+    # data = solver_jmag.show_results(bool_plot=False)
+    # sw.show_results(femm_solver_data=data)
+    sw.show_results_iemdc19(im_variant, femm_solver_data=data_solver_jmag, femm_rotor_current_function=solver_jmag.get_rotor_current_function())
+    # sw.timeStepSensitivity()
     from pylab import show
     show()
     quit()
@@ -211,7 +216,7 @@ quit()
 ''' 4. Show results, if not exist then produce it
 '''
 from numpy import arange
-if False: # this generate plots for iemdc19
+if True: # this generate plots for iemdc19
     data = solver_jmag.show_results(bool_plot=False)
     # sw.show_results(femm_solver_data=data)
     sw.show_results_iemdc19(femm_solver_data=data, femm_rotor_current_function=solver_jmag.get_rotor_current_function())
