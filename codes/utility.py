@@ -358,18 +358,19 @@ def add_plots(axeses, dm, title=None, label=None, zorder=None, time_list=None, s
     # torque error = torque - avg. torque
     torque_error = np.array(torque) - torque_average
     ss_max_torque_error = max(torque_error[-range_ss:]), min(torque_error[-range_ss:])
-    # we use peak value to compute error rather than use peak-to-peak value
+    # we use  half of peak-to-peak value to compute error rather than use peak-to-peak value
     normalized_torque_ripple   = 0.5*(ss_max_torque_error[0] - ss_max_torque_error[1]) / torque_average
     info += '\nNormalized Torque Ripple: %g %%' % (normalized_torque_ripple*100)
 
     info += '\nAverage Force Mag: %g N'% (sfv.ss_avg_force_magnitude)
-    # we use peak value to compute error rather than use peak-to-peak value
+    # we use half of peak-to-peak value to compute error rather than use peak-to-peak value
     normalized_force_error_magnitude = 0.5*(sfv.ss_max_force_err_abs[0]-sfv.ss_max_force_err_abs[1])/sfv.ss_avg_force_magnitude
     info += '\nNormalized Force Error Mag: %g%%, (+)%g%% (-)%g%%' % (normalized_force_error_magnitude*100,
                                                                   sfv.ss_max_force_err_abs[0]/sfv.ss_avg_force_magnitude*100,
                                                                   sfv.ss_max_force_err_abs[1]/sfv.ss_avg_force_magnitude*100)
     # we use peak value to compute error rather than use peak-to-peak value
-    force_error_angle= 0.5*(sfv.ss_max_force_err_ang[0]-sfv.ss_max_force_err_ang[1])
+    # 跟Eric讨论过后，确定了悬浮力的角度误差不能用峰峰值的一半，而是要用最大值和最小值中绝对值更大的那一个。
+    force_error_angle = sfv.force_error_angle
     info += '\nMaximum Force Error Angle: %g [deg], (+)%g deg (-)%g deg' % (force_error_angle,
                                                                  sfv.ss_max_force_err_ang[0],
                                                                  sfv.ss_max_force_err_ang[1])
@@ -495,6 +496,12 @@ class suspension_force_vector(object):
 
         self.ss_max_force_err_ang = max(self.force_err_ang[-range_ss:]), min(self.force_err_ang[-range_ss:])
         self.ss_max_force_err_abs = max(self.force_err_abs[-range_ss:]), min(self.force_err_abs[-range_ss:])
+
+        # method 1 
+        # self.force_error_angle = 0.5*(sfv.ss_max_force_err_ang[0]-sfv.ss_max_force_err_ang[1])
+        # method 2 suggested by Eric 
+        self.force_error_angle = max( [ abs(sfv.ss_max_force_err_ang[0]), 
+                                        abs(sfv.ss_max_force_err_ang[1]) ] )
 
 def pyplot_clear(axeses):
     # self.fig_main.clf()
