@@ -2086,7 +2086,7 @@ class swarm(object):
                         alpha=0.7)
                 ax_cur2.plot(dm.Current_dict['Time(s)'], 
                         dm.Current_dict[key], 
-                        label='Transient FEA with 2 Time Step Section',
+                        label='Transient w/ 2 Time Sect.',
                         alpha=0.7,
                         color='r')
                 break
@@ -2190,11 +2190,13 @@ class swarm(object):
         ax_cur.set_ylabel('Rotor slot current [A]')
         # plt.figtext(0.5, 0.01, txt, wrap=True, horizontalalignment='center', fontsize=12)
 
-        ax_cur2.legend()
+        ax_cur2.legend(fontsize=18)
         ax_cur2.grid()
-        ax_cur2.set_xlabel('Time [s]'); 
-        ax_cur2.set_ylabel('Rotor slot current [A]')
+        ax_cur2.set_xlabel('Time [s]', fontsize=18)
+        ax_cur2.set_ylabel('Rotor slot current [A]', fontsize=18)
         ax_cur2.set_xlim([0, 0.09]); 
+        ax_cur2.tick_params(axis='both', which='major', labelsize=18)
+        # ax_cur2.set_xticklabels(ax_cur2.get_xticklabels(), fontsize=16)
         fig_cur2.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\Qr36_rotor_current_1000A.png', dpi=150)
 
 

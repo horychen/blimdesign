@@ -1,3 +1,4 @@
+# coding:u8
 from pylab import *
 mpl.rcParams['legend.fontsize'] = 14
 font = {'family' : 'Times New Roman', #'serif',
@@ -99,16 +100,21 @@ ax.set_xlabel('Number of Random Designs')
 # xticks(range(5), list_ylabel)
 # ax.set_ylabel('Normalized Performance Error with respect to Transient FEA Reference')
 
+print 'Statistical plot'
+figS, axesS = subplots(2, 5*3, sharex=True, dpi=150, figsize=(12, 2), facecolor='w', edgecolor='k')
+subplots_adjust(left=None, bottom=0.25, right=None, top=None, wspace=0.8, hspace=None)
+
 
 print 'Error plot'
 fig, axes = subplots(1, 5, sharex=True, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
 subplots_adjust(left=None, bottom=0.25, right=None, top=None, wspace=0.8, hspace=None)
 list_ylabel = ['Torque difference [p.u.]', 'Torque ripple difference [%]', 'Force magnitude difference [p.u.]', 'Force error magnitude difference [%]', 'Force error angle difference [deg]']
 for i, ax in enumerate(axes):
+    statistical_data = []
     print '------------------------',
     print 'performance =', i
 
-    print 'index<1000'
+    print 'index<1000: regualr step'
     ref = array(data_as_list(0,i,d))
     if i == 0 or i == 2: 
         denominator = ref # difference in p.u.
@@ -116,56 +122,77 @@ for i, ax in enumerate(axes):
         denominator = 1 # difference in original dimention
     myones = ones(len(ref))
     y = (array(data_as_list(1,i,d)) - ref)/denominator
-    ax.plot( (-0.1)*myones, y,        label=list_label[1], marker='_', color=list_color[1], alpha=1.00 )
-    print '\tmean(var)=$%g(%g)$'%(np.mean(y),np.var(y))
+    ax.plot( (-0.1)*myones, y,        label=list_label[1], marker='_', color=list_color[1], alpha=1.00, lw=0.2 )
+    statistical_data.append([np.mean(y),np.var(y)]); print '\tmean(var)=$%.2g(%.2g)$'%(statistical_data[-1][0],statistical_data[-1][1])
     y = (array(data_as_list(2,i,d)) - ref)/denominator
-    ax.plot( (+0.0)*myones, y,        label=list_label[2], marker='_', color=list_color[2], alpha=1.00 )
-    print '\tmean(var)=$%g(%g)$'%(np.mean(y),np.var(y))
+    ax.plot( ( 0.0)*myones, y,        label=list_label[2], marker='_', color=list_color[2], alpha=1.00, lw=0.2 )
+    statistical_data.append([np.mean(y),np.var(y)]); print '\tmean(var)=$%.2g(%.2g)$'%(statistical_data[-1][0],statistical_data[-1][1])
     y = (array(data_as_list(3,i,d)) - ref)/denominator
-    ax.plot( (+0.1)*myones, y,        label=list_label[3], marker='_', color=list_color[3], alpha=1.00 )
-    print '\tmean(var)=$%g(%g)$'%(np.mean(y),np.var(y))
+    ax.plot( (+0.1)*myones, y,        label=list_label[3], marker='_', color=list_color[3], alpha=1.00, lw=0.2 )
+    statistical_data.append([np.mean(y),np.var(y)]); print '\tmean(var)=$%.2g(%.2g)$'%(statistical_data[-1][0],statistical_data[-1][1])
 
-    print '1000<=index<2000'
+    print '1000<=index<2000: coarse step'
     ref = array(data_as_list(0,i,d, index_range=[1000,1999]))
     myones = ones(len(ref))
     y = (array(data_as_list(1,i,d, index_range=[1000,1999])) - ref)/denominator
-    ax.plot( (-0.1-0.1/3.)*myones, y, label=list_label[1], marker='_', color=list_color[1], alpha=1.00 )
-    print '\tmean(var)=$%g(%g)$'%(np.mean(y),np.var(y))
+    ax.plot( (-0.1-0.1/3.)*myones, y, label=list_label[1], marker='_', color=list_color[1], alpha=1.00, lw=0.2 )
+    statistical_data.append([np.mean(y),np.var(y)]); print '\tmean(var)=$%.2g(%.2g)$'%(statistical_data[-1][0],statistical_data[-1][1])
     y = (array(data_as_list(2,i,d, index_range=[1000,1999])) - ref)/denominator
-    ax.plot( (+0.0-0.1/3.)*myones, y, label=list_label[2], marker='_', color=list_color[2], alpha=1.00 )
-    print '\tmean(var)=$%g(%g)$'%(np.mean(y),np.var(y))
+    ax.plot( ( 0.0-0.1/3.)*myones, y, label=list_label[2], marker='_', color=list_color[2], alpha=1.00, lw=0.2 )
+    statistical_data.append([np.mean(y),np.var(y)]); print '\tmean(var)=$%.2g(%.2g)$'%(statistical_data[-1][0],statistical_data[-1][1])
     y = (array(data_as_list(3,i,d, index_range=[1000,1999])) - ref)/denominator
-    ax.plot( (+0.1-0.1/3.)*myones, y, label=list_label[3], marker='_', color=list_color[3], alpha=1.00 )
-    print '\tmean(var)=$%g(%g)$'%(np.mean(y),np.var(y))
+    ax.plot( (+0.1-0.1/3.)*myones, y, label=list_label[3], marker='_', color=list_color[3], alpha=1.00, lw=0.2 )
+    statistical_data.append([np.mean(y),np.var(y)]); print '\tmean(var)=$%.2g(%.2g)$'%(statistical_data[-1][0],statistical_data[-1][1])
 
-    print '2000<=index<3000'
+    print '2000<=index<3000: fine step'
     ref = array(data_as_list(0,i,d, index_range=[2000,2999]))
     myones = ones(len(ref))
     y = (array(data_as_list(1,i,d, index_range=[2000,2999])) - ref)/denominator
-    ax.plot( (-0.1+0.1/3.)*myones, y, label=list_label[1], marker='_', color=list_color[1], alpha=1.00 )
-    print '\tmean(var)=$%g(%g)$'%(np.mean(y),np.var(y))
+    ax.plot( (-0.1+0.1/3.)*myones, y, label=list_label[1], marker='_', color=list_color[1], alpha=1.00, lw=0.2 )
+    statistical_data.append([np.mean(y),np.var(y)]); print '\tmean(var)=$%.2g(%.2g)$'%(statistical_data[-1][0],statistical_data[-1][1])
     y = (array(data_as_list(2,i,d, index_range=[2000,2999])) - ref)/denominator
-    ax.plot( (+0.0+0.1/3.)*myones, y, label=list_label[2], marker='_', color=list_color[2], alpha=1.00 )
-    print '\tmean(var)=$%g(%g)$'%(np.mean(y),np.var(y))
+    ax.plot( ( 0.0+0.1/3.)*myones, y, label=list_label[2], marker='_', color=list_color[2], alpha=1.00, lw=0.2 )
+    statistical_data.append([np.mean(y),np.var(y)]); print '\tmean(var)=$%.2g(%.2g)$'%(statistical_data[-1][0],statistical_data[-1][1])
     y = (array(data_as_list(3,i,d, index_range=[2000,2999])) - ref)/denominator
-    ax.plot( (+0.1+0.1/3.)*myones, y, label=list_label[3], marker='_', color=list_color[3], alpha=1.00 )
-    print '\tmean(var)=$%g(%g)$'%(np.mean(y),np.var(y))
+    ax.plot( (+0.1+0.1/3.)*myones, y, label=list_label[3], marker='_', color=list_color[3], alpha=1.00, lw=0.2 )
+    statistical_data.append([np.mean(y),np.var(y)]); print '\tmean(var)=$%.2g(%.2g)$'%(statistical_data[-1][0],statistical_data[-1][1])
+
+    # find the shitty design for static FEA
     # if i == 4:
     #     for ind, el in enumerate(data_as_list(3,i,d, index_range=[2000,2999])):
     #         print ind, el, ref[ind], el-ref[ind], 'This is not in original order.'
     #         quit()
 
+    def swap(l): # l是regular, coarse, fine排布的列表
+        return  [l[1], l[0], l[2]]
+
+    # overlap mean to the dash
+    ax.plot([-0.1-0.1/3.,
+             -0.1+0.0000, 
+             -0.1+0.1/3.], swap([ statistical_data[0][0],
+                                    statistical_data[3][0],
+                                    statistical_data[6][0]]), color='k', lw=1, alpha=0.75)
+    ax.plot( [0.0-0.1/3., 
+                0.0+0.0000,
+                0.0+0.1/3.], swap([statistical_data[1][0],
+                                    statistical_data[4][0],
+                                    statistical_data[7][0]]), color='k', lw=1, alpha=0.75)
+    ax.plot([+0.1-0.1/3.,
+             +0.1+0.0000,
+             +0.1+0.1/3.], swap([statistical_data[2][0],
+                                    statistical_data[5][0],
+                                    statistical_data[8][0]]), color='k', lw=1, alpha=0.75)
 
     lower, upper = ax.get_ylim()
-    ax.text(-0.1-0.1/3., lower + 0.15*(upper-lower), 'Coarse step',   rotation=90, color='tomato')
-    ax.text(-0.1+0.0000, lower + 0.15*(upper-lower), 'Regular step',  rotation=90, color='tomato')
-    ax.text(-0.1+0.1/3., lower + 0.15*(upper-lower), 'Fine step',     rotation=90, color='tomato')
-    ax.text(+0.0-0.1/3., lower + 0.15*(upper-lower), 'Coarse step',   rotation=90, color='limegreen')
-    ax.text(+0.0+0.0000, lower + 0.15*(upper-lower), 'Regular step',  rotation=90, color='limegreen')
-    ax.text(+0.0+0.1/3., lower + 0.15*(upper-lower), 'Fine step',     rotation=90, color='limegreen')
-    ax.text(+0.1-0.1/3., lower + 0.15*(upper-lower), 'Coarse step',   rotation=90, color='cornflowerblue')
-    ax.text(+0.1+0.0000, lower + 0.15*(upper-lower), 'Regular step',  rotation=90, color='cornflowerblue')
-    ax.text(+0.1+0.1/3., lower + 0.15*(upper-lower), 'Fine step',     rotation=90, color='cornflowerblue')
+    ax.text(-0.1-0.1/3., lower + 0.13*(upper-lower), 'Coarse step',   rotation=90, color='tomato')
+    ax.text(-0.1+0.0000, lower + 0.13*(upper-lower), 'Regular step',  rotation=90, color='tomato')
+    ax.text(-0.1+0.1/3., lower + 0.13*(upper-lower), 'Fine step',     rotation=90, color='tomato')
+    ax.text( 0.0-0.1/3., lower + 0.13*(upper-lower), 'Coarse step',   rotation=90, color='limegreen')
+    ax.text( 0.0+0.0000, lower + 0.13*(upper-lower), 'Regular step',  rotation=90, color='limegreen')
+    ax.text( 0.0+0.1/3., lower + 0.13*(upper-lower), 'Fine step',     rotation=90, color='limegreen')
+    ax.text(+0.1-0.1/3., lower + 0.13*(upper-lower), 'Coarse step',   rotation=90, color='cornflowerblue')
+    ax.text(+0.1+0.0000, lower + 0.13*(upper-lower), 'Regular step',  rotation=90, color='cornflowerblue')
+    ax.text(+0.1+0.1/3., lower + 0.13*(upper-lower), 'Fine step',     rotation=90, color='cornflowerblue')
 
     ax.set_ylabel(list_ylabel[i])
     ax.grid()
@@ -176,6 +203,30 @@ for i, ax in enumerate(axes):
     #     bottom=False,      # ticks along the bottom edge are off
     #     top=False,         # ticks along the top edge are off
     #     labelbottom=False) # labels along the bottom edge are off
+
+
+    nine = len(statistical_data)
+    print nine
+    mean_fea_model_a_tran2tss = [statistical_data[_][0] for _ in range(0,nine,3)]
+    mean_fea_model_b_ecrotate = [statistical_data[_][0] for _ in range(1,nine,3)]
+    mean_fea_model_c_static   = [statistical_data[_][0] for _ in range(2,nine+1,3)]
+    var_fea_model_a_tran2tss = [statistical_data[_][1] for _ in range(0,nine,3)]
+    var_fea_model_b_ecrotate = [statistical_data[_][1] for _ in range(1,nine,3)]
+    var_fea_model_c_static   = [statistical_data[_][1] for _ in range(2,nine+1,3)]
+    axesS[0][3*i+0].plot(swap(-0.1+array([0, -0.1/3, +0.1/3])), swap(mean_fea_model_a_tran2tss), '-o', color='tomato')          # 先中间，再左边，最后右边
+    axesS[0][3*i+1].plot(swap( 0.0+array([0, -0.1/3, +0.1/3])), swap(mean_fea_model_b_ecrotate), '-o', color='limegreen')       # 先中间，再左边，最后右边
+    axesS[0][3*i+2].plot(swap(+0.1+array([0, -0.1/3, +0.1/3])), swap(mean_fea_model_c_static),   '-o', color='cornflowerblue')  # 先中间，再左边，最后右边
+    axesS[1][3*i+0].plot(swap(-0.1+array([0, -0.1/3, +0.1/3])), swap(var_fea_model_a_tran2tss), '-v', color='tomato')          # 先中间，再左边，最后右边
+    axesS[1][3*i+1].plot(swap( 0.0+array([0, -0.1/3, +0.1/3])), swap(var_fea_model_b_ecrotate), '-v', color='limegreen')       # 先中间，再左边，最后右边
+    axesS[1][3*i+2].plot(swap(+0.1+array([0, -0.1/3, +0.1/3])), swap(var_fea_model_c_static),  '-v', color='cornflowerblue')  # 先中间，再左边，最后右边
+    ax=axesS[0][3*i+0]; ax.set_xticks([]); [ax.spines[loc].set_color('none') for loc in ['left', 'right', 'top', 'bottom']] # ax.set_yticks([]); 
+    ax=axesS[0][3*i+1]; ax.set_xticks([]); [ax.spines[loc].set_color('none') for loc in ['left', 'right', 'top', 'bottom']] # ax.set_yticks([]); 
+    ax=axesS[0][3*i+2]; ax.set_xticks([]); [ax.spines[loc].set_color('none') for loc in ['left', 'right', 'top', 'bottom']] # ax.set_yticks([]); 
+    ax=axesS[1][3*i+0]; ax.set_xticks([]); [ax.spines[loc].set_color('none') for loc in ['left', 'right', 'top', 'bottom']] # ax.set_yticks([]); 
+    ax=axesS[1][3*i+1]; ax.set_xticks([]); [ax.spines[loc].set_color('none') for loc in ['left', 'right', 'top', 'bottom']] # ax.set_yticks([]); 
+    ax=axesS[1][3*i+2]; ax.set_xticks([]); [ax.spines[loc].set_color('none') for loc in ['left', 'right', 'top', 'bottom']] # ax.set_yticks([]); 
+
+
 # ax.legend()
 xticks([-0.1, 0, 0.1], list_label[1:])
 # ax.set_ylabel('')

@@ -38,17 +38,25 @@ if 'Severson' in fea_config_dict['pc_name']:
 
     # serverson01    
     if '01' in fea_config_dict['pc_name']:
-        run_folder = r'run#299/' # some bug
+        # run_folder = r'run#299/' # some bug
+
+        fea_config_dict['number_cycles_prolonged'] = 150
         run_folder = r'run#298/' # 2 deg, 24 steps, 32 steps
-        run_folder = r'run#297/' # This is not used
-        run_folder = r'run#296/' # This is not used
-        run_folder = r'run#295/' # sensitivity of solving steps (fine step case): 0.5 deg, 48 steps, 400 steps（The generation is the same from run#298)
+
+        # fea_config_dict['number_cycles_prolonged'] = 0
+        # fea_config_dict['number_of_steps_2ndTTS'] = 400
+        # run_folder = r'run#297/' # sensitivity of solving steps (fine step case): 0.5 deg, 48 steps, 400 steps (error occurs: refarray is 3 not 5)
+        # run_folder = r'run#296/' # sensitivity of solving steps (fine step case): 0.5 deg, 48 steps, 400 steps
+        # run_folder = r'run#295/'
+
     # serverson02 
     elif '02' in fea_config_dict['pc_name']:
-        run_folder = r'run#399/' # some bug
-        run_folder = r'run#398/' # 2 deg, 24 steps, 32 steps
+        # run_folder = r'run#399/' # some bug
+        # run_folder = r'run#398/' # 2 deg, 24 steps, 32 steps
+
+        fea_config_dict['number_of_steps_2ndTTS'] = 16
         run_folder = r'run#397/' # This is not used
-        run_folder = r'run#395/' # sensitivity of solving steps (coarse step case): 5 deg, 12 steps, 16 steps （The generation is the same from run#298)
+        run_folder = r'run#395/' # sensitivity of solving steps (coarse step case): 5 deg, 12 steps, 16 steps
     else:
         raise Exception('Where are you?')
 
