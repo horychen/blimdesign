@@ -359,12 +359,12 @@ def add_plots(axeses, dm, title=None, label=None, zorder=None, time_list=None, s
     torque_error = np.array(torque) - torque_average
     ss_max_torque_error = max(torque_error[-range_ss:]), min(torque_error[-range_ss:])
     # we use  half of peak-to-peak value to compute error rather than use peak-to-peak value
-    normalized_torque_ripple   = 0.5*(ss_max_torque_error[0] - ss_max_torque_error[1]) / torque_average
+    normalized_torque_ripple   = 1.0*(ss_max_torque_error[0] - ss_max_torque_error[1]) / torque_average
     info += '\nNormalized Torque Ripple: %g %%' % (normalized_torque_ripple*100)
 
     info += '\nAverage Force Mag: %g N'% (sfv.ss_avg_force_magnitude)
     # we use half of peak-to-peak value to compute error rather than use peak-to-peak value
-    normalized_force_error_magnitude = 0.5*(sfv.ss_max_force_err_abs[0]-sfv.ss_max_force_err_abs[1])/sfv.ss_avg_force_magnitude
+    normalized_force_error_magnitude = sfv.normalized_force_error_magnitude
     info += '\nNormalized Force Error Mag: %g%%, (+)%g%% (-)%g%%' % (normalized_force_error_magnitude*100,
                                                                   sfv.ss_max_force_err_abs[0]/sfv.ss_avg_force_magnitude*100,
                                                                   sfv.ss_max_force_err_abs[1]/sfv.ss_avg_force_magnitude*100)
@@ -499,9 +499,13 @@ class suspension_force_vector(object):
 
         # method 1 
         # self.force_error_angle = 0.5*(self.ss_max_force_err_ang[0]-self.ss_max_force_err_ang[1])
+        # normalized_force_error_magnitude = 0.5*(sfv.ss_max_force_err_abs[0]-sfv.ss_max_force_err_abs[1])/sfv.ss_avg_force_magnitude
+        
         # method 2 suggested by Eric 
         self.force_error_angle = max( [ abs(self.ss_max_force_err_ang[0]), 
                                         abs(self.ss_max_force_err_ang[1]) ] )
+        self.normalized_force_error_magnitude = max( [  abs(self.force_err_abs[0]), 
+                                                        abs(self.force_err_abs[1]) ] ) / self.ss_avg_force_magnitude
 
 def pyplot_clear(axeses):
     # self.fig_main.clf()

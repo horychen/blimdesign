@@ -163,104 +163,192 @@ for individual_index in range(1):
 
 
     # EC-Rotate-24cases from Severson02
-    f_name1 = r'D:\JMAG_Files\CSV\Severson02_EC_Rotate_PS_24cases-ForConAbs.csv'
-    freq_list = []
-    ForConAbs_list = []
-    with open(f_name1, 'r') as f:
-        read_iterator = csv_reader(f, skipinitialspace=True)
-        count = 0
-        for row in whole_row_reader(read_iterator):
-            if count == 0:
-                count += 1
-                continue
-            freq_list.append(float(row[0]))
-            ForConAbs_list.append([float(el) for el in row[1:]])
-    fig = figure(26, dpi=150, figsize=(16/2, 8/2), facecolor='w', edgecolor='k')
-    ax = fig.gca()
-    # ax = plt.subplot2grid((2,3), (0,0), colspan=1, rowspan=1)
-    # plt.subplot2grid((2,3), (1,0), colspan=1, rowspan=1)
-    # plt.subplot2grid((2,3), (0,1), colspan=2, rowspan=1)
-    # plt.subplot2grid((2,3), (1,1), colspan=2, rowspan=1)
-    lines = []
-    for i in range(len(ForConAbs_list[0])):
-        y = [el[i] for el in ForConAbs_list]
-        lines += ax.plot(freq_list, y) # label=str(i*360./Qr/24.)
+    # ForConAbs
+    if False:
+        f_name1 = r'D:\JMAG_Files\CSV\Severson02_EC_Rotate_PS_24cases-ForConAbs.csv'
+        freq_list = []
+        ForConAbs_list = []
+        with open(f_name1, 'r') as f:
+            read_iterator = csv_reader(f, skipinitialspace=True)
+            count = 0
+            for row in whole_row_reader(read_iterator):
+                if count == 0:
+                    count += 1
+                    continue
+                freq_list.append(float(row[0]))
+                ForConAbs_list.append([float(el) for el in row[1:]])
+        fig = figure(26, dpi=150, figsize=(16/2, 8/2), facecolor='w', edgecolor='k')
+        ax = fig.gca()
+        # ax = plt.subplot2grid((2,3), (0,0), colspan=1, rowspan=1)
+        # plt.subplot2grid((2,3), (1,0), colspan=1, rowspan=1)
+        # plt.subplot2grid((2,3), (0,1), colspan=2, rowspan=1)
+        # plt.subplot2grid((2,3), (1,1), colspan=2, rowspan=1)
+        lines = []
+        for i in range(len(ForConAbs_list[0])):
+            y = [el[i] for el in ForConAbs_list]
+            lines += ax.plot(freq_list, y) # label=str(i*360./Qr/24.)
 
-    ax.grid()
-    # ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)    
-    ax.set_ylabel('Force [N]')
-    ax.set_xlabel('Frequency [Hz]')
-    # 高级图例
+        ax.grid()
+        # ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)    
+        ax.set_ylabel('Force amplitude [N]')
+        ax.set_xlabel('Slip frequency [Hz]')
+        # 高级图例
+        if True:
+            # specify the lines and labels of the first legend
+            ax.legend(lines[:5], ['%.2f deg' % (i*360./Qr/24.) for i in range(5)],
+                        frameon=False, loc='upper left')
+                        # bbox_to_anchor=(1.05, 1), borderaxespad=0.) # loc=2
+            # Create the second legend and add the artist manually.
+            from matplotlib.legend import Legend                                              # https://jakevdp.github.io/PythonDataScienceHandbook/04.06-customizing-legends.html
+            leg = Legend(ax, lines[5:], ['%.2f deg' % (i*360./Qr/24.) for i in range(5,16)],
+                         loc='lower center', frameon=False)
+            ax.add_artist(leg);
+
+            # Create the third legend and add the artist manually.
+            leg = Legend(ax, lines[16:], ['%.2f deg' % (i*360./Qr/24.) for i in range(16,24)],
+                        frameon=False, loc='lower right')
+                        # bbox_to_anchor=(0.8, 1), borderaxespad=0.)
+            ax.add_artist(leg);
+            # ax.text()
+        fig.tight_layout()
+        fig_name = 'EC-RR-24cases-force.png'
+        fig.savefig(fig_name, dpi=150)
+
+    # ForConXY
     if True:
-        # specify the lines and labels of the first legend
-        ax.legend(lines[:5], ['%.2f deg' % (i*360./Qr/24.) for i in range(5)],
-                    frameon=False, loc='upper left')
-                    # bbox_to_anchor=(1.05, 1), borderaxespad=0.) # loc=2
-        # Create the second legend and add the artist manually.
-        from matplotlib.legend import Legend                                              # https://jakevdp.github.io/PythonDataScienceHandbook/04.06-customizing-legends.html
-        leg = Legend(ax, lines[5:], ['%.2f deg' % (i*360./Qr/24.) for i in range(5,16)],
-                     loc='lower center', frameon=False)
-        ax.add_artist(leg);
+        for ind, XY in enumerate(['X', 'Y']):
+            f_name1 = 'D:/JMAG_Files/CSV/Severson02_EC_Rotate_PS_24cases-ForCon%s.csv'%(XY)
+            freq_list = []
+            ForConXY_list = []
+            with open(f_name1, 'r') as f:
+                read_iterator = csv_reader(f, skipinitialspace=True)
+                count = 0
+                for row in whole_row_reader(read_iterator):
+                    if count == 0:
+                        count += 1
+                        continue
+                    freq_list.append(float(row[0]))
+                    ForConXY_list.append([float(el) for el in row[1:]])
+            fig = figure(26+ind, dpi=150, figsize=(16/2*2/3., 8/2), facecolor='w', edgecolor='k')
+            ax = fig.gca()
+            # ax = plt.subplot2grid((2,3), (0,0), colspan=1, rowspan=1)
+            # plt.subplot2grid((2,3), (1,0), colspan=1, rowspan=1)
+            # plt.subplot2grid((2,3), (0,1), colspan=2, rowspan=1)
+            # plt.subplot2grid((2,3), (1,1), colspan=2, rowspan=1)
+            lines = []
+            for i in range(len(ForConXY_list[0])):
+                y = [el[i] for el in ForConXY_list]
+                lines += ax.plot(freq_list, y, lw=0.5) # label=str(i*360./Qr/24.)
 
-        # Create the third legend and add the artist manually.
-        leg = Legend(ax, lines[16:], ['%.2f deg' % (i*360./Qr/24.) for i in range(16,24)],
-                    frameon=False, loc='lower right')
-                    # bbox_to_anchor=(0.8, 1), borderaxespad=0.)
-        ax.add_artist(leg);
-        # ax.text()
-    fig.tight_layout()
-    fig_name = 'EC-RR-24cases-force.png'
-    fig.savefig(fig_name, dpi=150)
+            # annotation for the ripple calculation
+            if ind==0:
+                plt.annotate(
+                    '',
+                    xy=(2.75, 83.5), arrowprops=dict(arrowstyle='->'), xytext=(2.75, 83.5-20),  fontsize=12)
+                plt.annotate(
+                    '',
+                    xy=(2.75, 100.5), arrowprops=dict(arrowstyle='->'), xytext=(2.75, 100.5+20),  fontsize=12)
+                plt.text(2.85, 50, 'Eddy current FEA based\nforce error calculation\nat breakdown slip 2.75 Hz.', fontsize=10.5)
+                plt.plot([2.75, 2.75], [83.5, 100.5], 'k--')
+            elif ind==1:
+                plt.annotate(
+                    '',
+                    xy=(2.75, 103), arrowprops=dict(arrowstyle='->'), xytext=(2.75, 103-7),  fontsize=12)
+                plt.annotate(
+                    '',
+                    xy=(2.75, 115.5), arrowprops=dict(arrowstyle='->'), xytext=(2.75, 115.5+7),  fontsize=12)
+                plt.text(2.8, 90, 'Eddy current FEA based\nforce error calculation\nat breakdown slip 2.75 Hz.', fontsize=10.5)
+                plt.plot([2.75, 2.75], [103, 115.5], 'k--')
 
+            ax.grid(True)
+            # ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)    
+            ax.set_ylabel('%s-axis force [N]'%(XY))
+            ax.set_xlabel('Slip frequency [Hz]')
+            ax.set_xlim([2,6])
+            # 高级图例
+            if False:
+                # specify the lines and labels of the first legend
+                ax.legend(lines[:5], ['%.2f deg' % (i*360./Qr/24.) for i in range(5)],
+                            frameon=False, loc='upper left')
+                            # bbox_to_anchor=(1.05, 1), borderaxespad=0.) # loc=2
+                # Create the second legend and add the artist manually.
+                from matplotlib.legend import Legend                                              # https://jakevdp.github.io/PythonDataScienceHandbook/04.06-customizing-legends.html
+                leg = Legend(ax, lines[5:], ['%.2f deg' % (i*360./Qr/24.) for i in range(5,16)],
+                             loc='lower center', frameon=False)
+                ax.add_artist(leg);
 
+                # Create the third legend and add the artist manually.
+                leg = Legend(ax, lines[16:], ['%.2f deg' % (i*360./Qr/24.) for i in range(16,24)],
+                            frameon=False, loc='lower right')
+                            # bbox_to_anchor=(0.8, 1), borderaxespad=0.)
+                ax.add_artist(leg);
+                # ax.text()
+            fig.tight_layout()
+            fig_name = r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images/' + 'EC-RR-24cases-force%s.png'%(XY)
+            fig.savefig(fig_name, dpi=150)
 
-    f_name2 = r'D:\JMAG_Files\CSV\Severson02_EC_Rotate_PS_24cases-TorCon.csv'
-    freq_list = []
-    TorCon_list = []
-    with open(f_name2, 'r') as f:
-        read_iterator = csv_reader(f, skipinitialspace=True)
-        count = 0
-        for row in whole_row_reader(read_iterator):
-            if count == 0:
-                count += 1
-                continue
-            freq_list.append(float(row[0]))
-            TorCon_list.append([float(el) for el in row[1:]])
-    fig = figure(27, dpi=150, figsize=(16/2, 8/2), facecolor='w', edgecolor='k')
-    ax = fig.gca()
-    # plt.subplot2grid((2,3), (0,0), colspan=1, rowspan=1)
-    # ax = plt.subplot2grid((2,3), (1,0), colspan=1, rowspan=1)
-    # plt.subplot2grid((2,3), (0,1), colspan=2, rowspan=1)
-    # plt.subplot2grid((2,3), (1,1), colspan=2, rowspan=1)
-    lines = []
-    for i in range(len(TorCon_list[0])):
-        y = [el[i] for el in TorCon_list]
-        lines += ax.plot(freq_list, y) # label=str(i*360./Qr/24.)
-    ax.grid()
-    # ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-    ax.set_ylabel('Torque [Nm]')
-    ax.set_xlabel('Frequency [Hz]')
-    # 高级图例
+    # Torque
     if True:
-        # specify the lines and labels of the first legend
-        ax.legend(lines[:8], ['%.2f deg' % (i*360./Qr/24.) for i in range(8)],
-                    loc='lower left', frameon=False)
+        f_name2 = r'D:\JMAG_Files\CSV\Severson02_EC_Rotate_PS_24cases-TorCon.csv'
+        freq_list = []
+        TorCon_list = []
+        with open(f_name2, 'r') as f:
+            read_iterator = csv_reader(f, skipinitialspace=True)
+            count = 0
+            for row in whole_row_reader(read_iterator):
+                if count == 0:
+                    count += 1
+                    continue
+                freq_list.append(float(row[0]))
+                TorCon_list.append([float(el) for el in row[1:]])
+        fig = figure(28, dpi=150, figsize=(16/2*2/3., 8/2), facecolor='w', edgecolor='k')
+        ax = fig.gca()
+        ax.set_xlim([2,6])
+        ax.set_ylim([15,29])
+        # plt.subplot2grid((2,3), (0,0), colspan=1, rowspan=1)
+        # ax = plt.subplot2grid((2,3), (1,0), colspan=1, rowspan=1)
+        # plt.subplot2grid((2,3), (0,1), colspan=2, rowspan=1)
+        # plt.subplot2grid((2,3), (1,1), colspan=2, rowspan=1)
+        lines = []
+        for i in range(len(TorCon_list[0])):
+            y = [el[i] for el in TorCon_list]
+            lines += ax.plot(freq_list, y, lw=0.5) # label=str(i*360./Qr/24.)
 
-        # Create the second legend and add the artist manually.
-        leg = Legend(ax, lines[8:], ['%.2f deg' % (i*360./Qr/24.) for i in range(8,14)],
-                     loc='lower center', frameon=False)
-        ax.add_artist(leg);
+        # annotation for the ripple calculation
+        plt.annotate(
+            '',
+            xy=(2.75, 24.5), arrowprops=dict(arrowstyle='->'), xytext=(2.75, 24.5-2),  fontsize=12)
+        plt.annotate(
+            '',
+            xy=(2.75, 27.7), arrowprops=dict(arrowstyle='->'), xytext=(2.75, 27.7+1.5),  fontsize=12)
+        plt.text(2.2, 20, 'Eddy current FEA based\ntorque ripple calculation\nat breakdown slip 2.75 Hz.', fontsize=10.5)
+        plt.plot([2.75, 2.75], [24.5, 27.3], 'k--')
 
-        # Create the third legend and add the artist manually.
-        leg = Legend(ax, lines[14:], ['%.2f deg' % (i*360./Qr/24.) for i in range(14,24)],
-                     loc='upper right', frameon=False)
-        ax.add_artist(leg);
-    fig.tight_layout()
-    fig_name = 'EC-RR-24cases-torque.png'
-    fig.savefig(fig_name, dpi=150)
+        ax.grid()
+        # ax.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        ax.set_ylabel('Torque [Nm]')
+        ax.set_xlabel('Slip frequency [Hz]')
+        # 高级图例
+        if False:
+            # specify the lines and labels of the first legend
+            ax.legend(lines[:8], ['%.2f deg' % (i*360./Qr/24.) for i in range(8)],
+                        loc='lower left', frameon=False)
 
+            # Create the second legend and add the artist manually.
+            leg = Legend(ax, lines[8:], ['%.2f deg' % (i*360./Qr/24.) for i in range(8,14)],
+                         loc='lower center', frameon=False)
+            ax.add_artist(leg);
 
+            # Create the third legend and add the artist manually.
+            leg = Legend(ax, lines[14:], ['%.2f deg' % (i*360./Qr/24.) for i in range(14,24)],
+                         loc='upper right', frameon=False)
+            ax.add_artist(leg);
+        fig.tight_layout()
+        fig_name = r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images/' + 'EC-RR-24cases-torque.png'
+        fig.savefig(fig_name, dpi=150)
 
+    show()
+    quit()
 
 
 

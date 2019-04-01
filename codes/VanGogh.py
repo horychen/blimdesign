@@ -707,31 +707,35 @@ if __name__ == '__main__':
     # add labels to geometry
     ################################################################
     # xy = (-0.5*(im.Location_RotorBarCenter+im.Location_RotorBarCenter2), 2.5)
-    # vg.ax.annotate('Parallel tooth', xytext=(xy[0],-(xy[1]+5)), xy=(xy[0],-xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->"))
+    # vg.ax.annotate('Parallel tooth', xytext=(xy[0],-(xy[1]+5)), xy=(xy[0],-xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->"),fontsize=24,rotation=90)
 
     xy = (-im.Radius_OuterStatorYoke, 0)
-    vg.ax.annotate(r'$D_{os}$', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+    vg.ax.annotate(r'$D_{os}$', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"),fontsize=24,rotation=90)
     xy = (-im.Radius_OuterRotor, -4)
-    vg.ax.annotate(r'$D_{or}$', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+    vg.ax.annotate(r'$D_{or}$', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"),fontsize=24,rotation=90)
 
     def add_label_inside(vg, label, PA, PB):
         # vector_AB = (PB[0]-PA[0], PB[1]-PA[1])
         xy, xytext = PA, PB 
-        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"),fontsize=24,rotation=90)
         xy, xytext = xytext, xy
-        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
-        vg.ax.text(0.5+0.5*(xy[0]+xytext[0]), 0.+0.5*(xy[1]+xytext[1]), label,
+        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"),fontsize=24,rotation=90)
+        vg.ax.text(0.5+0.5*(xy[0]+xytext[0]), 0.+0.5*(xy[1]+xytext[1]), label,fontsize=24,rotation=90,
                     bbox=dict(facecolor='w', edgecolor='w',boxstyle='round,pad=0',alpha=0.9))
 
 
-    def add_label_outside(vg, label, PA, PB, ext_factor=1):
+    def add_label_outside(vg, label, PA, PB, ext_factor=1, left_or_right=True):
         vector_AB = np.array((PB[0]-PA[0], PB[1]-PA[1]))
         xy, xytext = PB, PB + vector_AB * ext_factor
-        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
+        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"),fontsize=24,rotation=90)
         xy, xytext = PA, PA - vector_AB * ext_factor
-        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"))
-        vg.ax.text(0.5+PB[0], -1.75+PB[1], label,
-                    bbox=dict(facecolor='w', edgecolor='w',boxstyle='round,pad=0',alpha=0.9))
+        vg.ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"),fontsize=24,rotation=90)
+        if left_or_right:
+            vg.ax.text(0.5+PB[0], -1.75+PB[1], label,fontsize=24,rotation=90,
+                        bbox=dict(facecolor='w', edgecolor='w',boxstyle='round,pad=0',alpha=0.9))
+        else:
+            vg.ax.text(0.5+PB[0], +1.75+PB[1], label,fontsize=24,rotation=90,
+                        bbox=dict(facecolor='w', edgecolor='w',boxstyle='round,pad=0',alpha=0.9))
 
 
     def add_extension_line(vg, P, vector_ext, distance_factor=1):
@@ -800,9 +804,9 @@ if __name__ == '__main__':
         print some_angle/pi*180, 180 - Stator_Sector_Angle/pi*180
         vg.pyplot_arc(im.Radius_OuterRotor+im.Length_AirGap+im.Width_StatorTeethHeadThickness+2, 
             angle_span=0.95*im.Angle_StatorSlotOpen/180*pi, rotation=some_angle-0.475*im.Angle_StatorSlotOpen/180*pi, center=(0,0), lw=0.6)
-        # vg.ax.text(Ptemp1[0], Ptemp1[1], r'$w_{\rm open,s}$',
+        # vg.ax.text(Ptemp1[0], Ptemp1[1], r'$w_{\rm open,s}$',fontsize=24,rotation=90,
         #             bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
-        vg.ax.text(0.5*(Ptemp1[0]+Ptemp2[0])-5, 0.5*(Ptemp1[1]+Ptemp2[1]), r'$\theta_{\rm ops}$',
+        vg.ax.text(0.5*(Ptemp1[0]+Ptemp2[0])-5, 0.5*(Ptemp1[1]+Ptemp2[1]), r'$\theta_{\rm ops}$',fontsize=24,rotation=90,
                     bbox=dict(facecolor='w', edgecolor='w',boxstyle='round,pad=0',alpha=0.9))
 
 
@@ -812,7 +816,7 @@ if __name__ == '__main__':
     Pr5 = vg.Pr_list[5-BIAS]
     Ptemp1 = 0.5*(Pr4+Pr5)
     Ptemp2 = Ptemp1 * np.array((1,-1)) # mirror
-    add_label_outside(vg, r'$W_{\rm opr}$', Ptemp1, Ptemp2, ext_factor=2)
+    add_label_outside(vg, r'$W_{\rm opr}$', Ptemp1, Ptemp2, ext_factor=2, left_or_right=False)
 
     #6
     Ps2 = vg.Ps_list[2-BIAS]
@@ -859,8 +863,10 @@ if __name__ == '__main__':
     vg.ax.get_yaxis().set_visible(False)
     vg.fig.tight_layout()
     # vg.fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\CAD_CrossSection.png')
+    vg.fig.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\CAD_CrossSection_Rot.png')
     show()
     quit()
+
 
 # My plot geometry with LaTeX labels
 if __name__ == '__main__':
