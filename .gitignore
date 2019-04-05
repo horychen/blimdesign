@@ -17,3 +17,8 @@
 *.pyc
 *.sublime*
 *.txt
+*.pdf
+*.aux
+*.dvi
+*.eps
+*.synctex*

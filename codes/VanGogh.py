@@ -2,7 +2,7 @@
 from __future__ import division
 from shapely.geometry import LineString
 from shapely.geometry import Point
-from math import tan, pi, atan, sqrt, sin, cos, copysign, atan2, asin
+from math import tan, pi, atan, sqrt, sin, cos, copysign, atan2, asin, acos
 
 CUSTOM = 2
 JMAG = 1
@@ -269,6 +269,7 @@ class VanGogh(object):
         # if self.child_index == FEMM:
             self.some_solver_related_operations_fraction(im, fraction)
 
+
     def draw_rotor_without_non_accurate_shapely(self, fraction=1):
         # Shapely is very poor in accuracy, use your high school geometry knowledge to derive the coordinates!
 
@@ -361,6 +362,9 @@ class VanGogh(object):
             # rotor objects
             self.rotor_object_list = self.plot_object_list
             self.plot_object_list = []
+
+        for ind, P in enumerate([P1, P2, P3, P4, P5, P6, P7, P8]):
+            print  'rP'+str(ind+1), P 
 
     def draw_stator_without_non_accurate_shapely(self, fraction=1):
         im = self.im
@@ -483,6 +487,9 @@ class VanGogh(object):
         if self.child_index == FEMM:
             self.mirror_and_copyrotate(im.Qs, im.Radius_OuterStatorYoke, fraction)
 
+        for ind, P in enumerate([P1, P2, P3, P4, P5, P6, P7, P8]):
+            print  'sP'+str(ind+1), P 
+
     @staticmethod
     def park_transform(P_rot, angle):
         return (  cos(angle)*P_rot[0] + sin(angle)*P_rot[1],
@@ -542,9 +549,6 @@ class VanGogh(object):
         # femm.mi_addnode(i.coords[0][0], i.coords[0][1])
         return i.coords[0][0], i.coords[0][1]
 
-
-
-
 def csv_row_reader(handle):
     from csv import reader
     read_iterator = reader(handle, skipinitialspace=True)
@@ -554,10 +558,10 @@ def whole_row_reader(reader):
     for row in reader:
         yield row[:]
 
-class VanGogh_Plotter(VanGogh):
-    """VanGogh_Plotter is child class of VanGogh for plotting IM geometry in matplotlib."""
+class VanGogh_pyPlotter(VanGogh):
+    """VanGogh_pyPlotter is child class of VanGogh for plotting IM geometry in matplotlib."""
     def __init__(self, im, child_index=2):
-        super(VanGogh_Plotter, self).__init__(im, child_index)
+        super(VanGogh_pyPlotter, self).__init__(im, child_index)
 
         self.add_line = self.draw_line
         self.add_arc  = self.draw_arc
@@ -565,10 +569,13 @@ class VanGogh_Plotter(VanGogh):
         self.fig = figure(figsize=(8, 8), facecolor='w', edgecolor='k')
         self.ax = self.fig.add_subplot(111, aspect='equal')
         # self.ax = self.fig.gca()
-        # self.ax.set_xlim([-100,0])
+        # self.ax.set_xlim([-74,-40])
         self.ax.set_ylim([-10,25])
 
         # plt.gcf().gca().invert_yaxis()
+
+        # Embeded TikZ function
+        self.tikz = VanGogh_TikZPlotter()
 
     @staticmethod
     def mirror_and_copyrotate(Q, Radius, fraction):
@@ -583,6 +590,9 @@ class VanGogh_Plotter(VanGogh):
         return
 
     def draw_arc(self, p1, p2, angle, center=(0,0), **kwarg):
+        # Embeded TikZ function
+        self.tikz.draw_arc(p1, p2, center, relangle=-0.5*angle)
+
         # center, radius = self.find_center_and_radius_of_a_circle_using_2_points_and_arc_angle(p1, p2, angle) # ordered p1 and p2 are
         # print sqrt((p1[0]-center[0])**2 + (p1[1]-center[0])**2)
         # print sqrt((p2[0]-center[0])**2 + (p2[1]-center[0])**2)
@@ -611,6 +621,9 @@ class VanGogh_Plotter(VanGogh):
         return ax.plot( *xy(radius, phis, center), c='k', **kwarg)
     
     def draw_line(self, p1, p2, ax=None, **kwarg):
+        # Embeded TikZ function
+        self.tikz.draw_line(p1, p2)
+
         # make sure ax is not empty
         if ax is None:
             ax = self.ax
@@ -619,7 +632,117 @@ class VanGogh_Plotter(VanGogh):
         self.plot_object_list.append(obj[0])
         return obj
 
+import pyx
+# from pyx import *
+# text.set(mode="latex") 
+# text.preamble(r"\usepackage{ulem}")  # underlining text...
+# text.preamble(r"\usepackage{anyfontsize}")  # one way of scaling fonts (except math fonts)....
 
+class VanGogh_TikZPlotter():
+    """VanGogh_TikzPlotter is child class of VanGogh for plotting IM geometry in TikZ.
+        The idea here is to incorporate this class with VanGogh_pyPlotter, 
+        such that what you see in Matplotlib is what you get in TikZ."""
+    def __init__(self):
+        self.add_line = self.draw_line
+        self.add_arc  = self.draw_arc
+        self.file = open('VanGogh_TikZ.tex', 'w')
+        self.c = pyx.canvas.canvas()
+
+        self.track_path = []
+
+    @staticmethod
+    def mirror_and_copyrotate(Q, Radius, fraction):
+        return
+
+    def draw_line(self, p1, p2, ax=None, **kwarg):
+        msg = '\\draw[black] (%12.8f,%12.8f) -- (%12.8f,%12.8f);\n' % (p1[0], p2[0], p1[1], p2[1])
+        # print msg
+        self.file.write(msg)
+
+        # PyX
+        self.c.stroke(pyx.path.line(p1[0], p1[1], p2[0], p2[1]), [pyx.color.rgb.black, pyx.style.linewidth.THICK])
+        self.c.fill(pyx.path.circle(p1[0], p1[1], 0.075)) # use this if THICK is used.
+        self.c.fill(pyx.path.circle(p2[0], p2[1], 0.075)) # use this if THICK is used.
+            # p = pyx.path.path(pyx.path.moveto(p1[0], p1[1]), pyx.path.lineto(p2[0], p2[1]), pyx.path.closepath())
+            # self.c.stroke(p, [pyx.color.rgb.black, pyx.style.linewidth.Thick])
+        if 'untrack' not in kwarg:
+            self.track_path.append([p1[0], p1[1], p2[0], p2[1]])
+
+    def draw_arc(self, startxy, endxy, centerxy=(0,0), **kwarg):
+        # %DRAWARC Draw an arc in the current TikZ graphic.
+        # %   drawarc(mn, [center_x,_y], [start_x, _y], [end_x, _y])
+        # %       draws an arc
+        
+        # % Extract and rename variables for processing        
+        h = centerxy[0]
+        k = centerxy[1]
+        x1 = startxy[0]
+        y1 = startxy[1]
+        x2 = endxy[0]
+        y2 = endxy[1]
+
+        # % Need to calculate: x, y, start, stop, radius...
+        x = x1
+        y = y1
+        radius = sqrt((x1 - h)**2 + (y1 - k)**2)
+        
+        # % These are both "correct" ways of determining start variable,
+        # % but only one works depending on orientation of arc. Hacks
+        # % below help solve this issue.
+        start = acos((x1 - h) / radius)
+        start2 = asin((y1 - k) / radius)
+        temp = (x2 - h) / radius
+        if temp>=1:
+            # print 'temp=', temp
+            temp = 1
+        elif temp<=-1:
+            # print 'temp=', temp
+            temp = -1
+        stop = acos(temp)
+        
+        # % ----------
+        # % HACKS START
+        # % ----------
+        
+        # % The code in this "hack" section is special cases for drawing
+        # % an arc... This involves mostly cases where x1==x2 or
+        # % y1==y2. I have not proved these are the correct solutions,
+        # % but I have tried many arcs using various stator geometries
+        # % and it seems to work for all cases...  �_(?)_/�            
+        if (start > stop):
+           start = -start
+           stop = -stop
+        
+        # % Trying to check for start == stop.
+        # % BUT, issues with rounding and floating numbers....
+        # % Using this delta comparison fixes one silly case where
+        # % rounding causes issues for direct comparison for equality...
+        # % 
+        # % Silly!
+        # %
+        if (abs(start - stop) < 0.0000001):
+            if (y1-k < 0):
+                start = -start
+            elif (x1-h < 0):
+                stop = start + (2 * start2)
+
+        # % --------
+        # % HACKS END
+        # % --------
+        def rad2deg(rad):
+            return rad/pi*180.
+        msg = '\\draw[black] (%12.8f,%12.8f) arc (%12.8f:%12.8f:%12.8f);\n' % (x, y, rad2deg(start), rad2deg(stop), radius)
+        # print msg
+        self.file.write(msg)
+
+        # PyX
+        textattrs = [pyx.text.halign.center, pyx.text.vshift.middlezero]
+        X = pyx.text.text(startxy[0], startxy[1], r"", textattrs) # must have textattrs or normsubpath cannot close erro
+        Y = pyx.text.text(endxy[0], endxy[1], r"", textattrs)
+        self.c.stroke(pyx.connector.arc(X, Y, boxdists=[0.0, 0.0], relangle=kwarg['relangle']/pi*180), [pyx.color.rgb.black, pyx.style.linewidth.THICK])
+            # print '[%g,%g,%g,%g,%g],'%(startxy[0], startxy[1], endxy[0], endxy[1], 0.5*kwarg['relangle'])
+        if 'untrack' not in kwarg:
+            self.track_path.append([startxy[0], startxy[1], endxy[0], endxy[1], centerxy[0], centerxy[1], kwarg['relangle']])
 
 # wiki: https://en.wikipedia.org/wiki/Tangent_lines_to_circles
 def get_tangent_points_of_two_circles(center1, radius1, center2, radius2):
@@ -656,12 +779,209 @@ if __name__ == '__main__':
     # print im.show(toString=True)
 
     # 示意图而已，改改尺寸吧
-    im.Radius_OuterStatorYoke -= 35
+    im.Radius_OuterStatorYoke -= 37
     im.Radius_InnerStatorYoke -= 20
     im.Radius_Shaft += 20
+    # im.Location_RotorBarCenter2 += 5 # this will change the shape of rotor slot
 
-    vg = VanGogh_Plotter(im, CUSTOM)
+    vg = VanGogh_pyPlotter(im, CUSTOM)
     vg.draw_model()
+
+    # PyX
+    vg.tikz.c = pyx.canvas.canvas() # clear the canvas because we want to redraw 90 deg with the data vg.tikz.track_path
+    from copy import deepcopy
+    def pyx_draw_path(vg, path, sign=1):
+        if len(path) == 4:
+            vg.tikz.draw_line(path[:2], path[2:4], untrack=True)
+        else:
+            vg.tikz.draw_arc(path[:2], path[2:4], path[4:6], relangle=sign*path[6], untrack=True)
+    def rotate(_, x, y):
+        return cos(_)*x + sin(_)*y, -sin(_)*x + cos(_)*y
+    def is_at_stator(im, path):
+        return sqrt(path[0]**2 + path[1]**2) > im.Radius_OuterRotor + 0.5*im.Length_AirGap
+    # 整体转动90度。
+    for path in vg.tikz.track_path:
+        path[0], path[1] = rotate(0.5*pi, path[0], path[1])
+        path[2], path[3] = rotate(0.5*pi, path[2], path[3])
+        pyx_draw_path(vg, path)
+    track_path_backup = deepcopy(vg.tikz.track_path)
+
+    # Rotate
+    for path in deepcopy(vg.tikz.track_path):
+        if is_at_stator(im, path):
+            Q = im.Qs
+        else:
+            Q = im.Qr
+        _ = 2*pi/Q
+        path[0], path[1] = rotate(_, path[0], path[1])
+        path[2], path[3] = rotate(_, path[2], path[3])
+        pyx_draw_path(vg, path)
+
+    # Mirror
+    for path in (vg.tikz.track_path): # track_path is passed by reference and is changed by mirror
+        path[0] *= -1
+        path[2] *= -1
+        pyx_draw_path(vg, path, sign=-1)
+    for path in (vg.tikz.track_path):
+        if sqrt(path[0]**2 + path[1]**2) > im.Radius_OuterRotor + 0.5*im.Length_AirGap:
+            Q = im.Qs
+        else:
+            Q = im.Qr
+        _ = 2*pi/Q
+        path[0], path[1] = rotate(_, path[0], path[1])
+        path[2], path[3] = rotate(_, path[2], path[3])
+        pyx_draw_path(vg, path, sign=-1)
+
+    def pyx_label_dimention(track_path):
+        def myarrow(c, PA, PB):
+            c.stroke(path.line(PA[0], PA[1], PB[0], PB[1]),
+                     [style.linewidth.Thick, style.linestyle.solid, color.rgb.black,
+                      deco.earrow([deco.stroked([color.rgb.black, style.linejoin.round]),
+                                   deco.filled([color.rgb.black])], size=0.5)])
+        def mytext(c, PText, label):
+            print PText
+            textattrs = [text.halign.center, text.vshift.middlezero, text.size(5), trafo.scale(2)]
+            handle = text.text(PText[0], PText[1], label, textattrs)
+            c.insert(handle)
+
+        def add_label_inside(c, label, PA, PB, PText=None):
+            if PText is None:
+                PText = 0.5*(PA + PB)
+            mytext(c, PText, label)
+            myarrow(c, PA, PB)
+            myarrow(c, PB, PA)
+
+        def add_label_outside(c, label, PA, PB, PText=None, ext_factor=1, left_or_right=True):
+            vector_AB = np.array((PB[0]-PA[0], PB[1]-PA[1]))
+            PB, PBExt = PB, PB + vector_AB * ext_factor
+            myarrow(c, PBExt, PB)
+            PA, PAExt = PA, PA - vector_AB * ext_factor
+            myarrow(c, PAExt, PA)
+            if PText is None:
+                PText = 0.5*(PA + PB)
+            mytext(c, PText, label)
+
+        def mymarker(l_PA):
+            for P in l_PA:
+                vg.tikz.c.fill(pyx.path.circle(P[0], P[1], 0.25))
+
+        count_stator = 0
+        count_rotor = 0
+        dictKeyPoints = {}
+        for ind, el in enumerate(track_path):
+            if is_at_stator(im, el):
+                count_stator += 1
+                print 'S-Path'+str(count_stator), el
+                dictKeyPoints['S-Path'+str(count_stator)] = el
+            else:
+                count_rotor += 1
+                print 'R-Path'+str(count_rotor), el
+                dictKeyPoints['R-Path'+str(count_rotor)] = el
+        # above SP means stator path, below SP means stator point
+
+        d = dictKeyPoints # too long to type
+        RP2 = array(d['R-Path6'][0:2])
+        RP3 = array(d['R-Path1'][0:2])
+        RP4 = array(d['R-Path2'][0:2])
+        RP5 = array(d['R-Path7'][0:2])
+        RP6 = array(d['R-Path3'][0:2])
+        RP7 = array(d['R-Path4'][2:4])
+
+        SP2 = array(d['S-Path1'][0:2])
+        SP3 = array(d['S-Path3'][0:2])
+        SP4 = array(d['S-Path3'][2:4])
+        SP5 = array(d['S-Path4'][2:4])
+        _s = 2*pi/im.Qs
+        _r = 2*pi/im.Qr
+
+
+        PA = 0.5 * (SP4 + SP5) 
+        PB = -PA[0], PA[1]
+        PText = 0.5*(PA[0]+PB[0]), PA[1] + 1.5
+        add_label_inside(vg.tikz.c, r'$w_{st}$', PA, PB, PText=PText)
+
+        PA = 0.5 * (SP2 + SP3) 
+        PB = rotate(_s, -PA[0], PA[1])
+        PText = 0.5*(PA[0]+PB[0]), PA[1] + 1.5
+        add_label_inside(vg.tikz.c, r'$\theta_{so}$', PA, PB, PText=PText)
+
+        PA = SP2
+        PB = SP3
+        PA = rotate(-0.9*_s, PA[0], PA[1])
+        PB = rotate(-0.9*_s, PB[0], PB[1])
+            # PText = 0.5*(PA[0]+PB[0]), PA[1] + 2.25
+            # add_label_inside(vg.tikz.c, r'$d_{so}$', PA, PB, PText=PText)
+        PText = 0.5*(PA[0]+PB[0]), PA[1] + 3
+        add_label_outside(vg.tikz.c, r'$d_{so}$', PA, PB, PText=PText)
+        # 辅助线
+        vg.tikz.c.stroke(path.line(-SP2[0], SP2[1], PA[0], PA[1]),
+                 [style.linewidth(0.08), style.linestyle.dashed, color.gray(0.5)])
+        vg.tikz.c.stroke(path.line(-SP3[0], SP3[1], PB[0], PB[1]),
+                 [style.linewidth(0.08), style.linestyle.dashed, color.gray(0.5)])
+
+
+        PA = 0.5 * (RP6 + RP7) 
+        PB = rotate(_r, -PA[0], PA[1])
+        PText = 0.5*(PA[0]+PB[0]), PA[1] + 1.5
+        add_label_inside(vg.tikz.c, r'$w_{rt}$', PA, PB, PText=PText)
+
+        PA = 0.5 * (RP4 + RP5)
+        PB = -PA[0], PA[1]
+            # PText = 0.5*(PA[0]+PB[0]), PA[1] + 1.45
+            # add_label_inside(vg.tikz.c, r'$w_{ro}$', PA, PB, PText=PText)
+        PText = 0.5*(PA[0]+PB[0])+3, PA[1] - 0.1
+        add_label_outside(vg.tikz.c, r'$w_{ro}$', PA, PB, PText=PText)
+
+        PA = RP4
+        PB = RP5
+        PA = rotate(1.08*_s, PA[0], PA[1])
+        PB = rotate(1.08*_s, PB[0], PB[1])
+            # PText = 0.5*(PA[0]+PB[0]) - 1.5, PA[1] - 1.
+            # add_label_inside(vg.tikz.c, r'$d_{ro}$', PA, PB, PText=PText)
+        PText = 0.5*(PA[0]+PB[0]) - 1.5, PA[1] - 2
+        add_label_outside(vg.tikz.c, r'$d_{ro}$', PA, PB, PText=PText)
+        # 辅助线
+        RP4 = rotate(_r, RP4[0], RP4[1])
+        RP5 = rotate(_r, RP5[0], RP5[1])
+        vg.tikz.c.stroke(path.line(RP4[0], RP4[1], PA[0], PA[1]),
+                 [style.linewidth(0.08), style.linestyle.dashed, color.gray(0.5)])
+        vg.tikz.c.stroke(path.line(RP5[0], RP5[1], PB[0], PB[1]),
+                 [style.linewidth(0.08), style.linestyle.dashed, color.gray(0.5)])
+
+        # Air gap
+        PA = array([-cos(0.5*pi-0.5*_r), sin(0.5*pi-0.5*_r)])*im.Radius_OuterRotor
+        PB = array([-cos(0.5*pi-0.5*_r), sin(0.5*pi-0.5*_r)])*(im.Radius_OuterRotor+im.Length_AirGap)
+        PText = 0.5*(PA[0]+PB[0]), PA[1] - 1
+        add_label_inside(vg.tikz.c, r'$L_{g}$', PA, PB, PText=PText)
+
+        # Outer Rotor Diameter
+        PA = array([cos(0.5*pi-0.5*_r), sin(0.5*pi-0.5*_r)])*im.Radius_OuterRotor
+        PB = array([cos(0.5*pi-0.5*_r), sin(0.5*pi-0.5*_r)])*(im.Radius_OuterRotor*0.975)
+        PText = PA[0] + 1.2, PA[1] - 1.5
+        myarrow(vg.tikz.c, PB, PA)
+        mytext(vg.tikz.c, PText, r'$r_{or}$')
+
+        # Outer Sator Diameter
+        PA = array([cos(0.5*pi-0.5*_r), sin(0.5*pi-0.5*_r)])*im.Radius_OuterStatorYoke
+        PB = array([cos(0.5*pi-0.5*_r), sin(0.5*pi-0.5*_r)])*(im.Radius_OuterStatorYoke*0.975)
+        PText = PA[0] - 1.5, PA[1] - 1.5
+        myarrow(vg.tikz.c, PB, PA)
+        mytext(vg.tikz.c, PText, r'$r_{os}$')
+
+        # mymarker([PA, PB, PText])
+
+        # print dir(color.rgb)
+        # print dir(style.linestyle)
+        # vg.tikz.c.stroke(path.line(0, 0, 0, 40),
+        #          [style.linewidth.THICK, style.linestyle.solid, color.gray(0.5),
+        #           deco.earrow([deco.stroked([color.rgb.black, style.linejoin.round]),
+        #                        deco.filled([color.rgb.black])], size=0.5)])
+
+    from pyx import *
+    pyx_label_dimention(track_path_backup)
+    vg.tikz.c.writePDFfile("pyx_output")
+    # vg.tikz.c.writeEPSfile("pyx_output")
+    quit()
 
     # 
     BIAS = 1
@@ -713,6 +1033,9 @@ if __name__ == '__main__':
     vg.ax.annotate(r'$D_{os}$', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"),fontsize=24,rotation=90)
     xy = (-im.Radius_OuterRotor, -4)
     vg.ax.annotate(r'$D_{or}$', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"),fontsize=24,rotation=90)
+    xy = (-im.Radius_Shaft, 0)
+    vg.ax.annotate(r'$D_{ir}$', xytext=(xy[0]+2.5,xy[1]-0.25), xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->"),fontsize=24,rotation=90)
+    vg.ax.set_xlim([-74,-45])
 
     def add_label_inside(vg, label, PA, PB):
         # vector_AB = (PB[0]-PA[0], PB[1]-PA[1])
@@ -806,7 +1129,7 @@ if __name__ == '__main__':
             angle_span=0.95*im.Angle_StatorSlotOpen/180*pi, rotation=some_angle-0.475*im.Angle_StatorSlotOpen/180*pi, center=(0,0), lw=0.6)
         # vg.ax.text(Ptemp1[0], Ptemp1[1], r'$w_{\rm open,s}$',fontsize=24,rotation=90,
         #             bbox=dict(facecolor='w', edgecolor='r',boxstyle='round,pad=0',alpha=0.9))
-        vg.ax.text(0.5*(Ptemp1[0]+Ptemp2[0])-5, 0.5*(Ptemp1[1]+Ptemp2[1]), r'$\theta_{\rm ops}$',fontsize=24,rotation=90,
+        vg.ax.text(0.5*(Ptemp1[0]+Ptemp2[0])-5, 0.5*(Ptemp1[1]+Ptemp2[1]), r'$\theta_{\rm so}$',fontsize=24,rotation=90,
                     bbox=dict(facecolor='w', edgecolor='w',boxstyle='round,pad=0',alpha=0.9))
 
 
@@ -816,7 +1139,7 @@ if __name__ == '__main__':
     Pr5 = vg.Pr_list[5-BIAS]
     Ptemp1 = 0.5*(Pr4+Pr5)
     Ptemp2 = Ptemp1 * np.array((1,-1)) # mirror
-    add_label_outside(vg, r'$W_{\rm opr}$', Ptemp1, Ptemp2, ext_factor=2, left_or_right=False)
+    add_label_outside(vg, r'$W_{\rm ro}$', Ptemp1, Ptemp2, ext_factor=2, left_or_right=False)
 
     #6
     Ps2 = vg.Ps_list[2-BIAS]
@@ -891,7 +1214,7 @@ if __name__ == '__main__':
     im.Radius_InnerStatorYoke -= 20
     im.Radius_Shaft += 10
 
-    vg = VanGogh_Plotter(im, CUSTOM)
+    vg = VanGogh_pyPlotter(im, CUSTOM)
     vg.draw_model()
 
     # 
