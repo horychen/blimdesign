@@ -11,6 +11,19 @@ db = mysql.connector.connect(
     )
 cursor = db.cursor()
 
+# Get Column name
+cursor.execute("SHOW columns FROM designs")
+print ([column[0] for column in cursor.fetchall()])
+MecPow
+
+
+
+
+
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# Tutorial
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+
 ## Create database
 # cursor.execute('CREATE DATABASE blimuw')
 # cursor.execute('SHOW DATABASES')
@@ -39,24 +52,25 @@ cursor = db.cursor()
 # cursor.executemany(sql, record)
 # db.commit()
 
-## Select, fetch and inspect
-cursor.execute('SELECT * FROM designs')
-result = cursor.fetchall()
-for row in result:
-    print (row)
-cursor.execute('SELECT name FROM designs')
-result = cursor.fetchall()
-for row in result:
-    print (row)
+# ## Select, fetch and inspect
+# cursor.execute('SELECT * FROM designs')
+# result = cursor.fetchall()
+# for row in result:
+#     print (row)
+# cursor.execute('SELECT name FROM designs')
+# result = cursor.fetchall()
+# for row in result:
+#     print (row)
 
-## Where clause
-cursor.execute("SELECT * FROM designs WHERE comments LIKE '%NineSigma%' AND design_id>3")
-result = cursor.fetchall()
-for row in result:
-    print (row)
+# ## Where clause
+# cursor.execute("SELECT * FROM designs WHERE comments LIKE '%NineSigma%' AND design_id>3")
+# result = cursor.fetchall()
+# for row in result:
+#     print (row)
 
-cursor.execute("SHOW columns FROM designs")
-print ([column[0] for column in cursor.fetchall()])
+## Get Column name
+# cursor.execute("SHOW columns FROM designs")
+# print ([column[0] for column in cursor.fetchall()])
 
 
 # ## add new column to table

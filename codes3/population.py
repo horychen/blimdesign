@@ -2619,44 +2619,6 @@ class swarm(object):
 
 class bearingless_induction_motor_design(object):
 
-    def update_mechanical_parameters(self, slip_freq=None, syn_freq=None):
-        # This function is first introduced to derive the new slip for different fundamental frequencies.
-        if syn_freq is None:
-            syn_freq = self.DriveW_Freq
-        else:
-            if syn_freq != self.DriveW_Freq:
-                raise Exception('I do not recommend to modify synchronous speed at instance level. Go update the initial design.')
-
-        if syn_freq == 0.0: # lock rotor
-            self.the_slip = 0. # this does not actually make sense
-            if slip_freq == None:
-                self.DriveW_Freq = self.slip_freq_breakdown_torque
-                self.BeariW_Freq = self.slip_freq_breakdown_torque
-            else:
-                self.DriveW_Freq = slip_freq
-                self.BeariW_Freq = slip_freq
-        else:
-            if slip_freq != None:
-                # change slip
-                self.the_slip = slip_freq / syn_freq
-                self.slip_freq_breakdown_torque = slip_freq
-            else:
-                # change syn_freq so update the slip
-                self.the_slip = self.slip_freq_breakdown_torque / syn_freq
-
-            self.DriveW_Freq = syn_freq
-            self.BeariW_Freq = syn_freq
-
-        self.the_speed = self.DriveW_Freq*60. / (0.5*self.DriveW_poles) * (1 - self.the_slip) # rpm
-
-        self.Omega = + self.the_speed / 60. * 2*pi
-        self.omega = None # This variable name is devil! you can't tell its electrical or mechanical! #+ self.DriveW_Freq * (1-self.the_slip) * 2*pi
-        # self.the_speed = + self.the_speed
-
-        if self.fea_config_dict is not None:
-            if self.fea_config_dict['flag_optimization'] == False: # or else it becomes annoying
-                print('[Update ID:%s]'%(self.ID), self.slip_freq_breakdown_torque, self.the_slip, self.the_speed, self.Omega, self.DriveW_Freq, self.BeariW_Freq)
-
     def __init__(self, row=None, fea_config_dict=None, model_name_prefix='PS'):
 
         # introspection (settings that may differ for initial design and variant designs)
@@ -2878,6 +2840,44 @@ class bearingless_induction_motor_design(object):
             for v in [-1, +1]:
                     self.RSH.append( (pm * self.Qr*(1-self.the_slip)/(0.5*self.DriveW_poles) + v)*self.DriveW_Freq )
         # print self.Qr, ', '.join("%g" % (rsh/self.DriveW_Freq) for rsh in self.RSH), '\n'
+
+    def update_mechanical_parameters(self, slip_freq=None, syn_freq=None):
+        # This function is first introduced to derive the new slip for different fundamental frequencies.
+        if syn_freq is None:
+            syn_freq = self.DriveW_Freq
+        else:
+            if syn_freq != self.DriveW_Freq:
+                raise Exception('I do not recommend to modify synchronous speed at instance level. Go update the initial design.')
+
+        if syn_freq == 0.0: # lock rotor
+            self.the_slip = 0. # this does not actually make sense
+            if slip_freq == None:
+                self.DriveW_Freq = self.slip_freq_breakdown_torque
+                self.BeariW_Freq = self.slip_freq_breakdown_torque
+            else:
+                self.DriveW_Freq = slip_freq
+                self.BeariW_Freq = slip_freq
+        else:
+            if slip_freq != None:
+                # change slip
+                self.the_slip = slip_freq / syn_freq
+                self.slip_freq_breakdown_torque = slip_freq
+            else:
+                # change syn_freq so update the slip
+                self.the_slip = self.slip_freq_breakdown_torque / syn_freq
+
+            self.DriveW_Freq = syn_freq
+            self.BeariW_Freq = syn_freq
+
+        self.the_speed = self.DriveW_Freq*60. / (0.5*self.DriveW_poles) * (1 - self.the_slip) # rpm
+
+        self.Omega = + self.the_speed / 60. * 2*pi
+        self.omega = None # This variable name is devil! you can't tell its electrical or mechanical! #+ self.DriveW_Freq * (1-self.the_slip) * 2*pi
+        # self.the_speed = + self.the_speed
+
+        if self.fea_config_dict is not None:
+            if self.fea_config_dict['flag_optimization'] == False: # or else it becomes annoying
+                print('[Update ID:%s]'%(self.ID), self.slip_freq_breakdown_torque, self.the_slip, self.the_speed, self.Omega, self.DriveW_Freq, self.BeariW_Freq)
 
     @staticmethod
     def get_stator_yoke_diameter_Dsyi(stator_tooth_width_b_ds, area_stator_slot_Sus, stator_inner_radius_r_is, Qs, Width_StatorTeethHeadThickness, Width_StatorTeethNeck):

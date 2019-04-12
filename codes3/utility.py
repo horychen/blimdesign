@@ -1210,7 +1210,7 @@ class SwarmDataAnalyzer(object):
         logger.debug(msg)
 
     def design_display_generator(self):
-        for i in range(self.number_of_designs):
+        for i in range(int(self.number_of_designs)):
             yield ''.join(self.buf[i*21:(1+i)*21])
 
     def design_parameters_generator(self):
@@ -1280,7 +1280,7 @@ class SwarmDataAnalyzer(object):
                     # + [float(el) for el in individual[18][16:].split(',')]
 
     def get_certain_objective_function(self, which):
-        for i in range(self.number_of_designs):
+        for i in range(int(self.number_of_designs)):
             individual = self.buf[i*21:(1+i)*21]
             try:
                 yield [float(el) for el in individual[3].split(',')][which]
