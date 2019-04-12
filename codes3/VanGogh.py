@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# from shapely.geometry import LineString
-# from shapely.geometry import Point
+from shapely.geometry import LineString
+from shapely.geometry import Point
 from math import tan, pi, atan, sqrt, sin, cos, copysign, atan2, asin, acos
+import utility
 
 CUSTOM = 2
 JMAG = 1
@@ -20,15 +21,20 @@ class VanGogh(object):
 
         if self.child_index == JMAG: # for being consistent with obselete codes
             self.plot_sketch_shaft() # Shaft if any
-            self.draw_rotor(fraction)
-            self.draw_stator(fraction)
+            self.draw_rotor_without_non_accurate_shapely(fraction)
+            self.draw_stator_without_non_accurate_shapely(fraction)
 
         elif self.child_index == FEMM: # for easy selecting of objects
-            self.draw_stator(fraction)
-            try:
-                self.draw_rotor(fraction)
-            except Exception as e:
-                raise e
+            # utility.blockPrint()
+            self.draw_stator_without_non_accurate_shapely(fraction)
+            self.draw_rotor_without_non_accurate_shapely(fraction)
+            # utility.enablePrint()
+
+            # self.draw_stator(fraction)
+            # try:
+            #     self.draw_rotor(fraction)
+            # except Exception as e:
+            #     raise e
 
         elif self.child_index == CUSTOM: 
             self.draw_rotor_without_non_accurate_shapely()

@@ -5,7 +5,7 @@ import sys
 import os
 
 print('Pyrhonen 2009 Chapter 7.')
-dir_prefix = '../release/OneReport/OneReport_TEX/contents/'
+one_report_dir_prefix = '../release/OneReport/OneReport_TEX/contents/'
 file_name = 'pyrhonen_procedure'
 file_suffix = '.tex'
 
@@ -87,6 +87,10 @@ class winding_layout(object):
         except:
             raise Exception('Error: Not implemented for this winding.')
 
+class geometry_data(object):
+    def __init__(self):
+        pass
+
 class desgin_specification(object):
     def __init__(self,
                     PS_or_SC = None,
@@ -152,6 +156,10 @@ class desgin_specification(object):
 
         self.winding_layout = winding_layout(self)
 
+        self.geometry = geometry_data()
+
+        self.loc_txt_file = '../' + 'pop/' + r'initial_design.txt'
+
     def build_name(self, bLatex=False):
         u'''转子类型+基本信息+槽配合+电负荷+导电材料+温度+导磁材料+磁负荷+叠压系数+假设+目的'''
         name = '%s%sp%dps%d_%dkW%dHz%dVtan%d_Qs%dQr%dJs%gJr%g%s%d%s%d@%dK_%s@%d_Bt%gs%grBy%gs%gr_b%.2fEff%gPf%g_%s%s%s%s' % (
@@ -206,7 +214,7 @@ class desgin_specification(object):
             return '\n- Bearingless Induction Motor Design SPecs\n\t' + ', \n\t'.join("%s = %s" % item for item in tuple_list)
 
     # @blockPrinting
-    def pyrhonen_procedure(self):
+    def pyrhonen_procedure(self, bool_loop_Jr=True):
         # for self.TangentialStress in arange(12000, 33001, 3000): # self.TangentialStress - this value will change the motor size, so it is not suited for loop for optimization bounds
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -224,7 +232,7 @@ class desgin_specification(object):
         else:
             bool_standard_voltage_rating = False
 
-        fname = open(dir_prefix+file_name+'_s01'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s01'+file_suffix, 'w', encoding='utf-8')
         print(r'''\subsubsection{Initial Design Parameters}''', file=fname)
         print('\nDesign Name:\\\\{\\tiny %s}' % self.build_name(bLatex=True), file=fname)
         if self.PS_or_SC:
@@ -271,7 +279,7 @@ class desgin_specification(object):
             machine_constant_Cmec = 150 # kW s / m^3. Figure 6.3 <- This is what Eric calls the penalty on the 2 pole IM---you loss power density.
         else:
             machine_constant_Cmec = 250 # kW s / m^3. 这里的电机常数都是按100kW去查的表哦，偏大了。不过电机常数在这里只用于检查AJ值的合理性。
-        fname = open(dir_prefix+file_name+'_s02'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s02'+file_suffix, 'w', encoding='utf-8')
         print(r'''\subsubsection{Machines Constant and Tangential Stress}
                 Tangential stress.
                 \[{\sigma _{F\tan }} = \frac{{\hat A{{\hat B}_\delta }\cos \varphi }}{2} = \frac{{A{{\hat B}_\delta }\cos \varphi }}{{\sqrt 2 }} \in [12000-21500] {\rm Pa}\]
@@ -322,7 +330,7 @@ class desgin_specification(object):
         # rotor_outer_diameter_Dr = 2*rotor_outer_radius_r_or
         # # We have: rotor_volume_Vr = pi * rotor_outer_radius_r_or**2 * stack_length, so
 
-        fname = open(dir_prefix+file_name+'_s03'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s03'+file_suffix, 'w', encoding='utf-8')
         print(r'''\subsubsection{Machine Sizing}\label{subsubsec:machine_sizing}
                 Required torque.
                 \[{T_{em}} = \frac{{{P_{mec}}}}{{2\pi {n_{mec}} \times 60}}\]
@@ -378,7 +386,7 @@ class desgin_specification(object):
         stator_inner_diameter_Dis = 2*air_gap_length_delta + rotor_outer_diameter_Dr
         stator_inner_radius_r_is = 0.5*stator_inner_diameter_Dis
 
-        fname = open(dir_prefix+file_name+'_s04'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s04'+file_suffix, 'w', encoding='utf-8')
         print(r'''\subsubsection{Air Gap}
                 For 50 Hz machines, we have
                 \[\delta  = \frac{{0.2 + 0.01P_{mec}^{0.4}}}{{1000}},\,p = 1\]
@@ -440,7 +448,7 @@ class desgin_specification(object):
             raise Exception('Not implemented error.')
         kw1 = kd1 * kq1 * ksq1
 
-        fname = open(dir_prefix+file_name+'_s05'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s05'+file_suffix, 'w', encoding='utf-8')
         print(r'''\subsubsection{Stator Winding and Slots}
                 \[{k_{wv}} = {k_{pv}}{k_{dv}}{k_{sqv}} = \sin \left( {v\frac{W}{{{\tau _p}}}\frac{\pi }{2}} \right)\frac{{2\sin \left( {\frac{v}{m}\frac{\pi }{2}} \right)}}{{\frac{Q}{{mp}}\sin \left( {v\pi \frac{p}{Q}} \right)}}\frac{{\sin \left( {v\frac{s}{{{\tau _p}}}\frac{\pi }{2}} \right)}}{{v\frac{s}{{{\tau _p}}}\frac{\pi }{2}}}\]
                  ''', file=fname)
@@ -468,7 +476,7 @@ class desgin_specification(object):
         self.guess_air_gap_flux_density
         linear_current_density_A = machine_constant_Cmec / (pi**2/sqrt(2)*kw1*self.guess_air_gap_flux_density)
         
-        fname = open(dir_prefix+file_name+'_s06'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s06'+file_suffix, 'w', encoding='utf-8')
         print(r'''\subsubsection{Air Gap Flux Density}
                     Recall machine constant.
                     \[{C_{{\rm{mec}}}} = \frac{{{\pi ^2}}}{{\sqrt 2 }}{k_{ws1}}A{{\hat B}_\delta } = 150{\rm{kWs/}}{{\rm{m}}^{\rm{3}}}\]
@@ -498,7 +506,7 @@ class desgin_specification(object):
         air_gap_flux_Phi_m = alpha_i * self.guess_air_gap_flux_density * pole_pitch_tau_p * stack_length_eff
         no_series_coil_turns_N = sqrt(2)*desired_emf_Em / (2*pi*self.ExcitationFreq * kw1 * air_gap_flux_Phi_m) # p306
 
-        fname = open(dir_prefix+file_name+'_s07'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s07'+file_suffix, 'w', encoding='utf-8')
         print(r'''\subsubsection{Number of Coil Turns}
                 \[{\alpha _i} > \pi /2\]
 
@@ -533,7 +541,7 @@ class desgin_specification(object):
         else:
             no_series_coil_turns_N = min([self.p*distribution_q*i for i in range(100)], key=lambda x:abs(x - no_series_coil_turns_N))  # using lower turns value has priority # https://stackoverflow.com/questions/12141150/from-list-of-integers-get-number-closest-to-a-given-value
 
-        fname = open(dir_prefix+file_name+'_s08'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s08'+file_suffix, 'w', encoding='utf-8')
         print(r'''\subsubsection{Round up Number of Coil Turns}
                     This $N$ must be multiples of $pq$ and it affects air gap B.
                     For example of $pq=4$, you get an $N$ value as 18,
@@ -585,7 +593,7 @@ class desgin_specification(object):
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         #
             self.guess_air_gap_flux_density = (sqrt(2)*desired_emf_Em) / (2*pi*self.ExcitationFreq * kw1 *  alpha_i * no_series_coil_turns_N * pole_pitch_tau_p * stack_length_eff) # p306
-            fname = open(dir_prefix+file_name+'_s09'+file_suffix, 'w', encoding='utf-8')
+            fname = open(one_report_dir_prefix+file_name+'_s09'+file_suffix, 'w', encoding='utf-8')
             print(r'''\subsubsection{Re-calculate Air Gap Flux Density and Beginning of Loop for $\alpha_i$}
                     \[{{\hat \Phi }_m} = {\alpha _i}{{\hat B}_\delta }{\tau _p}l'\]
                     \[{{\hat B}_\delta } = \frac{{\sqrt 2 {E_m}}}{{\omega {k_{w1}}{\alpha _i}N{\tau _p}l'}}\]
@@ -642,7 +650,7 @@ class desgin_specification(object):
             rotor_tooth_apparent_flux_over_slot_pitch_Phi_dr = stack_length_eff*rotor_slot_pitch_tau_ur*self.guess_air_gap_flux_density
             rotor_tooth_width_b_dr = stack_length_eff*rotor_slot_pitch_tau_ur*self.guess_air_gap_flux_density / (self.lamination_stacking_factor_kFe*stack_length*self.rotor_tooth_flux_density_B_dr) + 0.1e-3
 
-            fname = open(dir_prefix+file_name+'_s10'+file_suffix, 'w', encoding='utf-8')
+            fname = open(one_report_dir_prefix+file_name+'_s10'+file_suffix, 'w', encoding='utf-8')
             print(r'''\subsubsection{Tooth Flux Density}
                     Stator tooth.
                     \[\begin{array}{l}
@@ -699,7 +707,7 @@ class desgin_specification(object):
             # The slot depth equals the tooth height hs = hd Pyrhonen09@p309
             stator_slot_height_h_ss = stator_tooth_height_h_ds
 
-            fname = open(dir_prefix+file_name+'_s11'+file_suffix, 'w', encoding='utf-8')
+            fname = open(one_report_dir_prefix+file_name+'_s11'+file_suffix, 'w', encoding='utf-8')
             print(r'''\subsubsection{Dimension of Slots}
                     Guess efficiency ($\eta=0.9$) and power factor (${\rm PF}=0.6$). According to my simulation, it is important that you take a good guess at power factor, or else your design can be low in average torque. For example, if ${\rm PF}$ is 0.8, then the average torque is only 11 Nm, while according to my FEA simulation, a ${\rm PF}=0.6$ is reported and if this value is used, then the average torque reaches 21 Nm. The key physical quantity related to power factor is the rated stator current. That is, PF decreases from 0.8 down to 0.6 and in the meantime stator current 107 A increases up to 151 A.
                     \emph{P.S.: you can take an estimate of PF from the ratio of your designed magnetizing current to the stator current.}
@@ -807,8 +815,11 @@ class desgin_specification(object):
                 if isnan(rotor_tooth_height_h_dr) == True:
                     bool_enough_rotor_slot_space = False
                     print('[%d]'%count_Jr_search, 'Loop for working self.Jr, not', self.Jr, 'Arms/(m^2)')
-                    self.Jr += 0.25e6
-                    continue
+                    if bool_loop_Jr == True:
+                        self.Jr += 0.25e6
+                        continue
+                    else:
+                        return
                     # You can also increase your magnetic load at rotor tooth to create larger rotor slot area.
                     # raise Exception('There are no space on the rotor to fulfill the required rotor slot to reach your J_r and self.space_factor_kAl. Reduce your self.TangentialStress and run the script again.')
                 else:
@@ -893,7 +904,7 @@ class desgin_specification(object):
             air_gap_length_delta_eff = Carter_factor_kC * air_gap_length_delta
             air_gap_magnetic_voltage_Um_delta = air_gap_field_strength_H * air_gap_length_delta_eff
 
-            fname = open(dir_prefix+file_name+'_s12'+file_suffix, 'w', encoding='utf-8')
+            fname = open(one_report_dir_prefix+file_name+'_s12'+file_suffix, 'w', encoding='utf-8')
             print(r'''\subsubsection{Magnetic Voltage}
                         Look up in BH table for
                         \[\begin{array}{l}
@@ -973,7 +984,7 @@ class desgin_specification(object):
 
 
 
-            fname = open(dir_prefix+file_name+'_s13'+file_suffix, 'w', encoding='utf-8')
+            fname = open(one_report_dir_prefix+file_name+'_s13'+file_suffix, 'w', encoding='utf-8')
             print(r'''\subsubsection{(End Loop) Saturation Factor}
                         \[{k_{sat}} = \frac{{{{\hat U}_{m,ds}} + {{\hat U}_{m,dr}}}}{{{{\hat U}_{m,\delta }}}}\]
                         ''', file=fname)
@@ -1007,7 +1018,7 @@ class desgin_specification(object):
         stator_yoke_height_h_ys = 0.5*air_gap_flux_Phi_m / (self.lamination_stacking_factor_kFe*stack_length*self.stator_yoke_flux_density_Bys)
         rotor_yoke_height_h_yr = 0.5*air_gap_flux_Phi_m / (self.lamination_stacking_factor_kFe*stack_length*self.rotor_yoke_flux_density_Byr)
 
-        fname = open(dir_prefix+file_name+'_s14'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s14'+file_suffix, 'w', encoding='utf-8')
         print(r'''\subsubsection{Yoke Geometry}
                 \[\begin{array}{l}
                 Select\,{{\hat B}_{ys}},{{\hat B}_{yr}}\,in\,Table6.1\\
@@ -1035,7 +1046,7 @@ class desgin_specification(object):
         rotor_inner_diameter_Dri = rotor_yoke_diameter_Dryi - 2*rotor_yoke_height_h_yr
 
 
-        fname = open(dir_prefix+file_name+'_s15'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s15'+file_suffix, 'w', encoding='utf-8')
         print(r'''\subsubsection{Total Magnetic Voltage \& Machine Geometry}
                     When the air-gap diameter $D_s$, the heights $h_{ds}$ and $h_{dr}$ of the teeth, and the heights $h_{ys}$ and
                     $h_{yr}$ of the stator and rotor yokes are known, we obtain the outer diameter $D_{se}$ of the stator
@@ -1097,7 +1108,7 @@ class desgin_specification(object):
                                         + 0.5*stator_yoke_magnetic_voltage_Um_ys + 0.5*rotor_yoke_magnetic_voltage_Um_yr
         stator_magnetizing_current_Is_mag = total_magnetic_voltage_Um_tot * pi* self.p / (no_phase_m * kw1 * no_series_coil_turns_N * sqrt(2))
 
-        fname = open(dir_prefix+file_name+'_s16'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s16'+file_suffix, 'w', encoding='utf-8')
         print(r'''\subsubsection{Magnetizing Current Providing Total Magnetic Voltage}
                     \[q = \frac{{{Q_s}}}{{2pm}},q > 1 \Rightarrow {Q_s} = 12,18,24,30,36,42,48\]
                     \[\begin{array}{l}
@@ -1118,7 +1129,7 @@ class desgin_specification(object):
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # 17. Losses Computation and Efficiency
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        fname = open(dir_prefix+file_name+'_s17'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s17'+file_suffix, 'w', encoding='utf-8')
         print(r'''\subsubsection{Efficiency and Equivalent Circuit Parameters}
                     Since the dimensions have been defined and the winding has been selected, the resistances and inductances of the machine are now calculated. 
                     The magnetizing inductance was discussed in Chapter 3, the leakage inductances in Chapter 4 and the resistances in Chapter 5. 
@@ -1194,41 +1205,42 @@ class desgin_specification(object):
         DriveW_turns=no_conductors_per_slot_zQ
         DriveW_CurrentAmp = stator_phase_current_rms * sqrt(2); 
         DriveW_Freq = self.ExcitationFreq
-
-        # 参考FEMM_Solver.py 或 按照书上的公式算一下
-        stator_slot_area = area_stator_slot_Sus # FEMM是对槽积分得到的，更准哦
-        TEMPERATURE_OF_COIL = 75
-        print('TEMPERATURE_OF_COIL=', TEMPERATURE_OF_COIL, 'deg Celcius', file=fname)
-        rho_Copper = (3.76*TEMPERATURE_OF_COIL+873)*1e-9/55.
-        SLOT_FILL_FACTOR = self.space_factor_kCu
-        coil_pitch_slot_count = self.Qs / DriveW_poles # 整距！        
-        length_endArcConductor = coil_pitch_slot_count/self.Qs * (0.5*(Radius_OuterRotor + Length_AirGap + Radius_InnerStatorYoke)) * 2*pi # [mm] arc length = pi * diameter  
-        length_conductor = (stack_length*1e3 + length_endArcConductor) * 1e-3 # mm to m  ## imagine: two conductors + two end conducotors = one loop (in and out)
-        area_conductor   = (stator_slot_area) * SLOT_FILL_FACTOR / DriveW_turns # TODO: 这里绝缘用槽满率算进去了，但是没有考虑圆形导体之间的空隙？槽满率就是空隙，这里没有考虑绝缘的面积占用。
-        # number_parallel_branch = 1
-        resistance_per_conductor = rho_Copper * length_conductor / (area_conductor * number_parallel_branch)
-        DriveW_Rs = resistance_per_conductor * DriveW_turns * self.Qs / 3. # resistance per phase
+        if 'Cu' not in self.Coil:
+            raise Exception('Not implemented error.')
+        else:
+            print('self.Temperature=', self.Temperature, 'deg Celcius', file=fname)
+            rho_Copper = (3.76*self.Temperature+873)*1e-9/55.
+            # 参考FEMM_Solver.py 或 按照书上的公式算一下
+            stator_slot_area = area_stator_slot_Sus # FEMM是对槽积分得到的，更准哦
+            SLOT_FILL_FACTOR = self.space_factor_kCu
+            coil_pitch_slot_count = self.winding_layout.coil_pitch # 短距 # self.Qs / DriveW_poles # 整距！
+            length_endArcConductor = coil_pitch_slot_count/self.Qs * (0.5*(Radius_OuterRotor + Length_AirGap + Radius_InnerStatorYoke)) * 2*pi # [mm] arc length = pi * diameter  
+            length_conductor = (stack_length*1e3 + length_endArcConductor) * 1e-3 # mm to m  ## imagine: two conductors + two end conducotors = one loop (in and out)
+            area_conductor   = (stator_slot_area) * SLOT_FILL_FACTOR / DriveW_turns # TODO: 这里绝缘用槽满率算进去了，但是没有考虑圆形导体之间的空隙？槽满率就是空隙，这里没有考虑绝缘的面积占用。
+            # number_parallel_branch = 1
+            resistance_per_conductor = rho_Copper * length_conductor / (area_conductor * number_parallel_branch)
+        DriveW_Rs = resistance_per_conductor * DriveW_turns * self.Qs / no_phase_m # resistance per phase
         print('DriveW_Rs=', DriveW_Rs, 'Ohm', file=fname)
 
-        if False:
-            with open(loc_txt_file, 'a') as f:
-                f.write('%d, ' %(THE_IM_DESIGN_ID))
+        if True:
+            with open(self.loc_txt_file, 'a') as f:
+                f.write('%d, ' %(self.Qr))
                 f.write('%d, %d, ' %(self.Qs, self.Qr))
                 f.write('%f, %f, %f, %f, %f, '      % (Radius_OuterStatorYoke, Radius_InnerStatorYoke, Length_AirGap, Radius_OuterRotor, Radius_Shaft))
                 f.write('%f, %f, %f, %f, %f, %f, '  % (Length_HeadNeckRotorSlot, Radius_of_RotorSlot, Location_RotorBarCenter, Width_RotorSlotOpen, Radius_of_RotorSlot2, Location_RotorBarCenter2))
                 f.write('%f, %f, %f, %f, '          % (Angle_StatorSlotOpen, Width_StatorTeethBody, Width_StatorTeethHeadThickness, Width_StatorTeethNeck))
                 f.write('%f, %f, %f, %f, %f, %f, '  % (DriveW_poles, DriveW_turns, DriveW_Rs, DriveW_CurrentAmp, DriveW_Freq, stack_length*1000))
                 f.write('%.14f, %.14f, %.14f, '     % (area_stator_slot_Sus, area_rotor_slot_Sur, minimum__area_rotor_slot_Sur)) # this line exports values need to impose constraints among design parameters for the de optimization
-                f.write('%g, %g, %g, %g\n'          % (rotor_tooth_flux_density_B_dr, self.stator_tooth_flux_density_B_ds, self.Jr, rotor_tooth_width_b_dr))
+                f.write('%g, %g, %g, %g\n'          % (self.rotor_tooth_flux_density_B_dr, self.stator_tooth_flux_density_B_ds, self.Jr, rotor_tooth_width_b_dr))
 
         ''' Determine bounds for these parameters:
-            stator_tooth_width_b_ds       = design_parameters[0]*1e-3 # m                       # stator tooth width [mm]
-            air_gap_length_delta          = design_parameters[1]*1e-3 # m                       # air gap length [mm]
-            b1                            = design_parameters[2]*1e-3 # m                       # rotor slot opening [mm]
-            rotor_tooth_width_b_dr        = design_parameters[3]*1e-3 # m                       # rotor tooth width [mm]
-            self.Length_HeadNeckRotorSlot        = design_parameters[4]             # [4]       # rotor tooth head & neck length [mm]
-            self.Angle_StatorSlotOpen            = design_parameters[5]             # [5]       # stator slot opening [deg]
-            self.Width_StatorTeethHeadThickness  = design_parameters[6]             # [6]       # stator tooth head length [mm]
+            stator_tooth_width_b_ds        = design_parameters[0]*1e-3 # m                # stator tooth width [mm]
+            air_gap_length_delta           = design_parameters[1]*1e-3 # m                # air gap length [mm]
+            b1                             = design_parameters[2]*1e-3 # m                # rotor slot opening [mm]
+            rotor_tooth_width_b_dr         = design_parameters[3]*1e-3 # m                # rotor tooth width [mm]
+            Length_HeadNeckRotorSlot       = design_parameters[4]             # [4]       # rotor tooth head & neck length [mm]
+            Angle_StatorSlotOpen           = design_parameters[5]             # [5]       # stator slot opening [deg]
+            Width_StatorTeethHeadThickness = design_parameters[6]             # [6]       # stator tooth head length [mm]
         '''
         print('stator_tooth_width_b_ds =', stator_tooth_width_b_ds, file=fname)
         print('air_gap_length_delta =', air_gap_length_delta, file=fname)         
@@ -1238,8 +1250,8 @@ class desgin_specification(object):
         print('Angle_StatorSlotOpen =', Angle_StatorSlotOpen, file=fname)
         print('Width_StatorTeethHeadThickness =', Width_StatorTeethHeadThickness, file=fname)
 
-        bool_bad_specifications = True if self.Jr_backup < self.Jr else False
-        return bool_bad_specifications
+        return True if self.Jr_backup < self.Jr else False # bool_bad_specifications
+
 
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -1247,16 +1259,21 @@ class desgin_specification(object):
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 
 def loop_for_bounds(spec):
+    spec.loc_txt_file = '../' + 'pop/' + r'loop_for_bounds.txt'
+    open(spec.loc_txt_file, 'w').close()
+    import utility
 
     # for THE_IM_DESIGN_ID, spec.Qr in enumerate([16,20,28,32,36]): # any spec.Qr>36 will not converge (for alpha_i and k_sat)
     # for THE_IM_DESIGN_ID, spec.Qr in enumerate([32,36]): # any spec.Qr>36 will not converge (for alpha_i and k_sat) with Arnon5 at least
     # for THE_IM_DESIGN_ID, spec.Qr in enumerate([32]):
-    bool_run_for_bounds = False
-    for rotor_tooth_flux_density_B_dr in arange(1.1, 2.11, 0.1): #1.5–2.2 (rotor) 
-        for stator_tooth_flux_density_B_ds in arange(1.1, 1.81, 0.1): #1.4–2.1 (stator) # too large you will get End of Loop Error (Fixed by extropolating the k_sat vs alpha_i curve.)
+    bool_run_for_bounds = True
+    for rotor_tooth_flux_density_B_dr      in [1.1, 1.2, 1.8, 1.9]: #1.5–2.2 (rotor) 
+        for stator_tooth_flux_density_B_ds in [1.1, 1.2, 1.8, 1.9]: #1.4–2.1 (stator) # too large you will get End of Loop Error (Fixed by extropolating the k_sat vs alpha_i curve.)
 
             # for spec.Jr in arange(3e6, 8e6+1, 1e6):
-            for Jr in arange(3e6, 12e6+1, 0.5e6):
+            for Jr in [4e6, 6e6, 8e6, 12e6]:
+                print(rotor_tooth_flux_density_B_dr, stator_tooth_flux_density_B_ds, Jr)
+                utility.blockPrint()
 
                 if not bool_run_for_bounds:
                     rotor_tooth_flux_density_B_dr = 1.5
@@ -1270,10 +1287,11 @@ def loop_for_bounds(spec):
                 try:
                     spec.rotor_tooth_flux_density_B_dr  = rotor_tooth_flux_density_B_dr
                     spec.stator_tooth_flux_density_B_ds = stator_tooth_flux_density_B_ds
-                    spec.Jr       = Jr
-                    Radius_OuterRotor = pyrhonen_procedure(spec, fname)
+                    spec.Jr = Jr
+                    bool_bad_specifications = spec.pyrhonen_procedure(bool_loop_Jr=False)
                 except Exception as e:
                     raise e
+                utility.enablePrint()
 
                 if not bool_run_for_bounds:
                     break
@@ -1282,7 +1300,7 @@ def loop_for_bounds(spec):
         if not bool_run_for_bounds:
             break
 
-    return Radius_OuterRotor
+    return spec.loc_txt_file
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Utility for analytical mechanical check

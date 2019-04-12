@@ -32,6 +32,8 @@ class swarm(object):
         for im in self.im_list:
             if im.Qr == fea_config_dict['Active_Qr']:
                 self.im = im
+                print('Take the first Active_Qr match as initial design')
+                break
         try: 
             self.im
         except:

@@ -7,24 +7,24 @@ def where_am_i(fea_config_dict):
     if dir_interpreter[0] == 'D':
         print('you are on Legion Y730')
         dir_parent = 'D:/OneDrive - UW-Madison/c/'
-        dir_codes = dir_parent + 'codes/'
-        dir_lib = dir_parent + 'codes/'
+        dir_codes = dir_parent + 'codes3/'
+        dir_lib = dir_parent + 'codes3/'
         dir_femm_files = 'D:/femm42/' # .ans files are too large to store on OneDrive anymore
         dir_project_files = 'D:/JMAG_Files/'
         pc_name = 'Y730'
     elif dir_interpreter[0] == 'I':
         print('you are on Severson02')
         dir_parent = 'I:/jchen782/c/'
-        dir_codes = dir_parent + 'codes/'
-        dir_lib = dir_parent + 'codes/'
+        dir_codes = dir_parent + 'codes3/'
+        dir_lib = dir_parent + 'codes3/'
         dir_femm_files = 'I:/jchen782/FEMM/'
         dir_project_files = 'I:/jchen782/JMAG/'
         pc_name = 'Severson02'
     elif dir_interpreter[0] == 'K':
         print('you are on Severson01')
         dir_parent = 'K:/jchen782/c/'
-        dir_codes = dir_parent + 'codes/'
-        dir_lib = dir_parent + 'codes/'
+        dir_codes = dir_parent + 'codes3/'
+        dir_lib = dir_parent + 'codes3/'
         dir_femm_files = 'K:/jchen782/FEMM/'
         dir_project_files = 'K:/jchen782/JMAG/'
         pc_name = 'Severson01'
@@ -32,8 +32,8 @@ def where_am_i(fea_config_dict):
         # elif 'Chen' in 'dir_interpreter':
         print('you are on T440p')
         dir_parent = 'C:/Users/Hory Chen/OneDrive - UW-Madison/c/'
-        dir_codes = dir_parent + 'codes/'
-        dir_lib = dir_parent + 'codes/'
+        dir_codes = dir_parent + 'codes3/'
+        dir_lib = dir_parent + 'codes3/'
         dir_femm_files = 'C:/femm42/'
         dir_project_files = 'C:/JMAG_Files/'
         pc_name = 'T440p'
@@ -61,37 +61,42 @@ fea_config_dict = {
     ##########################
     # Sysetm Control
     ##########################
+    'OnlyTableResults':False, # modified later according to pc_name
+        # multiple cpu (SMP=2)
+        # use directSolver over ICCG Solver
+    'local_sensitivity_analysis':False,
+    'flag_optimization':True, # also use true for sensitivity analysis
+    'designer.Show':True,
+    'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
+
+    ##########################
+    # FEA Setting
+    ##########################
     'TranRef-StepPerCycle':40, # FEMM: 5 deg   # 360 to be precise as FEMM: 0.5 deg 
     # 'FrequencyRange':range(1,6), # the first generation for PSO
     'number_of_steps_1stTTS':32,
     'number_of_steps_2ndTTS':32, # use a multiples of 4! # 8*32 # steps for half period (0.5). That is, we implement two time sections, the 1st section lasts half slip period and the 2nd section lasts half fandamental period.
     'number_cycles_prolonged':1, # 150
-    'OnlyTableResults':False, # modified later according to pc_name
-        # multiple cpu (SMP=2)
-        # use directSolver over ICCG Solver
-    'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
-    'flag_optimization':True, # also use true for sensitivity analysis
-    'local_sensitivity_analysis':False,
     'FEMM_Coarse_Mesh':True,
-    'designer.Show':False,
 
     ##########################
     # Optimization
     ##########################
     'JMAG_Scheduler':False, # multi-cores run
-    'delete_results_after_calculation': False, # check if True can we still export Terminal Voltage? 如果是True，那么就得不到Terminal Voltage了！
+    'delete_results_after_calculation': False, # check if True can we still export Terminal Voltage? 如果是True，那么就得不到Terminal Voltage和功率因数了！
     'use_weights':None,
 
     ##########################
     # Design Specifications
     ##########################
-    'Active_Qr':16, #16, #32,
+    'Active_Qr':None, #16, #32,
+    'PoleSpecific': True,
     'DPNV': True,
     'DPNV_separate_winding_implementation': False,
     'mimic_separate_winding_with_DPNV_winding':False,
     'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
     'Steel': 'M19Gauge29', #'M15','Arnon5', 
-                              # 75 deg Celsus: If you modify the temperature here, you should update the initial design (the im.DriveW_Rs should be updated and it used in JMAG FEM Coil)
+                           # 75 deg Celsus: If you modify the temperature here, you should update the initial design (the im.DriveW_Rs should be updated and it used in JMAG FEM Coil)
     'Bar_Conductivity':1/((3.76*75+873)*1e-9/55.), # @75 Degree Celsius # 1/((3.76*100+873)*1e-9/55.) for Copper, where temperature is 25 or 100 deg Celsius.
     # 'Bar_Conductivity':40e6, # 40e6 for Aluminium; 
 }
@@ -112,19 +117,27 @@ imp.reload(utility)
 run_list = [1,1,0,0,0] # use JMAG only
 run_list = [0,1,0,0,0] # use FEMM to search for breakdown slip
 fea_config_dict['jmag_run_list'] = run_list
-def build_model_name_prefix(fea_config_dict):
+def build_model_name_prefix(run_folder, UID=None):
     if fea_config_dict['flag_optimization'] == True:
-        fea_config_dict['model_name_prefix'] = 'OP_PS_Qr%d_%s' % (fea_config_dict['Active_Qr'], fea_config_dict['Steel'])
+        fea_config_dict['model_name_prefix'] = 'OP'
     else:
-        fea_config_dict['model_name_prefix'] = 'PS_Qr%d_%s' % (fea_config_dict['Active_Qr'], fea_config_dict['Steel'])
-    if fea_config_dict['DPNV'] == True:
-        fea_config_dict['model_name_prefix'] += '_DPNV'
+        fea_config_dict['model_name_prefix'] = ''
+
+    if fea_config_dict['PoleSpecific'] == True:
+        fea_config_dict['model_name_prefix'] += '_PS'
+    else:
+        fea_config_dict['model_name_prefix'] += '_SC'
+
+    fea_config_dict['model_name_prefix'] += '_Qr%d'%(fea_config_dict['Active_Qr'])
+
     if fea_config_dict['End_Ring_Resistance'] == 0:
         fea_config_dict['model_name_prefix'] += '_NoEndRing'
-    if fea_config_dict['Restart'] == True:
-        fea_config_dict['model_name_prefix'] += '_Restart'
+
+    if UID is not None:
+        fea_config_dict['model_name_prefix'] += 'UID_%4d'%(UID)
+
     return fea_config_dict['model_name_prefix']
-print(build_model_name_prefix(fea_config_dict))
+# print(build_model_name_prefix(fea_config_dict))
 
 # FEMM Static FEA
 fea_config_dict['femm_deg_per_step'] = None # 0.25 * (360/4) / utility.lcm(24/4., fea_config_dict['Active_Qr']/4.) # at least half period

@@ -38,11 +38,11 @@ class VanGogh_FEMM(VanGogh):
         femm.mi_copyrotate2(0, 0, 360./Q, int(Q)/fraction, SELECT_ALL)
 
     @staticmethod
-    def draw_arc(p1, p2, angle, maxseg=1):
+    def draw_arc(p1, p2, angle, maxseg=1, center=None, **kwarg):
         femm.mi_drawarc(p1[0],p1[1],p2[0],p2[1],angle/pi*180,maxseg) # [deg]
     
     @staticmethod
-    def add_arc(p1, p2, angle, maxseg=1):
+    def add_arc(p1, p2, angle, maxseg=1, center=None, **kwarg):
         femm.mi_addarc(p1[0],p1[1],p2[0],p2[1],angle/pi*180,maxseg) # [deg]
 
     @staticmethod
@@ -2249,6 +2249,7 @@ class FEMM_Solver(object):
         # print dir_femm_temp + 'femm_temp.fem'
         # print dir_femm_temp + 'femm_temp.fem'
         femm.mi_saveas(dir_femm_temp + 'femm_temp.fem')
+        # quit()
         femm.mi_close()
         femm.closefemm()
 
