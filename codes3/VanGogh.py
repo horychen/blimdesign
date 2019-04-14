@@ -25,10 +25,10 @@ class VanGogh(object):
             self.draw_stator_without_non_accurate_shapely(fraction)
 
         elif self.child_index == FEMM: # for easy selecting of objects
-            # utility.blockPrint()
+            utility.blockPrint()
             self.draw_stator_without_non_accurate_shapely(fraction)
             self.draw_rotor_without_non_accurate_shapely(fraction)
-            # utility.enablePrint()
+            utility.enablePrint()
 
             # self.draw_stator(fraction)
             # try:
@@ -274,7 +274,6 @@ class VanGogh(object):
 
         # if self.child_index == FEMM:
             self.some_solver_related_operations_fraction(im, fraction)
-
 
     def draw_rotor_without_non_accurate_shapely(self, fraction=1):
         # Shapely is very poor in accuracy, use your high school geometry knowledge to derive the coordinates!
@@ -573,14 +572,7 @@ class VanGogh(object):
         y_solutions = (b*c - a*Delta)/(a**2+b**2), (b*c + a*Delta)/(a**2+b**2)
         return (x_solutions[0], y_solutions[0]), (x_solutions[1], y_solutions[1])
 
-def csv_row_reader(handle):
-    from csv import reader
-    read_iterator = reader(handle, skipinitialspace=True)
-    return whole_row_reader(read_iterator)        
-
-def whole_row_reader(reader):
-    for row in reader:
-        yield row[:]
+from utility import csv_row_reader
 
 class VanGogh_pyPlotter(VanGogh):
     """VanGogh_pyPlotter is child class of VanGogh for plotting IM geometry in matplotlib."""

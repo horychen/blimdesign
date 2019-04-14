@@ -63,7 +63,10 @@ class swarm(object):
 
         self.run_folder             = fea_config_dict['run_folder']
         self.dir_run                = self.dir_parent + 'pop/' + self.run_folder
-        self.dir_project_files      = fea_config_dict['dir_project_files']
+        if fea_config_dict['flag_optimization'] == True:
+            self.dir_project_files  = fea_config_dict['dir_project_files'] + self.run_folder
+        else:
+            self.dir_project_files  = fea_config_dict['dir_project_files']
         self.dir_jcf                = self.dir_project_files + 'jcf/'
         self.pc_name                = fea_config_dict['pc_name']
         self.fea_config_dict        = fea_config_dict

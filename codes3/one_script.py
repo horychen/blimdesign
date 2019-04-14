@@ -52,7 +52,7 @@ os.system('cd /d '+ r'"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TE
 if bool_bad_specifications:
     print('\nThe specifiaction can not be fulfilled. Read script log or OneReport.pdf for information and revise the specifiaction for $J_r$ or else your design name is wrong.')
 else:
-    print('\nThe specifiaction is meet. Check database and add record.')
+    print('\nThe specifiaction is meet. Now check the database of blimuw.')
     try:
         import mysql.connector
     except:
@@ -139,13 +139,15 @@ else:
                 cursor.execute(sql, record)
                 db.commit()
             sql_add_one_record(spec)
-
+            'A new record is added to table named designs.'
+        else:
+            'Record already exists, skip database communication.'
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Automatic Performance Evaluation
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# winding analysis? 之前的python代码利用起来啊
-# 希望的效果是：设定好一个设计，马上进行运行求解，把我要看的数据都以latex报告的形式呈现出来。
-# OP_PS_Qr36_M19Gauge29_DPNV_NoEndRing.jproj
+    # winding analysis? 之前的python代码利用起来啊
+    # 希望的效果是：设定好一个设计，马上进行运行求解，把我要看的数据都以latex报告的形式呈现出来。
+    # OP_PS_Qr36_M19Gauge29_DPNV_NoEndRing.jproj
 if True:
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -163,6 +165,14 @@ if True:
             list_b_dr.append(design[30]*1e3)
     b_ds_max, b_ds_min = max(list_b_ds), min(list_b_ds)
     b_dr_max, b_dr_min = max(list_b_dr), min(list_b_dr)
+    print(b_ds_max, b_ds_min)
+    print(b_dr_max, b_dr_min)
+    if b_ds_min<2:
+        print('Too small lower bound b_ds (%g) is detected. Set it to 2 mm.'%(b_ds_min))
+        b_ds_min = 2
+    if b_dr_min<2:
+        print('Too small lower bound b_dr (%g) is detected. Set it to 2 mm.'%(b_dr_min))
+        b_dr_min = 2
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 1. FEA Setting / General Information & Packages Loading
@@ -174,8 +184,7 @@ if True:
 
     if True: # ECCE
         fea_config_dict['Active_Qr'] = 16
-        fea_config_dict['use_weights'] = 'O2'
-        fea_config_dict['use_weights'] = 'O1'
+        fea_config_dict['use_weights'] = 'O1' # 'O2' # 'O3'
 
             # fea_config_dict['local_sensitivity_analysis'] = True
             # run_folder = r'run#400/' # Sensitivity analysis for Qr=16, T440p
@@ -192,9 +201,9 @@ if True:
         fea_config_dict['bool_refined_bounds'] = False
         run_folder = r'run#500/' # Sensitivity analysis for Qr=16
 
-        # fea_config_dict['local_sensitivity_analysis'] = False
-        # fea_config_dict['bool_refined_bounds'] = True
-        # run_folder = r'run#501/' # Optimize with refined bounds
+        fea_config_dict['local_sensitivity_analysis'] = False
+        fea_config_dict['bool_refined_bounds'] = True
+        run_folder = r'run#501/' # Optimize with refined bounds
 
     # run folder
     fea_config_dict['run_folder'] = run_folder
@@ -275,23 +284,34 @@ if True:
                                         [0, 1, 2, 3, 4, 5],
                                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
 
+                # from utility.py:run500 O1
+                raw_narrow_bounds = [   [15, 16, 17, 18, 19, 20],
+                                        [6, 7, 8, 9, 10, 1,1, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                        [0, 1, 5, 6, 7, 8],
+                                        [19, 28], # 这里出了BUG，由于loop_for_bound没有遍历到initial design的Jr bds bdr组合，导致initial design的转子齿=5.38mm大于该边界上界5.05mm，结果是，所有改变转子齿的design variant都比initial design差，所以这里特地加大上界。
+                                        [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                        [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                        [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
+                # original: [[2, 4.483629], [0.8, 3], [0.5, 3], [2, 5.042], [0.5, 3], [1, 10], [0.5, 3]], 
+                # refined:  [[3.86, 4.483629], [1.46, 3.0], [0.5, 1.5], [4.89, 6.26], [0.5, 3.0], [2.8, 10.0], [0.5, 3.0]]}
+
             for ind, bound in enumerate(raw_narrow_bounds):
                 de_config_dict['narrow_bounds_normalized'][ind].append(bound[0] /numver_of_variants)
                 de_config_dict['narrow_bounds_normalized'][ind].append(bound[-1]/numver_of_variants)
 
                 if de_config_dict['narrow_bounds_normalized'][ind][0] == de_config_dict['narrow_bounds_normalized'][ind][1]:
-                    raise Exception('Take a check here.')
+                    raise Exception('Upper bound equals to lower bound. Take a check here.')
                     print('ind=',ind, '---manually set the proper bounds based on the initial design: 7.00075,1.26943,0.924664,4.93052,1,3,1')
                     de_config_dict['narrow_bounds_normalized'][ind][0] = 4.93052 / 5
 
-            print('narrow_bounds_normalized:', de_config_dict['narrow_bounds_normalized'])
 
             for bnd1, bnd2 in zip(de_config_dict['original_bounds'], de_config_dict['narrow_bounds_normalized']):
                 diff = bnd1[1] - bnd1[0]
                 de_config_dict['bounds'].append( [ bnd1[0]+diff*bnd2[0] , bnd1[0]+diff*bnd2[1] ]) # 注意，都是乘以original_bounds的上限哦！
 
-            print('bounds:', de_config_dict['bounds'])
             print('original_bounds:', de_config_dict['original_bounds'])
+            print('refined bounds:', de_config_dict['bounds'])
+            print('narrow_bounds_normalized:', de_config_dict['narrow_bounds_normalized'])
         else:
             de_config_dict['bounds'] = de_config_dict['original_bounds']
     else:

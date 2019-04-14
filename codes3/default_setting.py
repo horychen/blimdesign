@@ -66,7 +66,7 @@ fea_config_dict = {
         # use directSolver over ICCG Solver
     'local_sensitivity_analysis':False,
     'flag_optimization':True, # also use true for sensitivity analysis
-    'designer.Show':True,
+    'designer.Show':False,
     'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
 
     ##########################

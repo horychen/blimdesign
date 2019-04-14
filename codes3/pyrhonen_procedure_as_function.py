@@ -644,11 +644,11 @@ class desgin_specification(object):
             # rotor_tooth_flux_density_B_dr = 1.5 #1.8 #1.5–2.2 (rotor)
             stator_slot_pitch_tau_us = pi * air_gap_diameter_D / self.Qs
             stator_tooth_apparent_flux_over_slot_pitch_Phi_ds = stack_length_eff * stator_slot_pitch_tau_us * self.guess_air_gap_flux_density
-            stator_tooth_width_b_ds = stack_length_eff*stator_slot_pitch_tau_us*self.guess_air_gap_flux_density / (self.lamination_stacking_factor_kFe*stack_length*self.stator_tooth_flux_density_B_ds) + 0.1e-3
+            stator_tooth_width_b_ds = stack_length_eff*stator_slot_pitch_tau_us*self.guess_air_gap_flux_density / (self.lamination_stacking_factor_kFe*stack_length*self.stator_tooth_flux_density_B_ds) + 0.1e-4 # (3.42)
 
             rotor_slot_pitch_tau_ur = pi * air_gap_diameter_D / self.Qr
             rotor_tooth_apparent_flux_over_slot_pitch_Phi_dr = stack_length_eff*rotor_slot_pitch_tau_ur*self.guess_air_gap_flux_density
-            rotor_tooth_width_b_dr = stack_length_eff*rotor_slot_pitch_tau_ur*self.guess_air_gap_flux_density / (self.lamination_stacking_factor_kFe*stack_length*self.rotor_tooth_flux_density_B_dr) + 0.1e-3
+            rotor_tooth_width_b_dr = stack_length_eff*rotor_slot_pitch_tau_ur*self.guess_air_gap_flux_density / (self.lamination_stacking_factor_kFe*stack_length*self.rotor_tooth_flux_density_B_dr) + 0.1e-4
 
             fname = open(one_report_dir_prefix+file_name+'_s10'+file_suffix, 'w', encoding='utf-8')
             print(r'''\subsubsection{Tooth Flux Density}
@@ -657,12 +657,12 @@ class desgin_specification(object):
                     {I_u} = {I_s}{z_Q}\\
                     A = {I_u}/{\tau _s} = \frac{{2{I_s}{N_s}m}}{{\pi D}}\\
                     {\tau _s} = \pi D/{Q_s}\\
-                    {{\hat B'}_d} = \frac{{{{\hat \Phi '}_d}}}{{{S_d}}} = \frac{{l'{\tau _u}}}{{{k_{Fe}}l\left( {{b_d} - {\rm{0}}{\rm{.1e - 3}}} \right)}}{{\hat B}_\delta }\\
-                     \Rightarrow {b_d} = \frac{{l'{\tau _u}}}{{{k_{Fe}}l{{\hat B'}_d}}}{{\hat B}_\delta } + {\rm{0}}{\rm{.1e - 3}}
+                    {{\hat B'}_d} = \frac{{{{\hat \Phi '}_d}}}{{{S_d}}} = \frac{{l'{\tau _u}}}{{{k_{Fe}}l\left( {{b_d} - {\rm{0}}{\rm{.1e - 4}}} \right)}}{{\hat B}_\delta }\\
+                     \Rightarrow {b_d} = \frac{{l'{\tau _u}}}{{{k_{Fe}}l{{\hat B'}_d}}}{{\hat B}_\delta } + {\rm{0}}{\rm{.1e - 4}}
                     \end{array}\]
 
                     Similar for rotor tooth.
-                    \[{b_{dr}} = \frac{{l'{\tau _{ur}}}}{{{k_{Fe}}l{{\hat B'}_{dr}}}}{{\hat B}_\delta } + {\rm{0}}{\rm{.1e - 3}}\]
+                    \[{b_{dr}} = \frac{{l'{\tau _{ur}}}}{{{k_{Fe}}l{{\hat B'}_{dr}}}}{{\hat B}_\delta } + {\rm{0}}{\rm{.1e - 4}}\]
                     ''', file=fname)
             print('\nStator tooth flux density $B_{ds}=%g$ T' % (self.stator_tooth_flux_density_B_ds), file=fname)
             print('\nStator tooth width $b_{ds}=%g$ mm---Here, we neglect the flux in stator slot' % (stator_tooth_width_b_ds*1e3), file=fname)
@@ -1267,11 +1267,11 @@ def loop_for_bounds(spec):
     # for THE_IM_DESIGN_ID, spec.Qr in enumerate([32,36]): # any spec.Qr>36 will not converge (for alpha_i and k_sat) with Arnon5 at least
     # for THE_IM_DESIGN_ID, spec.Qr in enumerate([32]):
     bool_run_for_bounds = True
-    for rotor_tooth_flux_density_B_dr      in [1.1, 1.2, 1.8, 1.9]: #1.5–2.2 (rotor) 
-        for stator_tooth_flux_density_B_ds in [1.1, 1.2, 1.8, 1.9]: #1.4–2.1 (stator) # too large you will get End of Loop Error (Fixed by extropolating the k_sat vs alpha_i curve.)
+    for rotor_tooth_flux_density_B_dr      in [1.2, 1.6, 1.8]: #1.5–2.2 (rotor) 
+        for stator_tooth_flux_density_B_ds in [1.2, 1.6, 1.8]: #1.4–2.1 (stator) # too large you will get End of Loop Error (Fixed by extropolating the k_sat vs alpha_i curve.)
 
             # for spec.Jr in arange(3e6, 8e6+1, 1e6):
-            for Jr in [4e6, 6e6, 8e6, 12e6]:
+            for Jr in [6e6, 8e6, 9e6]:
                 print(rotor_tooth_flux_density_B_dr, stator_tooth_flux_density_B_ds, Jr)
                 utility.blockPrint()
 
@@ -1288,6 +1288,7 @@ def loop_for_bounds(spec):
                     spec.rotor_tooth_flux_density_B_dr  = rotor_tooth_flux_density_B_dr
                     spec.stator_tooth_flux_density_B_ds = stator_tooth_flux_density_B_ds
                     spec.Jr = Jr
+                    # print 
                     bool_bad_specifications = spec.pyrhonen_procedure(bool_loop_Jr=False)
                 except Exception as e:
                     raise e
