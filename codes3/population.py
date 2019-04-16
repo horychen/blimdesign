@@ -12,6 +12,8 @@ from VanGogh import VanGogh
 
 from time import time as clock_time
 
+from pyrhonen_procedure_as_function import get_material_data
+
 EPS = 1e-2
 
 
@@ -3066,8 +3068,9 @@ class bearingless_induction_motor_design(object):
     def get_rotor_volume(self):
         return pi*(self.Radius_OuterRotor*1e-3)**2 * (self.stack_length*1e-3)
 
-    def get_rotor_weights(self):
-        return 9.8 * self.get_rotor_volume() * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg        
+    def get_rotor_weight(self, gravity=9.8):
+        material_density_rho = get_material_data()[0]
+        return gravity * self.get_rotor_volume() * material_density_rho # steel 7860 or 8050 kg/m^3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
 
     def whole_row_reader(self, reader):
         for row in reader:

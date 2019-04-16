@@ -1,4 +1,6 @@
 import pyrhonen_procedure_as_function 
+# solve or post-processing
+bool_post_processing = True
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Design Specification
@@ -43,8 +45,9 @@ print(spec.build_name())
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Automatic Report Generation
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-import os
-os.system('cd /d '+ r'"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX" && z_nul"')
+if not bool_post_processing:
+    import os
+    os.system('cd /d '+ r'"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX" && z_nul"')
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Add to Database
@@ -142,6 +145,7 @@ else:
             'A new record is added to table named designs.'
         else:
             'Record already exists, skip database communication.'
+
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Automatic Performance Evaluation
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -211,8 +215,6 @@ if True:
     logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ones_'+fea_config_dict['run_folder'][:-1])
     # rebuild the name
     build_model_name_prefix(fea_config_dict)
-
-
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG)
@@ -349,7 +351,7 @@ if True:
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     count_abort = 0
     # while True:
-    if True:
+    if not bool_post_processing:
         
         logger.debug('-------------------------count_abort=%d' % (count_abort))
 
@@ -384,4 +386,11 @@ if True:
                 logger.info('Done.')
                 utility.send_notification('Done.')
 
+    else:
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# 5. Post-processing
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~    
+        import utility
+        material_density_rho, _, _ = pyrhonen_procedure_as_function.get_material_data()
+        utility.build_Pareto_plot(spec, sw, material_density_rho, fea_config_dict['use_weights'])
 

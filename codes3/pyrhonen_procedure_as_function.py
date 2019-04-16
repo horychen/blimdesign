@@ -159,6 +159,7 @@ class desgin_specification(object):
         self.geometry = geometry_data()
 
         self.loc_txt_file = '../' + 'pop/' + r'initial_design.txt'
+        open(self.loc_txt_file, 'w').close() # clean slate to begin with
 
     def build_name(self, bLatex=False):
         u'''转子类型+基本信息+槽配合+电负荷+导电材料+温度+导磁材料+磁负荷+叠压系数+假设+目的'''
@@ -236,7 +237,7 @@ class desgin_specification(object):
         print(r'''\subsubsection{Initial Design Parameters}''', file=fname)
         print('\nDesign Name:\\\\{\\tiny %s}' % self.build_name(bLatex=True), file=fname)
         if self.PS_or_SC:
-            print('\nRotor type: pole-selfific rotor', file=fname)
+            print('\nRotor type: pole-specific rotor', file=fname)
         else:
             print('\nRotor type: squirrel cage rotor', file=fname)
         print('\nTorque winding poles: $2p=%d$' %(2*self.p), file=fname)
@@ -322,6 +323,7 @@ class desgin_specification(object):
 
         safety_factor_to_speed = 1.5
         stack_length_max = get_stack_length_critical_speed(speed_rpm, rotor_outer_radius_r_or, safety_factor_to_speed=safety_factor_to_speed)
+        self.Stack_Length_Max = stack_length_max*1e3
         if stack_length>stack_length_max:
             raise Exception('For current safety factor and power rating, no design can be sought under first critical speed.')
         
@@ -1307,6 +1309,12 @@ def loop_for_bounds(spec):
 # Utility for analytical mechanical check
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 
+def get_material_data():
+    material_density_rho = 7860 # kg/m^3
+    Poisson_ratio_nu = 0.29 # (i.e. the ratio of lateral contraction to longitudinal extension in the direction of the stretching force)
+    Youngs_modulus_of_elasticity = 190 * 1e9 # Young's modulus for steel is in [190, 210] GPa
+    return material_density_rho, Poisson_ratio_nu, Youngs_modulus_of_elasticity
+
 def get_C_prime(Poisson_ratio_nu, bBore):
     if bBore:
         return (3+Poisson_ratio_nu) / 4
@@ -1324,8 +1332,7 @@ def check_stress_due_to_centrifugal_force(speed_rpm, rotor_radius, material_dens
     Omega = speed_rpm/(60)*2*pi
 
     if material_density_rho is None: # Example 6.3
-        material_density_rho = 7860 # kg/m^3
-        Poisson_ratio_nu = 0.29 # (i.e. the ratio of lateral contraction to longitudinal extension in the direction of the stretching force)
+        material_density_rho, Poisson_ratio_nu, _ = get_material_data()
 
     return get_C_prime(Poisson_ratio_nu, bBore) * material_density_rho * rotor_radius**2 * Omega**2
 
@@ -1338,8 +1345,7 @@ def get_outer_rotor_radius_yield(speed_rpm, yield_stress=None, material_density_
     Omega = speed_rpm/(60)*2*pi
 
     if material_density_rho is None:
-        material_density_rho = 7860 
-        Poisson_ratio_nu = 0.29
+        material_density_rho, Poisson_ratio_nu, _ = get_material_data()
 
     rotor_radius_max = sqrt( yield_stress / (get_C_prime(Poisson_ratio_nu, bBore) * material_density_rho * Omega**2) )
     return rotor_radius_max
@@ -1353,8 +1359,7 @@ def get_stack_length_critical_speed(speed_rpm, rotor_radius, material_density_rh
     Omega = speed_rpm/(60)*2*pi
 
     if material_density_rho is None:
-        material_density_rho = 7860 
-        Youngs_modulus_of_elasticity = 190 * 1e9 # Young's modulus for steel is in [190, 210] GPa
+        material_density_rho, _, Youngs_modulus_of_elasticity = get_material_data()
 
     D_out = rotor_radius * 2
     D_in = 0 # Modifying this is not allowed or else cross section area formula needs to be updated.
