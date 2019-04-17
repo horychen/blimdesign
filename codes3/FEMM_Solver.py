@@ -21,7 +21,7 @@ from time import time as clock_time
 from VanGogh import VanGogh
 
 SELECT_ALL = 4
-EPS = 1e-2
+EPS = 1e-2 # unit mm
 
 class VanGogh_FEMM(VanGogh):
     def __init__(self, im, child_index=0):

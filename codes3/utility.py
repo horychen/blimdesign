@@ -3,11 +3,11 @@ import os
 import datetime
 import operator
 
-def get_max_and_index(the_list):
+def get_index_and_max(the_list):
     return max(enumerate(the_list), key=operator.itemgetter(1))
     # index, max_value
 
-def get_min_and_index(the_list):
+def get_index_and_min(the_list):
     return min(enumerate(the_list), key=operator.itemgetter(1))
     # index, min_value
 
@@ -187,8 +187,8 @@ def basefreqDFT(signal, samp_freq, ax_time_domain=None, ax_freq_domain=None, bas
         ax_time_domain.set_ylabel('B [T]')
 
 class Pyrhonen_design(object):
-    def __init__(self, im, original_bounds=None):
-        ''' Determine original_bounds for these parameters:
+    def __init__(self, im, bounds=None):
+        ''' Determine bounds for these parameters:
             stator_tooth_width_b_ds              = design_parameters[0]*1e-3 # m                       # stator tooth width [mm]
             air_gap_length_delta                 = design_parameters[1]*1e-3 # m                       # air gap length [mm]
             b1                                   = design_parameters[2]*1e-3 # m                       # rotor slot opening [mm]
@@ -204,7 +204,6 @@ class Pyrhonen_design(object):
             # = ( 2*PI()*(G4 - I4) - J4 * (2*C4+2*PI()) ) / C4
         from math import pi
         Qr = im.Qr
-
 
         # unit: mm and deg
         self.stator_tooth_width_b_ds        = im.Width_StatorTeethBody
@@ -223,22 +222,22 @@ class Pyrhonen_design(object):
                                             self.Angle_StatorSlotOpen,
                                             self.Width_StatorTeethHeadThickness]
 
-        if original_bounds is None:
+        if bounds is None:
             self.design_parameters_denorm
         else:
-            self.show_norm(original_bounds, self.design_parameters_denorm)
+            self.show_norm(bounds, self.design_parameters_denorm)
 
 
-    def show_denorm(self, original_bounds, design_parameters_norm):
+    def show_denorm(self, bounds, design_parameters_norm):
         pop = design_parameters_norm
-        min_b, max_b = np.asarray(original_bounds).T 
+        min_b, max_b = np.asarray(bounds).T 
         diff = np.fabs(min_b - max_b)
         pop_denorm = min_b + pop * diff
         print('[De-normalized]:', end=' ')
         print(pop_denorm.tolist())
         
-    def show_norm(self, original_bounds, design_parameters_denorm):
-        min_b, max_b = np.asarray(original_bounds).T 
+    def show_norm(self, bounds, design_parameters_denorm):
+        min_b, max_b = np.asarray(bounds).T 
         diff = np.fabs(min_b - max_b)
         self.design_parameters_norm = (design_parameters_denorm - min_b)/diff #= pop
         # print type(self.design_parameters_norm)
@@ -246,7 +245,7 @@ class Pyrhonen_design(object):
         print(self.design_parameters_norm.tolist())
 
         # pop = design_parameters_norm
-        # min_b, max_b = np.asarray(original_bounds).T 
+        # min_b, max_b = np.asarray(bounds).T 
         # diff = np.fabs(min_b - max_b)
         # pop_denorm = min_b + pop * diff
         # print '[De-normalized:]---------------------------Are these two the same?'
@@ -254,22 +253,25 @@ class Pyrhonen_design(object):
         # print design_parameters_denorm
 
 def add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger):
-    initial_design = Pyrhonen_design(sw.im, de_config_dict['original_bounds'])
+    initial_design = Pyrhonen_design(sw.im, de_config_dict['bounds'])
     # print 'SWAP!'
     # print initial_design.design_parameters_norm.tolist()
     # print '\nInitial Population:'
     # for index in range(len(sw.init_pop)):
     #     # print sw.init_pop[index].tolist()
     #     print index,
-    #     initial_design.show_denorm(de_config_dict['original_bounds'], sw.init_pop[index])
+    #     initial_design.show_denorm(de_config_dict['bounds'], sw.init_pop[index])
     # print sw.init_pop[0].tolist()
     sw.init_pop_denorm[0] = initial_design.design_parameters_denorm
     # print sw.init_pop[0].tolist()
+    with open(sw.get_gen_file(0), 'r') as f:
+        before = f.read()
     with open(sw.get_gen_file(0), 'w') as f:
         f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.init_pop_denorm)) # convert 2d array to string
     logger.info('Initial design from Pyrhonen09 is added to the first generation of pop (i.e., gen#0000ind#0000).')
-
-
+    print('Before:', before)
+    print('After:', '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.init_pop_denorm))
+    quit()
 
 from smtplib import SMTP
 def send_notification(text='Hello'):
@@ -1005,7 +1007,7 @@ def check_csv_results_4_general_purpose(study_name, path_prefix, returnBoolean=F
 
         breakdown_force = max(np.sqrt(np.array(l_ForCon_X)**2 + np.array(l_ForCon_Y)**2))
 
-        index, breakdown_torque = get_max_and_index(l_TorCon)
+        index, breakdown_torque = get_index_and_max(l_TorCon)
         slip_freq_breakdown_torque = l_slip_freq[index]
         return slip_freq_breakdown_torque, breakdown_torque, breakdown_force
     except NameError as e:
@@ -1280,6 +1282,7 @@ class SwarmDataAnalyzer(object):
     """docstring for SwarmDataAnalyzer"""
     def __init__(self, dir_run=None, run_integer=None, bool_sensitivity_analysis=True):
         if run_integer is not None:
+            self.run_integer = run_integer
             dir_run = r'D:\OneDrive - UW-Madison\c\pop\run#%d/'%(run_integer)
 
         with open(dir_run+'swarm_data.txt', 'r') as f:
@@ -1311,13 +1314,13 @@ class SwarmDataAnalyzer(object):
             yield ''.join(self.buf[i*21:(1+i)*21])
 
     def design_parameters_generator(self):
-        for i in range(self.number_of_designs):
+        for i in range(int(self.number_of_designs)):
             yield [float(el) for el in self.buf[i*21:(1+i)*21][5].split(',')]
 
     def list_generations(self):
 
         the_dict = {}
-        for i in range(self.number_of_designs):
+        for i in range(int(self.number_of_designs)):
             the_row = [float(el) for el in self.buf[i*21:(1+i)*21][2].split(',')]        
             the_dict[int(the_row[0])] = (the_row[1], the_row[2])
             # the_row[0] # generation
@@ -1395,6 +1398,68 @@ class SwarmDataAnalyzer(object):
                 print([float(el) for el in individual[-1][loc_data_begin:].split(',')], which, i, individual)
                 raise e
 
+    def my_population_distribution_plots(self, de_config_dict):
+        from pylab import subplots, subplots_adjust, show, legend
+        fig, axes = subplots(7, 1, sharex=True, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
+        subplots_adjust(left=None, bottom=0.25, right=None, top=None, wspace=0.8, hspace=None)
+        list_label = [  'Stator tooth width $w_{st}$         ',
+                        'Air gap length $L_g$                ',
+                        'Rotor slot open width $w_{ro}$      ',
+                        'Rotor tooth width $w_{rt}$          ',
+                        'Rotor slot open depth $d_{ro}$      ',
+                        'Stator slot open angle $\theta_{so}$',
+                        'Stator slot open depth $d_{so}$     ',]
+        geo_param = {}
+        geo_param[list_label[0]] = []
+        geo_param[list_label[1]] = []
+        geo_param[list_label[2]] = []
+        geo_param[list_label[3]] = []
+        geo_param[list_label[4]] = []
+        geo_param[list_label[5]] = []
+        geo_param[list_label[6]] = []
+        for el in self.design_parameters_generator():
+            geo_param[list_label[0]].append(el[0])
+            geo_param[list_label[1]].append(el[1])
+            geo_param[list_label[2]].append(el[2])
+            geo_param[list_label[3]].append(el[3])
+            geo_param[list_label[4]].append(el[4])
+            geo_param[list_label[5]].append(el[5])
+            geo_param[list_label[6]].append(el[6])
+        from collections import OrderedDict
+        ordered_geo_param = [(list_label[0], geo_param[list_label[0]]),
+                             (list_label[1], geo_param[list_label[1]]),
+                             (list_label[2], geo_param[list_label[2]]),
+                             (list_label[3], geo_param[list_label[3]]),
+                             (list_label[4], geo_param[list_label[4]]),
+                             (list_label[5], geo_param[list_label[5]]),
+                             (list_label[6], geo_param[list_label[6]])]
+        ordered_geo_param = OrderedDict(ordered_geo_param)
+
+        
+        popsize = de_config_dict['popsize']
+        no_generations = len(ordered_geo_param[list_label[0]]) // popsize
+        list_avg = [[], [], [], [], [], [], []] # != [[]]*7
+        for number_current_generation in range(no_generations):
+            for ind, key in enumerate(list_label):
+                item = ordered_geo_param[key]
+                item_in_question = item[number_current_generation*popsize:(number_current_generation+1)*popsize]
+
+                avg = sum(item_in_question) / len(item_in_question)
+                list_avg[ind].append(avg)
+                # print(list_avg)
+
+                axes[ind].plot( number_current_generation*np.ones(len(item_in_question)), 
+                                item_in_question, 
+                                label=list_label[ind].strip(), marker='_', color=None, alpha=1.00, lw=0.2 )
+        for ind, key in enumerate(list_label):
+            axes[ind].plot(list(range(no_generations)), list_avg[ind], color='k', lw=1.5)
+
+        print ('Distribution of total individuals:', popsize*no_generations, 'No. generations', no_generations)
+        # legend()
+        fig.tight_layout()
+        show()
+
+
     def my_scatter_plot(self, x, y, O, fig=None, ax=None, s=15, marker='.', index_list=None): # index_list is for filtered case
         O1, O2 = None, None
         # O is a copy of your list rather than array or the adress of the list
@@ -1405,31 +1470,40 @@ class SwarmDataAnalyzer(object):
             fig = figure()
             ax = fig.gca()
         scatter_handle = ax.scatter(x, y, c=O, s=s, alpha=0.5, cmap='viridis', marker=marker)
-        print('---------------------For plotting in Matlab:')
-        for a, b in zip(x, y):
-            print(a, b)
-            # O2_mix = np.concatenate([[O_ref], O2], axis=0) # # https://stackoverflow.com/questions/46106912/one-colorbar-for-multiple-scatter-plots
-            # min_, max_ = O2_mix.min(), O2_mix.max()
-            # scatter(*xy_ref, marker='s', c=O_ref, s=20, alpha=0.75, cmap='viridis')
-            # clim(min_, max_)
-            # clim(min_, max_)
-            # ax.grid()
-        print('---------------------End for plotting in Matlab:')
+        # print('---------------------For plotting in Matlab:')
+        # for a, b in zip(x, y):
+        #     print(a, b)
+        #     # O2_mix = np.concatenate([[O_ref], O2], axis=0) # # https://stackoverflow.com/questions/46106912/one-colorbar-for-multiple-scatter-plots
+        #     # min_, max_ = O2_mix.min(), O2_mix.max()
+        #     # scatter(*xy_ref, marker='s', c=O_ref, s=20, alpha=0.75, cmap='viridis')
+        #     # clim(min_, max_)
+        #     # clim(min_, max_)
+        #     # ax.grid()
+        # print('---------------------End for plotting in Matlab:')
 
         if True:
             # Decide which one is the best in this Pareto plot
-            best_index, best_O = get_min_and_index(O)
-            # best_index, best_O = get_max_and_index(y[:-1]) # the last one is initial design???
-            print('BEST metrics:', best_index, best_O)
-            print('Best design:')  #[best_index]
-            print(x[best_index], y[best_index])
-            for ind, el in enumerate(self.design_display_generator()):
-                # # not filtered
-                # if ind == best_index:
-                # filtered
-                if index_list is not None:
-                    if ind == index_list[best_index]:
-                        print(ind, el)
+            best_index, best_O = get_index_and_min(O)
+            # best_index, best_O = get_index_and_max(y[:-1]) # the last one is initial design???
+
+            # index_list being not None means filtered data are used. 注意，部分个体被滤除掉了，所以index_list是断断续续的，所以是必需的。
+            if index_list is not None:
+                print('run_integer:', self.run_integer)
+                print('BEST metrics:', best_index, index_list[best_index], best_O)
+                print('Best design:', x[best_index], y[best_index])
+                print(u'目标函数值对不上，是因为跑完优化以后，我修改了钢的密度，所以后处理中重新计算的目标函数会有所不同。')
+                print(u'此外，铜耗按叠长放大，其实是保守估计了，因为端部的铜耗不会因为叠长变化而变化。')
+
+                self.best_design_display = next(itertools.islice(self.design_display_generator(),    index_list[best_index], None))
+                self.best_design_denorm = next(itertools.islice(self.design_parameters_generator(), index_list[best_index], None))
+                print( self.best_design_display )
+                    # for ind, el in enumerate(self.design_display_generator()):
+                    #     if ind == index_list[best_index]:
+                    #         print(ind, el)
+                    #         break
+                    # print (next(itertools.islice(self.design_parameters_generator(), index_list[best_index], index_list[best_index]+1)))
+                    # print (list(self.design_parameters_generator())[index_list[best_index]])
+
             # quit()
             xy_best = (x[best_index], y[best_index])
             handle_best = ax.scatter(*xy_best, s=s*3, marker='s', facecolors='none', edgecolors='r')
@@ -1487,36 +1561,40 @@ class SwarmDataAnalyzer(object):
             filtered_loss_list = []
             filtered_O_list = []
             index_list = []
-            for torque, loss, err_angle, err_mag, o, index in zip(list(self.get_certain_objective_function(2)),
+            for torque, loss, err_angle, err_mag, o, index in zip(
+                                                        list(self.get_certain_objective_function(2)),
                                                         list(self.get_certain_objective_function(15)),
                                                         list(self.get_certain_objective_function(6)),
                                                         list(self.get_certain_objective_function(5)),
                                                         O,
                                                         list(range(len(O)))):
                 if err_angle<5 and err_mag<0.25:
-                    print(err_angle, err_mag)
+                    # print(err_angle, err_mag)
                     filtered_torque_list.append(torque)
                     filtered_loss_list.append(loss)
                     filtered_O_list.append(o)
                     index_list.append(index)
-
+            print('Max index is', index)
 
             x, y = get_rated_values(filtered_torque_list, filtered_loss_list)
             filtered_x = []
             filtered_y = []
             filtered_filtered_O_list = []
-            for x_el, y_el, O_el in zip(x, y, filtered_O_list):
+            filtered_index_list = []
+            for x_el, y_el, O_el, index in zip(x, y, filtered_O_list, list(range(len(filtered_O_list)))):
                 if x_el < self.stack_length_max:
                     filtered_x.append(x_el)
                     filtered_y.append(y_el)
                     filtered_filtered_O_list.append(O_el)
+                    filtered_index_list.append(index_list[index])
 
             filtered_y = 1 - np.array(filtered_y)/self.mec_power
             filtered_y = filtered_y.tolist()
             if len(filtered_y) == 0:
                 print(filtered_y)
                 raise Exception('After filtering, nothing is left')
-            self.my_scatter_plot(filtered_x, filtered_y, filtered_filtered_O_list[::], fig=fig, ax=ax, marker=marker,index_list=index_list)
+            self.my_scatter_plot(filtered_x, filtered_y, filtered_filtered_O_list[::], 
+                                    fig=fig, ax=ax, marker=marker,index_list=filtered_index_list)
 
         ax.set_xlabel('Stack length [mm]')
         ax.set_ylabel(r'Efficiency at %d kW [1]'%(self.mec_power*1e-3))
@@ -1665,7 +1743,7 @@ def build_Pareto_plot(spec, sw, material_density_rho, which_weight):
     swda.weights_used      = use_weights(which=sw.fea_config_dict['use_weights'])
     swda.stack_length      = sw.im.stack_length
     swda.stack_length_max  = spec.Stack_Length_Max
-    print('utility.py')
+    print('-'*50 + '\nutility.py')
     print('Qs=%d, rotor_volume=%g'%(swda.Qs, swda.rotor_volume), 'm^3')
     print('Qr=%d, rotor_weight=%g'%(swda.Qr, swda.rotor_weight), 'N')
     # O1_weights = use_weights(which='O1') # [ 1, 0.1,   1, 0.1, 0.1,   0 ]
@@ -1683,13 +1761,17 @@ def build_Pareto_plot(spec, sw, material_density_rho, which_weight):
     fig2.subplots_adjust(right=0.9, hspace=0.21, wspace=0.11) # won't work after I did something. just manual adjust!
     swda.pareto_plot_torque_force(fig2, axeses, marker='o') # Prototype DPNV O1
 
+    swda.my_population_distribution_plots(sw.de_config_dict)
+
         # add initial design to the plot
         # ax.annotate('Initial design', xytext=(xy_ref[0]*0.95, xy_ref[1]*1.0), xy=xy_ref, xycoords='data', arrowprops=dict(arrowstyle="->"))
 
-    swda.__init__(run_integer=500, bool_sensitivity_analysis=True) # the sensitivity results
-    swda.pareto_plot_eta_vs_stack_legnth(fig, ax, marker='^', bool_filtered=True) # Prototype DPNV O1
-    show()
-    quit()
+    # if run_integer == 501:
+    #     swda.__init__(run_integer=500, bool_sensitivity_analysis=True) # the sensitivity results
+    #     swda.pareto_plot_eta_vs_stack_legnth(fig, ax, marker='^', bool_filtered=True) # Prototype DPNV O1
+
+    # show()
+    return swda.best_design_denorm
 
 # Basic information
 if __name__ == '__main__':

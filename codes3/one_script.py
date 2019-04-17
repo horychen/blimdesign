@@ -1,6 +1,7 @@
 import pyrhonen_procedure_as_function 
-# solve or post-processing
-bool_post_processing = True
+bool_post_processing = True # solve or post-processing
+
+
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Design Specification
@@ -351,7 +352,7 @@ if True:
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     count_abort = 0
     # while True:
-    if not bool_post_processing:
+    if False == bool_post_processing:
         
         logger.debug('-------------------------count_abort=%d' % (count_abort))
 
@@ -359,9 +360,9 @@ if True:
         # generate the initial generation
         sw.generate_pop()
 
-        # if count_abort == 0:
-        #     # add initial_design of Pyrhonen09 to the initial generation
-        #     utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
+        # add initial_design of Pyrhonen09 to the initial generation
+        if count_abort == 0:
+            utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
 
         # write FEA config to disk
         sw.write_to_file_fea_config_dict()
@@ -386,11 +387,192 @@ if True:
                 logger.info('Done.')
                 utility.send_notification('Done.')
 
-    else:
+    elif True == bool_post_processing:
+
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 5. Post-processing
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~    
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         import utility
         material_density_rho, _, _ = pyrhonen_procedure_as_function.get_material_data()
-        utility.build_Pareto_plot(spec, sw, material_density_rho, fea_config_dict['use_weights'])
+        best_design_denorm = utility.build_Pareto_plot(spec, sw, material_density_rho, fea_config_dict['use_weights'])
+
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# 6. Check mechanical strength for the best design
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+
+        im_best = population.bearingless_induction_motor_design.local_design_variant(sw.im, \
+                     -1, -1, best_design_denorm)
+
+        # initialize JMAG Designer
+        sw.designer_init()
+        project_name = fea_config_dict['run_folder'][:-1]+'_Best' # spec.build_name() is too long...
+        expected_project_file = sw.dir_project_files + "%s.jproj"%(project_name)
+        print(expected_project_file)
+        if not os.path.exists(expected_project_file):
+            sw.app.NewProject("Untitled")
+            sw.app.SaveAs(expected_project_file)
+            logger.debug('Create JMAG project file: %s'%(expected_project_file))
+        else:
+            sw.app.Load(expected_project_file)
+            logger.debug('Load JMAG project file: %s'%(expected_project_file))
+            logger.debug('Existing models of %d are found in %s', sw.app.NumModels(), sw.app.GetDefaultModelFolderPath())
+
+        # draw the model in JMAG Designer
+        DRAW_SUCCESS = sw.draw_jmag_model( -1, 
+                                             im_best,
+                                             'Best %s %s'%(fea_config_dict['use_weights'], fea_config_dict['run_folder'][:-1]),
+                                             bool_trimDrawer_or_vanGogh=False,
+                                             doNotRotateCopy=True)
+        if DRAW_SUCCESS == 0:
+            raise Exception('Drawing failed')
+        elif DRAW_SUCCESS == -1:
+            print('Model Already Exists')
+
+        model = sw.app.GetCurrentModel()
+        if model.NumStudies() == 0:
+            expected_csv_output_dir = sw.dir_csv_output_folder+'structural/'
+            if not os.path.isdir(expected_csv_output_dir):
+                os.makedirs(expected_csv_output_dir)
+            study = im_best.add_structural_study(sw.app, model, expected_csv_output_dir) # 文件夹名应该与jproj同名
+        else:
+            study = model.GetStudy(0)
+
+        if study.AnyCaseHasResult():
+            pass
+        else:
+            # Add cases 
+            study.GetDesignTable().AddParameterVariableName(u"Centrifugal_Force (CentrifugalForce2D): AngularVelocity")
+            study.GetDesignTable().AddCase()
+            study.GetDesignTable().SetValue(1, 0, 45000) # r/min
+            study.GetDesignTable().AddCase()
+            study.GetDesignTable().SetValue(2, 0, 30000)
+            study.GetDesignTable().AddParameterVariableName(u"MeshSizeControl (ElementSizeOnPart): Size")
+            study.GetDesignTable().AddCase()
+            study.GetDesignTable().SetValue(3, 1, 0.5) # mm
+            study.GetDesignTable().AddCase()
+            study.GetDesignTable().SetValue(4, 1, 0.05) # mm
+
+            # run (mesh is included in add_study_structural)
+            study.RunAllCases()
+            sw.app.Save()
+
+            # Results-Graphs-Calculations-Add Part Calculation
+            study.CreateCalculationDefinition(u"VonMisesStress")
+            study.GetCalculationDefinition(u"VonMisesStress").SetResultType(u"MisesStress", u"")
+            study.GetCalculationDefinition(u"VonMisesStress").SetResultCoordinate(u"Global Rectangular")
+            study.GetCalculationDefinition(u"VonMisesStress").SetCalculationType(u"max")
+            study.GetCalculationDefinition(u"VonMisesStress").ClearParts()
+            study.GetCalculationDefinition(u"VonMisesStress").AddSet(model.GetSetList().GetSet(u"Motion_Region"), 0)
+
+            # show graph, Tab File|Edit|Calculation, click on Calculation - Response Graph Data to register response data
+            parameter = sw.app.CreateResponseDataParameter(u"VonMisesStress")
+            parameter.SetCalculationType(u"SingleValue")
+            parameter.SetStartValue(u"-1")
+            parameter.SetEndValue(u"-1")
+            parameter.SetUnit(u"s")
+            parameter.SetVariable(u"VonMisesStress")
+            parameter.SetAllLine(False)
+            parameter.SetCaseRangeType(1)
+            parameter.SetLine(u"Maximum Value")
+            sw.app.GetDataManager().CreateParametricDataWithParameter(study.GetDataSet(u"VonMisesStress", 4), parameter)
+
+            # Contour results
+            study.CreateScaling(u"Scale200")
+            study.GetScaling(u"Scale200").SetScalingFactor(200)
+            # sw.app.View().SetOriginalModelView(True)
+            sw.app.View().ShowMeshGeometry()
+            sw.app.View().SetScaledDisplacementView(True)
+            study.CreateContour(u"MisesElement")
+            study.GetContour(u"MisesElement").SetResultType(u"MisesStress", u"")
+            study.GetContour(u"MisesElement").SetResultCoordinate(u"Global Rectangular")
+            study.GetContour(u"MisesElement").SetContourType(2)
+            study.GetContour(u"MisesElement").SetDigitsNotationType(2)
+            sw.app.View().SetContourView(True)
+
+            # study.CreateContour(u"PrincipleStressElement")
+            # study.GetContour(u"PrincipleStressElement").SetResultType(u"PrincipalStress", u"")
+            # study.GetContour(u"PrincipleStressElement").SetComponent(u"I")
+            # study.GetContour(u"PrincipleStressElement").SetContourType(2)
+            # study.GetContour(u"PrincipleStressElement").SetDigitsNotationType(2)
+
+            sw.app.Save()
+
+
+        # Final LaTeX Report
+        print('According to Pyrhonen09, 300 MPa is the typical yield stress of iron core.')
+        initial_design = utility.Pyrhonen_design(sw.im, de_config_dict['bounds'])
+        print (initial_design.design_parameters_denorm)
+        print (best_design_denorm)
+        print (de_config_dict['bounds'])
+
+        one_report_dir_prefix = '../release/OneReport/OneReport_TEX/contents/'
+        file_name = 'pyrhonen_procedure'
+        file_suffix = '.tex'
+        fname = open(one_report_dir_prefix+file_name+'_s20'+file_suffix, 'w', encoding='utf-8')
+
+        def combine_lists_alternating_2(list1, list2):
+            if abs(len(list1) - len(list2))<=1:
+                result = [None]*(len(list1)+len(list2))
+                result[::2] = list1
+                result[1::2] = list2
+                return result
+            else:
+                raise Exception('Try this (not tested).') # https://stackoverflow.com/questions/3678869/pythonic-way-to-combine-two-lists-in-an-alternating-fashion
+                import itertools 
+                return [x for x in itertools.chain.from_iterable(itertools.izip_longest(list1,list2)) if x]
+
+        def combine_lists_alternating_4(list1, list2, list3, list4):
+            result = [None]*(len(list1)+len(list2)+len(list3)+len(list4))
+            result[::4] = list1
+            result[1::4] = list2
+            result[2::4] = list3
+            result[3::4] = list4
+            return result
+
+        lower_bounds = [el[0] for el in de_config_dict['bounds']]
+        upper_bounds = [el[1] for el in de_config_dict['bounds']]
+        design_data = combine_lists_alternating_4(  initial_design.design_parameters_denorm, 
+                                                    best_design_denorm,
+                                                    lower_bounds,
+                                                    upper_bounds,)
+
+        latex_table = r'''
+\begin{table*}[!t]
+  \caption{Comparison of the key geometry parameters between best design and initial design}
+  \centering
+    \begin{tabular}{ccccc}
+        \hline
+        \hline
+        \thead{Geometry parameters} &
+        \thead{Initial\\\relax design} &
+        \thead{The best\\\relax design} &
+        \thead{Lower\\\relax bounds} &
+        \thead{Upper\\\relax bounds} \\
+        \hline
+        Stator tooth width $w_{st}$             & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+        Air gap length $L_g$                    & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+        Rotor slot open width $w_{ro}$          & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+        Rotor tooth width $w_{rt}$              & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+        Rotor slot open depth $d_{ro}$          & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+        Stator slot open angle $\theta_{so}$    & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+        Stator slot open depth $d_{so}$         & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+        \hline
+        \vspace{-2.5ex}
+        \\
+        \multicolumn{3}{l}{*Note: Blah.}
+    \end{tabular}
+  \label{tab:001}
+  \vspace{-3ex}
+\end{table*}
+''' % tuple(design_data)
+        print('''\\subsection{Best Design of Objective Function %s}\n\n
+                    ''' % (fea_config_dict['use_weights']) + latex_table, file=fname)
+        fname.close()
+        os.system('cd /d '+ r'"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX" && z_nul"') # 必须先关闭文件！否则编译不起来的
+        # import subprocess
+        # subprocess.call(r"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX\z_nul", shell=True)
+
+        from pylab import show
+        show()
+
 

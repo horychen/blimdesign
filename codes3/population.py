@@ -14,7 +14,7 @@ from time import time as clock_time
 
 from pyrhonen_procedure_as_function import get_material_data
 
-EPS = 1e-2
+EPS = 1e-2 # unit: mm
 
 
 class swarm(object):
@@ -1078,9 +1078,16 @@ class swarm(object):
 
 
 
-    def draw_jmag_model(self, individual_index, im_variant, model_name):
+    def draw_jmag_model(self, individual_index, im_variant, model_name, bool_trimDrawer_or_vanGogh=True, doNotRotateCopy=False):
 
-        if individual_index+1 <= self.app.NumModels():
+        if individual_index == -1: # 后处理是-1
+            print('Draw model for post-processing')
+            if individual_index+1 + 1 <= self.app.NumModels():
+                logger = logging.getLogger(__name__)
+                logger.debug('The model already exists for individual with index=%d. Skip it.', individual_index)
+                return -1 # the model is already drawn
+
+        elif individual_index+1 <= self.app.NumModels(): # 一般是从零起步
             logger = logging.getLogger(__name__)
             logger.debug('The model already exists for individual with index=%d. Skip it.', individual_index)
             return -1 # the model is already drawn
@@ -1094,15 +1101,10 @@ class swarm(object):
         ass = doc.GetAssembly()
 
         # draw parts
-        if True:
-            d = TrimDrawer(im_variant) # 传递的是地址哦
-        else:
-            d = VanGogh_JMAG(im_variant) # 传递的是地址哦
-        self.d = d # for debug
-        d.doc = doc
-        d.ass = ass
         try:
-            if True:
+            if bool_trimDrawer_or_vanGogh:
+                d = TrimDrawer(im_variant) # 传递的是地址哦
+                d.doc, d.ass = doc, ass
                 d.plot_shaft("Shaft")
 
                 d.plot_rotorCore("Rotor Core")
@@ -1112,7 +1114,10 @@ class swarm(object):
                 d.plot_coil("Coil")
                 # d.plot_airWithinRotorSlots(u"Air Within Rotor Slots")
             else:
+                d = VanGogh_JMAG(im_variant, doNotRotateCopy=doNotRotateCopy) # 传递的是地址哦
+                d.doc, d.ass = doc, ass
                 d.draw_model()
+            self.d = d
         except Exception as e:
             print('See log file to plotting error.')
             logger = logging.getLogger(__name__)
@@ -1131,7 +1136,11 @@ class swarm(object):
         model = self.app.GetCurrentModel() # model = self.app.GetModel(u"IM_DEMO_1")
         model.SetName(model_name)
         model.SetDescription(im_variant.model_name_prefix + '\n' + im_variant.show(toString=True))
-        im_variant.pre_process(self.app)
+
+        if doNotRotateCopy:
+            im_variant.pre_process_structural(self.app, self.d.listKeyPoints)
+        else:
+            im_variant.pre_process(self.app)
 
         model.CloseCadLink() # this is essential if you want to create a series of models
         return True
@@ -1525,7 +1534,7 @@ class swarm(object):
                 # cond.SetValue(u"RevolutionSpeed", u"freq*60/%d"%(0.5*(im.DriveW_poles)))
                 # cond.ClearParts()
                 # sel = cond.GetSelection()
-                # sel.SelectPartByPosition(-im.Radius_OuterStatorYoke+1e-2, 0 ,0)
+                # sel.SelectPartByPosition(-im.Radius_OuterStatorYoke+EPS, 0 ,0)
                 # cond.AddSelected(sel)
                 # # Use FFT for hysteresis to be consistent with FEMM's results
                 # cond.SetValue(u"HysteresisLossCalcType", 1)
@@ -1536,7 +1545,7 @@ class swarm(object):
                 # cond.SetValue(u"BasicFrequency", u"slip*freq")
                 # cond.ClearParts()
                 # sel = cond.GetSelection()
-                # sel.SelectPartByPosition(-im.Radius_Shaft-1e-2, 0 ,0)
+                # sel.SelectPartByPosition(-im.Radius_Shaft-EPS, 0 ,0)
                 # cond.AddSelected(sel)
                 # # Use FFT for hysteresis to be consistent with FEMM's results
                 # cond.SetValue(u"HysteresisLossCalcType", 1)
@@ -1550,7 +1559,7 @@ class swarm(object):
                     cond.SetValue("RevolutionSpeed", "freq*60/%d"%(0.5*(im_variant.DriveW_poles)))
                     cond.ClearParts()
                     sel = cond.GetSelection()
-                    sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+1e-2, 0 ,0)
+                    sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+EPS, 0 ,0)
                     cond.AddSelected(sel)
                     # Use FFT for hysteresis to be consistent with FEMM's results and to have a FFT plot
                     cond.SetValue("HysteresisLossCalcType", 1)
@@ -1588,7 +1597,7 @@ class swarm(object):
                         # cond.SetValue(u"BasicFrequency", u"slip*freq") # this require the signal length to be at least 1/4 of slip period, that's too long!
                     cond.ClearParts()
                     sel = cond.GetSelection()
-                    sel.SelectPartByPosition(-im_variant.Radius_Shaft-1e-2, 0 ,0)
+                    sel.SelectPartByPosition(-im_variant.Radius_Shaft-EPS, 0 ,0)
                     cond.AddSelected(sel)
                     # Use FFT for hysteresis to be consistent with FEMM's results
                     cond.SetValue("HysteresisLossCalcType", 1)
@@ -2513,7 +2522,7 @@ class swarm(object):
                 cond.SetValue("RevolutionSpeed", "freq*60/%d"%(0.5*(im_variant.DriveW_poles)))
                 cond.ClearParts()
                 sel = cond.GetSelection()
-                sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+1e-2, 0 ,0)
+                sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+EPS, 0 ,0)
                 cond.AddSelected(sel)
                 # Use FFT for hysteresis to be consistent with FEMM's results and to have a FFT plot
                 cond.SetValue("HysteresisLossCalcType", 1)
@@ -2551,7 +2560,7 @@ class swarm(object):
                     # cond.SetValue(u"BasicFrequency", u"slip*freq") # this require the signal length to be at least 1/4 of slip period, that's too long!
                 cond.ClearParts()
                 sel = cond.GetSelection()
-                sel.SelectPartByPosition(-im_variant.Radius_Shaft-1e-2, 0 ,0)
+                sel.SelectPartByPosition(-im_variant.Radius_Shaft-EPS, 0 ,0)
                 cond.AddSelected(sel)
                 # Use FFT for hysteresis to be consistent with FEMM's results
                 cond.SetValue("HysteresisLossCalcType", 1)
@@ -2819,7 +2828,7 @@ class bearingless_induction_motor_design(object):
             # This means the round bar should be used instead of drop shape bar.
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             if self.use_drop_shape_rotor_bar == True:
-                # logger.debug('Location_RotorBarCenter1,2: %g, %g.'%(self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
+                # logger.debug('Location_RotorBarCenter:1,2: %g, %g.'%(self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
 
                 if self.Location_RotorBarCenter2 >= self.Location_RotorBarCenter:
                     logger = logging.getLogger(__name__)
@@ -3090,6 +3099,120 @@ class bearingless_induction_motor_design(object):
         else:
             return '\n- Bearingless Induction Motor Individual #%s\n\t' % (self.ID) + ', \n\t'.join("%s = %s" % item for item in tuple_list)
 
+    def pre_process_structural(self, app, listKeyPoints):
+        # pre-process : you can select part by coordinate!
+
+        model = app.GetCurrentModel()
+        part_ID_list = model.GetPartIDs()
+
+        if len(part_ID_list) != int(1 + 1 + 1):
+            msg = 'Number of Parts is unexpected.\n' + self.show(toString=True)
+            utility.send_notification(text=msg)
+            raise Exception(msg)
+
+        id_shaft = part_ID_list[0]
+        id_rotorCore = part_ID_list[1]
+        partIDRange_Cage = part_ID_list[2]
+        # print(part_ID_list)
+
+        # ''' Add Part to Set for later references '''
+        # Not Working ???
+            # def part_set(name, x, y):
+            #     model.GetSetList().CreatePartSet(name)
+            #     model.GetSetList().GetSet(name).SetMatcherType("Selection")
+            #     model.GetSetList().GetSet(name).ClearParts()
+            #     sel = model.GetSetList().GetSet(name).GetSelection()
+            #     sel.SelectPartByPosition(x,y,0.) # z=0 for 2D
+            #     model.GetSetList().GetSet(name).AddSelected(sel)
+            #     print(x,y)
+            #     print('---')
+
+        def part_set_by_id(name, part_id):
+            model.GetSetList().CreatePartSet(name)
+            model.GetSetList().GetSet(name).SetMatcherType("Selection")
+            model.GetSetList().GetSet(name).ClearParts()
+            sel = model.GetSetList().GetSet(name).GetSelection()
+            sel.SelectPart(part_id) # z=0 for 2D
+            model.GetSetList().GetSet(name).AddSelected(sel)
+
+        # Create Set for Shaft
+        part_set_by_id("ShaftSet", id_shaft )
+
+        # Create Set for Rotor Iron Core
+        part_set_by_id("RotorCoreSet", id_rotorCore)
+
+        # Create Set for Bar
+        part_set_by_id("BarSet", partIDRange_Cage)
+
+        # Create Set for Motion Region
+        def part_list_set(name, list_xy, prefix=None):
+            model.GetSetList().CreatePartSet(name)
+            model.GetSetList().GetSet(name).SetMatcherType("Selection")
+            model.GetSetList().GetSet(name).ClearParts()
+            sel = model.GetSetList().GetSet(name).GetSelection() 
+            for xy in list_xy:
+                sel.SelectPartByPosition(xy[0],xy[1],0.0) # z=0 for 2D
+                model.GetSetList().GetSet(name).AddSelected(sel)
+        part_list_set('Motion_Region', [[-self.Radius_Shaft+EPS, 0.0],
+                                        [-self.Radius_Shaft-EPS, 0.0],
+                                        [-self.Location_RotorBarCenter, 0.0] ])
+        # not working???
+            # # Create Set for Rotor Iron Core
+            # part_list_set("RotorCoreSet", [[-self.Radius_Shaft-EPS, 0.0]])
+
+            # # Create Set for Bar
+            # part_list_set("BarSet", [[-self.Location_RotorBarCenter, 0.0]])
+
+            # Create Set for Shaft
+            # part_list_set("ShaftSet", [[-EPS, 0.0]])
+
+        def edge_set(name,x,y):
+            model.GetSetList().CreateEdgeSet(name)
+            model.GetSetList().GetSet(name).SetMatcherType(u"Selection")
+            model.GetSetList().GetSet(name).ClearParts()
+            sel = model.GetSetList().GetSet(name).GetSelection()
+            sel.SelectEdgeByPosition(x,y,0)
+            model.GetSetList().GetSet(name).AddSelected(sel)
+        model.SetVisibility(u"Rotor Core", 0)
+        edge_set(u"RotorCoreShaft_Slave",  -self.Radius_Shaft, 0.0)
+        model.SetVisibility(u"Rotor Core", 1)
+        model.SetVisibility(u"Shaft", 0)
+        edge_set(u"RotorCoreShaft_Master",  -self.Radius_Shaft, 0.0)
+        model.SetVisibility(u"Shaft", 1)
+
+        def edge_list_set(name, list_xy, prefix=None):
+            model.GetSetList().CreateEdgeSet(name)
+            model.GetSetList().GetSet(name).SetMatcherType("Selection")
+            model.GetSetList().GetSet(name).ClearParts()
+            sel = model.GetSetList().GetSet(name).GetSelection() 
+            for xy in list_xy:
+                # print (xy)
+                # print('---')
+                sel.SelectEdgeByPosition(xy[0],xy[1],0) # z=0 for 2D
+                model.GetSetList().GetSet(name).AddSelected(sel)
+        Rotor_Sector_Angle = 2*pi/self.Qr*0.5
+        edge_list_set(u"FixtureConstraints", [[0.5*self.Radius_Shaft*-cos(Rotor_Sector_Angle), 0.5*self.Radius_Shaft*+sin(Rotor_Sector_Angle)],
+                                              [0.5*self.Radius_Shaft*-cos(Rotor_Sector_Angle), 0.5*self.Radius_Shaft*-sin(Rotor_Sector_Angle)],
+                                              [0.5*self.Radius_OuterRotor*-cos(Rotor_Sector_Angle), 0.5*self.Radius_OuterRotor*+sin(Rotor_Sector_Angle)],
+                                              [0.5*self.Radius_OuterRotor*-cos(Rotor_Sector_Angle), 0.5*self.Radius_OuterRotor*-sin(Rotor_Sector_Angle)]])
+        model.SetVisibility(u"Rotor Core", 0)
+        edge_list_set(u"BarRotorCore_Master",  [[-self.Location_RotorBarCenter-self.Radius_of_RotorSlot, 0.0],
+                                                [-self.Location_RotorBarCenter2+self.Radius_of_RotorSlot2, 0.0],
+                                                [listKeyPoints[5][0]-0.01*EPS, +listKeyPoints[5][1]], # 偏太远了就选不到这条Edge了哦，0.01太大了，0.0001差不多
+                                                [listKeyPoints[5][0]-0.01*EPS, -listKeyPoints[5][1]],
+                                                [listKeyPoints[6][0]-0.01*EPS, +listKeyPoints[6][1]],
+                                                [listKeyPoints[6][0]-0.01*EPS, -listKeyPoints[6][1]] ])
+        model.SetVisibility(u"Rotor Core", 1)
+        model.SetVisibility(u"Cage", 0)
+        edge_list_set(u"BarRotorCore_Slave",  [ [-self.Location_RotorBarCenter-self.Radius_of_RotorSlot, 0.0],
+                                                [-self.Location_RotorBarCenter2+self.Radius_of_RotorSlot2, 0.0],
+                                                [listKeyPoints[5][0]-0.01*EPS, +listKeyPoints[5][1]],
+                                                [listKeyPoints[5][0]-0.01*EPS, -listKeyPoints[5][1]],
+                                                [listKeyPoints[6][0]-0.01*EPS, +listKeyPoints[6][1]],
+                                                [listKeyPoints[6][0]-0.01*EPS, -listKeyPoints[6][1]] ])
+
+        model.SetVisibility(u"Cage", 1)
+
     def pre_process(self, app):
         # pre-process : you can select part by coordinate!
         ''' Group '''
@@ -3193,7 +3316,7 @@ class bearingless_induction_motor_design(object):
         # Create Set for Bars and Air within rotor slots
         R = self.Location_RotorBarCenter
                                                                                 # Another BUG:对于这种槽型，part_set在将AirWithin添加为set的时候，会错误选择到转子导条上！实际上，AirWithinRotorSlots对于JMAG来说完全是没有必要的！
-        # R_airR = self.Radius_OuterRotor - 0.1*self.Length_HeadNeckRotorSlot # if the airWithin is too big, minus 1e-2 is not enough anymore
+        # R_airR = self.Radius_OuterRotor - 0.1*self.Length_HeadNeckRotorSlot # if the airWithin is too big, minus EPS is not enough anymore
         THETA = pi # it is very important (when Qr is odd) to begin the part set assignment from the first bar you plot.
         X = R*cos(THETA)
         Y = R*sin(THETA)
@@ -3220,8 +3343,8 @@ class bearingless_induction_motor_design(object):
             for xy in list_xy:
                 sel.SelectPartByPosition(xy[0],xy[1],0) # z=0 for 2D
                 model.GetSetList().GetSet(name).AddSelected(sel)
-        # part_list_set(u'Motion_Region', [[0,0],[0,self.Radius_Shaft+1e-2]] + list_xy_bars + list_xy_airWithinRotorSlot) 
-        part_list_set('Motion_Region', [[0,0],[0,self.Radius_Shaft+1e-2]] + list_xy_bars) 
+        # part_list_set(u'Motion_Region', [[0,0],[0,self.Radius_Shaft+EPS]] + list_xy_bars + list_xy_airWithinRotorSlot) 
+        part_list_set('Motion_Region', [[0,0],[0,self.Radius_Shaft+EPS]] + list_xy_bars) 
 
         # Create Set for Cage
         model.GetSetList().CreatePartSet("CageSet")
@@ -3852,7 +3975,6 @@ class bearingless_induction_motor_design(object):
             dyn_circuit.Submit("Cage1", 23, 2)
             study.GetCircuit().CreateInstance("Ground", 25, 1)
 
-
     def add_TranFEAwi2TSS_study(self, slip_freq_breakdown_torque, app, model, dir_csv_output_folder, tran2tss_study_name, logger):
         im_variant = self
         # logger.debug('Slip frequency: %g = ' % (self.the_slip))
@@ -4016,7 +4138,7 @@ class bearingless_induction_motor_design(object):
             cond.SetValue("RevolutionSpeed", "freq*60/%d"%(0.5*(im_variant.DriveW_poles)))
             cond.ClearParts()
             sel = cond.GetSelection()
-            sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+1e-2, 0 ,0)
+            sel.SelectPartByPosition(-im_variant.Radius_OuterStatorYoke+EPS, 0 ,0)
             cond.AddSelected(sel)
             # Use FFT for hysteresis to be consistent with FEMM's results and to have a FFT plot
             cond.SetValue("HysteresisLossCalcType", 1)
@@ -4054,7 +4176,7 @@ class bearingless_induction_motor_design(object):
                 # cond.SetValue(u"BasicFrequency", u"slip*freq") # this require the signal length to be at least 1/4 of slip period, that's too long!
             cond.ClearParts()
             sel = cond.GetSelection()
-            sel.SelectPartByPosition(-im_variant.Radius_Shaft-1e-2, 0 ,0)
+            sel.SelectPartByPosition(-im_variant.Radius_Shaft-EPS, 0 ,0)
             cond.AddSelected(sel)
             # Use FFT for hysteresis to be consistent with FEMM's results
             cond.SetValue("HysteresisLossCalcType", 1)
@@ -4070,6 +4192,75 @@ class bearingless_induction_motor_design(object):
         self.study_name = study_name
         return study
 
+    # structural Study
+    def add_structural_study(self, app, model, dir_csv_output_folder):
+        study = model.CreateStudy(u"StructuralStatic2D", u"StructuralStatic")
+        print('Csv output directory: %s'%(dir_csv_output_folder))
+        study.GetStudyProperties().SetValue(u"CsvOutputPath", dir_csv_output_folder)
+        study.GetStudyProperties().SetValue(u"CsvOutputResponseData", 1)
+        study.GetStudyProperties().SetValue(u"CsvOutputProbe", 1)
+        study.GetStudyProperties().SetValue(u"CsvOutputCalculation", 1)
+
+        # Material
+        if 'M19' in self.fea_config_dict['Steel']:
+            study.SetMaterialByName("Rotor Core", "M-19 Steel Gauge-29")
+            study.GetMaterial("Rotor Core").SetValue("Laminated", 1)
+            study.GetMaterial("Rotor Core").SetValue("LaminationFactor", 95)
+
+            study.SetMaterialByName("Shaft", "M-19 Steel Gauge-29")
+            study.GetMaterial("Shaft").SetValue("Laminated", 1)
+            study.GetMaterial("Shaft").SetValue("LaminationFactor", 95)
+        else:
+            raise Exception('Not implemented error.')
+
+        study.SetMaterialByName("Cage", "Aluminium")
+        study.GetMaterial("Cage").SetValue("EddyCurrentCalculation", 1)
+        study.GetMaterial("Cage").SetValue("UserConductivityType", 1)
+        study.GetMaterial("Cage").SetValue("UserConductivityValue", self.Bar_Conductivity)        
+
+        # Conditions
+        # Fixture
+        study.CreateCondition(u"Constraint", u"FixtureConstraints")
+        study.GetCondition(u"FixtureConstraints").SetValue(u"Type", 1) # Normal direction
+        study.GetCondition(u"FixtureConstraints").ClearParts()
+        study.GetCondition(u"FixtureConstraints").AddSet(model.GetSetList().GetSet(u"FixtureConstraints"), 0)
+
+        # Contact
+        study.CreateCondition(u"Contact", u"RotorCoreBar_Contact")
+        study.GetCondition(u"RotorCoreBar_Contact").SetValue(u"ConsiderAdhesion", 1)
+        study.GetCondition(u"RotorCoreBar_Contact").SetValue(u"LayerYoungsModulus", 0.025) # JAC223_IPM_Opti
+        study.GetCondition(u"RotorCoreBar_Contact").SetValue(u"CalcTypeOfAdhesionLayer", 1)
+        study.GetCondition(u"RotorCoreBar_Contact").SetValue(u"ThickOfAdhesionLayer", 0.001)
+        study.GetCondition(u"RotorCoreBar_Contact").ClearParts()
+        study.GetCondition(u"RotorCoreBar_Contact").AddSet(model.GetSetList().GetSet(u"RotorCoreShaft_Master"), 0)
+        study.GetCondition(u"RotorCoreBar_Contact").AddSet(model.GetSetList().GetSet(u"RotorCoreShaft_Slave"), 1)
+
+        study.CreateCondition(u"Contact", u"BarRotorCore_Contact")
+        study.GetCondition(u"BarRotorCore_Contact").SetValue(u"ConsiderAdhesion", 1)
+        study.GetCondition(u"BarRotorCore_Contact").SetValue(u"LayerYoungsModulus", 0.025)
+        study.GetCondition(u"BarRotorCore_Contact").SetValue(u"CalcTypeOfAdhesionLayer", 1)
+        study.GetCondition(u"BarRotorCore_Contact").SetValue(u"ThickOfAdhesionLayer", 0.001)
+        study.GetCondition(u"BarRotorCore_Contact").ClearParts()
+        study.GetCondition(u"BarRotorCore_Contact").AddSet(model.GetSetList().GetSet(u"BarRotorCore_Slave"), 0) # 这里注意一下，根据JAC223，我们认为 Contact 条件
+        study.GetCondition(u"BarRotorCore_Contact").AddSet(model.GetSetList().GetSet(u"BarRotorCore_Master"), 1)
+
+        # Centrifugal Force
+        study.CreateCondition(u"CentrifugalForce", u"Centrifugal_Force")
+        print(self.DriveW_Freq*60. / (0.5*self.DriveW_poles),'r/min')
+        study.GetCondition(u"Centrifugal_Force").SetValue(u"AngularVelocity", self.DriveW_Freq*60. / (0.5*self.DriveW_poles))
+        study.GetCondition(u"Centrifugal_Force").SetXYZPoint(u"Axis", 0, 0, 1)
+        study.GetCondition(u"Centrifugal_Force").ClearParts()
+        study.GetCondition(u"Centrifugal_Force").AddSet(model.GetSetList().GetSet(u"Motion_Region"), 0)
+
+        # Mesh Size Control
+        study.GetMeshControl().CreateCondition(u"Part", u"MeshSizeControl")
+        study.GetMeshControl().GetCondition(u"MeshSizeControl").SetValue(u"Size", 0.100) # mm
+        study.GetMeshControl().GetCondition(u"MeshSizeControl").ClearParts()
+        study.GetMeshControl().GetCondition(u"MeshSizeControl").AddSet(model.GetSetList().GetSet(u"Motion_Region"), 0)
+        study.CreateMesh()
+        app.View().ShowMesh()
+
+        return study
 
     # Static FEA
     def add_cad_parameters(self, study):
@@ -4363,14 +4554,15 @@ class bearingless_induction_motor_design(object):
 
 
 class VanGogh_JMAG(VanGogh):
-    def __init__(self, im, child_index=1):
+    def __init__(self, im, child_index=1, doNotRotateCopy=False):
         super(VanGogh_JMAG, self).__init__(im, child_index)
+        self.doNotRotateCopy = doNotRotateCopy
 
         self.SketchName = None
         self.dict_count_arc = {}
         self.dict_count_region = {}
 
-        self.count = 0
+        self.count = 0 # counter of region
 
     def mirror_and_copyrotate(self, Q, Radius, fraction, 
                                 edge4ref=None,
@@ -4386,18 +4578,13 @@ class VanGogh_JMAG(VanGogh):
         # if self.count == 4: # debug
             # raise Exception
             # merge = True # When overlap occurs between regions because of copying, a boolean operation (sum) is executed and they are merged into 1 region.
-        self.region_circular_pattern_360_origin(region, float(Q), merge=merge,
-                                                do_you_have_region_in_the_mirror=do_you_have_region_in_the_mirror)
+        if not self.doNotRotateCopy:
+            self.region_circular_pattern_360_origin(region, float(Q), merge=merge,
+                                                    do_you_have_region_in_the_mirror=do_you_have_region_in_the_mirror)
         # print self.artist_list
         self.sketch.CloseSketch()
 
-    def draw_arc(self, p1, p2, angle, maxseg=1): # angle in rad
-        center = self.find_center_of_a_circle_using_2_points_and_arc_angle(p1, p2, angle) # ordered p1 and p2 are
-        art = self.sketch.CreateArc(center[0], center[1], p1[0], p1[1], p2[0], p2[1])
-        self.artist_list.append(art)
-    
-    def add_arc(self, p1, p2, angle, maxseg=1): # angle in rad
-        center = self.find_center_of_a_circle_using_2_points_and_arc_angle(p1, p2, angle) # ordered p1 and p2 are
+    def draw_arc(self, center, p1, p2, **kwarg):
         art = self.sketch.CreateArc(center[0], center[1], p1[0], p1[1], p2[0], p2[1])
         self.artist_list.append(art)
 
@@ -4407,19 +4594,29 @@ class VanGogh_JMAG(VanGogh):
         self.artist_list.append(art)
 
     def add_line(self, p1, p2):
-        # return self.line(p1[0],p1[1],p2[0],p2[1])
-        art = self.sketch.CreateLine(p1[0],p1[1],p2[0],p2[1])
-        self.artist_list.append(art)
+        draw_line(p1, p2)
 
     def plot_sketch_shaft(self):
         self.SketchName = "Shaft"
         SketchName = self.SketchName
         sketch = self.create_sketch(SketchName, "#D1B894")
 
-        self.circle(0, 0, self.im.Radius_Shaft)
+        if self.doNotRotateCopy:
+            Rotor_Sector_Angle = 2*pi/self.im.Qr*0.5
+            PA = [ self.im.Radius_Shaft*-cos(Rotor_Sector_Angle), self.im.Radius_Shaft*sin(Rotor_Sector_Angle) ]
+            PB = [ PA[0], -PA[1] ]
+            self.draw_arc([0,0], PA, PB)
+            self.draw_line(PA, [0,0])
+            self.draw_line(PB, [0,0])
+            self.doc.GetSelection().Clear()
+            self.doc.GetSelection().Add(sketch.GetItem("Arc"))
+            self.doc.GetSelection().Add(sketch.GetItem("Line"))
+            self.doc.GetSelection().Add(sketch.GetItem("Line.2"))
+        else:
+            self.circle(0, 0, self.im.Radius_Shaft)
 
-        self.doc.GetSelection().Clear()
-        self.doc.GetSelection().Add(sketch.GetItem("Circle"))
+            self.doc.GetSelection().Clear()
+            self.doc.GetSelection().Add(sketch.GetItem("Circle"))
         sketch.CreateRegions()
 
         sketch.CloseSketch()
@@ -4445,6 +4642,15 @@ class VanGogh_JMAG(VanGogh):
         sketch = self.create_sketch(self.SketchName, "#8D9440")
         return
 
+
+    # obsolete
+    def draw_arc_using_shapely(self, p1, p2, angle, maxseg=1): # angle in rad
+        center = self.find_center_of_a_circle_using_2_points_and_arc_angle(p1, p2, angle) # ordered p1 and p2 are
+        art = self.sketch.CreateArc(center[0], center[1], p1[0], p1[1], p2[0], p2[1])
+        self.artist_list.append(art)
+    
+    def add_arc_using_shapely(self, p1, p2, angle, maxseg=1): # angle in rad
+        self.draw_arc_using_shapely(p1, p2, angle, maxseg)
 
 
     # Utility wrap function for JMAG
@@ -4857,7 +5063,7 @@ class TrimDrawer(object):
         # Trim the Sketch Object!
         arc2 = self.trim_c(c2,0, c2.GetRadius()) # or self.trim_c(c2,0, self.im.Radius_OuterRotor)
 
-        X = float(c3.GetCenterVertex().GetX()) # the returned type is long, which will cause failing to trim. Convert to float. Or simply add 1e-2 to it, so Python will do the conversion for you.
+        X = float(c3.GetCenterVertex().GetX()) # the returned type is long, which will cause failing to trim. Convert to float. Or simply add EPS to it, so Python will do the conversion for you.
         arc3 = self.trim_c(c3, X, -c3.GetRadius()+1e-6) # or self.trim_c(c3,-self.im.Location_RotorBarCenter, -self.im.Radius_of_RotorSlot)
 
 
@@ -4869,7 +5075,7 @@ class TrimDrawer(object):
         # 上面说的“导致Line.3整根消失！”的原因是直接剪在了原点(0,0)上，所以把整根线都删掉了，稍微偏一点(-0.1,0.1)操作即可
         # ä¸Šé¢è¯´çš„â€œå¯¼è‡´Line.3æ•´æ ¹æ¶ˆå¤±ï¼â€çš„åŽŸå› æ˜¯ç›´æŽ\å‰ªåœ¨äº†åŽŸç‚¹(0,0)ä¸Šï¼Œæ‰€ä»\æŠŠæ•´æ ¹çº¿éƒ½åˆ æŽ‰äº†ï¼Œç¨å¾®åä¸€ç‚¹(-0.1,0.1)æ“ä½œå³å¯
             # self.doc.GetSketchManager().SketchTrim(0,0) # BUG - delete the whole Line.3
-        self.trim_l(l3,-1e-2, 1e-2)
+        self.trim_l(l3,-EPS, EPS)
 
         if self.im.use_drop_shape_rotor_bar == True:
 
@@ -4880,8 +5086,8 @@ class TrimDrawer(object):
 
             arc4 = self.trim_c(c4, -self.im.Location_RotorBarCenter2, -c4.GetRadius())
 
-            self.trim_l(l4, l4.GetStartVertex().GetX()+1e-2, l4.GetStartVertex().GetY()+1e-2)
-            self.trim_l(l4, l4.GetEndVertex().GetX()-1e-2, l4.GetEndVertex().GetY()-1e-2)
+            self.trim_l(l4, l4.GetStartVertex().GetX()+EPS, l4.GetStartVertex().GetY()+EPS)
+            self.trim_l(l4, l4.GetEndVertex().GetX()-EPS, l4.GetEndVertex().GetY()-EPS)
 
             # Mirror and Duplicate
             region = self.create_region(["Arc","Arc.2","Arc.3","Arc.4","Line","Line.2","Line.3","Line.4"])
@@ -5096,7 +5302,7 @@ class TrimDrawer(object):
                 self.doc.GetSelection().Clear()
                 self.doc.GetSelection().Add(c4)
                 self.doc.GetSelection().Delete()
-            arc3 = self.trim_c(c3, c3.GetCenterVertex().GetX()+1e-2+c3.GetRadius(), 0) # make sure it is float number
+            arc3 = self.trim_c(c3, c3.GetCenterVertex().GetX()+EPS+c3.GetRadius(), 0) # make sure it is float number
 
             if -self.im.Location_RotorBarCenter + self.im.Radius_of_RotorSlot > -self.im.Location_RotorBarCenter2 - self.im.Radius_of_RotorSlot2:
                 'Two circles have intersections.'
@@ -5104,11 +5310,11 @@ class TrimDrawer(object):
                 c4=self.circle(-self.im.Location_RotorBarCenter2, 0, self.im.Radius_of_RotorSlot2) # Circle.4
             arc4 = self.trim_c(c4, -self.im.Location_RotorBarCenter2-c4.GetRadius(), 0)
 
-            self.trim_l(l41, l41.GetStartVertex().GetX()+1e-2, l41.GetStartVertex().GetY()+1e-2)
-            self.trim_l(l41, l41.GetEndVertex().GetX()-1e-2, l41.GetEndVertex().GetY()-1e-2)
+            self.trim_l(l41, l41.GetStartVertex().GetX()+EPS, l41.GetStartVertex().GetY()+EPS)
+            self.trim_l(l41, l41.GetEndVertex().GetX()-EPS, l41.GetEndVertex().GetY()-EPS)
 
-            self.trim_l(l42, l42.GetStartVertex().GetX()+1e-2, l42.GetStartVertex().GetY()+1e-2)
-            self.trim_l(l42, l42.GetEndVertex().GetX()-1e-2, l42.GetEndVertex().GetY()-1e-2)
+            self.trim_l(l42, l42.GetStartVertex().GetX()+EPS, l42.GetStartVertex().GetY()+EPS)
+            self.trim_l(l42, l42.GetEndVertex().GetX()-EPS, l42.GetEndVertex().GetY()-EPS)
 
             region = self.create_region(["Arc","Arc.2","Line","Line.2"])
         else:            

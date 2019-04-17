@@ -163,7 +163,7 @@ for i, ax in enumerate(axes):
     #         print ind, el, ref[ind], el-ref[ind], 'This is not in original order.'
     #         quit()
 
-    def swap(l): # l是regular, coarse, fine排布的列表
+    def swap(l): # l是按regular, coarse, fine排布的列表
         return  [l[1], l[0], l[2]]
 
     # overlap mean to the dash

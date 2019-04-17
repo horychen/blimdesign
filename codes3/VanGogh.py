@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from shapely.geometry import LineString
-from shapely.geometry import Point
+# from shapely.geometry import LineString, Point
 from math import tan, pi, atan, sqrt, sin, cos, copysign, atan2, asin, acos
 import utility
+import numpy as np
 
 CUSTOM = 2
 JMAG = 1
@@ -21,8 +21,8 @@ class VanGogh(object):
 
         if self.child_index == JMAG: # for being consistent with obselete codes
             self.plot_sketch_shaft() # Shaft if any
-            self.draw_rotor_without_non_accurate_shapely(fraction)
-            self.draw_stator_without_non_accurate_shapely(fraction)
+            self.draw_rotor_eMach(fraction)
+            # self.draw_stator_without_non_accurate_shapely(fraction)
 
         elif self.child_index == FEMM: # for easy selecting of objects
             utility.blockPrint()
@@ -368,8 +368,8 @@ class VanGogh(object):
             self.rotor_object_list = self.plot_object_list
             self.plot_object_list = []
 
-        for ind, P in enumerate([P1, P2, P3, P4, P5, P6, P7, P8]):
-            print('rP'+str(ind+1), P) 
+            for ind, P in enumerate([P1, P2, P3, P4, P5, P6, P7, P8]):
+                print('rP'+str(ind+1), P) 
 
     def draw_stator_without_non_accurate_shapely(self, fraction=1):
         im = self.im
@@ -473,6 +473,9 @@ class VanGogh(object):
             self.stator_object_list = self.plot_object_list
             self.plot_object_list = []
 
+            for ind, P in enumerate([P1, P2, P3, P4, P5, P6, P7, P8]):
+                print('sP'+str(ind+1), P) 
+
         else:
             self.draw_line(P4, P_Coil)
             self.draw_line(P6, P_Coil)
@@ -495,8 +498,153 @@ class VanGogh(object):
         if self.child_index == FEMM:
             self.mirror_and_copyrotate(im.Qs, im.Radius_OuterStatorYoke, fraction)
 
-        for ind, P in enumerate([P1, P2, P3, P4, P5, P6, P7, P8]):
-            print('sP'+str(ind+1), P) 
+
+    def draw_rotor_eMach(self, fraction):
+
+        def utilityTangentPointsOfTwoCircles(C1, C2, r, R):
+            x1 = C1[0]; y1 = C1[1]
+            x2 = C2[0]; y2 = C2[1]
+            gamma = -atan((y2-y1)/(x2-x1))
+            distance = sqrt((x2-x1)**2+(y2-y1)**2)
+            beta = asin((R-r)/distance)
+            alpha = gamma - beta
+            x3 = x1 + r*cos(0.5*pi - alpha)
+            y3 = y1 + r*sin(0.5*pi - alpha)
+            x4 = x2 + R*cos(0.5*pi - alpha)
+            y4 = y2 + R*sin(0.5*pi - alpha) 
+            # (x3,y3) and (x4,y4) are outer tangent points on one side.
+            coord3 = [x3, y3]
+            coord4 = [x4, y4]
+            return coord3, coord4
+
+        d_rs  = self.im.Location_RotorBarCenter - self.im.Location_RotorBarCenter2
+        d_ro  = self.im.Length_HeadNeckRotorSlot
+        w_ro  = self.im.Width_RotorSlotOpen
+        w_rs1 = self.im.Radius_of_RotorSlot
+        w_rs2 = self.im.Radius_of_RotorSlot2
+        R_or  = self.im.Radius_OuterRotor
+        R_ir  = self.im.Radius_Shaft
+        Qr    = self.im.Qr
+
+        # origin = [0,0]
+        angleRotorSector = 2*pi/Qr*0.5
+
+        ''' Part: Rotor '''
+        if self.child_index == JMAG:
+            self.init_sketch_rotorCore()
+
+        # Draw Points as direction of CCW
+        P1 = (-R_ir, 0)
+        P2 = [-R_ir*cos(angleRotorSector), R_ir*sin(angleRotorSector)]
+        P3 = [-R_or*cos(angleRotorSector), R_or*sin(angleRotorSector)]
+        x, y = self.linecirc(0, 0.5*w_ro, 0, 0, R_or)
+        if np.isnan(y).all(): # all element are True?
+            raise Exception('Error: provided line and circle have no intersection.')
+        elif x[0]<0:
+            P4 = [x[0],y[0]]
+        else:
+            P4 = [x[1],y[1]]
+        CenterP5P6 = [-(R_or - d_ro - w_rs1), 0]
+        [x,y] = self.linecirc(0, 0.5*w_ro, CenterP5P6[0], CenterP5P6[1], w_rs1)
+        if np.isnan(y).all():
+            raise Exception('Error: provided line and circle have no intersection.')
+        elif x[0] < CenterP5P6[0]:
+            P5 = [x[0],y[0]]
+        else:
+            P5 = [x[1],y[1]]
+        CenterP7P8 = [-(R_or - d_ro - w_rs1 - d_rs), 0]
+        [P6, P7] = utilityTangentPointsOfTwoCircles(CenterP5P6, CenterP7P8, w_rs1, w_rs2)
+        if P6[1] < 0:
+            P6[1] = -1*P6[1]
+            P7[1] = -1*P7[1]
+        if P6[0] > P7[0]:
+            P6, P7 = P7, P6
+        P8 = [-(R_or - d_ro - w_rs1 - d_rs - w_rs2), 0]        
+
+        self.listKeyPoints = [P1, P2, P3, P4, P5, P6, P7, P8];
+            
+        drawer = self
+        arc21  = drawer.drawArc([0,0],P2,P1)
+        line23 = drawer.drawLine(P2,P3)
+        arc34  = drawer.drawArc([0,0],P3,P4)
+        line45 = drawer.drawLine(P4,P5)
+        arc65  = drawer.drawArc(CenterP5P6,P6,P5)
+        line67 = drawer.drawLine(P6,P7)
+        arc87  = drawer.drawArc(CenterP7P8,P8,P7)
+        line81 = drawer.drawLine(P8,P1)
+
+        segments = [arc21 ,line23,arc34 ,line45,arc65 ,line67,arc87 ,line81]
+        csToken = segments
+        
+        im = self.im
+        if self.child_index == FEMM:
+            self.some_solver_related_operations_rotor_before_mirror_rotation(im, P6, P8) # call this before mirror_and_copyrotate
+
+        if self.child_index == JMAG:
+            # JMAG needs to explictly draw the rotor slot.
+            drawer.drawLine(P8, P1)
+            drawer.drawArc([0,0],P2,P1)
+            drawer.drawLine(P2, P3)
+
+            self.mirror_and_copyrotate(im.Qr, im.Radius_OuterRotor, fraction,
+                                        symmetry_type=2) 
+            self.init_sketch_cage()
+
+        if self.child_index == CUSTOM:
+            # self.draw_line(P8, P1, ls='-.')
+            self.draw_arc(P2, P1, P2_angle)
+            # self.draw_line(P2, P3, ls='-.')
+
+        # P_Bar
+        P_Bar = (-im.Location_RotorBarCenter-im.Radius_of_RotorSlot, 0)
+        drawer.drawArc((-im.Location_RotorBarCenter, 0), P5, P_Bar, ls=':')
+
+        if self.child_index == JMAG:
+            drawer.drawLine(P_Bar, P8)
+            drawer.drawLine(P6, P7)
+            # draw the outline of stator core for coil to form a region in JMAG
+            drawer.drawArc((-im.Location_RotorBarCenter, 0), P6, P5)
+            drawer.drawArc((-im.Location_RotorBarCenter2, 0), P8, P7)
+
+            self.mirror_and_copyrotate(im.Qr, None, fraction,
+                                        symmetry_type=2
+                                        # merge=False, # bars are not connected to each other, so you don't have to specify merge=False, they will not merge anyway...
+                                        # do_you_have_region_in_the_mirror=True # In short, this should be true if merge is false...
+                                        )
+
+        if self.child_index == FEMM:
+            self.mirror_and_copyrotate(im.Qr, im.Radius_OuterRotor, fraction)
+            self.some_solver_related_operations_fraction(im, fraction)
+
+        if self.child_index == CUSTOM:
+            # self.draw_line(P8, P_Bar, ls='-.')
+            self.mirror_and_copyrotate(im.Qr, im.Radius_OuterRotor, fraction)
+
+            # self.Pr_list = [P1,P2,P3,P4,P5,P6,P7,P8,P_Bar]
+            self.Pr_list = [np.array(P) for P in [P1,P2,P3,P4,P5,P6,P7,P8]]
+            for P in self.Pr_list:
+                self.ax.scatter(*P, c='k', marker='None')
+
+            # rotor objects
+            self.rotor_object_list = self.plot_object_list
+            self.plot_object_list = []
+
+            for ind, P in enumerate([P1, P2, P3, P4, P5, P6, P7, P8]):
+                print('rP'+str(ind+1), P)
+
+
+    def drawLine(self, PA, PB):
+        self.draw_line(PA, PB)
+
+    def drawArc(self, CenterPAPB, PA, PB, **kwarg):
+
+        if self.child_index == JMAG: # plot arc using center and two points
+            self.draw_arc(CenterPAPB, PA, PB)
+
+        elif self.child_index == FEMM or self.child_index == CUSTOM: # plot arc using arc angle and two points
+            angle = abs(self.get_postive_angle(PA) - self.get_postive_angle(PB))
+            self.draw_arc(PA, PB, angle, **kwarg) # angle in rad       
+
 
     @staticmethod
     def park_transform(P_rot, angle):
@@ -547,12 +695,12 @@ class VanGogh(object):
         return p.buffer(radius).boundary
 
     @staticmethod
-    def get_postive_angle(p, origin=(0,0)):
+    def get_postive_angle(p, center=(0,0)):
         # using atan loses info about the quadrant, so it is "positive"
-        return atan(abs((p[1]-origin[1]) / (p[0]-origin[0])))
+        return atan(abs((p[1]-center[1]) / (p[0]-center[0])))
 
     @staticmethod
-    def get_node_at_intersection(c,l): 
+    def get_node_at_intersection(c,l):
         # this works for c and l having one or two intersections
         if c[0][0] != 0 or c[0][1] != 0:
             raise Exception('Not implemented for non-origin centered circle.')
@@ -571,6 +719,30 @@ class VanGogh(object):
         x_solutions = (a*c + b*Delta)/(a**2+b**2), (a*c - b*Delta)/(a**2+b**2)
         y_solutions = (b*c - a*Delta)/(a**2+b**2), (b*c + a*Delta)/(a**2+b**2)
         return (x_solutions[0], y_solutions[0]), (x_solutions[1], y_solutions[1])
+
+    @staticmethod
+    def linecirc(slope,intercpt,centerx,centery,r):
+        # Input data are in alpha-beta frame:
+        #   -slope*alpha + beta = intercpt
+        #   (alpha - c_x)**2 + (beta - c_y)**2 = r**2
+        # Translation of coordinates:
+        #   let x = alpha - c_x
+        #   let y = beta - c_y
+        # We have:
+        #   a*x + b*y = c
+        #   x**2 + y**2 = r**2
+        # The solution in x-y coordinates should be transormed back:
+        #   alpha = x + c_x
+        #   beta = y + c_y
+        a = -slope
+        b = 1
+        c = intercpt
+        Delta = sqrt(r**2*(a**2+b**2)-c**2)
+        if Delta < 0:
+            raise Exception('No intersection for given line and circle')
+        x_solutions = (a*c + b*Delta)/(a**2+b**2), (a*c - b*Delta)/(a**2+b**2)
+        y_solutions = (b*c - a*Delta)/(a**2+b**2), (b*c + a*Delta)/(a**2+b**2)
+        return (x_solutions[0]+centerx, x_solutions[1]+centerx), (y_solutions[0]+centery, y_solutions[1]+centery)
 
 from utility import csv_row_reader
 
@@ -780,7 +952,6 @@ def get_tangent_points_of_two_circles(center1, radius1, center2, radius2):
 if __name__ == '__main__':
     import matplotlib.patches as mpatches
     import matplotlib.pyplot as plt
-    import numpy as np
     plt.rcParams["font.family"] = "Times New Roman"
 
     myfontsize = 13.5

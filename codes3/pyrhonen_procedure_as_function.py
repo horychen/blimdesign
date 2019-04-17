@@ -264,8 +264,6 @@ class desgin_specification(object):
         print('\nGuess efficiency: ${\\rm PF}=%g$'% (self.guess_efficiency), file=fname)
         print('\nDebug or release: %s'% (self.debug_or_release), file=fname)
         print('\n*Note: The default option for voltage availability is plenty. That is, the dc bus can be high enough (higher than the specified votlage rating) for allowing more conductors in stator slots.', file=fname)
-        fname.close()
-        fname = None
 
 
 
@@ -1145,6 +1143,8 @@ class desgin_specification(object):
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # 18. Collect Key Geometry Parameters for Performance Evaluation
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        fname.close() # 别忘了关闭文件！
+        
         # fig, axes = subplots(1,3, dpi=80)
         # ax = axes[0]
         # ax.plot(hdata, bdata)
@@ -1252,6 +1252,7 @@ class desgin_specification(object):
         print('Angle_StatorSlotOpen =', Angle_StatorSlotOpen, file=fname)
         print('Width_StatorTeethHeadThickness =', Width_StatorTeethHeadThickness, file=fname)
 
+        
         return True if self.Jr_backup < self.Jr else False # bool_bad_specifications
 
 
