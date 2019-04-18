@@ -1,25 +1,25 @@
 import pyrhonen_procedure_as_function 
-bool_post_processing = True # solve or post-processing
+bool_post_processing = False # solve or post-processing
 
 
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Design Specification
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-p = 1
+p = 2
 spec = pyrhonen_procedure_as_function.desgin_specification(
         PS_or_SC = True, # Pole Specific or Squirrel Cage
         DPNV_or_SEPA = True, # Dual purpose no voltage or Separate winding
         p = p,
         ps = 2 if p==1 else 1,
         mec_power = 100e3, # kW
-        ExcitationFreq = 880, # Hz
+        ExcitationFreq = p*750, # Hz
         VoltageRating = 480, # Vrms (line-to-line, Wye-Connect)
         TangentialStress = 12000, # Pa
         Qs = 24,
         Qr = 16,
         Js = 3.7e6, # Arms/m^2
-        Jr = 7.25e6, #7.5e6, #6.575e6, # Arms/m^2
+        Jr = 5.75e6,  #7.25e6, #7.5e6, #6.575e6, # Arms/m^2
         Steel = 'M19Gauge29', # Arnon-7
         lamination_stacking_factor_kFe = 0.95, # from http://www.femm.info/wiki/spmloss # 0.91 for Arnon
         Coil = 'Cu',
@@ -29,7 +29,7 @@ spec = pyrhonen_procedure_as_function.desgin_specification(
         Temperature = 75, # deg Celsius
         stator_tooth_flux_density_B_ds = 1.4, # Tesla
         rotor_tooth_flux_density_B_dr  = 1.5, # Tesla
-        stator_yoke_flux_density_Bys = 1.2, # Tesla
+        stator_yoke_flux_density_Bys = 1.1, # Tesla
         rotor_yoke_flux_density_Byr  = 1.1 + 0.3 if p==1 else 1.1, # Tesla
         guess_air_gap_flux_density = 0.8, # 0.8, # Tesla | 0.7 ~ 0.9 | Table 6.3
         guess_efficiency = 0.95,
@@ -156,31 +156,7 @@ else:
 if True:
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# 0. Bounds
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # loc_txt_file = pyrhonen_procedure_as_function.loop_for_bounds(spec)
-    loc_txt_file = '../' + 'pop/' + r'loop_for_bounds.txt'
-    list_b_dr = []
-    list_b_ds = []
-    with open(loc_txt_file, 'r') as f:
-        buf = f.readlines()
-        for row in buf:
-            design = [float(el) for el in row.split(',')]
-            list_b_ds.append(design[15])
-            list_b_dr.append(design[30]*1e3)
-    b_ds_max, b_ds_min = max(list_b_ds), min(list_b_ds)
-    b_dr_max, b_dr_min = max(list_b_dr), min(list_b_dr)
-    print(b_ds_max, b_ds_min)
-    print(b_dr_max, b_dr_min)
-    if b_ds_min<2:
-        print('Too small lower bound b_ds (%g) is detected. Set it to 2 mm.'%(b_ds_min))
-        b_ds_min = 2
-    if b_dr_min<2:
-        print('Too small lower bound b_dr (%g) is detected. Set it to 2 mm.'%(b_dr_min))
-        b_dr_min = 2
-
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# 1. FEA Setting / General Information & Packages Loading
+# 0. FEA Setting / General Information & Packages Loading
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Situation when default_setting does not match spec may happen
     filename = './default_setting.py'
@@ -191,24 +167,25 @@ if True:
         fea_config_dict['Active_Qr'] = 16
         fea_config_dict['use_weights'] = 'O1' # 'O2' # 'O3'
 
-            # fea_config_dict['local_sensitivity_analysis'] = True
-            # run_folder = r'run#400/' # Sensitivity analysis for Qr=16, T440p
-            # run_folder = r'run#140/' # Sensitivity analysis for Qr=16, Y730
+        # Prototype OD150 two pole motor
+        if False:
+            fea_config_dict['local_sensitivity_analysis'] = True
+            fea_config_dict['bool_refined_bounds'] = False
+            run_folder = r'run#500/' # Sensitivity analysis for Qr=16 and p=1
 
-            # fea_config_dict['local_sensitivity_analysis'] = False
-            # run_folder = r'run#141/' # run for reference
-            # run_folder = r'run#142/' # optimize Qr=16 for O2
-            # run_folder = r'run#143/' # test for shitty design (not true)
-            # run_folder = r'run#144/' # optimize Qr=16 for O1
+            fea_config_dict['local_sensitivity_analysis'] = False
+            fea_config_dict['bool_refined_bounds'] = True
+            run_folder = r'run#501/' # Optimize with refined bounds
 
-        # Prototype OD150
+        # Prototype OD150 four pole motor
         fea_config_dict['local_sensitivity_analysis'] = True
         fea_config_dict['bool_refined_bounds'] = False
-        run_folder = r'run#500/' # Sensitivity analysis for Qr=16
+        run_folder = r'run#502/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 2*"50Hz delta")
+        run_folder = r'run#503/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta")
 
-        fea_config_dict['local_sensitivity_analysis'] = False
-        fea_config_dict['bool_refined_bounds'] = True
-        run_folder = r'run#501/' # Optimize with refined bounds
+        # fea_config_dict['local_sensitivity_analysis'] = False
+        # fea_config_dict['bool_refined_bounds'] = True
+        # run_folder = r'run#504/' # Optimize with refined bounds
 
     # run folder
     fea_config_dict['run_folder'] = run_folder
@@ -216,6 +193,39 @@ if True:
     logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ones_'+fea_config_dict['run_folder'][:-1])
     # rebuild the name
     build_model_name_prefix(fea_config_dict)
+
+
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# 1. Bounds for DE optimiazation
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    if True:
+        # run for tooth width bounds
+        loc_txt_file = pyrhonen_procedure_as_function.loop_for_bounds(spec, run_folder)
+    else:
+        # save some time when degbuging
+        loc_txt_file = '../' + 'pop/' + 'loop_for_bounds_%s.txt'%(run_folder[:-1])
+    list_b_dr = []
+    list_b_ds = []
+    with open(loc_txt_file, 'r') as f:
+        buf = f.readlines()
+        for row in buf:
+            design = [float(el) for el in row.split(',')]
+            list_b_ds.append(design[15])
+            list_b_dr.append(design[30]*1e3)
+    b_ds_max, b_ds_min = max(list_b_ds), min(list_b_ds)
+    b_dr_max, b_dr_min = max(list_b_dr), min(list_b_dr)
+    print(b_ds_max, b_ds_min, 'initial design:', 1e3*spec.stator_tooth_width_b_ds, 'mm')
+    print(b_dr_max, b_dr_min, 'initial design:', 1e3*spec.rotor_tooth_width_b_dr, 'mm')
+    if b_ds_min<2:
+        print('Too small lower bound b_ds (%g) is detected. Set it to 2 mm.'%(b_ds_min))
+        b_ds_min = 2
+    if b_dr_min<2:
+        print('Too small lower bound b_dr (%g) is detected. Set it to 2 mm.'%(b_dr_min))
+        b_dr_min = 2
+    if 1e3*spec.stator_tooth_width_b_ds < b_ds_min  and 1e3*spec.stator_tooth_width_b_ds > b_ds_max:
+        raise Exception('The initial design is not within the bounds.')
+    if 1e3*spec.rotor_tooth_width_b_dr < b_dr_min  and 1e3*spec.rotor_tooth_width_b_dr > b_dr_max:
+        raise Exception('The initial design is not within the bounds.')
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG)
@@ -230,7 +240,7 @@ if True:
                                                     [    5e-1,        3],   # Width_RotorSlotOpen 
                                                     [b_dr_min, b_dr_max],#--# rotor_tooth_width_b_dr # It allows for large rotor tooth because we raise Jr and recall this is for less slots---Qr=16.
                                                     [    5e-1,        3],   # Length_HeadNeckRotorSlot
-                                                    [       1,       10],   # Angle_StatorSlotOpen
+                                                    [       1,       11],   # Angle_StatorSlotOpen
                                                     [    5e-1,        3] ], # Width_StatorTeethHeadThickness
                                 'mut':        0.8,
                                 'crossp':     0.7,
@@ -247,46 +257,8 @@ if True:
 
         # Sensitivity Analysis based narrowing bounds
         if fea_config_dict['bool_refined_bounds'] == True:
-            # data acquired from run#116
             numver_of_variants = 20.0
-            if fea_config_dict['Active_Qr'] == 32: # O1 is already best
-                # from utility.py O2
-                raw_narrow_bounds = [   [9, 10],
-                                        [5, 6, 7], #[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                        [0, 1, 2, 3],
-                                        [20],
-                                        [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
-                                        [5, 6, 7],
-                                        [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
-
             if fea_config_dict['Active_Qr'] == 16: 
-                # from utility.py:run140 O2
-                raw_narrow_bounds = [   [3, 4, 7, 9, 12, 14, 15, 16, 19, 20],
-                                        [1, 2, 7, 8, 9, 12, 13, 14, 15, 16, 18],
-                                        [1, 3, 4, 5, 6, 7, 8, 9, 10, 13, 16, 19],
-                                        [1, 4, 5, 9, 11, 12, 13, 16, 17],
-                                        [1, 2, 3, 6, 7, 10, 11, 12, 13, 15, 18],
-                                        [2, 4, 5, 6, 8, 10, 11, 12, 13, 16, 18, 19],
-                                        [0, 1, 3, 4, 6, 7, 8, 9, 10, 12, 15, 17, 18, 20]]
-
-                # from utility.py:run191 O2
-                raw_narrow_bounds = [   [12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                        [8, 9, 10, 11, 12, 13, 14, 15, 16, 17],
-                                        [19, 20],
-                                        [19, 20],
-                                        [12, 13],
-                                        [11, 13, 14, 15, 16, 17, 18],
-                                        [9, 10] ]
-
-                # from utility.py:run191 O3
-                raw_narrow_bounds = [   [9, 10, 11, 12, 13],
-                                        [0, 1, 2, 3, 4, 5, 6, 7],
-                                        [0, 1, 2, 3, 4, 5, 6, 7],
-                                        [16, 17, 19, 20],
-                                        [0, 1, 2, 3, 4, 5, 6],
-                                        [0, 1, 2, 3, 4, 5],
-                                        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
-
                 # from utility.py:run500 O1
                 raw_narrow_bounds = [   [15, 16, 17, 18, 19, 20],
                                         [6, 7, 8, 9, 10, 1,1, 12, 13, 14, 15, 16, 17, 18, 19, 20],
@@ -297,6 +269,7 @@ if True:
                                         [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
                 # original: [[2, 4.483629], [0.8, 3], [0.5, 3], [2, 5.042], [0.5, 3], [1, 10], [0.5, 3]], 
                 # refined:  [[3.86, 4.483629], [1.46, 3.0], [0.5, 1.5], [4.89, 6.26], [0.5, 3.0], [2.8, 10.0], [0.5, 3.0]]}
+                raise 
 
             for ind, bound in enumerate(raw_narrow_bounds):
                 de_config_dict['narrow_bounds_normalized'][ind].append(bound[0] /numver_of_variants)
@@ -361,8 +334,9 @@ if True:
         sw.generate_pop()
 
         # add initial_design of Pyrhonen09 to the initial generation
-        if count_abort == 0:
-            utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
+        if sw.fea_config_dict['local_sensitivity_analysis'] == False:
+            if count_abort == 0:
+                utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
 
         # write FEA config to disk
         sw.write_to_file_fea_config_dict()

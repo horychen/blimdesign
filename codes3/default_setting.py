@@ -1,6 +1,5 @@
 # coding:utf-8
 import os
-import imp
 
 fea_config_dict = {
     ##########################
@@ -11,7 +10,7 @@ fea_config_dict = {
         # use directSolver over ICCG Solver
     'local_sensitivity_analysis':False,
     'flag_optimization':True, # also use true for sensitivity analysis
-    'designer.Show':True,
+    'designer.Show':False,
     'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
 
     ##########################
@@ -37,7 +36,7 @@ fea_config_dict = {
     'Active_Qr':None, #16, #32,
     'PoleSpecific': True,
     'DPNV': True,
-    'DPNV_separate_winding_implementation': False,
+    # 'DPNV_separate_winding_implementation': None, # this is obsolete feature (it is not good because the copper loss is different from the reality and only works for Qs=24, p=2 case)
     'mimic_separate_winding_with_DPNV_winding':False,
     'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
     'Steel': 'M19Gauge29', #'M15','Arnon5', 
@@ -110,9 +109,10 @@ sys_path.append(fea_config_dict['dir_lib'])
 import population
 import FEMM_Solver
 import utility
-imp.reload(population) # relaod for JMAG's python environment
-imp.reload(FEMM_Solver)
-imp.reload(utility)
+import importlib
+importlib.reload(population) # relaod for JMAG's python environment
+importlib.reload(FEMM_Solver)
+importlib.reload(utility)
 
 run_list = [1,1,0,0,0] # use JMAG only
 run_list = [0,1,0,0,0] # use FEMM to search for breakdown slip

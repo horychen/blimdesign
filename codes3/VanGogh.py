@@ -949,7 +949,7 @@ def get_tangent_points_of_two_circles(center1, radius1, center2, radius2):
     return (x3, y3), (x4, y4)
 
 # Eric required plot geometry with LaTeX labels
-if __name__ == '__main__':
+if __name__ == '!__main__':
     import matplotlib.patches as mpatches
     import matplotlib.pyplot as plt
     plt.rcParams["font.family"] = "Times New Roman"
@@ -1379,7 +1379,7 @@ if __name__ == '__main__':
 
 
 # My plot geometry with LaTeX labels
-if __name__ == '__main__':
+if __name__ == '!__main__':
     import matplotlib.patches as mpatches
     import matplotlib.pyplot as plt
     import numpy as np
@@ -1750,7 +1750,7 @@ if __name__ == '__main__':
 if __name__ == '__main__':
 
     # generate the dict of list: dl
-    if False: # 4 pole motor
+    if True: # 4 pole motor
         # ExampleQ24p2m3ps1y6
         l41 = ['C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B']
         l42 = ['+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']

@@ -10,12 +10,12 @@ file_name = 'pyrhonen_procedure'
 file_suffix = '.tex'
 
 class winding_layout(object):
-    def __init__(self, spec):
+    def __init__(self, DPNV_or_SEPA, Qs, p):
 
         # separate winding
-        if spec.DPNV_or_SEPA == False \
-        and spec.Qs == 24 \
-        and spec.p == 2:
+        if DPNV_or_SEPA == False \
+        and Qs == 24 \
+        and p == 2:
             self.l41=[ 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', ]
             self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', ]
             # separate style for one phase: ---- ++++
@@ -28,52 +28,77 @@ class winding_layout(object):
             self.bool_3PhaseCurrentSource = True
             self.no_winding_layer = 1 # for troque winding
 
-        # combined winding
-        if spec.DPNV_or_SEPA == True \
-        and spec.Qs == 24 \
-        and spec.p == 2:
-            # DPNV winding implemented as separate winding
-            # if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False: 
-                # You may see this msg because there are more than one designs in the initial_design.txt file.
-                # msg = 'Not implemented error. In fact, this equivalent implementation works for 4 pole motor only.'
-                # logging.getLogger(__name__).warn(msg)
+        # # combined winding
+        # if DPNV_or_SEPA == True \
+        # and Qs == 24 \
+        # and p == 2:
+        #     # DPNV winding implemented as separate winding
+        #     # if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False: 
+        #         # You may see this msg because there are more than one designs in the initial_design.txt file.
+        #         # msg = 'Not implemented error. In fact, this equivalent implementation works for 4 pole motor only.'
+        #         # logging.getLogger(__name__).warn(msg)
 
-            # this is legacy codes for easy implementation in FEMM
-            self.l41=[ 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V']
-            self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
-            # DPNV style for one phase: -- oo ++ oo
-            self.l21=[  'U', 'U', 'W', 'W', 'V', 'V', 
-                        'U', 'U', 'W', 'W', 'V', 'V', 
-                        'U', 'U', 'W', 'W', 'V', 'V', 
-                        'U', 'U', 'W', 'W', 'V', 'V']
-            self.l22=[  '-', '-', 'o', 'o', '+', '+', # 横着读和竖着读都是负零正零。 
-                        'o', 'o', '-', '-', 'o', 'o', 
-                        '+', '+', 'o', 'o', '-', '-', 
-                        'o', 'o', '+', '+', 'o', 'o']
-            self.coil_pitch = 6
-            self.CommutatingSequenceD = 0
+        #     # this is legacy codes for easy implementation in FEMM
+        #     self.l41=[ 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V']
+        #     self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
+        #     # DPNV style for one phase: -- oo ++ oo
+        #     self.l21=[  'U', 'U', 'W', 'W', 'V', 'V', 
+        #                 'U', 'U', 'W', 'W', 'V', 'V', 
+        #                 'U', 'U', 'W', 'W', 'V', 'V', 
+        #                 'U', 'U', 'W', 'W', 'V', 'V']
+        #     self.l22=[  '-', '-', 'o', 'o', '+', '+', # 横着读和竖着读都是负零正零。 
+        #                 'o', 'o', '-', '-', 'o', 'o', 
+        #                 '+', '+', 'o', 'o', '-', '-', 
+        #                 'o', 'o', '+', '+', 'o', 'o']
+        #     self.coil_pitch = 6
+        #     self.CommutatingSequenceD = 0
+        #     self.CommutatingSequenceB = 0
+        #     self.number_parallel_branch = 1.
+        #     self.bool_3PhaseCurrentSource = True
+        #     self.no_winding_layer = 1 # for troque winding
+
+        # combined winding
+        if DPNV_or_SEPA == True \
+        and Qs == 24 \
+        and p == 2:
+            # DPNV winding implemented as DPNV winding (GroupAC means it experiences flip phasor excitation from suspension inverter, while GroupBD does not.)
+            #                     U-GrBD                        U-GrBD    W-GrBD                        W-GrBD    V-GrBD                        V-GrBD
+            #                               W-GrAC    V-GrAC                        V-GrAC    U-GrAC                        U-GrAC    W-GrAC             : flip phases 19-14??? slot of phase U??? (这个例子的这句话看不懂)
+            self.l_rightlayer1 = ['U', 'U', 'W', 'W', 'V', 'V', 'U', 'U', 'W', 'W', 'V', 'V', 'U', 'U', 'W', 'W', 'V', 'V', 'U', 'U', 'W', 'W', 'V', 'V'] # ExampleQ24p2m3ps1: torque winding outer layer
+            self.l_rightlayer2 = ['+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
+            self.l_leftlayer1  = self.l_rightlayer1[::] # ExampleQ24p2m3ps1: torque winding inner layer
+            self.l_leftlayer2  = self.l_rightlayer2[::]
+            self.grouping_AC   = [  0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1,   0,   0] # 只取决于outerlayer/rightlayer的反相情况
+            self.coil_pitch    = 6 # left layer can be inferred from coil pitch and right layer diagram
+            self.CommutatingSequenceD = 1
             self.CommutatingSequenceB = 0
-            self.number_parallel_branch = 1.
-            self.bool_3PhaseCurrentSource = True
-            self.no_winding_layer = 1 # for troque winding
+            self.number_parallel_branch = 2.
+            self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
+            self.no_winding_layer = 2 # for troque winding and this means there could be a short pitch
+
+            # backward compatibility
+            self.l41 = self.l_rightlayer1
+            self.l42 = self.l_rightlayer2
+            self.l21 = self.l_leftlayer1
+            self.l22 = self.l_leftlayer2
 
         # combined winding
-        if spec.DPNV_or_SEPA == True \
-        and spec.Qs == 24 \
-        and spec.p == 1:
-            # DPNV winding implemented as DPNV winding
+        if DPNV_or_SEPA == True \
+        and Qs == 24 \
+        and p == 1:
+            # DPNV winding implemented as DPNV winding (GroupAC means it experiences flip phasor excitation from suspension inverter, while GroupBD does not.)
             #                     U-GroupBD                               V-GroupBD                               W-GroupBD
-            #                                         GroupAC                                 GroupAC                                 GroupAC           : flip phases 13-16 slot of phase U
-            self.l_rightlayer1 = ['U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V']
-            self.l_rightlayer2 = ['+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-']
-            self.l_leftlayer1  = ['U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U']
+            #                                         W-GroupAC                               U-GroupAC                               V-GroupAC           : flip phases 13-16 slot of phase U
+            self.l_rightlayer1 = ['U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V'] # ExampleQ24p1m3ps2: torque winding outer layer
+            self.l_rightlayer2 = ['+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-'] 
+            self.l_leftlayer1  = ['U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U'] # ExampleQ24p1m3ps2: torque winding inner layer
             self.l_leftlayer2  = ['+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+']
-            self.grouping_AC   = [  0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1]
+            self.grouping_AC   = [  0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1] # 只取决于rightlayer的反相情况
             self.coil_pitch    = 9 # left layer can be inferred from coil pitch and right layer diagram
             self.CommutatingSequenceD = 1
             self.CommutatingSequenceB = 0
             self.number_parallel_branch = 2.
-            self.bool_3PhaseCurrentSource = False
+            self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
             self.no_winding_layer = 2 # for troque winding and this means there could be a short pitch
 
             # backward compatibility
@@ -154,7 +179,7 @@ class desgin_specification(object):
         self.bool_skew_stator = bool_skew_stator
         self.bool_skew_rotor  = bool_skew_rotor 
 
-        self.winding_layout = winding_layout(self)
+        self.winding_layout = winding_layout(self.DPNV_or_SEPA, self.Qs, self.p)
 
         self.geometry = geometry_data()
 
@@ -352,7 +377,7 @@ class desgin_specification(object):
                  ''', file=fname)
         print('\nRequired Torque: %g Nm'% required_torque, file=fname)
         print('\nTip speed: %g m/s' %(get_tip_speed(speed_rpm, rotor_outer_radius_r_or)), file=fname)
-        print('\nCentrifugal stress: %g Pa' %(check_stress_due_to_centrifugal_force(speed_rpm, rotor_outer_radius_r_or)), file=fname)
+        print('\nCentrifugal stress: %g MPa' %(1e-6*check_stress_due_to_centrifugal_force(speed_rpm, rotor_outer_radius_r_or)), file=fname)
         print('\nRotor outer diameter $D_{or}=%g$ mm'% (rotor_outer_diameter_Dr*1e3), file=fname)
         print('\nRotor outer radius $r_{or}=%g$ mm'% (rotor_outer_radius_r_or*1e3), file=fname)
             # print 'Yegu Kang: rotor_outer_diameter_Dr, 95 mm'
@@ -373,7 +398,10 @@ class desgin_specification(object):
         else:
             air_gap_length_delta = (0.18 + 0.006*self.mec_power**0.4) / 1000
         if self.p == 2:
-            air_gap_length_delta *= 2 # *=3 will not converge
+            if self.mec_power <= 75e3:
+                air_gap_length_delta *= 2 # *=3 will not converge
+            else:
+                air_gap_length_delta *= 1.5
         elif self.p == 1:
             if self.mec_power <= 75e3:
                 air_gap_length_delta *= 1.5
@@ -575,6 +603,8 @@ class desgin_specification(object):
 
         print('\nNumber of parallel branch: $a=%d$' % number_parallel_branch, file=fname)
         print('\nNumber of conductors per slot: $z_Q=%g$'%no_conductors_per_slot_zQ, file=fname)
+        print('\nAir gap length: $\\delta=%g$ mm' % (air_gap_length_delta*1e3), file=fname)
+        print('\n[Guess] Air gap flux density: $B_\\delta=%g$ T' % (self.guess_air_gap_flux_density), file=fname)
 
         if no_conductors_per_slot_zQ % 2 != 0:
             raise Exception('This zQ does not suit for two layer winding.')
@@ -1252,6 +1282,13 @@ class desgin_specification(object):
         print('Angle_StatorSlotOpen =', Angle_StatorSlotOpen, file=fname)
         print('Width_StatorTeethHeadThickness =', Width_StatorTeethHeadThickness, file=fname)
 
+        self.stator_tooth_width_b_ds        = stator_tooth_width_b_ds
+        self.air_gap_length_delta           = air_gap_length_delta
+        self.b1                             = b1
+        self.rotor_tooth_width_b_dr         = rotor_tooth_width_b_dr
+        self.Length_HeadNeckRotorSlot       = Length_HeadNeckRotorSlot
+        self.Angle_StatorSlotOpen           = Angle_StatorSlotOpen
+        self.Width_StatorTeethHeadThickness = Width_StatorTeethHeadThickness
         
         return True if self.Jr_backup < self.Jr else False # bool_bad_specifications
 
@@ -1261,8 +1298,8 @@ class desgin_specification(object):
 # Play with this Pyrhonen procedure
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 
-def loop_for_bounds(spec):
-    spec.loc_txt_file = '../' + 'pop/' + r'loop_for_bounds.txt'
+def loop_for_bounds(spec, run_folder):
+    spec.loc_txt_file = '../' + 'pop/' + 'loop_for_bounds_%s.txt'%(run_folder[:-1])
     open(spec.loc_txt_file, 'w').close()
     import utility
 
@@ -1270,11 +1307,11 @@ def loop_for_bounds(spec):
     # for THE_IM_DESIGN_ID, spec.Qr in enumerate([32,36]): # any spec.Qr>36 will not converge (for alpha_i and k_sat) with Arnon5 at least
     # for THE_IM_DESIGN_ID, spec.Qr in enumerate([32]):
     bool_run_for_bounds = True
-    for rotor_tooth_flux_density_B_dr      in [1.2, 1.6, 1.8]: #1.5–2.2 (rotor) 
-        for stator_tooth_flux_density_B_ds in [1.2, 1.6, 1.8]: #1.4–2.1 (stator) # too large you will get End of Loop Error (Fixed by extropolating the k_sat vs alpha_i curve.)
+    for rotor_tooth_flux_density_B_dr      in np.arange(1.2, 1.8+0.01, 0.1): #1.5–2.2 (rotor) 
+        for stator_tooth_flux_density_B_ds in np.arange(1.2, 1.8+0.01, 0.1): #1.4–2.1 (stator) # too large you will get End of Loop Error (Fixed by extropolating the k_sat vs alpha_i curve.)
 
             # for spec.Jr in arange(3e6, 8e6+1, 1e6):
-            for Jr in [6e6, 8e6, 9e6]:
+            for Jr in np.arange(5.5e6, 8e6+0.01, 0.25e6):
                 print(rotor_tooth_flux_density_B_dr, stator_tooth_flux_density_B_ds, Jr)
                 utility.blockPrint()
 

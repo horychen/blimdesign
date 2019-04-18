@@ -12,7 +12,7 @@ from VanGogh import VanGogh
 
 from time import time as clock_time
 
-from pyrhonen_procedure_as_function import get_material_data
+from pyrhonen_procedure_as_function import get_material_data, winding_layout
 
 EPS = 1e-2 # unit: mm
 
@@ -2704,86 +2704,84 @@ class bearingless_induction_motor_design(object):
 
 
         #05 Windings & Excitation
-        if self.Qs != 24:
-            raise Exception('Not implemented error.')
+        self.wily = winding_layout(self.fea_config_dict['DPNV'], self.Qs, self.DriveW_poles/2)
 
+        # if self.fea_config_dict is not None:
+        #     if self.fea_config_dict['DPNV'] == False: 
+        #         # separate winding
+        #         self.l41=[ 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', ]
+        #         self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', ]
+        #         # separate style for one phase: ---- ++++
+        #         self.l21=[ 'U', 'U', 'V', 'V', 'V', 'V', 'W', 'W', 'W', 'W', 'U', 'U', 'U', 'U', 'V', 'V', 'V', 'V', 'W', 'W', 'W', 'W', 'U', 'U', ]
+        #         self.l22=[ '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', ]
+        #         self.coil_pitch = 6 # = Qs / poles for single layer
+        #         self.CommutatingSequenceD = 0
+        #         self.CommutatingSequenceB = 0
+        #         self.number_parallel_branch = 1.
+        #         self.bool_3PhaseCurrentSource = True
+        #     else:
+        #         # combined winding
+        #         if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False: 
+        #             # DPNV winding implemented as separate winding
+        #             if self.DriveW_poles != 4:
+        #                 # You may see this msg because there are more than one designs in the initial_design.txt file.
+        #                 msg = 'Not implemented error. In fact, this equivalent implementation works for 4 pole motor only.'
+        #                 logging.getLogger(__name__).warn(msg)
+        #                 # raise Exception(msg)
 
-        if self.fea_config_dict is not None:
-            if self.fea_config_dict['DPNV'] == False: 
-                # separate winding
-                self.l41=[ 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', ]
-                self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', ]
-                # separate style for one phase: ---- ++++
-                self.l21=[ 'U', 'U', 'V', 'V', 'V', 'V', 'W', 'W', 'W', 'W', 'U', 'U', 'U', 'U', 'V', 'V', 'V', 'V', 'W', 'W', 'W', 'W', 'U', 'U', ]
-                self.l22=[ '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', ]
-                self.coil_pitch = 6 # = Qs / poles for single layer
-                self.CommutatingSequenceD = 0
-                self.CommutatingSequenceB = 0
-                self.number_parallel_branch = 1.
-                self.bool_3PhaseCurrentSource = True
-            else:
-                # combined winding
-                if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False: 
-                    # DPNV winding implemented as separate winding
-                    if self.DriveW_poles != 4:
-                        # You may see this msg because there are more than one designs in the initial_design.txt file.
-                        msg = 'Not implemented error. In fact, this equivalent implementation works for 4 pole motor only.'
-                        logging.getLogger(__name__).warn(msg)
-                        # raise Exception(msg)
+        #             # this is legacy codes for easy implementation in FEMM
+        #             self.l41=[ 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V']
+        #             self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
+        #             # DPNV style for one phase: -- oo ++ oo
+        #             self.l21=[  'U', 'U', 'W', 'W', 'V', 'V', 
+        #                         'U', 'U', 'W', 'W', 'V', 'V', 
+        #                         'U', 'U', 'W', 'W', 'V', 'V', 
+        #                         'U', 'U', 'W', 'W', 'V', 'V']
+        #             self.l22=[  '-', '-', 'o', 'o', '+', '+', # 横着读和竖着读都是负零正零。 
+        #                         'o', 'o', '-', '-', 'o', 'o', 
+        #                         '+', '+', 'o', 'o', '-', '-', 
+        #                         'o', 'o', '+', '+', 'o', 'o']
+        #             self.coil_pitch = 6
+        #             self.CommutatingSequenceD = 0
+        #             self.CommutatingSequenceB = 0
+        #             self.number_parallel_branch = 1.
+        #             self.bool_3PhaseCurrentSource = True
+        #         else: 
+        #             # DPNV winding implemented as DPNV winding
+        #             if self.DriveW_poles == 2:
+        #                 #                     U-GroupBD                               V-GroupBD                               W-GroupBD
+        #                 #                                         GroupAC                                 GroupAC                                 GroupAC           : flip phases 13-16 slot of phase U
+        #                 self.l_rightlayer1 = ['U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V']
+        #                 self.l_rightlayer2 = ['+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-']
+        #                 self.l_leftlayer1  = ['U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U']
+        #                 self.l_leftlayer2  = ['+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+']
+        #                 self.grouping_AC   = [  0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1]
+        #                 self.coil_pitch    = 9 # left layer can be inferred from coil pitch and right layer diagram
+        #                 self.CommutatingSequenceD = 1
+        #                 self.CommutatingSequenceB = 0
+        #                 self.number_parallel_branch = 2.
+        #                 self.bool_3PhaseCurrentSource = False
 
-                    # this is legacy codes for easy implementation in FEMM
-                    self.l41=[ 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V']
-                    self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
-                    # DPNV style for one phase: -- oo ++ oo
-                    self.l21=[  'U', 'U', 'W', 'W', 'V', 'V', 
-                                'U', 'U', 'W', 'W', 'V', 'V', 
-                                'U', 'U', 'W', 'W', 'V', 'V', 
-                                'U', 'U', 'W', 'W', 'V', 'V']
-                    self.l22=[  '-', '-', 'o', 'o', '+', '+', # 横着读和竖着读都是负零正零。 
-                                'o', 'o', '-', '-', 'o', 'o', 
-                                '+', '+', 'o', 'o', '-', '-', 
-                                'o', 'o', '+', '+', 'o', 'o']
-                    self.coil_pitch = 6
-                    self.CommutatingSequenceD = 0
-                    self.CommutatingSequenceB = 0
-                    self.number_parallel_branch = 1.
-                    self.bool_3PhaseCurrentSource = True
-                else: 
-                    # DPNV winding implemented as DPNV winding
-                    if self.DriveW_poles == 2:
-                        #                     U-GroupBD                               V-GroupBD                               W-GroupBD
-                        #                                         GroupAC                                 GroupAC                                 GroupAC           : flip phases 13-16 slot of phase U
-                        self.l_rightlayer1 = ['U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V']
-                        self.l_rightlayer2 = ['+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-']
-                        self.l_leftlayer1  = ['U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U']
-                        self.l_leftlayer2  = ['+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+']
-                        self.grouping_AC   = [  0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1]
-                        self.coil_pitch    = 9 # left layer can be inferred from coil pitch and right layer diagram
-                        self.CommutatingSequenceD = 1
-                        self.CommutatingSequenceB = 0
-                        self.number_parallel_branch = 2.
-                        self.bool_3PhaseCurrentSource = False
-
-                        # backward compatibility
-                        self.l41 = self.l_rightlayer1
-                        self.l42 = self.l_rightlayer2
-                        self.l21 = self.l_leftlayer1
-                        self.l22 = self.l_leftlayer2
-                    elif self.DriveW_poles == 4:
-                        self.l41 = None
-                        self.l42 = None
-                        self.l21 = None
-                        self.l22 = None
-                        coil_pitch = None
-                        # raise Exception('Not implemented error.')
-                    else:
-                        raise Exception('Not implemented error.')
-        else:
-            self.l41 = None
-            self.l42 = None
-            self.l21 = None
-            self.l22 = None
-            coil_pitch = None
+        #                 # backward compatibility
+        #                 self.l41 = self.l_rightlayer1
+        #                 self.l42 = self.l_rightlayer2
+        #                 self.l21 = self.l_leftlayer1
+        #                 self.l22 = self.l_leftlayer2
+        #             elif self.DriveW_poles == 4:
+        #                 self.l41 = None
+        #                 self.l42 = None
+        #                 self.l21 = None
+        #                 self.l22 = None
+        #                 coil_pitch = None
+        #                 # raise Exception('Not implemented error.')
+        #             else:
+        #                 raise Exception('Not implemented error.')
+        # else:
+        #     self.l41 = None
+        #     self.l42 = None
+        #     self.l21 = None
+        #     self.l22 = None
+        #     coil_pitch = None
 
         if self.DriveW_poles == 2:
             self.BeariW_poles = 4
@@ -2798,7 +2796,7 @@ class bearingless_induction_motor_design(object):
         self.BeariW_Rs         = self.DriveW_Rs * self.BeariW_turns / self.DriveW_turns
         self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975 # extra 2.5% as bearing current
         self.BeariW_Freq       = self.DriveW_Freq
-        self.dict_coil_connection = {41:self.l41, 42:self.l42, 21:self.l21, 22:self.l22}
+        self.dict_coil_connection = {41:self.wily.l41, 42:self.wily.l42, 21:self.wily.l21, 22:self.wily.l22} # 这里的2和4等价于leftlayer和rightlayer。
 
         #06 Meshing & Solver Properties
         self.max_nonlinear_iteration = 50 # 30 for transient solve
@@ -3287,7 +3285,7 @@ class bearingless_induction_motor_design(object):
         # l41=[ 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', ]
         # l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', ]
         count = 0
-        for UVW, UpDown in zip(self.l41,self.l42):
+        for UVW, UpDown in zip(self.wily.l41,self.wily.l42):
             count += 1 
             part_set("Coil4%s%s %d"%(UVW,UpDown,count), X, Y)
 
@@ -3303,7 +3301,7 @@ class bearingless_induction_motor_design(object):
         # l21=[ 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', ]
         # l22=[ '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', ]
         count = 0
-        for UVW, UpDown in zip(self.l21,self.l22):
+        for UVW, UpDown in zip(self.wily.l21,self.wily.l22):
             count += 1 
             part_set("Coil2%s%s %d"%(UVW,UpDown,count), X, Y)
 
@@ -3704,7 +3702,7 @@ class bearingless_induction_motor_design(object):
                 study.GetCircuit().CreateComponent("3PhaseCurrentSource", "CS%d"%(poles))
                 study.GetCircuit().CreateInstance("CS%d"%(poles), x-4, y+1)
                 study.GetCircuit().GetComponent("CS%d"%(poles)).SetValue("Amplitude", ampD+ampB)
-                study.GetCircuit().GetComponent("CS%d"%(poles)).SetValue("Frequency", freq) # this is not needed for freq analysis
+                study.GetCircuit().GetComponent("CS%d"%(poles)).SetValue("Frequency", "freq") # this is not needed for freq analysis # "freq" is a variable
                 study.GetCircuit().GetComponent("CS%d"%(poles)).SetValue("PhaseU", phase)
                 # Commutating sequence is essencial for the direction of the field to be consistent with speed: UVW rather than UWV
                 study.GetCircuit().GetComponent("CS%d"%(poles)).SetValue("CommutatingSequence", CommutatingSequenceD) 
@@ -3748,8 +3746,9 @@ class bearingless_induction_motor_design(object):
         # 这里电流幅值中的0.5因子源自DPNV导致的等于2的平行支路数。没有考虑到这一点，是否会对initial design的有效性产生影响？
         # 仔细看DPNV的接线，对于转矩逆变器，绕组的并联支路数为2，而对于悬浮逆变器，绕组的并联支路数为1。
 
-        npb = self.number_parallel_branch
-        if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False:
+        npb = self.wily.number_parallel_branch
+        # if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False:
+        if self.fea_config_dict['DPNV'] == False:
             # either a separate winding or a DPNV winding implemented as a separate winding
             ampD =  0.5 * (self.DriveW_CurrentAmp/npb + self.BeariW_CurrentAmp) # 为了代码能被四极电机和二极电机通用，代入看看就知道啦。
             ampB = -0.5 * (self.DriveW_CurrentAmp/npb - self.BeariW_CurrentAmp) # 关于符号，注意下面的DriveW对应的circuit调用时的ampB前还有个负号！
@@ -3765,16 +3764,17 @@ class bearingless_induction_motor_design(object):
         circuit(self.DriveW_poles,  self.DriveW_turns/npb, bool_3PhaseCurrentSource=bool_3PhaseCurrentSource,
             Rs=self.DriveW_Rs,ampD= ampD,
                               ampB=-ampB, freq=self.DriveW_Freq, phase=0,
-                              CommutatingSequenceD=self.CommutatingSequenceD,
-                              CommutatingSequenceB=self.CommutatingSequenceB)
+                              CommutatingSequenceD=self.wily.CommutatingSequenceD,
+                              CommutatingSequenceB=self.wily.CommutatingSequenceB)
         circuit(self.BeariW_poles,  self.BeariW_turns/npb, bool_3PhaseCurrentSource=bool_3PhaseCurrentSource,
             Rs=self.BeariW_Rs,ampD= ampD,
                               ampB=+ampB, freq=self.BeariW_Freq, phase=0,
-                              CommutatingSequenceD=self.CommutatingSequenceD,
-                              CommutatingSequenceB=self.CommutatingSequenceB,x=25) # CS4 corresponds to uauc (conflict with following codes but it does not matter.)
+                              CommutatingSequenceD=self.wily.CommutatingSequenceD,
+                              CommutatingSequenceB=self.wily.CommutatingSequenceB,x=25) # CS4 corresponds to uauc (conflict with following codes but it does not matter.)
 
         # Link FEM Coils to Coil Set         
-        if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False:
+        # if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False:
+        if self.fea_config_dict['DPNV'] == False:
             def link_FEMCoils_2_CoilSet(poles,l1,l2):
                 # link between FEM Coil Condition and Circuit FEM Coil
                 for UVW in ['U','V','W']:
@@ -3805,11 +3805,11 @@ class bearingless_induction_motor_design(object):
                     condition = study.GetCondition(which_phase)
                     condition.RemoveSubCondition("delete")
             link_FEMCoils_2_CoilSet(self.DriveW_poles, 
-                                    self.dict_coil_connection[int(self.DriveW_poles*10+1)], # 40 for 4 poles, 1 for ABD, 2 for up or down,
-                                    self.dict_coil_connection[int(self.DriveW_poles*10+2)])
+                                    self.dict_coil_connection[int(self.DriveW_poles*10+1)], # 40 for 4 poles, +1 for UVW, 
+                                    self.dict_coil_connection[int(self.DriveW_poles*10+2)])                 # +2 for up or down, 
             link_FEMCoils_2_CoilSet(self.BeariW_poles, 
-                                    self.dict_coil_connection[int(self.BeariW_poles*10+1)], # 20 for 2 poles.
-                                    self.dict_coil_connection[int(self.BeariW_poles*10+2)])
+                                    self.dict_coil_connection[int(self.BeariW_poles*10+1)], # 20 for 2 poles, +1 for UVW, .
+                                    self.dict_coil_connection[int(self.BeariW_poles*10+2)])                 # +2 for up or down,  这里的2和4等价于leftlayer和rightlayer。
         else:
             # 两个改变，一个是激励大小的改变（本来是200A 和 5A，现在是205A和195A），
             # 另一个绕组分组的改变，现在的A相是上层加下层为一相，以前是用俩单层绕组等效的。
@@ -3825,40 +3825,43 @@ class bearingless_induction_motor_design(object):
                     condition = study.GetCondition('phase'+UVW+suffix)
                     condition.SetLink("CircuitCoil%d%s"%(poles,UVW))
                     condition.GetSubCondition("untitled").SetName("delete")
-            count = 0
+            count = 0 # count indicates which slot the current rightlayer is in.
             index = 0
             dict_dir = {'+':1, '-':0}
-            coil_pitch = self.coil_pitch #self.dict_coil_connection[0]
+            coil_pitch = self.wily.coil_pitch #self.dict_coil_connection[0]
             # select the part (via `Set') to assign the FEM Coil condition
-            for UVW, UpDown in zip(self.l_rightlayer1, self.l_rightlayer2):
+            for UVW, UpDown in zip(self.wily.l_rightlayer1, self.wily.l_rightlayer2):
+
                 count += 1 
-                # if count <= self.Qs/2: # 能这么处理的底气是winding diagram的形式给的。<- This is wrong
-                if self.grouping_AC[index] == 1:
+                if self.wily.grouping_AC[index] == 1:
                     suffix = 'GroupAC'
                 else:
                     suffix = 'GroupBD'
-
                 condition = study.GetCondition('phase'+UVW+suffix)
 
-                condition.CreateSubCondition("FEMCoilData", "Coil Set %d"%(count))
-                subcondition = condition.GetSubCondition("Coil Set %d"%(count))
+                # right layer
+                # print (count, "Coil Set %d"%(count), end=' ')
+                condition.CreateSubCondition("FEMCoilData", "Coil Set Right %d"%(count))
+                subcondition = condition.GetSubCondition("Coil Set Right %d"%(count))
                 subcondition.ClearParts()
                 subcondition.AddSet(model.GetSetList().GetSet("Coil%d%s%s %d"%(4,UVW,UpDown,count)), 0) # poles=4 means right layer, rather than actual poles
                 subcondition.SetValue("Direction2D", dict_dir[UpDown])
 
+                # left layer
                 if count+coil_pitch <= self.Qs:
                     count_leftlayer = count+coil_pitch
                     index_leftlayer = index+coil_pitch
                 else:
                     count_leftlayer = int(count+coil_pitch - self.Qs)
                     index_leftlayer = int(index+coil_pitch - self.Qs)
-                # 右层导体的电流方向是正，那么左层就是负！不需要再检查l_leftlayer2了~
+                # 右层导体的电流方向是正，那么与其串联的一个coil_pitch之处的左层导体就是负！不需要再检查l_leftlayer2了~
                 if UpDown == '+': 
                     UpDown = '-'
                 else:
                     UpDown = '+'
-                condition.CreateSubCondition("FEMCoilData", "Coil Set %d"%(count_leftlayer))
-                subcondition = condition.GetSubCondition("Coil Set %d"%(count_leftlayer))
+                # print (count_leftlayer, "Coil Set %d"%(count_leftlayer))
+                condition.CreateSubCondition("FEMCoilData", "Coil Set Left %d"%(count_leftlayer))
+                subcondition = condition.GetSubCondition("Coil Set Left %d"%(count_leftlayer))
                 subcondition.ClearParts()
                 subcondition.AddSet(model.GetSetList().GetSet("Coil%d%s%s %d"%(2,UVW,UpDown,count_leftlayer)), 0) # poles=2 means left layer, rather than actual poles
                 subcondition.SetValue("Direction2D", dict_dir[UpDown])
@@ -3869,7 +3872,7 @@ class bearingless_induction_motor_design(object):
                 # print l_leftlayer1
                 index += 1
                 # double check
-                if self.l_leftlayer1[index_leftlayer] != UVW:
+                if self.wily.l_leftlayer1[index_leftlayer] != UVW:
                     raise Exception('Bug in winding diagram.')
             # clean up
             for suffix in ['GroupAC', 'GroupBD']:
@@ -3877,7 +3880,6 @@ class bearingless_induction_motor_design(object):
                     condition = study.GetCondition('phase'+UVW+suffix)
                     condition.RemoveSubCondition("delete")
             # raise Exception('Test DPNV PE.')
-
 
         # Condition - Conductor (i.e. rotor winding)
         for ind in range(int(self.Qr)):
@@ -4019,7 +4021,7 @@ class bearingless_induction_motor_design(object):
 
 
         # Conditions - FEM Coils & Conductors (i.e. stator/rotor winding)
-        self.add_circuit(app, model, study, bool_3PhaseCurrentSource=self.bool_3PhaseCurrentSource)
+        self.add_circuit(app, model, study, bool_3PhaseCurrentSource=self.wily.bool_3PhaseCurrentSource)
 
 
         # True: no mesh or field results are needed

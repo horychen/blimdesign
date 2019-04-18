@@ -1717,7 +1717,8 @@ class SwarmDataAnalyzer(object):
 
             quit()   
 
-
+    def sensitivity_bar_charts(self):
+        pass
 
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -1880,11 +1881,11 @@ if __name__ == '__main__':
 
 
 # ------------------------------------ Sensitivity Analysis Bar Chart Scripts --- plot sensitivity bar chart, Oj v.s. geometry parameters, 
-if __name__ == '!!!__main__':
+if __name__ == '__main__':
     
     # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
     # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
-    if False: # 4 pole motor
+    if True: # 4 pole motor
         # swda = SwarmDataAnalyzer(run_integer=113)
         # swda = SwarmDataAnalyzer(run_integer=200)
 
@@ -1905,6 +1906,10 @@ if __name__ == '!!!__main__':
             # 5 [0.104915] <-In population.py   [0.159409] <- from initial_design.txt
             # 6 [6.53137]  <-In population.py  [10.1256] <- from initial_design.txt
             # 7 [1817.22]  <-In population.py  [1353.49] <- from initial_design.txt
+
+        swda = SwarmDataAnalyzer(run_integer=502)
+        number_of_variant = 20 + 1
+
     else: # 2 pole motor
         # swda = SwarmDataAnalyzer(run_integer=184)
         # swda = SwarmDataAnalyzer(run_integer=190) # Wrong bounds

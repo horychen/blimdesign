@@ -117,13 +117,13 @@ while True:
     list_torque_copy = list_torque[::]
     index_1st, breakdown_torque_1st = max(enumerate(list_torque_copy), key=operator.itemgetter(1))
     breakdown_slipfreq_1st = list_slipfreq[index_1st]
-    print('Max is', index_1st, breakdown_torque_1st)
+    print('The max is #%d'%index_1st, breakdown_torque_1st, 'Nm')
 
     # find the 2nd max
     list_torque_copy[index_1st] = -999999
     index_2nd, breakdown_torque_2nd = max(enumerate(list_torque_copy), key=operator.itemgetter(1))
     breakdown_slipfreq_2nd = list_slipfreq[index_2nd]
-    print('2nd max is', index_2nd, breakdown_torque_2nd)
+    print('2nd max is #%d'%index_2nd, breakdown_torque_2nd, 'Nm')
 
     print('max slip freq error=', 0.5*(breakdown_slipfreq_1st - breakdown_slipfreq_2nd), 'Hz', ', 2*EPS=%g'%(VAREPSILON))
 
