@@ -886,7 +886,7 @@ class FEMM_Solver(object):
                 print(time*1e3, 'ms', rotor_position_in_deg, 'deg')
         femm.closefemm()
 
-    def parallel_solve(self, dir_run=None, number_of_instantces=5, bool_watchdog_postproc=True):
+    def parallel_solve(self, dir_run=None, number_of_instantces=5, bool_watchdog_postproc=True, bool_run_in_JMAG_Script_Editor=False):
         '''[并行求解] 当初没想好，旋转转子竟然不是并行的。。。
         Keyword Arguments:
             dir_run {[type]} -- [静态场用self.dir_run，涡流场用self.dir_run_sweeping] (default: {None})
@@ -899,7 +899,7 @@ class FEMM_Solver(object):
         if dir_run == None:
            dir_run = self.dir_run
 
-        if True: # for running script in JMAG
+        if bool_run_in_JMAG_Script_Editor: # for running script in JMAG, we need a .bat file wrapper for the subprocess calls.
             # os.system('python "%smethod_parallel_solve_4jmag.py" %s' % (self.dir_codes, dir_run))
             with open('temp.bat', 'w') as f:
                 if '01' in self.im.fea_config_dict['pc_name']: # python is not added to path in Severson01
@@ -910,6 +910,7 @@ class FEMM_Solver(object):
             # os.remove('temp.bat')
 
         else: # run script in other platforms such as command prompt
+            raise Exception('Please explicitly specify bool_run_in_JMAG_Script_Editor.')
             procs = []
             for i in range(number_of_instantces):
                 # proc = subprocess.Popen([sys.executable, 'parasolve.py', '{}in.csv'.format(i), '{}out.csv'.format(i)], bufsize=-1)
@@ -2225,7 +2226,7 @@ class FEMM_Solver(object):
 
 
     # this is for JMAG calling to seek for breakdown torque and slip
-    def greedy_search_for_breakdown_slip(self, dir_femm_temp, study_name, fraction=2, number_of_instantces=5):
+    def greedy_search_for_breakdown_slip(self, dir_femm_temp, study_name, fraction=2, number_of_instantces=5, bool_run_in_JMAG_Script_Editor=False):
         if not os.path.isdir(dir_femm_temp):
             os.makedirs(dir_femm_temp)
 
@@ -2267,13 +2268,20 @@ class FEMM_Solver(object):
         # 在搜索的过程中，显然是需要知道结果的，
         # 这说明，不仅仅要跑五个instance，
         # 而且还需要有一个总管，负责总调。
-        with open('temp2.bat', 'w') as f:
-            f.write('python "%smethod_parasolve_greedy_search.py" "%s" %d %.16f' % (self.dir_codes, 
-                                                                                    dir_femm_temp, 
-                                                                                    number_of_instantces,
-                                                                                    self.stack_length))
-        os.startfile('temp2.bat')
-        # os.remove('temp2.bat')
+        if bool_run_in_JMAG_Script_Editor: # run inside JMAG then a wrapper batch file is required to work properly.
+            with open('temp2.bat', 'w') as f:
+                f.write('python "%smethod_parasolve_greedy_search.py" "%s" %d %.16f' % (self.dir_codes, 
+                                                                                        dir_femm_temp, 
+                                                                                        number_of_instantces,
+                                                                                        self.stack_length))
+            os.startfile('temp2.bat')
+            # os.remove('temp2.bat')
+        else:
+            print('\n' + '-'*20, self.study_name)
+            proc = subprocess.Popen([sys.executable, 'parasolve_greedy_search_manager.py', 
+                                     str(number_of_instantces), self.dir_femm_temp, str(self.stack_length)], bufsize=-1)
+            # proc.wait() # don't wait on femm solver, and let jmag plot the model and get ready for the breakdownd slip info.
+
 
     def wait_greedy_search(self, tic):
         while True:

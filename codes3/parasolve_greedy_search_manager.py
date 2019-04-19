@@ -108,10 +108,10 @@ while True:
         if len(list_done_id) >= number_of_instantces:
             break
 
-    print('-----------------------')
+    # print('-----------------------')
     # print list_solver_id
-    print(list_slipfreq)
-    print(list_torque)
+    print('slip freq [Hz]:', list_slipfreq)
+    print('torque [Nm]:', list_torque)
 
     # find the max
     list_torque_copy = list_torque[::]
@@ -125,7 +125,7 @@ while True:
     breakdown_slipfreq_2nd = list_slipfreq[index_2nd]
     print('2nd max is #%d'%index_2nd, breakdown_torque_2nd, 'Nm')
 
-    print('max slip freq error=', 0.5*(breakdown_slipfreq_1st - breakdown_slipfreq_2nd), 'Hz', ', 2*EPS=%g'%(VAREPSILON))
+    print('Max slip freq error=', 0.5*(breakdown_slipfreq_1st - breakdown_slipfreq_2nd), 'Hz', ', 2*EPS=%g'%(VAREPSILON))
 
     # find the two slip freq close enough then break.5
     if abs(breakdown_slipfreq_1st - breakdown_slipfreq_2nd) < VAREPSILON: # Hz
@@ -142,7 +142,7 @@ while True:
 
 
     else:
-        print('not yet')
+        print('Not yet.')
         count_loop += 1
         if count_loop > 100:
             os.system('pause')

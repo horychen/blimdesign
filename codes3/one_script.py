@@ -58,6 +58,7 @@ if bool_bad_specifications:
     print('\nThe specifiaction can not be fulfilled. Read script log or OneReport.pdf for information and revise the specifiaction for $J_r$ or else your design name is wrong.')
 else:
     print('\nThe specifiaction is meet. Now check the database of blimuw.')
+    import utility
     utility.communicate_database(spec)
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -98,9 +99,9 @@ if True:
         run_folder = r'run#504/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = 1000 Hz
 
 
-        # fea_config_dict['local_sensitivity_analysis'] = False
-        # fea_config_dict['bool_refined_bounds'] = True
-        # run_folder = r'run#505/' # Optimize with refined bounds (popsize is 70=7*10 now)
+        fea_config_dict['local_sensitivity_analysis'] = False
+        fea_config_dict['bool_refined_bounds'] = True
+        run_folder = r'run#505/' # Optimize with refined bounds (popsize is 70=7*10 now)
 
     # run folder
     fea_config_dict['run_folder'] = run_folder

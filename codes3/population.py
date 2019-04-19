@@ -115,7 +115,7 @@ class swarm(object):
                 # remove gen and fit files
                 # os.remove(self.dir_run + file) 
                 if 'gen#' in file:
-                    print(file, end=' ')
+                    print(file)
                     self.ongoing_pop_denorm = []
                     with open(self.dir_run + file, 'r') as f:
                         for row in self.csv_row_reader(f):
@@ -133,7 +133,7 @@ class swarm(object):
                     print('List ongoing_pop_denorm here:', self.ongoing_pop_denorm.tolist())
 
                 if 'fit#' in file:
-                    print(file, end=' ')
+                    print(file)
                     self.ongoing_fitness = []
                     with open(self.dir_run + file, 'r') as f: 
                         for row in self.csv_row_reader(f):
@@ -143,7 +143,7 @@ class swarm(object):
                     # ongoing_pop (yes) and ongoing_fitness will be directly used in de.
 
                 if 'liv#' in file:
-                    print(file, end=' ')
+                    print(file)
                     self.ongoing_living_pop_denorm = []
                     with open(self.dir_run + file, 'r') as f: 
                         for row in self.csv_row_reader(f):
@@ -152,7 +152,7 @@ class swarm(object):
                     print('List ongoing_living_pop_denorm here:', self.ongoing_living_pop_denorm)
 
                     file = file[:3] + '_fit' + file[3:8] + '.txt' # liv_fit#xxxx.txt has always no tag '-ongoing'.
-                    print(file, end=' ')
+                    print(file)
                     self.ongoing_living_fitness = []
                     with open(self.dir_run + file, 'r') as f: 
                         for row in self.csv_row_reader(f):
@@ -194,75 +194,6 @@ class swarm(object):
 
             def local_sensitivity_analysis(self):
                 # 敏感性检查：以基本设计为准，检查不同的参数取极值时的电机性能变化！这是最简单有效的办法。七个设计参数，那么就有14种极值设计。
-                if self.fea_config_dict['run_folder'] == r'run#115/':
-                    # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
-                    initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
-                    initial_design = (initial_design_denorm - min_b) / diff
-                    print(initial_design_denorm.tolist())
-                    print(initial_design.tolist())
-                    base_design = initial_design.tolist()
-                    print(base_design, '\n-------------')
-                    number_of_variants = 5
-                    self.init_pop = []
-                    for i in range(len(base_design)): # 7 design parameters
-                        for j in range(number_of_variants+1): # 5 variants interval
-                            # copy list
-                            design_variant = base_design[::]
-                            design_variant[i] = j * 1./number_of_variants
-                            self.init_pop.append(design_variant)
-                    for ind, el in enumerate(self.init_pop):
-                        print(ind, el)
-                    return 
-                    # quit()
-                if self.fea_config_dict['run_folder'] == r'run#116/':
-                    # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
-                    initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
-                    initial_design = (initial_design_denorm - min_b) / diff
-                    print(initial_design_denorm.tolist())
-                    print(initial_design.tolist())
-                    base_design = initial_design.tolist()
-                    print(base_design, '\n-------------')
-                    number_of_variants = 20
-                    self.init_pop = []
-                    for i in range(len(base_design)): # 7 design parameters
-                        for j in range(number_of_variants+1): # 21 variants interval
-                            # copy list
-                            design_variant = base_design[::]
-                            design_variant[i] = j * 1./number_of_variants
-                            self.init_pop.append(design_variant)
-                    for ind, el in enumerate(self.init_pop):
-                        print(ind, el)
-                    return 
-                    # quit()
-                if self.fea_config_dict['run_folder'] == r'run#117/':
-                    # initial_design_denorm = array([6.9890559999999997,1.2694300000000001,0.9246640000000000,4.9223397799883148,1.0000000000000000,3.0000000000000000,1.0000000000000000])
-                    initial_design_denorm = array([7.0007460000000004,1.2694300000000001,0.9246640000000000,4.9305211820279791,1.0000000000000000,3.0000000000000000,1.0000000000000000])
-                    initial_design = (initial_design_denorm - min_b) / diff
-                    print(initial_design_denorm.tolist())
-                    print(initial_design.tolist())
-                    base_design = initial_design.tolist()
-                    print(base_design, '\n-------------')
-                    number_of_variants = 20
-                    self.init_pop = []
-                    for i in range(len(base_design)): # 7 design parameters
-                        for j in range(number_of_variants+1): # 21 variants interval
-                            self.init_pop.append(initial_design) #<---------------------------ONLY Base Design
-                    for ind, el in enumerate(self.init_pop):
-                        print(ind, el)
-                    return 
-                    # quit()
-
-                # if self.fea_config_dict['run_folder'] == r'run#400/' \
-                #    or self.fea_config_dict['run_folder'] == r'run#180/'\
-                #    or self.fea_config_dict['run_folder'] == r'run#181/'\
-                #    or self.fea_config_dict['run_folder'] == r'run#183/'\
-                #    or self.fea_config_dict['run_folder'] == r'run#184/'\
-                #    or self.fea_config_dict['run_folder'] == r'run#185/'\
-                #    or self.fea_config_dict['run_folder'] == r'run#186/'\
-                #    or self.fea_config_dict['run_folder'] == r'run#187/'\
-                #    or self.fea_config_dict['run_folder'] == r'run#188/'\
-                #    or self.fea_config_dict['run_folder'] == r'run#189/':
-
                 initial_design_denorm = np.array( utility.Pyrhonen_design(self.im).design_parameters_denorm )
                 initial_design = (initial_design_denorm - min_b) / diff
                 print(initial_design_denorm.tolist())
@@ -356,28 +287,44 @@ class swarm(object):
         self.app = None
         self.jmag_control_state = False # indicating that by default, the jmag designer is already opened but the project file is not yet loaded or created.
 
+        # set self.bool_run_in_JMAG_Script_Editor
+        self.designer_init()
+
         logger = logging.getLogger(__name__)
         logger.info('Swarm is generated.')
+
+
+        # 这是一个补丁，所以很 low 很 silly。
+        # 【多加一层保险】，如果上一次优化是在运行完 wait_greedy_search 之后中断的，那么在 femm_temp/ 下就会有 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 存在。
+        # 但是，从第二代以后开始，所有在gen#文件里的个体都是随机生成的，也就是说，每次中断重新跑，这一代的这个个体都是新的 trial_denorm，所以旧的 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 必须被删除。
+        # 但是下面这样的代码是有问题，因为正常情况到了这里，self.check_csv_results(tran2tss_study_name, returnBoolean=True) 永远都应该返回 False。
+        tempID = self.im.ID + '-' + str(self.number_current_generation+1) + '-' + str(self.size_ongoing_living) # 比如说index是7，意味着已经有"8"个个体被评估过了，那么我们要检查第9个，其index为"8"。
+        original_study_name = "ID%s" % (tempID) + "Freq"    
+        tran2tss_study_name = "ID%s" % (tempID) + 'Tran2TSS'
+        output_file_path = self.dir_csv_output_folder + 'femm_temp/' + original_study_name + '.csv'
+        if os.path.exists(output_file_path) and not self.check_csv_results(tran2tss_study_name, returnBoolean=True):
+            os.remove(output_file_path)
+            if os.path.exists(output_file_path[:-4]+'.fem'):
+                os.remove(output_file_path[:-4]+'.fem')
+            print('Removed:', output_file_path)
+            print('Removed:', output_file_path[:-4]+'.fem')
 
     def designer_init(self):
         try:
             if self.app is None:
-                import designer
-                self.app = designer.GetApplication() 
-        except:
-            if False:
                 # run inside JMAG Designer 
                 import designer
                 self.app = designer.GetApplication() 
+                self.bool_run_in_JMAG_Script_Editor = True
+        except:
+            import win32com.client
+            self.app = win32com.client.Dispatch('designer.Application.171')
+            if self.fea_config_dict['designer.Show'] == True:
+                self.app.Show()
             else:
-                import win32com.client
-                self.app = win32com.client.Dispatch('designer.Application.171')
-                if self.fea_config_dict['designer.Show'] == True:
-                    self.app.Show()
-                else:
-                    self.app.Hide()
-                # self.app.Quit()
-
+                self.app.Hide()
+            # self.app.Quit()
+            self.bool_run_in_JMAG_Script_Editor = False
 
         def add_steel(self):
             if 'M15' in self.fea_config_dict['Steel']:
@@ -563,6 +510,8 @@ class swarm(object):
 
             return results
 
+
+
         ################################################################
         # Begin from where left: Frequency Study
         ################################################################
@@ -577,7 +526,18 @@ class swarm(object):
             # check for existing results
             self.dir_femm_temp = self.dir_csv_output_folder + 'femm_temp/'
             output_file_path = self.dir_femm_temp + original_study_name + '.csv'
+
+    
             if os.path.exists(output_file_path):
+                # 本来想在这里多加一层保险，如果上一次优化是在运行完 wait_greedy_search 之后中断的，那么在 femm_temp/ 下就会有 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 存在。
+                # 但是，从第二代以后开始，所有在gen#文件里的个体都是随机生成的，也就是说，每次中断重新跑，这一代的这个个体都是新的 trial_denorm，所以旧的 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 必须被删除。
+                # 但是下面这样的代码是有问题，因为正常情况到了这里，self.check_csv_results(tran2tss_study_name, returnBoolean=True) 永远都应该返回 False。
+                # if not self.check_csv_results(tran2tss_study_name, returnBoolean=True):
+                #     os.remove(output_file_path)
+                #     if os.path.exists(output_file_path[-4:]+'.fem'):
+                #         os.remove(output_file_path[-4:]+'.fem')
+                # 正确的做法是在刚刚初始化 pop 的时候检查！
+
                 with open(output_file_path, 'r') as f:
                     data = f.readlines()
 
@@ -600,9 +560,11 @@ class swarm(object):
                 femm_tic = clock_time()
                 self.femm_solver.__init__(im_variant, flag_read_from_jmag=False, freq=2.23)
                 if im_variant.DriveW_poles == 2:
-                    self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, fraction=1 ) # 转子导条必须形成通路
+                    self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
+                                                                        bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=1) # 转子导条必须形成通路
                 else:
-                    self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, fraction=2 )
+                    self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
+                                                                        bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=2)
 
                 # this is the only if path that no slip_freq_breakdown_torque is assigned!
                 # this is the only if path that no slip_freq_breakdown_torque is assigned!
@@ -624,7 +586,7 @@ class swarm(object):
         # Begin from where left: Transient Study
         ################################################################
         tran2tss_study_name = im_variant.individual_name + 'Tran2TSS'
-        bool_skip_transient = False
+        # bool_skip_transient = False
 
         # check whether or not the transient problem is already solved.
         if not self.check_csv_results(tran2tss_study_name, returnBoolean=True):
@@ -642,17 +604,35 @@ class swarm(object):
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             # add or duplicate study for transient FEA denpending on jmag_run_list
             if self.fea_config_dict['jmag_run_list'][0] == 0:
-                if slip_freq_breakdown_torque is None:
-                    # wait for femm to finish, and get your slip of breakdown
-                    slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
-                else:
-                    # femm already has results and has assign value to slip_freq_breakdown_torque
-                    pass
+                if False: # this will wait for breakdown slip before setting up the pre-processor
+                    if slip_freq_breakdown_torque is None:
+                        # wait for femm to finish, and get your slip of breakdown
+                        slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
+                    else:
+                        # femm already has results and has assign value to slip_freq_breakdown_torque
+                        pass
 
-                # FEMM+JMAG
-                im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
-                study = im_variant.add_TranFEAwi2TSS_study( slip_freq_breakdown_torque, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
-                self.mesh_study(im_variant, app, model, study)
+                    # FEMM+JMAG
+                    im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
+                    study = im_variant.add_TranFEAwi2TSS_study( slip_freq_breakdown_torque, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
+                    self.mesh_study(im_variant, app, model, study)
+                else:
+
+                    # FEMM+JMAG
+                    study = im_variant.add_TranFEAwi2TSS_study( 50.0, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
+                    self.mesh_study(im_variant, app, model, study)
+
+                    if slip_freq_breakdown_torque is None:
+                        # wait for femm to finish, and get your slip of breakdown
+                        slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
+                    else:
+                        # femm already has results and has assign value to slip_freq_breakdown_torque
+                        pass
+                    # Now we have the slip, set it up!
+                    im_variant.update_mechanical_parameters(slip_freq_breakdown_torque) # do this for records only
+                    if im_variant.the_slip != slip_freq_breakdown_torque / im_variant.DriveW_Freq:
+                        raise Exception('Check update_mechanical_parameters().')
+                    study.GetDesignTable().GetEquation("slip").SetExpression("%g"%(im_variant.the_slip))
                 self.run_study(im_variant, app, study, clock_time())
             else:
                 # JMAG+JMAG
@@ -947,7 +927,7 @@ class swarm(object):
                     # get fitness value for the trial individual 
                     f = fobj(j, trial_denorm)
 
-                    # write ongoing results
+                    # write ongoing results (gen代表新随机生成的用于比较的这一代，而liv代表物竞天择以后活下来的这一代。)
                     self.write_individual_data(trial_denorm) # we write individual data after fitness is evaluated in order to make sure the two files are synchronized
                                                              # this means that the pop data file on disk does not necessarily correspondes to the current generation of pop.
                     self.write_individual_fitness(f)
@@ -1040,8 +1020,10 @@ class swarm(object):
             self.ongoing_pop_denorm        = np.array(last_generation_pop_denorm)
             self.ongoing_living_pop_denorm = last_living_pop_denorm
 
-        msg += 'ongoing-gen:------\n\t' + '\n\t'.join([str(el) for el in self.ongoing_pop_denorm.tolist()]) + '\n'
-        msg += 'ongoing-liv:------\n\t' + '\n\t'.join([str(el) for el in self.ongoing_living_pop_denorm]) + '\n'
+        size_ongoing_last   = len(self.ongoing_pop_denorm       )
+        self.size_ongoing_living = len(self.ongoing_living_pop_denorm)
+        msg += 'ongoing-gen(%d):------\n\t'%(size_ongoing_last)        + '\n\t'.join([str(el) for el in self.ongoing_pop_denorm.tolist()]) + '\n'
+        msg += 'ongoing-liv(%d):------\n\t'%(self.size_ongoing_living) + '\n\t'.join([str(el) for el in self.ongoing_living_pop_denorm]) + '\n'
 
         if size_living < size_last:
             raise Exception('size_living < size_last')
@@ -3721,7 +3703,7 @@ class bearingless_induction_motor_design(object):
                 phase_shift_beari = -120 if CommutatingSequenceB == 1 else 120
 
                 func = app.FunctionFactory().Composite()            
-                f1 = app.FunctionFactory().Sin(ampD, freq, 0*phase_shift_drive)
+                f1 = app.FunctionFactory().Sin(ampD, freq, 0*phase_shift_drive) # "freq" variable cannot be used here. So pay extra attension here when you create new case of a different freq.
                 f2 = app.FunctionFactory().Sin(ampB, freq, 0*phase_shift_beari)
                 func.AddFunction(f1)
                 func.AddFunction(f2)
@@ -3896,7 +3878,8 @@ class bearingless_induction_motor_design(object):
             study.GetCondition("CdctCon_Group").AddSubCondition("CdctCon %d"%(natural_ind), ind)
 
         # Link Conductors to Circuit
-        if 'PS' in self.model_name_prefix: # Pole-Specific Rotor Winding
+        # if 'PS' in self.model_name_prefix: # Pole-Specific Rotor Winding
+        if self.fea_config_dict['PoleSpecific'] == True:
             def place_conductor(x,y,name):
                 study.GetCircuit().CreateComponent("FEMConductor", name)
                 study.GetCircuit().CreateInstance(name, x, y)
@@ -3991,7 +3974,7 @@ class bearingless_induction_motor_design(object):
         # SS-ATA
         study.GetStudyProperties().SetValue("ApproximateTransientAnalysis", 1) # psuedo steady state freq is for PWM drive to use
         study.GetStudyProperties().SetValue("SpecifySlip", 1)
-        study.GetStudyProperties().SetValue("Slip", self.the_slip)
+        study.GetStudyProperties().SetValue("Slip", self.the_slip) # this will be overwritted later with "slip"
         study.GetStudyProperties().SetValue("OutputSteadyResultAs1stStep", 0)
         # study.GetStudyProperties().SetValue(u"TimePeriodicType", 2) # This is for TP-EEC but is not effective
 
@@ -4111,16 +4094,17 @@ class bearingless_induction_motor_design(object):
 
         # speed, freq, slip
         study.GetCondition("RotCon").SetValue("AngularVelocity", 'speed')
-        app.ShowCircuitGrid(True)
-        study.GetCircuit().GetComponent("CS4").SetValue("Frequency", "freq")
-        study.GetCircuit().GetComponent("CS2").SetValue("Frequency", "freq")
+        if self.fea_config_dict['DPNV']==False:
+            app.ShowCircuitGrid(True)
+            study.GetCircuit().GetComponent("CS4").SetValue("Frequency", "freq")
+            study.GetCircuit().GetComponent("CS2").SetValue("Frequency", "freq")
 
         # max_nonlinear_iteration = 50
         # study.GetStudyProperties().SetValue(u"NonlinearMaxIteration", max_nonlinear_iteration)
         study.GetStudyProperties().SetValue("ApproximateTransientAnalysis", 1) # psuedo steady state freq is for PWM drive to use
         study.GetStudyProperties().SetValue("SpecifySlip", 1)
         study.GetStudyProperties().SetValue("OutputSteadyResultAs1stStep", 0)
-        study.GetStudyProperties().SetValue("Slip", "slip")
+        study.GetStudyProperties().SetValue("Slip", "slip") # overwrite with variables
 
         # # add other excitation frequencies other than 500 Hz as cases
         # for case_no, DriveW_Freq in enumerate([50.0, slip_freq_breakdown_torque]):
