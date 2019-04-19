@@ -124,6 +124,7 @@ class desgin_specification(object):
                     ps = None,
                     mec_power = None,
                     ExcitationFreq = None,
+                    ExcitationFreqSimulated = None,
                     VoltageRating = None,
                     TangentialStress = None,
                     Qs = None,
@@ -154,6 +155,7 @@ class desgin_specification(object):
         self.ps = ps
         self.mec_power = mec_power
         self.ExcitationFreq = ExcitationFreq
+        self.ExcitationFreqSimulated = ExcitationFreqSimulated
         self.VoltageRating = VoltageRating
         self.TangentialStress = TangentialStress
         self.Qs = Qs
@@ -268,7 +270,8 @@ class desgin_specification(object):
         print('\nTorque winding poles: $2p=%d$' %(2*self.p), file=fname)
         print('\nSuspension winding poles: $2p_s=%d$' %(2*self.ps), file=fname)
         print('\nPower: $P_{mec}=%g$ kW' %(self.mec_power*1e-3), file=fname)
-        print('\nRated frequency: %g Hz' % (self.ExcitationFreq), file=fname)
+        print('\nMaximum frequency: %g Hz' % (self.ExcitationFreq), file=fname)
+        print('\nRated frequency (for FEA study): %g Hz' % (self.ExcitationFreqSimulated), file=fname)
         print('\nVoltage rating: %g Vrms (line-to-line, Wye-Connect)' % self.VoltageRating, file=fname)
         print('\nTangential stress: $\\sigma_{\\rm tan}=%g$ Pa' % self.TangentialStress, file=fname)
         print('\nRotor speed: $n_{mec}=%g$ r/min' % speed_rpm, file=fname)
@@ -1236,7 +1239,7 @@ class desgin_specification(object):
         DriveW_poles=self.p*2
         DriveW_turns=no_conductors_per_slot_zQ
         DriveW_CurrentAmp = stator_phase_current_rms * sqrt(2); 
-        DriveW_Freq = self.ExcitationFreq
+        DriveW_Freq = self.ExcitationFreqSimulated
         if 'Cu' not in self.Coil:
             raise Exception('Not implemented error.')
         else:

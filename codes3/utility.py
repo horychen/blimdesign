@@ -1,8 +1,100 @@
 # coding:u8
 import os
 import datetime
-import operator
+import itertools
 
+def communicate_database(spec):
+    try:
+        import mysql.connector
+    except:
+        print('MySQL python connector is not installed. Skip database communication.')
+    else:
+        db = mysql.connector.connect(
+            host ='localhost',
+            user ='root',
+            passwd ='password123',
+            database ='blimuw',
+            )
+        cursor = db.cursor()
+        cursor.execute('SELECT name FROM designs')
+        result = cursor.fetchall()
+        if spec.build_name() not in [row[0] for row in result]:
+            def sql_add_one_record(spec):
+                # Add one record
+                sql = "INSERT INTO designs " \
+                    + "(" \
+                        + "name, " \
+                            + "PS_or_SC, " \
+                            + "DPNV_or_SEPA, " \
+                            + "p, " \
+                            + "ps, " \
+                            + "MecPow, " \
+                            + "Freq, " \
+                            + "Voltage, " \
+                            + "TanStress, " \
+                            + "Qs, " \
+                            + "Qr, " \
+                            + "Js, " \
+                            + "Jr, " \
+                            + "Coil, " \
+                            + "kCu, " \
+                            + "Condct, " \
+                            + "kAl, " \
+                            + "Temp, " \
+                            + "Steel, " \
+                            + "kFe, " \
+                            + "Bds, " \
+                            + "Bdr, " \
+                            + "Bys, " \
+                            + "Byr, " \
+                            + "G_b, " \
+                            + "G_eta, " \
+                            + "G_PF, " \
+                            + "debug, " \
+                            + "Sskew, " \
+                            + "Rskew, " \
+                            + "Pitch " \
+                    + ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                record = (  spec.build_name(), 
+                            'PS' if spec.PS_or_SC else 'SC',
+                            'DPNV' if spec.DPNV_or_SEPA else 'SEPA',
+                            spec.p,
+                            spec.ps,
+                            spec.mec_power,
+                            spec.ExcitationFreq,
+                            spec.VoltageRating,
+                            spec.TangentialStress,
+                            spec.Qs,
+                            spec.Qr,
+                            spec.Js,
+                            spec.Jr,
+                            spec.Coil,
+                            spec.space_factor_kCu,
+                            spec.Conductor,
+                            spec.space_factor_kAl,
+                            spec.Temperature,
+                            spec.Steel,
+                            spec.lamination_stacking_factor_kFe,
+                            spec.stator_tooth_flux_density_B_ds,
+                            spec.rotor_tooth_flux_density_B_dr,
+                            spec.stator_yoke_flux_density_Bys,
+                            spec.rotor_yoke_flux_density_Byr,
+                            spec.guess_air_gap_flux_density,
+                            spec.guess_efficiency,
+                            spec.guess_power_factor,
+                            spec.debug_or_release,
+                            spec.bool_skew_stator,
+                            spec.bool_skew_rotor,
+                            spec.winding_layout.coil_pitch
+                        )
+                cursor.execute(sql, record)
+                db.commit()
+            sql_add_one_record(spec)
+            'A new record is added to table named designs.'
+        else:
+            'Record already exists, skip database communication.'
+
+import operator
 def get_index_and_max(the_list):
     return max(enumerate(the_list), key=operator.itemgetter(1))
     # index, max_value
@@ -269,9 +361,9 @@ def add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger):
     with open(sw.get_gen_file(0), 'w') as f:
         f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.init_pop_denorm)) # convert 2d array to string
     logger.info('Initial design from Pyrhonen09 is added to the first generation of pop (i.e., gen#0000ind#0000).')
-    print('Before:', before)
-    print('After:', '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.init_pop_denorm))
-    quit()
+    # print('Before:', before)
+    # print('After:', '\n'.join(','.join('%.16f'%(x) for x in y) for y in sw.init_pop_denorm))
+    # quit()
 
 from smtplib import SMTP
 def send_notification(text='Hello'):
@@ -1459,7 +1551,6 @@ class SwarmDataAnalyzer(object):
         fig.tight_layout()
         show()
 
-
     def my_scatter_plot(self, x, y, O, fig=None, ax=None, s=15, marker='.', index_list=None): # index_list is for filtered case
         O1, O2 = None, None
         # O is a copy of your list rather than array or the adress of the list
@@ -1510,7 +1601,6 @@ class SwarmDataAnalyzer(object):
             ax.legend((handle_best,), ('Best',))
 
         return scatter_handle
-        
 
     def pareto_plot_eta_vs_stack_legnth(self, fig, ax, marker='.', bool_filtered=True):
         ''' Pareto Plot for efficiency v.s. statck length @ rated power '''
@@ -1543,12 +1633,12 @@ class SwarmDataAnalyzer(object):
 
             return l_rated_stack_length, l_rated_total_loss
 
-        # a, b = get_rated_values([torque_average], [total_loss])
-        # rated_stack_length = a[0]
-        # rated_total_loss = b[0]
-        # print('stack_length=', stack_length, 'mm, rated_stack_length=', rated_stack_length, 'mm')
-        # print('total_loss=', total_loss, 'W, rated_total_loss=', rated_total_loss, 'W')
-        # xy_ref = (rated_stack_length, 1 - rated_total_loss/self.mec_power)
+            # a, b = get_rated_values([torque_average], [total_loss])
+            # rated_stack_length = a[0]
+            # rated_total_loss = b[0]
+            # print('stack_length=', stack_length, 'mm, rated_stack_length=', rated_stack_length, 'mm')
+            # print('total_loss=', total_loss, 'W, rated_total_loss=', rated_total_loss, 'W')
+            # xy_ref = (rated_stack_length, 1 - rated_total_loss/self.mec_power)
 
         if not bool_filtered: # no filter
             x, y = get_rated_values(list(self.get_certain_objective_function(2)), 
@@ -1718,37 +1808,377 @@ class SwarmDataAnalyzer(object):
             quit()   
 
     def sensitivity_bar_charts(self):
-        pass
+        # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
+        number_of_variant = 20 + 1
+
+        from pylab import subplots
+        fig, axeses = subplots(4, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+        ax_list = []
+        for i in range(4):
+            ax_list.extend(axeses[i].tolist())
+        # O2_prototype_ax.plot(O2_prototype_data[1], 'o-', lw=0.75, alpha=0.5, label=r'$\delta$'         )
+        # O2_prototype_ax.plot(O2_prototype_data[0], 'v-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,s}$')
+        # O2_prototype_ax.plot(O2_prototype_data[3], 's-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,r}$')
+        # O2_prototype_ax.plot(O2_prototype_data[5], '^-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,s}$')
+        # O2_prototype_ax.plot(O2_prototype_data[2], 'd-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,r}$')
+        # O2_prototype_ax.plot(O2_prototype_data[6], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
+        # O2_prototype_ax.plot(O2_prototype_data[4], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
+
+        # Extract data
+        param_list = ['stator_tooth_width_b_ds',
+        'air_gap_length_delta',
+        'Width_RotorSlotOpen ',
+        'rotor_tooth_width_b_dr',
+        'Length_HeadNeckRotorSlot',
+        'Angle_StatorSlotOpen',
+        'Width_StatorTeethHeadThickness']
+        y_label_list = ['PF', r'$\eta$ [100%]', r'$T_{em} [N]$', r'$T_{rip}$ [100%]', r'$|F|$ [N]', r'$E_m$ [100%]', r'$E_a$ [deg]', 
+                        r'$P_{Cu,s,JMAG}$', r'$P_{Cu,r,JMAG}$', r'$P_{Fe}$ [W]', r'$P_{eddy}$', r'$P_{hyst}$', r'$P_{Cu,s,FEMM}$', r'$P_{Cu,r,FEMM}$', 
+                        r'Windage loss', r'Total loss']
+        # print next(self.get_list_objective_function())
+        data_max = []
+        data_min = []
+        eta_at_50kW_max = []
+        eta_at_50kW_min = []
+        O1_max   = []
+        O1_min   = []
+        for ind, i in enumerate(list(range(7))+[15]):
+            print('\n-----------', y_label_list[i])
+            l = list(self.get_certain_objective_function(i))
+            y = l
+            print('ind=', ind, 'i=', i, 'len(y)=', len(y))
+
+            data_max.append([])
+            data_min.append([])
+
+            for j in range(int(len(y)/number_of_variant)): # iterate design parameters
+                y_vs_design_parameter = y[j*number_of_variant:(j+1)*number_of_variant]
+
+                try:
+                    # if j == 6:
+                    ax_list[ind].plot(y_vs_design_parameter, 'o-', lw=0.75, label=str(j)+' '+param_list[j], alpha=0.5)
+                except IndexError as e:
+                    print('Check the length of y should be 7*21=147, or else you should remove the redundant results in swarm_data.txt (they are produced because of the interrupted/resumed script run.)')
+                    raise e
+                print('\tj=', j, param_list[j], '\t\t Max-Min:', max(y_vs_design_parameter) - min(y_vs_design_parameter))
+
+                data_max[ind].append(max(y_vs_design_parameter))
+                data_min[ind].append(min(y_vs_design_parameter))            
+
+            if i==1:
+                ax_list[ind].legend()
+            ax_list[ind].grid()
+            ax_list[ind].set_ylabel(y_label_list[i])
+
+        for ind, el in enumerate(data_max):
+            print(ind, 'Max', el)
+        print()
+        for ind, el in enumerate(data_min):
+            print(ind, 'Min', el)
+
+        if self.reference_design is not None:
+            print('-------------------- Here goes the reference design:')
+            for el in self.reference_design[1:]:
+                print(el, end=' ')
+            self.reference_data = [float(el) for el in self.reference_design[3].split(',')]
+            O2_ref = fobj_scalar(self.reference_data[2],
+                                 self.reference_data[4],
+                                 self.reference_data[3],
+                                 self.reference_data[5],
+                                 self.reference_data[6],
+                                 self.reference_data[15],
+                                 weights=use_weights('O2'), rotor_volume=self.rotor_volume, rotor_weight=self.rotor_weight)
+            O1_ref = fobj_scalar(self.reference_data[2],
+                                 self.reference_data[4],
+                                 self.reference_data[3],
+                                 self.reference_data[5],
+                                 self.reference_data[6],
+                                 self.reference_data[15],
+                                 weights=use_weights('O1'), rotor_volume=self.rotor_volume, rotor_weight=self.rotor_weight)
+        else:
+            raise Exception('self.reference_design is None.')
+
+        print('Objective function 1')
+        O1 = fobj_list( list(self.get_certain_objective_function(2)), 
+                        list(self.get_certain_objective_function(4)), 
+                        list(self.get_certain_objective_function(3)), 
+                        list(self.get_certain_objective_function(5)), 
+                        list(self.get_certain_objective_function(6)), 
+                        np.array(list(self.get_certain_objective_function(9))) + np.array(list(self.get_certain_objective_function(12))) + np.array(list(self.get_certain_objective_function(13))),
+                        weights=use_weights('O1'), rotor_volume=self.rotor_volume, rotor_weight=self.rotor_weight)
+        O1_max = []
+        O1_min = []
+        from pylab import figure
+        O1_ax  = figure().gca()
+        O2_prototype_data = []
+        for j in range(int(len(O1)/number_of_variant)): # iterate design parameters
+            O1_vs_design_parameter = O1[j*number_of_variant:(j+1)*number_of_variant]
+            O2_prototype_data.append(O1_vs_design_parameter)
+
+            O1_ax.plot(O1_vs_design_parameter, label=str(j)+' '+param_list[j], alpha=0.5)
+            print('\t', j, param_list[j], '\t\t', max(O1_vs_design_parameter) - min(O1_vs_design_parameter), '\t\t', end=' ')
+
+            # narrow bounds (refine bounds)
+            print([ind for ind, el in enumerate(O1_vs_design_parameter) if el < O1_ref*1.005]) #'<- to derive new original_bounds.'
+
+            O1_max.append(max(O1_vs_design_parameter))
+            O1_min.append(min(O1_vs_design_parameter))            
+        O1_ax.legend()
+        O1_ax.grid()
+        O1_ax.set_ylabel('O1 [1]')
+        O1_ax.set_xlabel('Count of design variants')
+
+        fig_prototype = figure(500, figsize=(10, 5), facecolor='w', edgecolor='k')
+        O2_prototype_ax = fig_prototype.gca()
+        O2_prototype_ax.plot(list(range(-1, 22)), O1_ref*np.ones(23), 'k--', label='reference design')
+        O2_prototype_ax.plot(O2_prototype_data[1], 'o-', lw=0.75, alpha=0.5, label=r'$\delta$'         )
+        O2_prototype_ax.plot(O2_prototype_data[0], 'v-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,s}$')
+        O2_prototype_ax.plot(O2_prototype_data[3], 's-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,r}$')
+        O2_prototype_ax.plot(O2_prototype_data[5], '^-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,s}$')
+        O2_prototype_ax.plot(O2_prototype_data[2], 'd-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,r}$')
+        O2_prototype_ax.plot(O2_prototype_data[6], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
+        O2_prototype_ax.plot(O2_prototype_data[4], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
+        O2_prototype_ax.legend()
+        O2_prototype_ax.set_ylabel('$O_2(x)$ [1]')
+
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # O2
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        print('Objective function 2')
+        O2 = fobj_list( list(self.get_certain_objective_function(2)), 
+                        list(self.get_certain_objective_function(4)), 
+                        list(self.get_certain_objective_function(3)), 
+                        list(self.get_certain_objective_function(5)), 
+                        list(self.get_certain_objective_function(6)), 
+                        np.array(list(self.get_certain_objective_function(9))) + np.array(list(self.get_certain_objective_function(12))) + np.array(list(self.get_certain_objective_function(13))),
+                        weights=use_weights('O2'), rotor_volume=self.rotor_volume, rotor_weight=self.rotor_weight )
+        O2_max = []
+        O2_min = []
+        O2_ax  = figure().gca()
+        O2_ecce_data = []
+        for j in range(int(len(O2)/number_of_variant)): # iterate design parameters: range(7)
+            O2_vs_design_parameter = O2[j*number_of_variant:(j+1)*number_of_variant]
+            O2_ecce_data.append(O2_vs_design_parameter)
+
+            # narrow bounds (refine bounds)
+            O2_ax.plot(O2_vs_design_parameter, 'o-', label=str(j)+' '+param_list[j], alpha=0.5)
+            print('\t', j, param_list[j], '\t\t', max(O2_vs_design_parameter) - min(O2_vs_design_parameter), '\t\t', end=' ')
+            print([ind for ind, el in enumerate(O2_vs_design_parameter) if el < O2_ref*1.005]) #'<- to derive new original_bounds.'
+
+            O2_max.append(max(O2_vs_design_parameter))
+            O2_min.append(min(O2_vs_design_parameter))            
+        O2_ax.legend()
+        O2_ax.grid()
+        O2_ax.set_ylabel('O2 [1]')
+        O2_ax.set_xlabel('Count of design variants')
+
+        # for ecce digest
+        fig_ecce = figure(figsize=(10, 5), facecolor='w', edgecolor='k')
+        O2_ecce_ax = fig_ecce.gca()
+        O2_ecce_ax.plot(list(range(-1, 22)), O2_ref*np.ones(23), 'k--', label='reference design')
+        O2_ecce_ax.plot(O2_ecce_data[1], 'o-', lw=0.75, alpha=0.5, label=r'$\delta$'         )
+        O2_ecce_ax.plot(O2_ecce_data[0], 'v-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,s}$')
+        O2_ecce_ax.plot(O2_ecce_data[3], 's-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,r}$')
+        O2_ecce_ax.plot(O2_ecce_data[5], '^-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,s}$')
+        O2_ecce_ax.plot(O2_ecce_data[2], 'd-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,r}$')
+        O2_ecce_ax.plot(O2_ecce_data[6], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
+        O2_ecce_ax.plot(O2_ecce_data[4], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
+
+        myfontsize = 12.5
+        from pylab import plt
+        plt.rcParams.update({'font.size': myfontsize})
+
+
+        # Reference candidate design
+        ref = np.zeros(8)
+            # ref[0] = 0.635489                                   # PF
+            # ref[1] = 0.963698                                   # eta
+            # ref[1] = efficiency_at_50kW(1817.22+216.216+224.706)# eta@50kW
+
+        if self.reference_design is not None:
+            list_plotting_weights = [8, 3, self.required_torque, 0.1, self.rotor_weight, 0.2, 10, 2500]
+            ref[0] = O2_ref                  / list_plotting_weights[0] 
+            ref[1] = O1_ref                  / list_plotting_weights[1] 
+            ref[2] = self.reference_data[2]  / list_plotting_weights[2]  # 100%
+            ref[3] = self.reference_data[3]  / list_plotting_weights[3]  # 100%
+            ref[4] = self.reference_data[4]  / list_plotting_weights[4]  # 100% = FRW
+            ref[5] = self.reference_data[5]  / list_plotting_weights[5]  # 100%
+            ref[6] = self.reference_data[6]  / list_plotting_weights[6]  # deg
+            ref[7] = self.reference_data[15] / list_plotting_weights[7]  # W
+
+        O1_ax.plot(list(range(-1, 22)), O1_ref*np.ones(23), 'k--')
+        O2_ax.plot(list(range(-1, 22)), O2_ref*np.ones(23), 'k--')
+        O2_ecce_ax.legend()
+        O2_ecce_ax.grid()
+        O2_ecce_ax.set_xticks(list(range(21)))
+        O2_ecce_ax.annotate('Lower bound', xytext=(0.5, 5.5), xy=(0, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
+        O2_ecce_ax.annotate('Upper bound', xytext=(18.0, 5.5),  xy=(20, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
+        O2_ecce_ax.set_xlim((-0.5,20.5))
+        O2_ecce_ax.set_ylim((0,14)) # 4,14
+        O2_ecce_ax.set_xlabel(r'Number of design variant', fontsize=myfontsize)
+        O2_ecce_ax.set_ylabel(r'$O_2(x)$ [1]', fontsize=myfontsize)
+        fig_ecce.tight_layout()
+        # fig_ecce.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\O2_vs_params.png', dpi=150)
+        plt.show()
+        # quit() ###################################
+
+
+        # Maximum
+        data_max = np.array(data_max)
+        O1_max   = np.array(O1_max)
+        O2_max   = np.array(O2_max)
+            # data_max[0] = (data_max[0])                   # PF
+            # data_max[1] = (data_max[1])                   # eta
+            # data_max[1] = efficiency_at_50kW(data_max[7]) # eta@50kW # should use data_min[7] because less loss, higher efficiency
+        data_max[0] = O2_max       / list_plotting_weights[0]  
+        data_max[1] = O1_max       / list_plotting_weights[1]  
+        data_max[2] = (data_max[2])/ list_plotting_weights[2]  # 100%
+        data_max[3] = (data_max[3])/ list_plotting_weights[3]  # 100%
+        data_max[4] = (data_max[4])/ list_plotting_weights[4]  # 100% = FRW
+        data_max[5] = (data_max[5])/ list_plotting_weights[5]  # 100%
+        data_max[6] = (data_max[6])/ list_plotting_weights[6]  # deg
+        data_max[7] = (data_max[7])/ list_plotting_weights[7]  # W
+        y_max_vs_design_parameter_0 = [el[0] for el in data_max]
+        y_max_vs_design_parameter_1 = [el[1] for el in data_max]
+        y_max_vs_design_parameter_2 = [el[2] for el in data_max]
+        y_max_vs_design_parameter_3 = [el[3] for el in data_max]
+        y_max_vs_design_parameter_4 = [el[4] for el in data_max]
+        y_max_vs_design_parameter_5 = [el[5] for el in data_max]
+        y_max_vs_design_parameter_6 = [el[6] for el in data_max]
+
+        # Minimum
+        data_min = np.array(data_min)
+        O1_min   = np.array(O1_min)
+        O2_min   = np.array(O2_min)
+            # data_min[0] = (data_min[0])                    # PF
+            # data_min[1] = (data_min[1])                    # eta
+            # data_min[1] = efficiency_at_50kW(data_min[7])  # eta@50kW
+        data_min[0] = O2_min        / list_plotting_weights[0] 
+        data_min[1] = O1_min        / list_plotting_weights[1] 
+        data_min[2] = (data_min[2]) / list_plotting_weights[2] # 100%
+        data_min[3] = (data_min[3]) / list_plotting_weights[3] # 100%
+        data_min[4] = (data_min[4]) / list_plotting_weights[4] # 100% = FRW
+        data_min[5] = (data_min[5]) / list_plotting_weights[5] # 100%
+        data_min[6] = (data_min[6]) / list_plotting_weights[6] # deg
+        data_min[7] = (data_min[7]) / list_plotting_weights[7] # W
+        y_min_vs_design_parameter_0 = [el[0] for el in data_min]
+        y_min_vs_design_parameter_1 = [el[1] for el in data_min]
+        y_min_vs_design_parameter_2 = [el[2] for el in data_min]
+        y_min_vs_design_parameter_3 = [el[3] for el in data_min]
+        y_min_vs_design_parameter_4 = [el[4] for el in data_min]
+        y_min_vs_design_parameter_5 = [el[5] for el in data_min]
+        y_min_vs_design_parameter_6 = [el[6] for el in data_min]
+
+        count = np.arange(len(y_max_vs_design_parameter_0))  # the x locations for the groups
+        width = 1.0  # the width of the bars
+
+        fig, ax = plt.subplots(dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')                                      #  #1034A
+        rects2 = ax.bar(count - 3*width/8, y_min_vs_design_parameter_1, width/8, alpha=0.5, label=r'$\delta$,           Air gap length', color='#6593F5')
+        rects1 = ax.bar(count - 2*width/8, y_min_vs_design_parameter_0, width/8, alpha=0.5, label=r'$b_{\rm tooth,s}$, Stator tooth width', color='#1D2951') # https://digitalsynopsis.com/design/beautiful-color-palettes-combinations-schemes/
+        rects4 = ax.bar(count - 1*width/8, y_min_vs_design_parameter_3, width/8, alpha=0.5, label=r'$b_{\rm tooth,r}$, Rotor tooth width', color='#03396c')
+        rects6 = ax.bar(count + 0*width/8, y_min_vs_design_parameter_5, width/8, alpha=0.5, label=r'$w_{\rm open,s}$, Stator slot open', color='#6497b1')
+        rects3 = ax.bar(count + 1*width/8, y_min_vs_design_parameter_2, width/8, alpha=0.5, label=r'$w_{\rm open,r}$, Rotor slot open',  color='#0E4D92')
+        rects5 = ax.bar(count + 2*width/8, y_min_vs_design_parameter_4, width/8, alpha=0.5, label=r'$h_{\rm head,s}$, Stator head height', color='#005b96')
+        rects7 = ax.bar(count + 3*width/8, y_min_vs_design_parameter_6, width/8, alpha=0.5, label=r'$h_{\rm head,r}$, Rotor head height', color='#b3cde0') 
+        print('ylim=', ax.get_ylim())
+        autolabel(ax, rects1, bias=-0.10)
+        autolabel(ax, rects2, bias=-0.10)
+        autolabel(ax, rects3, bias=-0.10)
+        autolabel(ax, rects4, bias=-0.10)
+        autolabel(ax, rects5, bias=-0.10)
+        autolabel(ax, rects6, bias=-0.10)
+        autolabel(ax, rects7, bias=-0.10)
+        one_one = np.array([1, 1])
+        minus_one_one = np.array([-1, 1])
+        ax.plot(rects6[0].get_x() + 0.5*width*minus_one_one, ref[0]*one_one, 'k--', lw=1.0, alpha=0.6, label='Reference design' )
+        ax.plot(rects6[1].get_x() + 0.5*width*minus_one_one, ref[1]*one_one, 'k--', lw=1.0, alpha=0.6 )
+        ax.plot(rects6[2].get_x() + 0.5*width*minus_one_one, ref[2]*one_one, 'k--', lw=1.0, alpha=0.6 )
+        ax.plot(rects6[3].get_x() + 0.5*width*minus_one_one, ref[3]*one_one, 'k--', lw=1.0, alpha=0.6 )
+        ax.plot(rects6[4].get_x() + 0.5*width*minus_one_one, ref[4]*one_one, 'k--', lw=1.0, alpha=0.6 )
+        ax.plot(rects6[5].get_x() + 0.5*width*minus_one_one, ref[5]*one_one, 'k--', lw=1.0, alpha=0.6 )
+        ax.plot(rects6[6].get_x() + 0.5*width*minus_one_one, ref[6]*one_one, 'k--', lw=1.0, alpha=0.6 )
+        ax.plot(rects6[7].get_x() + 0.5*width*minus_one_one, ref[7]*one_one, 'k--', lw=1.0, alpha=0.6 )
+        ax.legend(loc='upper right') 
+        ax.text(rects6[0].get_x() - 3.5/8*width, ref[0]*1.01, '%.2f'%(ref[0]), ha='center', va='bottom', rotation=90)
+        ax.text(rects6[1].get_x() - 3.5/8*width, ref[1]*1.01, '%.2f'%(ref[1]), ha='center', va='bottom', rotation=90)
+        ax.text(rects6[2].get_x() - 3.5/8*width, ref[2]*1.01, '%.2f'%(ref[2]), ha='center', va='bottom', rotation=90)
+        ax.text(rects6[3].get_x() - 3.5/8*width, ref[3]*1.01, '%.2f'%(ref[3]), ha='center', va='bottom', rotation=90)
+        ax.text(rects6[4].get_x() - 3.5/8*width, ref[4]*1.01, '%.2f'%(ref[4]), ha='center', va='bottom', rotation=90)
+        ax.text(rects6[5].get_x() - 3.5/8*width, ref[5]*1.01, '%.2f'%(ref[5]), ha='center', va='bottom', rotation=90)
+        ax.text(rects6[6].get_x() - 3.5/8*width, ref[6]*1.01, '%.2f'%(ref[6]), ha='center', va='bottom', rotation=90)
+        ax.text(rects6[7].get_x() - 3.5/8*width, ref[7]*1.01, '%.2f'%(ref[7]), ha='center', va='bottom', rotation=90)
+
+        rects1 = ax.bar(count - 2*width/8, y_max_vs_design_parameter_0, width/8, alpha=0.5, label=r'$b_{\rm tooth,s}$', color='#1D2951') # bottom=y_min_vs_design_parameter_0, 
+        rects2 = ax.bar(count - 3*width/8, y_max_vs_design_parameter_1, width/8, alpha=0.5, label=r'$\delta$',          color='#6593F5') # bottom=y_min_vs_design_parameter_1, 
+        rects3 = ax.bar(count + 1*width/8, y_max_vs_design_parameter_2, width/8, alpha=0.5, label=r'$w_{\rm open,r}$',  color='#0E4D92') # bottom=y_min_vs_design_parameter_2, 
+        rects4 = ax.bar(count - 1*width/8, y_max_vs_design_parameter_3, width/8, alpha=0.5, label=r'$b_{\rm tooth,r}$', color='#03396c') # bottom=y_min_vs_design_parameter_3, 
+        rects5 = ax.bar(count + 2*width/8, y_max_vs_design_parameter_4, width/8, alpha=0.5, label=r'$h_{head,s}$',      color='#005b96') # bottom=y_min_vs_design_parameter_4, 
+        rects6 = ax.bar(count + 0*width/8, y_max_vs_design_parameter_5, width/8, alpha=0.5, label=r'$w_{\rm open,s}$',  color='#6497b1') # bottom=y_min_vs_design_parameter_5, 
+        rects7 = ax.bar(count + 3*width/8, y_max_vs_design_parameter_6, width/8, alpha=0.5, label=r'$h_{head,r}$',      color='#b3cde0') # bottom=y_min_vs_design_parameter_6, 
+        autolabel(ax, rects1)
+        autolabel(ax, rects2)
+        autolabel(ax, rects3)
+        autolabel(ax, rects4)
+        autolabel(ax, rects5)
+        autolabel(ax, rects6)
+        autolabel(ax, rects7)
+
+        # Add some text for labels, title and custom x-axis tick labels, etc.
+        ax.set_ylabel('Normalized Objective Functions')
+        ax.set_xticks(count)
+        # ax.set_xticklabels(('Power Factor [100%]', r'$\eta$@$T_{em}$ [100%]', r'$T_{em}$ [15.9 N]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]')))
+        # ax.set_xticklabels(('Power Factor [100%]', r'$O_1$ [3]', r'$T_{em}$ [15.9 N]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]'))
+        ax.set_xticklabels(('$O_2$ [%g]'               %(list_plotting_weights[0]), 
+                            '$O_1$ [%g]'               %(list_plotting_weights[1]), 
+                            '$T_{em}$ [%g Nm]'         %(list_plotting_weights[2]), 
+                            '$T_{rip}$ [%g%%]'         %(list_plotting_weights[3]*100), 
+                            '$|F|$ [%g N]'             %(list_plotting_weights[4]), 
+                            '    $E_m$ [%g%%]'         %(list_plotting_weights[5]*100), 
+                            '      $E_a$ [%g deg]'     %(list_plotting_weights[6]), 
+                            '$P_{\\rm Cu,Fe}$ [%g kW]' %(list_plotting_weights[7]*1e-3) ))
+        ax.grid()
+        fig.tight_layout()
+        # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\sensitivity_results.png', dpi=150)
+
+        plt.show()
+
+    def build_basic_info(self, spec, sw):
+        # Basic information
+        self.speed_rpm         = spec.ExcitationFreq * 60 / spec.p # rpm
+        self.Omega             = self.speed_rpm / 60. * 2*np.pi
+        self.mec_power         = spec.mec_power
+        self.required_torque   = spec.mec_power / self.Omega # Nm
+        self.Radius_OuterRotor = sw.im.Radius_OuterRotor
+        self.stack_length      = sw.im.stack_length
+        self.Qs                = sw.im.Qs
+        self.Qr                = sw.im.Qr
+        self.rotor_volume      = sw.im.get_rotor_volume()
+        self.rotor_weight      = sw.im.get_rotor_weight()
+        self.weights_name      = sw.fea_config_dict['use_weights']
+        self.weights_used      = use_weights(which=sw.fea_config_dict['use_weights'])
+        self.stack_length      = sw.im.stack_length
+        self.stack_length_max  = spec.Stack_Length_Max
+        print('-'*50 + '\nutility.py')
+        print('Qs=%d, rotor_volume=%g'%(self.Qs, self.rotor_volume), 'm^3')
+        print('Qr=%d, rotor_weight=%g'%(self.Qr, self.rotor_weight), 'N')
+        # O1_weights = use_weights(which='O1') # [ 1, 0.1,   1, 0.1, 0.1,   0 ]
+        # O2_weights = use_weights(which='O2') # [ 1, 1.0,   1, 1.0, 1.0,   0 ]
 
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Post-processing
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 
-def build_Pareto_plot(spec, sw, material_density_rho, which_weight):
+def build_sensitivity_bar_charts(spec, sw):
+    run_integer = int(sw.fea_config_dict['run_folder'][4:-1])
+    swda = SwarmDataAnalyzer(run_integer=run_integer, bool_sensitivity_analysis=True) 
+    swda.build_basic_info(spec, sw)
+    swda.sensitivity_bar_charts()
+
+def build_Pareto_plot(spec, sw):
     run_integer = int(sw.fea_config_dict['run_folder'][4:-1])
     swda = SwarmDataAnalyzer(run_integer=run_integer, bool_sensitivity_analysis=False) 
-
-    # Basic information
-    swda.speed_rpm         = spec.ExcitationFreq * 60 / spec.p # rpm
-    swda.Omega             = swda.speed_rpm / 60. * 2*np.pi
-    swda.mec_power         = spec.mec_power
-    swda.required_torque   = spec.mec_power / swda.Omega # Nm
-    swda.Radius_OuterRotor = sw.im.Radius_OuterRotor
-    swda.stack_length      = sw.im.stack_length
-    swda.Qs                = sw.im.Qs
-    swda.Qr                = sw.im.Qr
-    swda.rotor_volume      = sw.im.get_rotor_volume()
-    swda.rotor_weight      = sw.im.get_rotor_weight()
-    swda.weights_name      = sw.fea_config_dict['use_weights']
-    swda.weights_used      = use_weights(which=sw.fea_config_dict['use_weights'])
-    swda.stack_length      = sw.im.stack_length
-    swda.stack_length_max  = spec.Stack_Length_Max
-    print('-'*50 + '\nutility.py')
-    print('Qs=%d, rotor_volume=%g'%(swda.Qs, swda.rotor_volume), 'm^3')
-    print('Qr=%d, rotor_weight=%g'%(swda.Qr, swda.rotor_weight), 'N')
-    # O1_weights = use_weights(which='O1') # [ 1, 0.1,   1, 0.1, 0.1,   0 ]
-    # O2_weights = use_weights(which='O2') # [ 1, 1.0,   1, 1.0, 1.0,   0 ]
+    swda.build_basic_info(spec, sw)
 
     # Plotting the Pareto plot
     from pylab import plt, subplots, show
@@ -1774,530 +2204,7 @@ def build_Pareto_plot(spec, sw, material_density_rho, which_weight):
     # show()
     return swda.best_design_denorm
 
-# Basic information
-if __name__ == '__main__':
-    
-    if False: # 4 pole motor
-        required_torque = 15.9154943092 #Nm
-        Radius_OuterRotor = 47.092753
-        stack_length = 93.200295
-        Omega = 30000 / 60. * 2*np.pi
-        Qr = 32 
 
-    else: # 2 pole motor
-        # # NineSigma
-        # required_torque = 14.8544613552 #Nm
-        # Radius_OuterRotor = 28.8
-        # stack_length = 237.525815777
-        # Omega = 45000 / 60. * 2*np.pi
-        # Qr = 16
-
-        # Prototype OD150
-        required_torque =  18.0858 #Nm
-        Radius_OuterRotor =  31.8107
-        stack_length = 237.044
-        Omega =  52800 / 60. * 2*np.pi
-        Qr = 16
-
-
-    rotor_volume = math.pi*(Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
-    rotor_weight = 9.8 * rotor_volume * 8050 # steel 8,050 kg/m3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
-
-    print('utility.py')
-    print('Qr=%d, rotor_volume='%(Qr), rotor_volume, 'm^3')
-    print('Qr=%d, rotor_weight='%(Qr), rotor_weight, 'N')
-
-    if False: # 4 pole motor
-        # run 115 and 116
-        de_config_dict = {  'original_bounds':[ [ 4.9,   9],#--# stator_tooth_width_b_ds
-                                                [ 0.8,   3],   # air_gap_length_delta
-                                                [5e-1,   3],   # Width_RotorSlotOpen 
-                                                [ 2.7,   5],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-                                                [5e-1,   3],   # Length_HeadNeckRotorSlot
-                                                [   1,  10],   # Angle_StatorSlotOpen
-                                                [5e-1,   3] ], # Width_StatorTeethHeadThickness
-                            'mut':        0.8,
-                            'crossp':     0.7,
-                            'popsize':    42, # 50, # 100,
-                            'iterations': 1 } # 148
-        # run 114 and 200
-        # de_config_dict = {  'original_bounds':     [ [   4, 7.2],#--# stator_tooth_width_b_ds
-        #                                     [ 0.8,   4],   # air_gap_length_delta
-        #                                     [5e-1,   3],   # Width_RotorSlotOpen 
-        #                                     [ 2.5, 5.2],#--# rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-        #                                     [5e-1,   3],   # Length_HeadNeckRotorSlot
-        #                                     [   1,  10],   # Angle_StatorSlotOpen
-        #                                     [5e-1,   3] ], # Width_StatorTeethHeadThickness
-        #                     'mut':        0.8,
-        #                     'crossp':     0.7,
-        #                     'popsize':    50, # 50, # 100,
-        #                     'iterations': 2*48 } # 148
-    else: # 2 pole motor denorm: [4.484966, 1.60056, 1.130973, 6.238951254340352, 1.0, 3.0, 1.0]
-        # # run#190
-        # de_config_dict = {  'original_bounds':[ [   3, 5.6],#--# stator_tooth_width_b_ds
-        #                                         [ 0.8,   3],   # air_gap_length_delta
-        #                                         [5e-1,   3],   # Width_RotorSlotOpen 
-        #                                         [ 3.6,5.45],#--# rotor_tooth_width_b_dr 
-        #                                         [5e-1,   3],   # Length_HeadNeckRotorSlot
-        #                                         [   1,  10],   # Angle_StatorSlotOpen
-        #                                         [5e-1,   3] ], # Width_StatorTeethHeadThickness
-        #                     'mut':        0.8,
-        #                     'crossp':     0.7,
-        #                     'popsize':    30, # 21*7,  # 50, # 100,
-        #                     'iterations': 100}
-
-        # run#191 # initial design: 4.48497,1.60056,1.13097,6.23895,1,3,1
-        de_config_dict = {  'original_bounds':[ [ 2.7, 5.8],#--# stator_tooth_width_b_ds
-                                                [ 0.8,   3],   # air_gap_length_delta
-                                                [5e-1,   3],   # Width_RotorSlotOpen 
-                                                [ 3.5, 6.3],#--# rotor_tooth_width_b_dr # It allows for large rotor tooth because we raise Jr and recall this is for less slots---Qr=16.
-                                                [5e-1,   3],   # Length_HeadNeckRotorSlot
-                                                [   1,  10],   # Angle_StatorSlotOpen
-                                                [5e-1,   3] ], # Width_StatorTeethHeadThickness
-                            'mut':        0.8,
-                            'crossp':     0.7,
-                            'popsize':    30, # 21*7,  # 50, # 100,
-                            'iterations': 100}
-
-    
-    O1_weights = use_weights(which='O1') # [ 1, 0.1,   1, 0.1, 0.1,   0 ]
-    O2_weights = use_weights(which='O2') # [ 1, 1.0,   1, 1.0, 1.0,   0 ]
-    # O1_weights = [ 1, 0.1,   1, 0.1, 0.1,   0.1 ]
-    # O2_weights = [ 1, 1.0,   1, 1.0, 1.0,   1 ]
-    # O2_weights = [ 0, 0,   0, 0, 0,   1.0 ]
-
-    # O2_weights = use_weights(which='O3') # run#194
-
-    # In fact, you can run a bounds-check from the swarm_data.txt (whether the initial design falls within given bounds)
-    # In fact, you can run a bounds-check from the swarm_data.txt
-    # In fact, you can run a bounds-check from the swarm_data.txt
-
-    original_bounds = de_config_dict['original_bounds']
-    dimensions = len(original_bounds)
-    min_b, max_b = np.asarray(original_bounds).T 
-    diff = np.fabs(min_b - max_b)
-    # pop_denorm = min_b + pop * diff
-    # pop[j] = (pop_denorm[j] - min_b) / diff
-
-
-# ------------------------------------ Sensitivity Analysis Bar Chart Scripts --- plot sensitivity bar chart, Oj v.s. geometry parameters, 
-if __name__ == '__main__':
-    
-    # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
-    # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
-    if True: # 4 pole motor
-        # swda = SwarmDataAnalyzer(run_integer=113)
-        # swda = SwarmDataAnalyzer(run_integer=200)
-
-        # swda = SwarmDataAnalyzer(run_integer=115)
-        # number_of_variant = 5 + 1
-
-        swda = SwarmDataAnalyzer(run_integer=116)
-        number_of_variant = 20 + 1
-
-        # swda = SwarmDataAnalyzer(run_integer=117)
-        # number_of_variant = 1
-            # gives the reference values:
-            # 0 [0.635489] <-In population.py   [0.65533] <- from initial_design.txt
-            # 1 [0.963698] <-In population.py   [0.967276] <- from initial_design.txt
-            # 2 [19.1197]  <-In population.py  [16.9944] <- from initial_design.txt
-            # 3 [0.0864712]<-In population.py    [0.0782085] <- from initial_design.txt
-            # 4 [96.9263]  <-In population.py  [63.6959] <- from initial_design.txt
-            # 5 [0.104915] <-In population.py   [0.159409] <- from initial_design.txt
-            # 6 [6.53137]  <-In population.py  [10.1256] <- from initial_design.txt
-            # 7 [1817.22]  <-In population.py  [1353.49] <- from initial_design.txt
-
-        swda = SwarmDataAnalyzer(run_integer=502)
-        number_of_variant = 20 + 1
-
-    else: # 2 pole motor
-        # swda = SwarmDataAnalyzer(run_integer=184)
-        # swda = SwarmDataAnalyzer(run_integer=190) # Wrong bounds
-        # swda = SwarmDataAnalyzer(run_integer=191) # Correct bounds
-
-        swda = SwarmDataAnalyzer(run_integer=500) # WEMPEC OD150 Prototype
-        number_of_variant = 20 + 1
-
-    from pylab import subplots
-    fi, axeses = subplots(4, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
-    ax_list = []
-    for i in range(4):
-        ax_list.extend(axeses[i].tolist())
-
-    param_list = ['stator_tooth_width_b_ds',
-    'air_gap_length_delta',
-    'Width_RotorSlotOpen ',
-    'rotor_tooth_width_b_dr',
-    'Length_HeadNeckRotorSlot',
-    'Angle_StatorSlotOpen',
-    'Width_StatorTeethHeadThickness']
-    # [power_factor, efficiency, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle]
-    y_label_list = ['PF', r'$\eta$ [100%]', r'$T_{em} [N]$', r'$T_{rip}$ [100%]', r'$|F|$ [N]', r'$E_m$ [100%]', r'$E_a$ [deg]', r'$P_{Cu,s}$', r'$P_{Cu,r}$', r'$P_{Fe}$ [W]', r'$P_{eddy}$', r'$P_{hyst}$', r'$P_{Cu,s}$', r'$P_{Cu,r}$']
-    # print next(swda.get_list_objective_function())
-    data_max = []
-    data_min = []
-    eta_at_50kW_max = []
-    eta_at_50kW_min = []
-    O1_max   = []
-    O1_min   = []
-    for ind, i in enumerate(list(range(7))+[9]):
-    # for i in range(14):
-        print('\n-----------', y_label_list[i])
-        l = list(swda.get_certain_objective_function(i))
-
-        if i == 9: # replace P_Fe with P_Fe,Cu
-            l_femm_stator_copper = np.array(list(swda.get_certain_objective_function(12)))
-            l_femm_rotor_copper  = np.array(list(swda.get_certain_objective_function(13)))
-            y = np.array(l) + l_femm_stator_copper + l_femm_rotor_copper 
-            # print l, len(l)
-            # print y, len(y)
-            # quit()
-        else:
-            # y = l[:len(l)/2] # 115
-            y = l # 116
-        print('ind=', ind, 'i=', i, 'len(y)=', len(y))
-
-        data_max.append([])
-        data_min.append([])
-
-        for j in range(int(len(y)/number_of_variant)): # iterate design parameters
-            y_vs_design_parameter = y[j*number_of_variant:(j+1)*number_of_variant]
-
-            try:
-                # if j == 6:
-                ax_list[ind].plot(y_vs_design_parameter, label=str(j)+' '+param_list[j], alpha=0.5)
-            except IndexError as e:
-                print('Check the length of y should be 7*21=147, or else you should remove the redundant results in swarm_data.txt (they are produced because of the interrupted/resumed script run.)')
-                raise e
-            print('\tj=', j, param_list[j], '\t\t', max(y_vs_design_parameter) - min(y_vs_design_parameter))
-
-            data_max[ind].append(max(y_vs_design_parameter))
-            data_min[ind].append(min(y_vs_design_parameter))            
-
-        if i==1:
-            ax_list[ind].legend()
-        ax_list[ind].grid()
-        ax_list[ind].set_ylabel(y_label_list[i])
-
-    for ind, el in enumerate(data_max):
-        print(ind, el)
-    print()
-    for ind, el in enumerate(data_min):
-        print(ind, el)
-
-    if swda.reference_design is None:
-        # add reference design results manually as follows:
-        O2_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
-        O1_ref = fobj_scalar(19.1197, 96.9263, 0.0864712, 0.104915, 6.53137, (1817.22+216.216+224.706), weights=O1_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
-    else:
-        print('-------------------- Here goes the reference design:')
-        for el in swda.reference_design[1:]:
-            print(el, end=' ')
-        swda.reference_data = [float(el) for el in swda.reference_design[3].split(',')]
-        O2_ref = fobj_scalar(swda.reference_data[2],
-                             swda.reference_data[4],
-                             swda.reference_data[3],
-                             swda.reference_data[5],
-                             swda.reference_data[6], (swda.reference_data[9]+swda.reference_data[12]+swda.reference_data[13]), 
-                             weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
-        O1_ref = fobj_scalar(swda.reference_data[2],
-                             swda.reference_data[4],
-                             swda.reference_data[3],
-                             swda.reference_data[5],
-                             swda.reference_data[6], (swda.reference_data[9]+swda.reference_data[12]+swda.reference_data[13]), 
-                             weights=O1_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
-
-    print('Objective function 1')
-    O1 = fobj_list( list(swda.get_certain_objective_function(2)), 
-                    list(swda.get_certain_objective_function(4)), 
-                    list(swda.get_certain_objective_function(3)), 
-                    list(swda.get_certain_objective_function(5)), 
-                    list(swda.get_certain_objective_function(6)), 
-                    np.array(list(swda.get_certain_objective_function(9))) + np.array(list(swda.get_certain_objective_function(12))) + np.array(list(swda.get_certain_objective_function(13))),
-                    weights=O1_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight)
-    O1_max = []
-    O1_min = []
-    from pylab import figure
-    O1_ax  = figure().gca()
-    O2_prototype_data = []
-    for j in range(int(len(O1)/number_of_variant)): # iterate design parameters
-        O1_vs_design_parameter = O1[j*number_of_variant:(j+1)*number_of_variant]
-        O2_prototype_data.append(O1_vs_design_parameter)
-
-        O1_ax.plot(O1_vs_design_parameter, label=str(j)+' '+param_list[j], alpha=0.5)
-        print('\t', j, param_list[j], '\t\t', max(O1_vs_design_parameter) - min(O1_vs_design_parameter), '\t\t', end=' ')
-
-        # narrow bounds (refine bounds)
-        print([ind for ind, el in enumerate(O1_vs_design_parameter) if el < O1_ref*1.005]) #'<- to derive new original_bounds.'
-
-        O1_max.append(max(O1_vs_design_parameter))
-        O1_min.append(min(O1_vs_design_parameter))            
-    O1_ax.legend()
-    O1_ax.grid()
-    O1_ax.set_ylabel('O1 [1]')
-    O1_ax.set_xlabel('Count of design variants')
-
-    fig_prototype = figure(500, figsize=(10, 5), facecolor='w', edgecolor='k')
-    O2_prototype_ax = fig_prototype.gca()
-    O2_prototype_ax.plot(list(range(-1, 22)), O1_ref*np.ones(23), 'k--', label='reference design')
-    O2_prototype_ax.plot(O2_prototype_data[1], 'o-', lw=0.75, alpha=0.5, label=r'$\delta$'         )
-    O2_prototype_ax.plot(O2_prototype_data[0], 'v-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,s}$')
-    O2_prototype_ax.plot(O2_prototype_data[3], 's-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,r}$')
-    O2_prototype_ax.plot(O2_prototype_data[5], '^-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,s}$')
-    O2_prototype_ax.plot(O2_prototype_data[2], 'd-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,r}$')
-    O2_prototype_ax.plot(O2_prototype_data[6], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
-    O2_prototype_ax.plot(O2_prototype_data[4], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
-    O2_prototype_ax.legend()
-
-    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # O2
-    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    print('Objective function 2')
-    O2 = fobj_list( list(swda.get_certain_objective_function(2)), 
-                    list(swda.get_certain_objective_function(4)), 
-                    list(swda.get_certain_objective_function(3)), 
-                    list(swda.get_certain_objective_function(5)), 
-                    list(swda.get_certain_objective_function(6)), 
-                    np.array(list(swda.get_certain_objective_function(9))) + np.array(list(swda.get_certain_objective_function(12))) + np.array(list(swda.get_certain_objective_function(13))),
-                    weights=O2_weights, rotor_volume=rotor_volume, rotor_weight=rotor_weight )
-    O2_max = []
-    O2_min = []
-    O2_ax  = figure().gca()
-    O2_ecce_data = []
-    for j in range(int(len(O2)/number_of_variant)): # iterate design parameters: range(7)
-        O2_vs_design_parameter = O2[j*number_of_variant:(j+1)*number_of_variant]
-        O2_ecce_data.append(O2_vs_design_parameter)
-
-        # narrow bounds (refine bounds)
-        O2_ax.plot(O2_vs_design_parameter, 'o-', label=str(j)+' '+param_list[j], alpha=0.5)
-        print('\t', j, param_list[j], '\t\t', max(O2_vs_design_parameter) - min(O2_vs_design_parameter), '\t\t', end=' ')
-        print([ind for ind, el in enumerate(O2_vs_design_parameter) if el < O2_ref*1.005]) #'<- to derive new original_bounds.'
-
-        O2_max.append(max(O2_vs_design_parameter))
-        O2_min.append(min(O2_vs_design_parameter))            
-    O2_ax.legend()
-    O2_ax.grid()
-    O2_ax.set_ylabel('O2 [1]')
-    O2_ax.set_xlabel('Count of design variants')
-
-    # for ecce digest
-    fig_ecce = figure(figsize=(10, 5), facecolor='w', edgecolor='k')
-    O2_ecce_ax = fig_ecce.gca()
-    O2_ecce_ax.plot(list(range(-1, 22)), O2_ref*np.ones(23), 'k--', label='reference design')
-    O2_ecce_ax.plot(O2_ecce_data[1], 'o-', lw=0.75, alpha=0.5, label=r'$\delta$'         )
-    O2_ecce_ax.plot(O2_ecce_data[0], 'v-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,s}$')
-    O2_ecce_ax.plot(O2_ecce_data[3], 's-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,r}$')
-    O2_ecce_ax.plot(O2_ecce_data[5], '^-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,s}$')
-    O2_ecce_ax.plot(O2_ecce_data[2], 'd-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,r}$')
-    O2_ecce_ax.plot(O2_ecce_data[6], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
-    O2_ecce_ax.plot(O2_ecce_data[4], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
-
-    myfontsize = 12.5
-    from pylab import plt
-    plt.rcParams.update({'font.size': myfontsize})
-
-
-    # Reference candidate design
-    ref = np.zeros(8)
-        # ref[0] = 0.635489                                   # PF
-        # ref[1] = 0.963698                                   # eta
-        # ref[1] = efficiency_at_50kW(1817.22+216.216+224.706)# eta@50kW
-    O1_ax.plot(list(range(-1, 22)), O1_ref*np.ones(23), 'k--')
-    O2_ax.plot(list(range(-1, 22)), O2_ref*np.ones(23), 'k--')
-    O2_ecce_ax.legend()
-    O2_ecce_ax.grid()
-    O2_ecce_ax.set_xticks(list(range(21)))
-    O2_ecce_ax.annotate('Lower bound', xytext=(0.5, 5.5), xy=(0, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
-    O2_ecce_ax.annotate('Upper bound', xytext=(18.0, 5.5),  xy=(20, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
-    O2_ecce_ax.set_xlim((-0.5,20.5))
-    O2_ecce_ax.set_ylim((0,14)) # 4,14
-    O2_ecce_ax.set_xlabel(r'Number of design variant', fontsize=myfontsize)
-    O2_ecce_ax.set_ylabel(r'$O_2(x)$ [1]', fontsize=myfontsize)
-    fig_ecce.tight_layout()
-    # fig_ecce.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\O2_vs_params.png', dpi=150)
-    plt.show()
-    # quit() ###################################
-
-    if swda.reference_design is None:
-        list_plotting_weights = [8, 3, required_torque, 0.1, rotor_weight, 0.2, 10, 2500]
-        # manually set this up
-        ref[0] = O2_ref    / list_plotting_weights[0]
-        ref[1] = O1_ref    / list_plotting_weights[1]
-        ref[2] = 19.1197   / list_plotting_weights[2]                   # 100%
-        ref[3] = 0.0864712 / list_plotting_weights[3]                   # 100%
-        ref[4] = 96.9263   / list_plotting_weights[4]                   # 100% = FRW
-        ref[5] = 0.104915  / list_plotting_weights[5]                   # 100%
-        ref[6] = 6.53137   / list_plotting_weights[6]                   # deg
-        ref[7] = (1817.22+216.216+224.706) / list_plotting_weights[7]   # W
-    else:
-        list_plotting_weights = [8, 3, required_torque, 0.1, rotor_weight, 0.2, 10, 2100]
-        ref[0] = O2_ref                                                                   / list_plotting_weights[0] 
-        ref[1] = O1_ref                                                                   / list_plotting_weights[1] 
-        ref[2] = swda.reference_data[2]                                                   / list_plotting_weights[2]  # 100%
-        ref[3] = swda.reference_data[3]                                                   / list_plotting_weights[3]  # 100%
-        ref[4] = swda.reference_data[4]                                                   / list_plotting_weights[4]  # 100% = FRW
-        ref[5] = swda.reference_data[5]                                                   / list_plotting_weights[5]  # 100%
-        ref[6] = swda.reference_data[6]                                                   / list_plotting_weights[6]  # deg
-        ref[7] = (swda.reference_data[9]+swda.reference_data[12]+swda.reference_data[13])/ list_plotting_weights[7]  # W
-
-    # Maximum
-    data_max = np.array(data_max)
-    O1_max   = np.array(O1_max)
-    O2_max   = np.array(O2_max)
-        # data_max[0] = (data_max[0])                   # PF
-        # data_max[1] = (data_max[1])                   # eta
-        # data_max[1] = efficiency_at_50kW(data_max[7]) # eta@50kW # should use data_min[7] because less loss, higher efficiency
-    data_max[0] = O2_max       / list_plotting_weights[0]  
-    data_max[1] = O1_max       / list_plotting_weights[1]  
-    data_max[2] = (data_max[2])/ list_plotting_weights[2]  # 100%
-    data_max[3] = (data_max[3])/ list_plotting_weights[3]  # 100%
-    data_max[4] = (data_max[4])/ list_plotting_weights[4]  # 100% = FRW
-    data_max[5] = (data_max[5])/ list_plotting_weights[5]  # 100%
-    data_max[6] = (data_max[6])/ list_plotting_weights[6]  # deg
-    data_max[7] = (data_max[7])/ list_plotting_weights[7]  # W
-    y_max_vs_design_parameter_0 = [el[0] for el in data_max]
-    y_max_vs_design_parameter_1 = [el[1] for el in data_max]
-    y_max_vs_design_parameter_2 = [el[2] for el in data_max]
-    y_max_vs_design_parameter_3 = [el[3] for el in data_max]
-    y_max_vs_design_parameter_4 = [el[4] for el in data_max]
-    y_max_vs_design_parameter_5 = [el[5] for el in data_max]
-    y_max_vs_design_parameter_6 = [el[6] for el in data_max]
-
-    # Minimum
-    data_min = np.array(data_min)
-    O1_min   = np.array(O1_min)
-    O2_min   = np.array(O2_min)
-        # data_min[0] = (data_min[0])                    # PF
-        # data_min[1] = (data_min[1])                    # eta
-        # data_min[1] = efficiency_at_50kW(data_min[7])  # eta@50kW
-    data_min[0] = O2_min        / list_plotting_weights[0] 
-    data_min[1] = O1_min        / list_plotting_weights[1] 
-    data_min[2] = (data_min[2]) / list_plotting_weights[2] # 100%
-    data_min[3] = (data_min[3]) / list_plotting_weights[3] # 100%
-    data_min[4] = (data_min[4]) / list_plotting_weights[4] # 100% = FRW
-    data_min[5] = (data_min[5]) / list_plotting_weights[5] # 100%
-    data_min[6] = (data_min[6]) / list_plotting_weights[6] # deg
-    data_min[7] = (data_min[7]) / list_plotting_weights[7] # W
-    y_min_vs_design_parameter_0 = [el[0] for el in data_min]
-    y_min_vs_design_parameter_1 = [el[1] for el in data_min]
-    y_min_vs_design_parameter_2 = [el[2] for el in data_min]
-    y_min_vs_design_parameter_3 = [el[3] for el in data_min]
-    y_min_vs_design_parameter_4 = [el[4] for el in data_min]
-    y_min_vs_design_parameter_5 = [el[5] for el in data_min]
-    y_min_vs_design_parameter_6 = [el[6] for el in data_min]
-
-    count = np.arange(len(y_max_vs_design_parameter_0))  # the x locations for the groups
-    width = 1.0  # the width of the bars
-
-    fig, ax = plt.subplots(dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')                                      #  #1034A
-    rects2 = ax.bar(count - 3*width/8, y_min_vs_design_parameter_1, width/8, alpha=0.5, label=r'$\delta$,           Air gap length', color='#6593F5')
-    rects1 = ax.bar(count - 2*width/8, y_min_vs_design_parameter_0, width/8, alpha=0.5, label=r'$b_{\rm tooth,s}$, Stator tooth width', color='#1D2951') # https://digitalsynopsis.com/design/beautiful-color-palettes-combinations-schemes/
-    rects4 = ax.bar(count - 1*width/8, y_min_vs_design_parameter_3, width/8, alpha=0.5, label=r'$b_{\rm tooth,r}$, Rotor tooth width', color='#03396c')
-    rects6 = ax.bar(count + 0*width/8, y_min_vs_design_parameter_5, width/8, alpha=0.5, label=r'$w_{\rm open,s}$, Stator slot open', color='#6497b1')
-    rects3 = ax.bar(count + 1*width/8, y_min_vs_design_parameter_2, width/8, alpha=0.5, label=r'$w_{\rm open,r}$, Rotor slot open',  color='#0E4D92')
-    rects5 = ax.bar(count + 2*width/8, y_min_vs_design_parameter_4, width/8, alpha=0.5, label=r'$h_{\rm head,s}$, Stator head height', color='#005b96')
-    rects7 = ax.bar(count + 3*width/8, y_min_vs_design_parameter_6, width/8, alpha=0.5, label=r'$h_{\rm head,r}$, Rotor head height', color='#b3cde0') 
-    print('ylim=', ax.get_ylim())
-    autolabel(ax, rects1, bias=-0.10)
-    autolabel(ax, rects2, bias=-0.10)
-    autolabel(ax, rects3, bias=-0.10)
-    autolabel(ax, rects4, bias=-0.10)
-    autolabel(ax, rects5, bias=-0.10)
-    autolabel(ax, rects6, bias=-0.10)
-    autolabel(ax, rects7, bias=-0.10)
-    one_one = np.array([1, 1])
-    minus_one_one = np.array([-1, 1])
-    ax.plot(rects6[0].get_x() + 0.5*width*minus_one_one, ref[0]*one_one, 'k--', lw=1.0, alpha=0.6, label='Reference design' )
-    ax.plot(rects6[1].get_x() + 0.5*width*minus_one_one, ref[1]*one_one, 'k--', lw=1.0, alpha=0.6 )
-    ax.plot(rects6[2].get_x() + 0.5*width*minus_one_one, ref[2]*one_one, 'k--', lw=1.0, alpha=0.6 )
-    ax.plot(rects6[3].get_x() + 0.5*width*minus_one_one, ref[3]*one_one, 'k--', lw=1.0, alpha=0.6 )
-    ax.plot(rects6[4].get_x() + 0.5*width*minus_one_one, ref[4]*one_one, 'k--', lw=1.0, alpha=0.6 )
-    ax.plot(rects6[5].get_x() + 0.5*width*minus_one_one, ref[5]*one_one, 'k--', lw=1.0, alpha=0.6 )
-    ax.plot(rects6[6].get_x() + 0.5*width*minus_one_one, ref[6]*one_one, 'k--', lw=1.0, alpha=0.6 )
-    ax.plot(rects6[7].get_x() + 0.5*width*minus_one_one, ref[7]*one_one, 'k--', lw=1.0, alpha=0.6 )
-    ax.legend(loc='upper right') 
-    ax.text(rects6[0].get_x() - 3.5/8*width, ref[0]*1.01, '%.2f'%(ref[0]), ha='center', va='bottom', rotation=90)
-    ax.text(rects6[1].get_x() - 3.5/8*width, ref[1]*1.01, '%.2f'%(ref[1]), ha='center', va='bottom', rotation=90)
-    ax.text(rects6[2].get_x() - 3.5/8*width, ref[2]*1.01, '%.2f'%(ref[2]), ha='center', va='bottom', rotation=90)
-    ax.text(rects6[3].get_x() - 3.5/8*width, ref[3]*1.01, '%.2f'%(ref[3]), ha='center', va='bottom', rotation=90)
-    ax.text(rects6[4].get_x() - 3.5/8*width, ref[4]*1.01, '%.2f'%(ref[4]), ha='center', va='bottom', rotation=90)
-    ax.text(rects6[5].get_x() - 3.5/8*width, ref[5]*1.01, '%.2f'%(ref[5]), ha='center', va='bottom', rotation=90)
-    ax.text(rects6[6].get_x() - 3.5/8*width, ref[6]*1.01, '%.2f'%(ref[6]), ha='center', va='bottom', rotation=90)
-    ax.text(rects6[7].get_x() - 3.5/8*width, ref[7]*1.01, '%.2f'%(ref[7]), ha='center', va='bottom', rotation=90)
-
-    rects1 = ax.bar(count - 2*width/8, y_max_vs_design_parameter_0, width/8, alpha=0.5, label=r'$b_{\rm tooth,s}$', color='#1D2951') # bottom=y_min_vs_design_parameter_0, 
-    rects2 = ax.bar(count - 3*width/8, y_max_vs_design_parameter_1, width/8, alpha=0.5, label=r'$\delta$',          color='#6593F5') # bottom=y_min_vs_design_parameter_1, 
-    rects3 = ax.bar(count + 1*width/8, y_max_vs_design_parameter_2, width/8, alpha=0.5, label=r'$w_{\rm open,r}$',  color='#0E4D92') # bottom=y_min_vs_design_parameter_2, 
-    rects4 = ax.bar(count - 1*width/8, y_max_vs_design_parameter_3, width/8, alpha=0.5, label=r'$b_{\rm tooth,r}$', color='#03396c') # bottom=y_min_vs_design_parameter_3, 
-    rects5 = ax.bar(count + 2*width/8, y_max_vs_design_parameter_4, width/8, alpha=0.5, label=r'$h_{head,s}$',      color='#005b96') # bottom=y_min_vs_design_parameter_4, 
-    rects6 = ax.bar(count + 0*width/8, y_max_vs_design_parameter_5, width/8, alpha=0.5, label=r'$w_{\rm open,s}$',  color='#6497b1') # bottom=y_min_vs_design_parameter_5, 
-    rects7 = ax.bar(count + 3*width/8, y_max_vs_design_parameter_6, width/8, alpha=0.5, label=r'$h_{head,r}$',      color='#b3cde0') # bottom=y_min_vs_design_parameter_6, 
-    autolabel(ax, rects1)
-    autolabel(ax, rects2)
-    autolabel(ax, rects3)
-    autolabel(ax, rects4)
-    autolabel(ax, rects5)
-    autolabel(ax, rects6)
-    autolabel(ax, rects7)
-
-    # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel('Normalized Objective Functions')
-    ax.set_xticks(count)
-    # ax.set_xticklabels(('Power Factor [100%]', r'$\eta$@$T_{em}$ [100%]', r'$T_{em}$ [15.9 N]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]')))
-    # ax.set_xticklabels(('Power Factor [100%]', r'$O_1$ [3]', r'$T_{em}$ [15.9 N]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]'))
-    ax.set_xticklabels(('$O_2$ [%g]'               %(list_plotting_weights[0]), 
-                        '$O_1$ [%g]'               %(list_plotting_weights[1]), 
-                        '$T_{em}$ [%g Nm]'         %(list_plotting_weights[2]), 
-                        '$T_{rip}$ [%g%%]'         %(list_plotting_weights[3]*100), 
-                        '$|F|$ [%g N]'             %(list_plotting_weights[4]), 
-                        '    $E_m$ [%g%%]'         %(list_plotting_weights[5]*100), 
-                        '      $E_a$ [%g deg]'     %(list_plotting_weights[6]), 
-                        '$P_{\\rm Cu,Fe}$ [%g kW]' %(list_plotting_weights[7]*1e-3) ))
-    ax.grid()
-    fig.tight_layout()
-    # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\sensitivity_results.png', dpi=150)
-
-    plt.show()
-
-    quit()
-
-
-
-# pareto plot for ecce paper or NineSigma proposal
-import itertools
-if __name__ == '__main__':
-    from pylab import *
-    plt.rcParams["font.family"] = "Times New Roman"
-    # import seaborn as sns
-
-    # style.use('seaborn-poster') #sets the size of the charts
-    # style.use('grayscale')
-    # ax = sns.barplot(y= "Deaths", x = "Causes", data = deaths_pd, palette=("Blues_d"))
-    # sns.set_context("poster")
-
-
-    # eta vs stack length
-    fig, ax = subplots(1, 1, sharex=False, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
-    axeses = None
-    fig2 = None
-
-    # torque and force
-    # fig2, axeses = subplots(2, 2, sharex=False, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
-    # fig2.subplots_adjust(right=0.9, hspace=0.21, wspace=0.11) # won't work after I did something. just manual adjust!
-
-
-    # # pareto_plot(193, fig, ax, fig2, axeses, marker='o') # DPNV O2
-    # pareto_plot(194, fig, ax, fig2, axeses, marker='o') # DPNV O3
-    # # pareto_plot(196, fig, ax, fig2, axeses, marker='v') # Separate O3
-    # # pareto_plot(199, fig, ax, fig2, axeses, marker='o') # DPNV O1
-    pareto_plot(501, fig, ax, fig2, axeses, marker='o') # Prototype DPNV O1
-
-    fig.tight_layout()
-    # fig2.tight_layout()
-    # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\pareto_plot.png', dpi=150, bbox_inches='tight')
-    # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\pareto_plot.png', dpi=150, bbox_inches='tight')
-    show()
-    quit()
 
 
 # test for power factor (Goertzel Algorithm with periodic extension 1000), etc.
@@ -2479,7 +2386,6 @@ if __name__ == '__main__':
 
         # it works!
         # send_notification('Test email')
-
 
 # find best individual
 if __name__ == '__main__':

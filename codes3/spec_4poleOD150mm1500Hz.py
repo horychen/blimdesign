@@ -1,21 +1,21 @@
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Design Specification
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-p = 1
+p = 2
 spec = pyrhonen_procedure_as_function.desgin_specification(
         PS_or_SC = True, # Pole Specific or Squirrel Cage
         DPNV_or_SEPA = True, # Dual purpose no voltage or Separate winding
         p = p,
         ps = 2 if p==1 else 1,
         mec_power = 100e3, # kW
-        ExcitationFreq = 880, # Hz
-        ExcitationFreqSimulated = 500, # Hz This sets to DriveW_Freq that is actually used in FE simulation.
+        ExcitationFreq = p*750, # Hz
+        ExcitationFreqSimulated = p*500, # Hz This sets to DriveW_Freq that is actually used in FE simulation.
         VoltageRating = 480, # Vrms (line-to-line, Wye-Connect)
         TangentialStress = 12000, # Pa
         Qs = 24,
         Qr = 16,
         Js = 3.7e6, # Arms/m^2
-        Jr = 7.25e6, #7.5e6, #6.575e6, # Arms/m^2
+        Jr = 5.75e6,  #7.25e6, #7.5e6, #6.575e6, # Arms/m^2
         Steel = 'M19Gauge29', # Arnon-7
         lamination_stacking_factor_kFe = 0.95, # from http://www.femm.info/wiki/spmloss # 0.91 for Arnon
         Coil = 'Cu',
@@ -25,7 +25,7 @@ spec = pyrhonen_procedure_as_function.desgin_specification(
         Temperature = 75, # deg Celsius
         stator_tooth_flux_density_B_ds = 1.4, # Tesla
         rotor_tooth_flux_density_B_dr  = 1.5, # Tesla
-        stator_yoke_flux_density_Bys = 1.2, # Tesla
+        stator_yoke_flux_density_Bys = 1.1, # Tesla
         rotor_yoke_flux_density_Byr  = 1.1 + 0.3 if p==1 else 1.1, # Tesla
         guess_air_gap_flux_density = 0.8, # 0.8, # Tesla | 0.7 ~ 0.9 | Table 6.3
         guess_efficiency = 0.95,

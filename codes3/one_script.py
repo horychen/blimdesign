@@ -14,6 +14,7 @@ spec = pyrhonen_procedure_as_function.desgin_specification(
         ps = 2 if p==1 else 1,
         mec_power = 100e3, # kW
         ExcitationFreq = p*750, # Hz
+        ExcitationFreqSimulated = p*500, # Hz This sets to DriveW_Freq that is actually used in FE simulation.
         VoltageRating = 480, # Vrms (line-to-line, Wye-Connect)
         TangentialStress = 12000, # Pa
         Qs = 24,
@@ -57,95 +58,7 @@ if bool_bad_specifications:
     print('\nThe specifiaction can not be fulfilled. Read script log or OneReport.pdf for information and revise the specifiaction for $J_r$ or else your design name is wrong.')
 else:
     print('\nThe specifiaction is meet. Now check the database of blimuw.')
-    try:
-        import mysql.connector
-    except:
-        print('MySQL python connector is not installed. Skip database communication.')
-    else:
-        db = mysql.connector.connect(
-            host ='localhost',
-            user ='root',
-            passwd ='password123',
-            database ='blimuw',
-            )
-        cursor = db.cursor()
-        cursor.execute('SELECT name FROM designs')
-        result = cursor.fetchall()
-        if spec.build_name() not in [row[0] for row in result]:
-            def sql_add_one_record(spec):
-                # Add one record
-                sql = "INSERT INTO designs " \
-                    + "(" \
-                        + "name, " \
-                            + "PS_or_SC, " \
-                            + "DPNV_or_SEPA, " \
-                            + "p, " \
-                            + "ps, " \
-                            + "MecPow, " \
-                            + "Freq, " \
-                            + "Voltage, " \
-                            + "TanStress, " \
-                            + "Qs, " \
-                            + "Qr, " \
-                            + "Js, " \
-                            + "Jr, " \
-                            + "Coil, " \
-                            + "kCu, " \
-                            + "Condct, " \
-                            + "kAl, " \
-                            + "Temp, " \
-                            + "Steel, " \
-                            + "kFe, " \
-                            + "Bds, " \
-                            + "Bdr, " \
-                            + "Bys, " \
-                            + "Byr, " \
-                            + "G_b, " \
-                            + "G_eta, " \
-                            + "G_PF, " \
-                            + "debug, " \
-                            + "Sskew, " \
-                            + "Rskew, " \
-                            + "Pitch " \
-                    + ") VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-                record = (  spec.build_name(), 
-                            'PS' if spec.PS_or_SC else 'SC',
-                            'DPNV' if spec.DPNV_or_SEPA else 'SEPA',
-                            spec.p,
-                            spec.ps,
-                            spec.mec_power,
-                            spec.ExcitationFreq,
-                            spec.VoltageRating,
-                            spec.TangentialStress,
-                            spec.Qs,
-                            spec.Qr,
-                            spec.Js,
-                            spec.Jr,
-                            spec.Coil,
-                            spec.space_factor_kCu,
-                            spec.Conductor,
-                            spec.space_factor_kAl,
-                            spec.Temperature,
-                            spec.Steel,
-                            spec.lamination_stacking_factor_kFe,
-                            spec.stator_tooth_flux_density_B_ds,
-                            spec.rotor_tooth_flux_density_B_dr,
-                            spec.stator_yoke_flux_density_Bys,
-                            spec.rotor_yoke_flux_density_Byr,
-                            spec.guess_air_gap_flux_density,
-                            spec.guess_efficiency,
-                            spec.guess_power_factor,
-                            spec.debug_or_release,
-                            spec.bool_skew_stator,
-                            spec.bool_skew_rotor,
-                            spec.winding_layout.coil_pitch
-                        )
-                cursor.execute(sql, record)
-                db.commit()
-            sql_add_one_record(spec)
-            'A new record is added to table named designs.'
-        else:
-            'Record already exists, skip database communication.'
+    utility.communicate_database(spec)
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Automatic Performance Evaluation
@@ -180,12 +93,14 @@ if True:
         # Prototype OD150 four pole motor
         fea_config_dict['local_sensitivity_analysis'] = True
         fea_config_dict['bool_refined_bounds'] = False
-        run_folder = r'run#502/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 2*"50Hz delta")
-        run_folder = r'run#503/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta")
+        run_folder = r'run#502/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 2*"50Hz delta") ExcitationFreqSimulated = ExcitationFreq = 1500 Hz
+        run_folder = r'run#503/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = ExcitationFreq = 1500 Hz
+        run_folder = r'run#504/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = 1000 Hz
+
 
         # fea_config_dict['local_sensitivity_analysis'] = False
         # fea_config_dict['bool_refined_bounds'] = True
-        # run_folder = r'run#504/' # Optimize with refined bounds
+        # run_folder = r'run#505/' # Optimize with refined bounds (popsize is 70=7*10 now)
 
     # run folder
     fea_config_dict['run_folder'] = run_folder
@@ -194,16 +109,18 @@ if True:
     # rebuild the name
     build_model_name_prefix(fea_config_dict)
 
-
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 1. Bounds for DE optimiazation
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    if True:
+    # save some time when degbuging
+    loc_txt_file = '../' + 'pop/' + 'loop_for_bounds_%s.txt'%(run_folder[:-1])
+    if not os.path.exists(loc_txt_file):
+        import copy
+        spec_latch = copy.deepcopy(spec) # 后面调用loop_for_bounds的时候回覆盖掉这里的initial_design的结果的。
         # run for tooth width bounds
         loc_txt_file = pyrhonen_procedure_as_function.loop_for_bounds(spec, run_folder)
-    else:
-        # save some time when degbuging
-        loc_txt_file = '../' + 'pop/' + 'loop_for_bounds_%s.txt'%(run_folder[:-1])
+        spec = spec_latch
+    # read in tooth width data
     list_b_dr = []
     list_b_ds = []
     with open(loc_txt_file, 'r') as f:
@@ -216,12 +133,12 @@ if True:
     b_dr_max, b_dr_min = max(list_b_dr), min(list_b_dr)
     print(b_ds_max, b_ds_min, 'initial design:', 1e3*spec.stator_tooth_width_b_ds, 'mm')
     print(b_dr_max, b_dr_min, 'initial design:', 1e3*spec.rotor_tooth_width_b_dr, 'mm')
-    if b_ds_min<2:
-        print('Too small lower bound b_ds (%g) is detected. Set it to 2 mm.'%(b_ds_min))
-        b_ds_min = 2
-    if b_dr_min<2:
-        print('Too small lower bound b_dr (%g) is detected. Set it to 2 mm.'%(b_dr_min))
-        b_dr_min = 2
+    if b_ds_min<2.5:
+        print('Too small lower bound b_ds (%g) is detected. Set it to 2.5 mm.'%(b_ds_min))
+        b_ds_min = 2.5
+    if b_dr_min<2.5:
+        print('Too small lower bound b_dr (%g) is detected. Set it to 2.5 mm.'%(b_dr_min))
+        b_dr_min = 2.5
     if 1e3*spec.stator_tooth_width_b_ds < b_ds_min  and 1e3*spec.stator_tooth_width_b_ds > b_ds_max:
         raise Exception('The initial design is not within the bounds.')
     if 1e3*spec.rotor_tooth_width_b_dr < b_dr_min  and 1e3*spec.rotor_tooth_width_b_dr > b_dr_max:
@@ -234,31 +151,31 @@ if True:
 #    A 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     if fea_config_dict['flag_optimization'] == True:
-        if True: # 2 pole motor
-            de_config_dict = {  'original_bounds':[ [b_ds_min, b_ds_max],#--# stator_tooth_width_b_ds
-                                                    [     0.8,        3],   # air_gap_length_delta
-                                                    [    5e-1,        3],   # Width_RotorSlotOpen 
-                                                    [b_dr_min, b_dr_max],#--# rotor_tooth_width_b_dr # It allows for large rotor tooth because we raise Jr and recall this is for less slots---Qr=16.
-                                                    [    5e-1,        3],   # Length_HeadNeckRotorSlot
-                                                    [       1,       11],   # Angle_StatorSlotOpen
-                                                    [    5e-1,        3] ], # Width_StatorTeethHeadThickness
-                                'mut':        0.8,
-                                'crossp':     0.7,
-                                'popsize':    35, # 5~10 \times number of geometry parameters --JAC223
-                                'iterations': 100,
-                                'narrow_bounds_normalized':[[],
-                                                            [],
-                                                            [],
-                                                            [],
-                                                            [],
-                                                            [],
-                                                            [] ],
-                                'bounds':[]}
+        de_config_dict = {  'original_bounds':[ [b_ds_min, b_ds_max],#--# stator_tooth_width_b_ds
+                                                [     0.8,        3],   # air_gap_length_delta
+                                                [    5e-1,        3],   # Width_RotorSlotOpen 
+                                                [b_dr_min, b_dr_max],#--# rotor_tooth_width_b_dr # It allows for large rotor tooth because we raise Jr and recall this is for less slots---Qr=16.
+                                                [    5e-1,        3],   # Length_HeadNeckRotorSlot
+                                                [       1,       11],   # Angle_StatorSlotOpen
+                                                [    5e-1,        3] ], # Width_StatorTeethHeadThickness
+                            'mut':        0.8,
+                            'crossp':     0.7,
+                            'popsize':    70, # 5~10 \times number of geometry parameters --JAC223
+                            'iterations': 30,
+                            'narrow_bounds_normalized':[[],
+                                                        [],
+                                                        [],
+                                                        [],
+                                                        [],
+                                                        [],
+                                                        [] ],
+                            'bounds':[]}
 
         # Sensitivity Analysis based narrowing bounds
         if fea_config_dict['bool_refined_bounds'] == True:
             numver_of_variants = 20.0
             if fea_config_dict['Active_Qr'] == 16: 
+
                 # from utility.py:run500 O1
                 raw_narrow_bounds = [   [15, 16, 17, 18, 19, 20],
                                         [6, 7, 8, 9, 10, 1,1, 12, 13, 14, 15, 16, 17, 18, 19, 20],
@@ -267,9 +184,17 @@ if True:
                                         [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
                                         [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
                                         [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
-                # original: [[2, 4.483629], [0.8, 3], [0.5, 3], [2, 5.042], [0.5, 3], [1, 10], [0.5, 3]], 
-                # refined:  [[3.86, 4.483629], [1.46, 3.0], [0.5, 1.5], [4.89, 6.26], [0.5, 3.0], [2.8, 10.0], [0.5, 3.0]]}
-                raise 
+                    # original: [[2, 4.483629], [0.8, 3], [0.5, 3], [2, 5.042], [0.5, 3], [1, 10], [0.5, 3]], 
+                    # refined:  [[3.86, 4.483629], [1.46, 3.0], [0.5, 1.5], [4.89, 6.26], [0.5, 3.0], [2.8, 10.0], [0.5, 3.0]]}
+
+                # from utility.py:run504 O2
+                raw_narrow_bounds = [   [13, 15],
+                                        [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                        [1, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                        [14, 15, 18, 19, 20],
+                                        [0, 1, 2, 3, 4, 5],
+                                        [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                        [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
 
             for ind, bound in enumerate(raw_narrow_bounds):
                 de_config_dict['narrow_bounds_normalized'][ind].append(bound[0] /numver_of_variants)
@@ -311,6 +236,14 @@ if True:
     # print sw.im.show(toString=True)
     # quit()
 
+    # Sensitivity Bar Charts
+    if fea_config_dict['local_sensitivity_analysis'] == True:
+        if os.path.exists(fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt'):
+            import utility
+            utility.build_sensitivity_bar_charts(spec, sw)
+            quit()
+        else:
+            print('Now begin to generate results for sensitivity analysis...')
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 3. Initialize FEMM Solver (if required)
@@ -367,8 +300,7 @@ if True:
 # 5. Post-processing
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         import utility
-        material_density_rho, _, _ = pyrhonen_procedure_as_function.get_material_data()
-        best_design_denorm = utility.build_Pareto_plot(spec, sw, material_density_rho, fea_config_dict['use_weights'])
+        best_design_denorm = utility.build_Pareto_plot(spec, sw)
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 6. Check mechanical strength for the best design
