@@ -1,6 +1,10 @@
 import pyrhonen_procedure_as_function 
 bool_post_processing = False # solve or post-processing
 
+# Situation when default_setting does not match spec may happen. What???
+filename = './default_setting.py'
+exec(compile(open(filename, "rb").read(), filename, 'exec'), globals(), locals())
+
 
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -12,7 +16,7 @@ spec = pyrhonen_procedure_as_function.desgin_specification(
         DPNV_or_SEPA = True, # Dual purpose no voltage or Separate winding
         p = p,
         ps = 2 if p==1 else 1,
-        mec_power = 100e3, # kW
+        mec_power = 82e3, # kW
         ExcitationFreq = p*750, # Hz
         ExcitationFreqSimulated = p*500, # Hz This sets to DriveW_Freq that is actually used in FE simulation.
         VoltageRating = 480, # Vrms (line-to-line, Wye-Connect)
@@ -48,8 +52,8 @@ print(spec.build_name())
 # Automatic Report Generation
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 if not bool_post_processing:
-    import os
-    os.system('cd /d '+ r'"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX" && z_nul"')
+    if '730' in fea_config_dict['pc_name']:
+        os.system('cd /d '+ r'"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX" && z_nul"')
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Add to Database
@@ -57,9 +61,9 @@ if not bool_post_processing:
 if bool_bad_specifications:
     print('\nThe specifiaction can not be fulfilled. Read script log or OneReport.pdf for information and revise the specifiaction for $J_r$ or else your design name is wrong.')
 else:
-    print('\nThe specifiaction is meet. Now check the database of blimuw.')
-    import utility
-    utility.communicate_database(spec)
+    print('\nThe specifiaction is meet. Now check the database of blimuw if on Y730.')
+    if '730' in fea_config_dict['pc_name']:
+        utility.communicate_database(spec)
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Automatic Performance Evaluation
@@ -72,36 +76,54 @@ if True:
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # Situation when default_setting does not match spec may happen
-    filename = './default_setting.py'
-    exec(compile(open(filename, "rb").read(), filename, 'exec'), globals(), locals())
-
 
     if True: # ECCE
         fea_config_dict['Active_Qr'] = 16
         fea_config_dict['use_weights'] = 'O1' # 'O2' # 'O3'
 
-        # Prototype OD150 two pole motor
-        if False:
-            fea_config_dict['local_sensitivity_analysis'] = True
-            fea_config_dict['bool_refined_bounds'] = False
-            run_folder = r'run#500/' # Sensitivity analysis for Qr=16 and p=1
+        # # Prototype OD150 two pole motor
+        # if False:
+        #     fea_config_dict['local_sensitivity_analysis'] = True
+        #     fea_config_dict['bool_refined_bounds'] = False
+        #     run_folder = r'run#500/' # Sensitivity analysis for Qr=16 and p=1
 
-            fea_config_dict['local_sensitivity_analysis'] = False
-            fea_config_dict['bool_refined_bounds'] = True
-            run_folder = r'run#501/' # Optimize with refined bounds
+        #     fea_config_dict['local_sensitivity_analysis'] = False
+        #     fea_config_dict['bool_refined_bounds'] = True
+        #     run_folder = r'run#501/' # Optimize with refined bounds
 
-        # Prototype OD150 four pole motor
-        fea_config_dict['local_sensitivity_analysis'] = True
-        fea_config_dict['bool_refined_bounds'] = False
-        run_folder = r'run#502/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 2*"50Hz delta") ExcitationFreqSimulated = ExcitationFreq = 1500 Hz
-        run_folder = r'run#503/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = ExcitationFreq = 1500 Hz
-        run_folder = r'run#504/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = 1000 Hz
+        # # Prototype OD150 four pole motor
+        # fea_config_dict['local_sensitivity_analysis'] = True
+        # fea_config_dict['bool_refined_bounds'] = False
+        # run_folder = r'run#502/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 2*"50Hz delta") ExcitationFreqSimulated = ExcitationFreq = 1500 Hz
+        # run_folder = r'run#503/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = ExcitationFreq = 1500 Hz
+        # run_folder = r'run#504/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = 1000 Hz
+
+
+        # fea_config_dict['local_sensitivity_analysis'] = False
+        # fea_config_dict['bool_refined_bounds'] = True
+        # run_folder = r'run#505/' # Optimize with refined bounds (popsize is 70=7*10 now)
+
+        # fea_config_dict['local_sensitivity_analysis'] = False
+        # fea_config_dict['bool_refined_bounds'] = False
+        # run_folder = r'run#506/' # Optimize without refined bounds (popsize is 70=7*10 now) the mec_power is changed from 100kW to 75kW.
+
 
 
         fea_config_dict['local_sensitivity_analysis'] = False
-        fea_config_dict['bool_refined_bounds'] = True
-        run_folder = r'run#505/' # Optimize with refined bounds (popsize is 70=7*10 now)
+        fea_config_dict['bool_refined_bounds'] = False
+        if '01' in fea_config_dict['pc_name']:
+            fea_config_dict['use_weights'] = 'O1'
+            run_folder = r'run#50701/'
+        elif '02' in fea_config_dict['pc_name']:
+            fea_config_dict['use_weights'] = 'O2'
+            run_folder = r'run#50702/'
+        elif '730' in fea_config_dict['pc_name']:
+            fea_config_dict['use_weights'] = 'O3'
+            run_folder = r'run#507/' # Optimize without refined bounds (popsize is 70=7*10 now) the mec_power is changed from 100kW to 75kW. Use weights O3
+        else:
+            raise 
+
+        # quit()
 
     # run folder
     fea_config_dict['run_folder'] = run_folder
@@ -161,7 +183,7 @@ if True:
                                                 [    5e-1,        3] ], # Width_StatorTeethHeadThickness
                             'mut':        0.8,
                             'crossp':     0.7,
-                            'popsize':    70, # 5~10 \times number of geometry parameters --JAC223
+                            'popsize':    35, # 5~10 \times number of geometry parameters --JAC223
                             'iterations': 30,
                             'narrow_bounds_normalized':[[],
                                                         [],
@@ -215,6 +237,7 @@ if True:
             print('refined bounds:', de_config_dict['bounds'])
             print('narrow_bounds_normalized:', de_config_dict['narrow_bounds_normalized'])
         else:
+            print('No refined bounds are applied.')
             de_config_dict['bounds'] = de_config_dict['original_bounds']
     else:
         raise
@@ -306,12 +329,13 @@ if True:
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 6. Check mechanical strength for the best design
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-
+        quit()
         im_best = population.bearingless_induction_motor_design.local_design_variant(sw.im, \
                      -1, -1, best_design_denorm)
 
         # initialize JMAG Designer
         sw.designer_init()
+        sw.app.Show()
         project_name = fea_config_dict['run_folder'][:-1]+'_Best' # spec.build_name() is too long...
         expected_project_file = sw.dir_project_files + "%s.jproj"%(project_name)
         print(expected_project_file)

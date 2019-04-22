@@ -45,7 +45,7 @@ class swarm(object):
             logger.warn(msg)
             raise Exception('no match for Active_Qr')
 
-        # directories part II        
+        # directories part II
         if im.DriveW_Freq == 1000: # New design for 1000 Hz machine. some patch for my scrappy codes (lot of bugs are fixed, we need a new name).
             im.model_name_prefix += '_1e3Hz'
             self.model_name_prefix = im.model_name_prefix
@@ -159,7 +159,7 @@ class swarm(object):
                             if len(row)>0: 
                                 self.ongoing_living_fitness.append(float(row[0]))
                     print('List ongoing_living_fitness here:', self.ongoing_living_fitness)
-                    
+            
                     # decide at which j the fobj will called in de()
                     self.index_interrupt_beginning = len(self.ongoing_living_pop_denorm)
                     if len(self.ongoing_living_pop_denorm) != len(self.ongoing_pop_denorm):
@@ -188,7 +188,7 @@ class swarm(object):
         if len(generations) == 0:
             logger = logging.getLogger(__name__)
             logger.debug('There is no swarm yet. Generate the initial random swarm...')
-            
+    
             # generate the initial random swarm from the initial design
             self.init_pop = np.random.rand(popsize, dimensions) # normalized design parameters between 0 and 1
 
@@ -298,16 +298,21 @@ class swarm(object):
         # 【多加一层保险】，如果上一次优化是在运行完 wait_greedy_search 之后中断的，那么在 femm_temp/ 下就会有 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 存在。
         # 但是，从第二代以后开始，所有在gen#文件里的个体都是随机生成的，也就是说，每次中断重新跑，这一代的这个个体都是新的 trial_denorm，所以旧的 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 必须被删除。
         # 但是下面这样的代码是有问题，因为正常情况到了这里，self.check_csv_results(tran2tss_study_name, returnBoolean=True) 永远都应该返回 False。
-        tempID = self.im.ID + '-' + str(self.number_current_generation+1) + '-' + str(self.size_ongoing_living) # 比如说index是7，意味着已经有"8"个个体被评估过了，那么我们要检查第9个，其index为"8"。
-        original_study_name = "ID%s" % (tempID) + "Freq"    
-        tran2tss_study_name = "ID%s" % (tempID) + 'Tran2TSS'
-        output_file_path = self.dir_csv_output_folder + 'femm_temp/' + original_study_name + '.csv'
-        if os.path.exists(output_file_path) and not self.check_csv_results(tran2tss_study_name, returnBoolean=True):
-            os.remove(output_file_path)
-            if os.path.exists(output_file_path[:-4]+'.fem'):
-                os.remove(output_file_path[:-4]+'.fem')
-            print('Removed:', output_file_path)
-            print('Removed:', output_file_path[:-4]+'.fem')
+        try:
+            self.size_ongoing_living # for initial generation there is no size_ongoing_living
+        except:
+            pass
+        else:
+            tempID = self.im.ID + '-' + str(self.number_current_generation+1) + '-' + str(self.size_ongoing_living) # 比如说index是7，意味着已经有"8"个个体被评估过了，那么我们要检查第9个，其index为"8"。
+            original_study_name = "ID%s" % (tempID) + "Freq"
+            tran2tss_study_name = "ID%s" % (tempID) + 'Tran2TSS'
+            output_file_path = self.dir_csv_output_folder + 'femm_temp/' + original_study_name + '.csv'
+            if os.path.exists(output_file_path) and not self.check_csv_results(tran2tss_study_name, returnBoolean=True):
+                os.remove(output_file_path)
+                if os.path.exists(output_file_path[:-4]+'.fem'):
+                    os.remove(output_file_path[:-4]+'.fem')
+                print('Removed:', output_file_path)
+                print('Removed:', output_file_path[:-4]+'.fem')
 
     def designer_init(self):
         try:
@@ -332,7 +337,7 @@ class swarm(object):
             elif 'M19' in self.fea_config_dict['Steel']:
                 add_M1xSteel(self.app, self.dir_parent)
             elif 'Arnon5' == self.fea_config_dict['Steel']:
-                add_Arnon5(self.app, self.dir_parent)            
+                add_Arnon5(self.app, self.dir_parent)        
 
         # too avoid tons of the same material in JAMG's material library
         if not os.path.exists(self.dir_parent + '.jmag_state.txt'):
@@ -460,7 +465,7 @@ class swarm(object):
                 print('Model Already Exists')
                 logging.getLogger(__name__).debug('Model Already Exists')
             # Tip: 在JMAG Designer中DEBUG的时候，删掉模型，必须要手动save一下，否则再运行脚本重新load project的话，是没有删除成功的，只是删掉了model的name，新导入进来的model name与project name一致。
-            
+        
             # JMAG
             if app.NumModels()>=1:
                 model = app.GetModel(im_variant.individual_name)
@@ -527,7 +532,7 @@ class swarm(object):
             self.dir_femm_temp = self.dir_csv_output_folder + 'femm_temp/'
             output_file_path = self.dir_femm_temp + original_study_name + '.csv'
 
-    
+
             if os.path.exists(output_file_path):
                 # 本来想在这里多加一层保险，如果上一次优化是在运行完 wait_greedy_search 之后中断的，那么在 femm_temp/ 下就会有 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 存在。
                 # 但是，从第二代以后开始，所有在gen#文件里的个体都是随机生成的，也就是说，每次中断重新跑，这一代的这个个体都是新的 trial_denorm，所以旧的 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 必须被删除。
@@ -558,7 +563,7 @@ class swarm(object):
 
                 # no direct returning of results, wait for it later when you need it.
                 femm_tic = clock_time()
-                self.femm_solver.__init__(im_variant, flag_read_from_jmag=False, freq=2.23)
+                self.femm_solver.__init__(im_variant, flag_read_from_jmag=False, freq=50.0)
                 if im_variant.DriveW_poles == 2:
                     self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
                                                                         bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=1) # 转子导条必须形成通路
@@ -700,7 +705,7 @@ class swarm(object):
             self.weights = [0.5*sum(el) for el in self.bounds]
             print(self.bounds)
             print(self.weights)
-    
+
         x = np.linspace(0, 6.28, 50) 
         y = fmodel(x, w=self.weights)
 
@@ -735,9 +740,9 @@ class swarm(object):
         logger = logging.getLogger(__name__)
         logger.debug('DE Configuration:\n\t' + '\n\t'.join('%.4f,%.4f'%tuple(el) for el in bounds) + '\tmut=%.4f, crossp=%.4f, popsize=%d, iterations=%d' % (mut,crossp,popsize,iterations) \
                      +'''\n\t# stator_tooth_width_b_ds\n\t# air_gap_length_delta\n\t# Width_RotorSlotOpen \n\t# rotor_tooth_width_b_dr \n\t# Length_HeadNeckRotorSlot\n\t# Angle_StatorSlotOpen\n\t# Width_StatorTeethHeadThickness''')
-        
+    
         self.bounds = np.array(bounds) # for debug purpose in fobj_test
-        
+    
         # mut \in  [0.5, 2.0]
         if mut < 0.5 or mut > 2.0:
             logger = logging.getLogger(__name__)
@@ -754,7 +759,7 @@ class swarm(object):
         #     print 'gen#0000 with initail design as the first individual:'
         #     for el in pop_denorm:
         #         print el.tolist()
-        # 出现以下BUG：        
+        # 出现以下BUG：    
         # 2019-01-25 00:44:42,292 - root - ERROR - Optimization aborted.
         # Traceback (most recent call last):
         #   File "D:/OneDrive - UW-Madison/c/codes/opti_script.py", line 297, in <module>
@@ -768,7 +773,7 @@ class swarm(object):
         # 判断：如果是第一次，那就需要对现有pop进行生成fitness；如果续上一次的运行，则读入fitness。
         if self.init_fitness is None:
             if self.number_current_generation == 0:
-                # there is no fitness file yet. run evaluation for the initial pop            
+                # there is no fitness file yet. run evaluation for the initial pop        
                 self.jmag_control_state = False # demand to initialize the jamg designer
                 fitness = np.asarray( [fobj(index, individual_denorm) for index, individual_denorm in enumerate(pop_denorm)] ) # modification #2
 
@@ -783,7 +788,7 @@ class swarm(object):
                     f.write('\n'.join('%.16f'%(x) for x in fitness)) 
                 # write liv#0000 (liv_id#0000 is trivial so not needed)
                 self.write_population_data(pop_denorm, fname=self.get_liv_file(self.number_current_generation))
-                logger.debug('Copy the 1st generation (gen#%4d) as living pop and its fitness to file.' % (self.number_current_generation))            
+                logger.debug('Copy the 1st generation (gen#%4d) as living pop and its fitness to file.' % (self.number_current_generation))        
         else:
             # this is a continued run. load the last completed living pop's fitness data
             fitness = self.init_fitness
@@ -797,7 +802,7 @@ class swarm(object):
                 if popsize > solved_popsize:
                     logger.debug('Popsize changed. New fitness for the newly come individuals should be generated...')
                     fitness_part2 = np.asarray( [fobj(index+solved_popsize, individual) for index, individual in enumerate(pop_denorm[solved_popsize:])] ) # modification #2
-                    
+                
                     print('DEBUG fitness_part1:\n', fitness)
                     print('DEBUG fitness_part2:\n', fitness_part2.tolist())
                     fitness += fitness_part2.tolist()
@@ -1043,7 +1048,7 @@ class swarm(object):
                 f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop)) # convert 2d array to string
         else:
             with open(fname, 'w') as f:
-                f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop)) # convert 2d array to string            
+                f.write('\n'.join(','.join('%.16f'%(x) for x in y) for y in pop)) # convert 2d array to string        
 
     def append_population_data(self, pop): # for increased popsize from last run
         with open(self.get_gen_file(self.number_current_generation), 'a') as f:
@@ -1748,7 +1753,7 @@ class swarm(object):
 
         # read from eddy current results
         dict_circuit_current_complex = {}
-        
+    
         with open(self.im.get_csv('circuit_current'), 'r') as f:
             for row in self.csv_row_reader(f):
                 try: 
@@ -1839,7 +1844,7 @@ class swarm(object):
         number_of_repeat = int(end_time / time_list[-1])
         # print number_of_repeat, end_time, time_list[-1]
         femm_force_x = femm_solver_data[2].tolist()
-        femm_force_y = femm_solver_data[3].tolist()        
+        femm_force_y = femm_solver_data[3].tolist()    
         femm_force_abs = np.sqrt(np.array(femm_force_x)**2 + np.array(femm_force_y)**2 )
 
         # # Vector plot
@@ -1886,7 +1891,7 @@ class swarm(object):
         print('show results!')
         mpl.rcParams['font.family'] = ['serif'] # default is sans-serif
         mpl.rcParams['font.serif'] = ['Times New Roman']
-        
+    
         Fs = 500.*400.
         def basefreqFFT(x, Fs, base_freq=500, ax=None, ax_time_domain=None): #频域横坐标除以基频，即以基频为单位
             def nextpow2(L):
@@ -2042,7 +2047,7 @@ class swarm(object):
 
         # ''' TranRef '''
         # study_name = 'TranRef'
-        # dm = utility.read_csv_results_4_comparison__transient(study_name)        
+        # dm = utility.read_csv_results_4_comparison__transient(study_name)    
         # basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
         # add_plot( axeses,
         #           title=study_name,
@@ -2110,7 +2115,7 @@ class swarm(object):
         time_list = rotor_position_in_deg/180.*pi / self.im.Omega
         number_of_repeat = int(end_time / time_list[-1]) + 2
         femm_force_x = femm_solver_data[2].tolist()
-        femm_force_y = femm_solver_data[3].tolist()        
+        femm_force_y = femm_solver_data[3].tolist()    
         femm_force_abs = np.sqrt(np.array(femm_force_x)**2 + np.array(femm_force_y)**2 )
 
         # 延拓
@@ -2203,7 +2208,7 @@ class swarm(object):
             fig_main.savefig('FEA_Model_Comparisons.png', dpi=150)
             # fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 BlessIMDesign\p2019_iemdc_bearingless_induction full paper\images\FEA_Model_Comparisons.png', dpi=150)
             fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\New_FEA_Model_Comparisons.png', dpi=150)
-            
+        
 
     def timeStepSensitivity(self):
         from pylab import figure, show, subplots, xlim, ylim
@@ -2372,7 +2377,7 @@ class swarm(object):
                         stator_copper_loss = float(row[8]) # Coil # it is the same over time, this value does not account for end coil
 
                     rotor_copper_loss_list.append(float(row[7])) # Cage
-        
+    
         # use the last 1/4 period data to compute average copper loss of Tran2TSS rather than use that of Freq study
         effective_part = rotor_copper_loss_list[:int(0.5*self.fea_config_dict['number_of_steps_2ndTTS'])] # number_of_steps_2ndTTS = steps for half peirod
         rotor_copper_loss = sum(effective_part) / len(effective_part)
@@ -2565,14 +2570,18 @@ class swarm(object):
         else:
             # the results exist already?
             return 
-    
+
     def run_study(self, im_variant, app, study, toc):
         logger = logging.getLogger(__name__)
         if self.fea_config_dict['JMAG_Scheduler'] == False:
+            print('Run jam.exe...')
             # if run_list[1] == True:
             study.RunAllCases()
-            logger.debug('Time spent on %s is %g s.'%(study.GetName() , clock_time() - toc))
+            msg = 'Time spent on %s is %g s.'%(study.GetName() , clock_time() - toc)
+            logger.debug(msg)
+            print(msg)
         else:
+            print('Submit to JMAG_Scheduler...')
             job = study.CreateJob()
             job.SetValue("Title", study.GetName())
             job.SetValue("Queued", True)
@@ -2614,7 +2623,6 @@ class swarm(object):
         app.ExportImageWithSize(self.dir_run + model.GetName() + '.png', 2000, 2000)
         app.View().ShowModel() # 1st btn. close mesh view, and note that mesh data will be deleted if only ouput table results are selected.
 
-
 class bearingless_induction_motor_design(object):
 
     def __init__(self, row=None, fea_config_dict=None, model_name_prefix='PS'):
@@ -2624,7 +2632,7 @@ class bearingless_induction_motor_design(object):
         self.fea_config_dict = fea_config_dict
         self.slip_freq_breakdown_torque = None
         self.MODEL_ROTATE = False 
-        
+    
         #01 Model Name
         self.model_name_prefix = model_name_prefix # do include 'PS' here
 
@@ -2675,7 +2683,7 @@ class bearingless_induction_motor_design(object):
             return None # __init__ is required to return None. You cannot (or at least shouldn't) return something else.
 
         #03 Mechanical Parameters
-        self.update_mechanical_parameters(slip_freq=0.233) #, syn_freq=500.)
+        self.update_mechanical_parameters(slip_freq=50.0) #, syn_freq=500.)
 
         #04 Material Condutivity Properties
         if self.fea_config_dict is not None:
@@ -2790,7 +2798,7 @@ class bearingless_induction_motor_design(object):
             logger = logging.getLogger(__name__)
             logger.debug('Warning: There is no need to use a drop shape rotor, because the centers of the inner and outer circles are too close: %g, %g.' % (self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
             self.use_drop_shape_rotor_bar = False
-            
+        
             # for VanGogh (FEMM) to work properly （如何不把两者设置成一样的，那么FEMM画出来的（很短的droop shape slot）和JMAG画出来的（Round shape圆形槽）则不一样。
             self.Location_RotorBarCenter2_backup = self.Location_RotorBarCenter2
             self.Location_RotorBarCenter2 = self.Location_RotorBarCenter 
@@ -2987,9 +2995,9 @@ class bearingless_induction_motor_design(object):
                 design_parameters[0],                # [0] # Width_StatorTeethBody
                 Width_StatorTeethHeadThickness,      # [6]
                 Width_StatorTeethNeck,
-                im.DriveW_poles,     
+                im.DriveW_poles, 
                 im.DriveW_turns, # turns per slot
-                im.DriveW_Rs,        
+                im.DriveW_Rs,    
                 im.DriveW_CurrentAmp * (1.0 - 0.4*im.fea_config_dict['mimic_separate_winding_with_DPNV_winding']),
                 im.DriveW_Freq,
                 im.stack_length
@@ -3702,14 +3710,14 @@ class bearingless_induction_motor_design(object):
                 phase_shift_drive = -120 if CommutatingSequenceD == 1 else 120
                 phase_shift_beari = -120 if CommutatingSequenceB == 1 else 120
 
-                func = app.FunctionFactory().Composite()            
+                func = app.FunctionFactory().Composite()        
                 f1 = app.FunctionFactory().Sin(ampD, freq, 0*phase_shift_drive) # "freq" variable cannot be used here. So pay extra attension here when you create new case of a different freq.
                 f2 = app.FunctionFactory().Sin(ampB, freq, 0*phase_shift_beari)
                 func.AddFunction(f1)
                 func.AddFunction(f2)
                 study.GetCircuit().GetComponent(I1).SetFunction(func)
 
-                func = app.FunctionFactory().Composite()            
+                func = app.FunctionFactory().Composite()        
                 f1 = app.FunctionFactory().Sin(ampD, freq, 1*phase_shift_drive)
                 f2 = app.FunctionFactory().Sin(ampB, freq, 1*phase_shift_beari)
                 func.AddFunction(f1)
@@ -3754,7 +3762,7 @@ class bearingless_induction_motor_design(object):
                               CommutatingSequenceD=self.wily.CommutatingSequenceD,
                               CommutatingSequenceB=self.wily.CommutatingSequenceB,x=25) # CS4 corresponds to uauc (conflict with following codes but it does not matter.)
 
-        # Link FEM Coils to Coil Set         
+        # Link FEM Coils to Coil Set     
         # if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False:
         if self.fea_config_dict['DPNV'] == False:
             def link_FEMCoils_2_CoilSet(poles,l1,l2):
@@ -3929,7 +3937,7 @@ class bearingless_induction_motor_design(object):
                         place_resistor(X-4, Y-3, "R_%s2"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
                         place_resistor(X+4, Y-6, "R_%s3"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
                         place_resistor(X-4, Y-9, "R_%s4"%(rotor_phase_name_list[i]), self.End_Ring_Resistance)
-            
+        
                         study.GetCircuit().CreateWire(X+6,   Y, X+2, Y-3)
                         study.GetCircuit().CreateWire(X-6, Y-3, X-2, Y-6)
                         study.GetCircuit().CreateWire(X+6, Y-6, X+2, Y-9)
@@ -4202,7 +4210,7 @@ class bearingless_induction_motor_design(object):
         study.SetMaterialByName("Cage", "Aluminium")
         study.GetMaterial("Cage").SetValue("EddyCurrentCalculation", 1)
         study.GetMaterial("Cage").SetValue("UserConductivityType", 1)
-        study.GetMaterial("Cage").SetValue("UserConductivityValue", self.Bar_Conductivity)        
+        study.GetMaterial("Cage").SetValue("UserConductivityValue", self.Bar_Conductivity)    
 
         # Conditions
         # Fixture
@@ -4281,7 +4289,7 @@ class bearingless_induction_motor_design(object):
         if total_number_of_cases > 1:
 
             # add case label!
-            study.GetDesignTable().AddCases(total_number_of_cases - 1)        
+            study.GetDesignTable().AddCases(total_number_of_cases - 1)    
 
             def rotate_vertex_in_cad_param(theta, case_no_list, param_no):
                 for case_no in case_no_list:
@@ -4323,7 +4331,7 @@ class bearingless_induction_motor_design(object):
                 except:
                     continue
                 else:
-                    if np.abs(self.slip_freq_breakdown_torque - float(row[0])) < 1e-3:                    
+                    if np.abs(self.slip_freq_breakdown_torque - float(row[0])) < 1e-3:                
                         beginning_column = 1 + 2*3*2 # title + drive/bearing * 3 phase * real/imag
                         for i in range(0, int(self.no_slot_per_pole)):
                             natural_i = i+1
@@ -4634,7 +4642,7 @@ class VanGogh_JMAG(VanGogh):
         center = self.find_center_of_a_circle_using_2_points_and_arc_angle(p1, p2, angle) # ordered p1 and p2 are
         art = self.sketch.CreateArc(center[0], center[1], p1[0], p1[1], p2[0], p2[1])
         self.artist_list.append(art)
-    
+
     def add_arc_using_shapely(self, p1, p2, angle, maxseg=1): # angle in rad
         self.draw_arc_using_shapely(p1, p2, angle, maxseg)
 
@@ -4972,7 +4980,7 @@ class TrimDrawer(object):
             l2=self.line(0, 0, -self.im.Location_RotorBarCenter2+self.im.Radius_of_RotorSlot2, 0) # Line.2
             ref1 = sketch.GetItem("Line.2")
             ref2 = self.doc.CreateReferenceFromItem(ref1)
-            sketch.CreateMonoConstraint("horizontality", ref2)            
+            sketch.CreateMonoConstraint("horizontality", ref2)    
         else:
             l2=self.line(0, 0, -self.im.Location_RotorBarCenter+self.im.Radius_of_RotorSlot, 0) # Line.2
             ref1 = sketch.GetItem("Line.2")
@@ -5199,7 +5207,7 @@ class TrimDrawer(object):
 
         # we forget to plot the neck of stator tooth
         self.l5_start_vertex_x = l2.GetEndVertex().GetX()        # used later for plot_coil()
-        self.l5_start_vertex_y = float(l2.GetEndVertex().GetY()) # used later for plot_coil()                
+        self.l5_start_vertex_y = float(l2.GetEndVertex().GetY()) # used later for plot_coil()        
         X = arc4.GetStartVertex().GetX()
         Y = arc4.GetStartVertex().GetY()
         try:
@@ -5303,7 +5311,7 @@ class TrimDrawer(object):
             self.trim_l(l42, l42.GetEndVertex().GetX()-EPS, l42.GetEndVertex().GetY()-EPS)
 
             region = self.create_region(["Arc","Arc.2","Line","Line.2"])
-        else:            
+        else:    
             region = self.create_region(["Circle"])
 
         if self.im.MODEL_ROTATE:
@@ -5324,7 +5332,7 @@ class TrimDrawer(object):
             self.im.list_rotorCage_vertex_names = list(dict.fromkeys(self.im.list_rotorCage_vertex_names).keys())
 
 
-        self.region_circular_pattern_360_origin(region, self.im.Qr)        
+        self.region_circular_pattern_360_origin(region, self.im.Qr)
 
         sketch.CloseSketch()
     def plot_coil(self, name=None):
@@ -5375,7 +5383,7 @@ class TrimDrawer(object):
 
         # Mirror and Duplicate
         region = self.create_region(["Line","Line.2","Line.3","Arc"])
-        
+
         # region_mirror_pattern_which_is_ItemObject = self.region_mirror_copy(region, l3, merge=False)
         # region_in_the_mirror = RegionItem(region_mirror_pattern_which_is_ItemObject)
         region_in_the_mirror = self.region_mirror_copy(region, l3, merge=False)

@@ -2144,10 +2144,10 @@ class SwarmDataAnalyzer(object):
 
     def build_basic_info(self, spec, sw):
         # Basic information
-        self.speed_rpm         = spec.ExcitationFreq * 60 / spec.p # rpm
+        self.speed_rpm         = spec.ExcitationFreqSimulated * 60 / spec.p # rpm
         self.Omega             = self.speed_rpm / 60. * 2*np.pi
-        self.mec_power         = spec.mec_power
-        self.required_torque   = spec.mec_power / self.Omega # Nm
+        self.mec_power         = spec.mec_power / spec.ExcitationFreq * spec.ExcitationFreqSimulated
+        self.required_torque   = self.mec_power / self.Omega # Nm
         self.Radius_OuterRotor = sw.im.Radius_OuterRotor
         self.stack_length      = sw.im.stack_length
         self.Qs                = sw.im.Qs
