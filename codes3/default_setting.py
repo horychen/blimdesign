@@ -5,12 +5,12 @@ fea_config_dict = {
     ##########################
     # Sysetm Control
     ##########################
-    'OnlyTableResults':False, # modified later according to pc_name
+    'designer.Show':False,
+    'OnlyTableResults':False, # modified later according to pc_name # the only reason we want save mesh results are to obtain voltage profile for power factor evaluation
         # multiple cpu (SMP=2)
         # use directSolver over ICCG Solver
     'local_sensitivity_analysis':False,
     'flag_optimization':True, # also use true for sensitivity analysis
-    'designer.Show':False,
     'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
 
     ##########################

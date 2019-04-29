@@ -294,25 +294,25 @@ class swarm(object):
         logger.info('Swarm is generated.')
 
 
-        # 这是一个补丁，所以很 low 很 silly。
-        # 【多加一层保险】，如果上一次优化是在运行完 wait_greedy_search 之后中断的，那么在 femm_temp/ 下就会有 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 存在。
-        # 但是，从第二代以后开始，所有在gen#文件里的个体都是随机生成的，也就是说，每次中断重新跑，这一代的这个个体都是新的 trial_denorm，所以旧的 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 必须被删除。
-        # 但是下面这样的代码是有问题，因为正常情况到了这里，self.check_csv_results(tran2tss_study_name, returnBoolean=True) 永远都应该返回 False。
-        try:
-            self.size_ongoing_living # for initial generation there is no size_ongoing_living
-        except:
-            pass
-        else:
-            tempID = self.im.ID + '-' + str(self.number_current_generation+1) + '-' + str(self.size_ongoing_living) # 比如说index是7，意味着已经有"8"个个体被评估过了，那么我们要检查第9个，其index为"8"。
-            original_study_name = "ID%s" % (tempID) + "Freq"
-            tran2tss_study_name = "ID%s" % (tempID) + 'Tran2TSS'
-            output_file_path = self.dir_csv_output_folder + 'femm_temp/' + original_study_name + '.csv'
-            if os.path.exists(output_file_path) and not self.check_csv_results(tran2tss_study_name, returnBoolean=True):
-                os.remove(output_file_path)
-                if os.path.exists(output_file_path[:-4]+'.fem'):
-                    os.remove(output_file_path[:-4]+'.fem')
-                print('Removed:', output_file_path)
-                print('Removed:', output_file_path[:-4]+'.fem')
+        # # 这是一个补丁，所以很 low 很 silly。
+        # # 【多加一层保险】，如果上一次优化是在运行完 wait_greedy_search 之后中断的，那么在 femm_temp/ 下就会有 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 存在。
+        # # 但是，从第二代以后开始，所有在gen#文件里的个体都是随机生成的，也就是说，每次中断重新跑，这一代的这个个体都是新的 trial_denorm，所以旧的 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 必须被删除。
+        # # 但是下面这样的代码是有问题，因为正常情况到了这里，self.check_csv_results(tran2tss_study_name, returnBoolean=True) 永远都应该返回 False。
+        # try:
+        #     self.size_ongoing_living # for initial generation there is no size_ongoing_living
+        # except:
+        #     pass
+        # else:
+        #     tempID = self.im.ID + '-' + str(self.number_current_generation+1) + '-' + str(self.size_ongoing_living) # 比如说index是7，意味着已经有"8"个个体被评估过了，那么我们要检查第9个，其index为"8"。
+        #     original_study_name = "ID%s" % (tempID) + "Freq"
+        #     tran2tss_study_name = "ID%s" % (tempID) + 'Tran2TSS'
+        #     femm_output_file_path = self.dir_csv_output_folder + 'femm_temp/' + original_study_name + '.csv'
+        #     if os.path.exists(femm_output_file_path) and not self.check_csv_results(tran2tss_study_name, returnBoolean=True):
+        #         os.remove(femm_output_file_path)
+        #         if os.path.exists(femm_output_file_path[:-4]+'.fem'):
+        #             os.remove(femm_output_file_path[:-4]+'.fem')
+        #         print('Removed:', femm_output_file_path)
+        #         print('Removed:', femm_output_file_path[:-4]+'.fem')
 
     def designer_init(self):
         try:
@@ -332,6 +332,8 @@ class swarm(object):
             self.bool_run_in_JMAG_Script_Editor = False
 
         def add_steel(self):
+            print('[First run on this computer detected]', self.fea_config_dict['Steel'], 'is added to jmag material library.')
+
             if 'M15' in self.fea_config_dict['Steel']:
                 add_M1xSteel(self.app, self.dir_parent, steel_name="M-15 Steel")
             elif 'M19' in self.fea_config_dict['Steel']:
@@ -432,17 +434,27 @@ class swarm(object):
                     app.SaveAs(expected_project_file)
                     logger.debug('Create JMAG project file: %s'%(expected_project_file))
                 else:
+                    print('An existing model is found. This is not expected. In order to make sure femm and jmag share the exact model, the femm results will be deleted if found.')
+                    if os.path.exists(self.femm_output_file_path):
+                        os.remove(self.femm_output_file_path)
+                        print('Removed:', self.femm_output_file_path)
+                        if os.path.exists(self.femm_output_file_path[:-4]+'.fem'):
+                            os.remove(self.femm_output_file_path[:-4]+'.fem')
+                            print('Removed:', self.femm_output_file_path[:-4]+'.fem')
                     app.Load(expected_project_file)
                     logger.debug('Load JMAG project file: %s'%(expected_project_file))
                     logger.debug('Existing models of %d are found in %s', app.NumModels(), app.GetDefaultModelFolderPath())
 
-                    # this `if' is obselete. it is used when a project contains 100 models.
-                    # if app.NumModels() <= individual_index:
-                    #     logger.warn('Some models are not plotted because of bad bounds (some lower bound is too small)! individual_index=%d, NumModels()=%d. See also the fit#%04d.txt file for 99999. There will be no .png file for these individuals either.', individual_index, app.NumModels(), self.number_current_generation)
+                    model = app.GetCurrentModel()
+                    app.DeleteModel(model.GetName())
 
-                    # print app.NumStudies()
-                    # print app.NumAnalysisGroups()
-                    # app.SubmitAllModelsLocal() # we'd better do it one by one for easing the programing?
+                        # this `if' is obselete. it is used when a project contains 100 models.
+                        # if app.NumModels() <= individual_index:
+                        #     logger.warn('Some models are not plotted because of bad bounds (some lower bound is too small)! individual_index=%d, NumModels()=%d. See also the fit#%04d.txt file for 99999. There will be no .png file for these individuals either.', individual_index, app.NumModels(), self.number_current_generation)
+
+                        # print app.NumStudies()
+                        # print app.NumAnalysisGroups()
+                        # app.SubmitAllModelsLocal() # we'd better do it one by one for easing the programing?
 
             self.jmag_control_state = True # indicating that the jmag project is already created
             return app
@@ -503,25 +515,23 @@ class swarm(object):
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
             # Load Results for Tran2TSS
             #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-            try:
-                results = utility.build_str_results(self.axeses, im_variant, self.project_name, tran2tss_study_name, self.dir_csv_output_folder, self.fea_config_dict, self.femm_solver)
-
+            results = utility.build_str_results(self.axeses, im_variant, self.project_name, tran2tss_study_name, self.dir_csv_output_folder, self.fea_config_dict, self.femm_solver)
+            if results is not None:
                 self.fig_main.savefig(self.dir_run + im_variant.individual_name + 'results.png', dpi=150)
                 utility.pyplot_clear(self.axeses)
-            except Exception as e:
-                logger.error('Error when loading csv results for Tran2TSS. Check the Report of JMAG Designer. (Maybe Material is not added.)', exc_info=True)
-                raise e
-            # show()
-
+                # show()
             return results
 
-
+        # this should be summoned even before initializing femm, and it will decide whether the femm results are reliable
+        original_study_name = im_variant.individual_name + "Freq"
+        self.dir_femm_temp = self.dir_csv_output_folder + 'femm_temp/'
+        self.femm_output_file_path = self.dir_femm_temp + original_study_name + '.csv'
+        app = open_jmag() # will set self.jmag_control_state to True
 
         ################################################################
         # Begin from where left: Frequency Study
         ################################################################
         # Freq Study: you can choose to not use JMAG to find the breakdown slip.
-        original_study_name = im_variant.individual_name + "Freq"
         slip_freq_breakdown_torque = None
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         # Eddy Current Solver for Breakdown Torque and Slip
@@ -529,36 +539,35 @@ class swarm(object):
         if self.fea_config_dict['jmag_run_list'][0] == 0:
             # FEMM # In this case, you have to set im_variant.slip_freq_breakdown_torque by FEMM Solver
             # check for existing results
-            self.dir_femm_temp = self.dir_csv_output_folder + 'femm_temp/'
-            output_file_path = self.dir_femm_temp + original_study_name + '.csv'
 
+            if os.path.exists(self.femm_output_file_path):
+                raise Exception('This should never be reached')
 
-            if os.path.exists(output_file_path):
-                # 本来想在这里多加一层保险，如果上一次优化是在运行完 wait_greedy_search 之后中断的，那么在 femm_temp/ 下就会有 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 存在。
-                # 但是，从第二代以后开始，所有在gen#文件里的个体都是随机生成的，也就是说，每次中断重新跑，这一代的这个个体都是新的 trial_denorm，所以旧的 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 必须被删除。
-                # 但是下面这样的代码是有问题，因为正常情况到了这里，self.check_csv_results(tran2tss_study_name, returnBoolean=True) 永远都应该返回 False。
-                # if not self.check_csv_results(tran2tss_study_name, returnBoolean=True):
-                #     os.remove(output_file_path)
-                #     if os.path.exists(output_file_path[-4:]+'.fem'):
-                #         os.remove(output_file_path[-4:]+'.fem')
-                # 正确的做法是在刚刚初始化 pop 的时候检查！
+                # # 本来想在这里多加一层保险，如果上一次优化是在运行完 wait_greedy_search 之后中断的，那么在 femm_temp/ 下就会有 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 存在。
+                # # 但是，从第二代以后开始，所有在gen#文件里的个体都是随机生成的，也就是说，每次中断重新跑，这一代的这个个体都是新的 trial_denorm，所以旧的 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 必须被删除。
+                # # 但是下面这样的代码是有问题，因为正常情况到了这里，self.check_csv_results(tran2tss_study_name, returnBoolean=True) 永远都应该返回 False。
+                # # if not self.check_csv_results(tran2tss_study_name, returnBoolean=True):
+                # #     os.remove(femm_output_file_path)
+                # #     if os.path.exists(femm_output_file_path[-4:]+'.fem'):
+                # #         os.remove(femm_output_file_path[-4:]+'.fem')
+                # # 正确的做法是在刚刚初始化 pop 的时候检查！
 
-                with open(output_file_path, 'r') as f:
-                    data = f.readlines()
+                # with open(self.femm_output_file_path, 'r') as f:
+                #     data = f.readlines()
 
-                    slip_freq_breakdown_torque                  = float(data[0][:-1])
-                    breakdown_torque                            = float(data[1][:-1])
+                #     slip_freq_breakdown_torque                  = float(data[0][:-1])
+                #     breakdown_torque                            = float(data[1][:-1])
 
-                    self.femm_solver.stator_slot_area           = float(data[2][:-1])
-                    self.femm_solver.rotor_slot_area            = float(data[3][:-1])
+                #     self.femm_solver.stator_slot_area           = float(data[2][:-1])
+                #     self.femm_solver.rotor_slot_area            = float(data[3][:-1])
 
-                    self.femm_solver.vals_results_rotor_current = []
-                    for row in data[4:]:
-                        index = row.find(',')
-                        self.femm_solver.vals_results_rotor_current.append(float(row[:index]) + 1j*float(row[index+1:-1]))
-                    # self.femm_solver.list_rotor_current_amp = [abs(el) for el in vals_results_rotor_current]
-                    # print 'debug,'
-                    # print self.femm_solver.vals_results_rotor_current
+                #     self.femm_solver.vals_results_rotor_current = []
+                #     for row in data[4:]:
+                #         index = row.find(',')
+                #         self.femm_solver.vals_results_rotor_current.append(float(row[:index]) + 1j*float(row[index+1:-1]))
+                #     # self.femm_solver.list_rotor_current_amp = [abs(el) for el in vals_results_rotor_current]
+                #     # print 'debug,'
+                #     # print self.femm_solver.vals_results_rotor_current
             else:
 
                 # no direct returning of results, wait for it later when you need it.
@@ -578,7 +587,6 @@ class swarm(object):
             # check for existing results
             temp = self.check_csv_results(original_study_name)
             if temp is None:
-                app = open_jmag()
                 model = draw_jmag()
                 slip_freq_breakdown_torque, breakdown_torque, breakdown_force = exe_frequency()
             else:
@@ -586,110 +594,114 @@ class swarm(object):
                 toc = clock_time()
 
 
-
         ################################################################
         # Begin from where left: Transient Study
         ################################################################
-        tran2tss_study_name = im_variant.individual_name + 'Tran2TSS'
-        # bool_skip_transient = False
+        count_tran2tss_loop = 0
+        while True: # this is added in case of, e.g., iron loss data are not present while other data are already there.
+            count_tran2tss_loop += 1 
+            tran2tss_study_name = im_variant.individual_name + 'Tran2TSS'
+            # bool_skip_transient = False
 
-        # check whether or not the transient problem is already solved.
-        if not self.check_csv_results(tran2tss_study_name, returnBoolean=True):
+            # check whether or not the transient problem is already solved.
+            if not self.check_csv_results(tran2tss_study_name, returnBoolean=True, file_suffix='_iron_loss_loss.csv'):
 
-            # no results? no jmag? then make sure jmag is opened
-            if self.jmag_control_state == False: # means that no jmag project is loaded because the eddy current problem is already solved.
+                if self.jmag_control_state:
+                    if count_tran2tss_loop == 3:
+                        # if this is reached, means the while clause is working, so we delete the existing model and draw again
+                        # print('In normal case, jmag_control_state should be False here, but now it is True meaning the loop of While True is triggered. Something went wrong with JMAG solver. Loop count:', count_tran2tss_loop)
+                        msg = 'The second try has failed. A manual check is needed with the jmag project %s. The most likely place that goes wrong is that a linear magnetic is somehow applied so that the iron loss solver will invariably fail.' % (self.project_name)
+                        utility.send_notification(text=msg)
+                        raise Exception(msg)
 
-                app = open_jmag() # will set self.jmag_control_state to True
-                model = draw_jmag()
+                    elif count_tran2tss_loop > 1:
+                        # model exists so delete it
+                        model = app.GetCurrentModel()
+                        app.DeleteModel(model.GetName())
+                        # and draw it again
+                        model = draw_jmag()
 
-
-            # no results?
-            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-            # TranFEAwi2TSS for ripples and iron loss
-            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-            # add or duplicate study for transient FEA denpending on jmag_run_list
-            if self.fea_config_dict['jmag_run_list'][0] == 0:
-                if False: # this will wait for breakdown slip before setting up the pre-processor
-                    if slip_freq_breakdown_torque is None:
-                        # wait for femm to finish, and get your slip of breakdown
-                        slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
                     else:
-                        # femm already has results and has assign value to slip_freq_breakdown_torque
-                        pass
-
-                    # FEMM+JMAG
-                    im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
-                    study = im_variant.add_TranFEAwi2TSS_study( slip_freq_breakdown_torque, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
-                    self.mesh_study(im_variant, app, model, study)
+                        model = draw_jmag()
                 else:
+                    raise Exception('Wrong jmag_control_state.')
 
-                    # FEMM+JMAG
-                    study = im_variant.add_TranFEAwi2TSS_study( 50.0, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
-                    self.mesh_study(im_variant, app, model, study)
+                #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+                # TranFEAwi2TSS for ripples and iron loss
+                #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+                # add or duplicate study for transient FEA denpending on jmag_run_list
+                if self.fea_config_dict['jmag_run_list'][0] == 0:
+                    if False: # this will wait for breakdown slip before setting up the pre-processor
+                        if slip_freq_breakdown_torque is None:
+                            # wait for femm to finish, and get your slip of breakdown
+                            slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
+                        else:
+                            # femm already has results and has assign value to slip_freq_breakdown_torque
+                            pass
 
-                    if slip_freq_breakdown_torque is None:
-                        # wait for femm to finish, and get your slip of breakdown
-                        slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
+                        # FEMM+JMAG
+                        im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
+                        study = im_variant.add_TranFEAwi2TSS_study( slip_freq_breakdown_torque, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
+                        self.mesh_study(im_variant, app, model, study)
                     else:
-                        # femm already has results and has assign value to slip_freq_breakdown_torque
-                        pass
-                    # Now we have the slip, set it up!
-                    im_variant.update_mechanical_parameters(slip_freq_breakdown_torque) # do this for records only
-                    if im_variant.the_slip != slip_freq_breakdown_torque / im_variant.DriveW_Freq:
-                        raise Exception('Check update_mechanical_parameters().')
-                    study.GetDesignTable().GetEquation("slip").SetExpression("%g"%(im_variant.the_slip))
-                self.run_study(im_variant, app, study, clock_time())
-            else:
-                # JMAG+JMAG
-                # model = app.GetCurrentModel()
-                im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
-                if False: 
-                    # this is not a good option if the excitation is different for transient study from frequency study
-                    self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger)
-                else:
-                    study = im_variant.add_TranFEAwi2TSS_study( slip_freq_breakdown_torque, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
-                    self.mesh_study(im_variant, app, model, study)
+
+                        # FEMM+JMAG
+                        study = im_variant.add_TranFEAwi2TSS_study( 50.0, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
+                        self.mesh_study(im_variant, app, model, study)
+
+                        if slip_freq_breakdown_torque is None:
+                            # wait for femm to finish, and get your slip of breakdown
+                            slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
+                        else:
+                            # femm already has results and has assign value to slip_freq_breakdown_torque
+                            pass
+                        # Now we have the slip, set it up!
+                        im_variant.update_mechanical_parameters(slip_freq_breakdown_torque) # do this for records only
+                        if im_variant.the_slip != slip_freq_breakdown_torque / im_variant.DriveW_Freq:
+                            raise Exception('Check update_mechanical_parameters().')
+                        study.GetDesignTable().GetEquation("slip").SetExpression("%g"%(im_variant.the_slip))
                     self.run_study(im_variant, app, study, clock_time())
+                else:
+                    # JMAG+JMAG
+                    # model = app.GetCurrentModel()
+                    im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
+                    if False: 
+                        # this is not a good option if the excitation is different for transient study from frequency study
+                        self.duplicate_TranFEAwi2TSS_from_frequency_study(im_variant, slip_freq_breakdown_torque, app, model, original_study_name, tran2tss_study_name, logger)
+                    else:
+                        study = im_variant.add_TranFEAwi2TSS_study( slip_freq_breakdown_torque, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
+                        self.mesh_study(im_variant, app, model, study)
+                        self.run_study(im_variant, app, study, clock_time())
 
-            # export Voltage if field data exists.
-            if self.fea_config_dict['delete_results_after_calculation'] == False:
-                # Export Circuit Voltage
-                ref1 = app.GetDataManager().GetDataSet("Circuit Voltage")
-                app.GetDataManager().CreateGraphModel(ref1)
-                app.GetDataManager().GetGraphModel("Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+                # export Voltage if field data exists.
+                if self.fea_config_dict['delete_results_after_calculation'] == False:
+                    # Export Circuit Voltage
+                    ref1 = app.GetDataManager().GetDataSet("Circuit Voltage")
+                    app.GetDataManager().CreateGraphModel(ref1)
+                    app.GetDataManager().GetGraphModel("Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.individual_name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+            else:
+                # if csv already exists, im_variant.slip_freq_breakdown_torque is still None till here
+                # print 'DEBUG::::::::::::', im_variant.slip_freq_breakdown_torque
+                if slip_freq_breakdown_torque is None:
+                    # wait for femm to finish, and get your slip of breakdown
+                    slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
+                im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
 
-        # if csv already exists, im_variant.slip_freq_breakdown_torque is still None till here
-        # print 'DEBUG::::::::::::', im_variant.slip_freq_breakdown_torque
-        if im_variant.slip_freq_breakdown_torque is None:
-            im_variant.update_mechanical_parameters(slip_freq_breakdown_torque)
+            ################################################################
+            # Load data for cost function evaluation
+            ################################################################
+            results_to_be_unpacked = load_transeint()
+            if results_to_be_unpacked is not None:
+                str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss, cost_function = results_to_be_unpacked
 
+                # write design evaluation data to file
+                with open(self.dir_run + 'swarm_data.txt', 'a') as f:
+                    f.write(str_results)
 
-
-        ################################################################
-        # Load data for cost function evaluation
-        ################################################################
-        str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss, cost_function = load_transeint()
-
-        # # before writing, do a double check that individual_denorm (design_parameters) corresponds to the evaluation results from database
-        # if self.database is not None and self.number_current_generation == self.database.the_generation_that_i_am_worried_about:
-        #     design_parameters_database, cost_function_database = self.database.find_individual_denorm(self.number_current_generation, individual_index)
-        #     if design_parameters_database is not None:
-        #         if abs(sum(np.array(design_parameters_database) - np.array(individual_denorm)))>1e-4 or abs(cost_function_database-cost_function)>1e-4:
-        #             print design_parameters_database, individual_denorm
-        #             print cost_function_database, cost_function
-        #             raise Exception('Wrong individual_denorm. Unmatch database data.')
-        #         logger.debug('Locate the design in the database. worried gen#=%d'%(self.database.the_generation_that_i_am_worried_about))
-        #     else:
-        #         logger.debug('Cannot find the design in the database. worried gen#=%d'%(self.database.the_generation_that_i_am_worried_about))
-
-        # write design evaluation data to file
-        with open(self.dir_run + 'swarm_data.txt', 'a') as f:
-            f.write(str_results)
-
-        self.im = mylatch
-        # raise
-        # quit() # for run#117: write the initial design to swarm_data.txt
-        return cost_function
+                self.im = mylatch
+                return cost_function
+            else:
+                continue
 
     def fobj_test(self, individual_index, individual_denorm):
 
@@ -1132,11 +1144,11 @@ class swarm(object):
         model.CloseCadLink() # this is essential if you want to create a series of models
         return True
 
-    def check_csv_results(self, study_name, returnBoolean=False):
+    def check_csv_results(self, study_name, returnBoolean=False, file_suffix='_torque.csv'): # '_iron_loss_loss.csv'
         # print self.dir_csv_output_folder + study_name + '_torque.csv'
-        if not os.path.exists(self.dir_csv_output_folder + study_name + '_torque.csv'):
+        if not os.path.exists(self.dir_csv_output_folder + study_name + file_suffix):
             if returnBoolean == False:
-                print('Nothing is found when looking into:', self.dir_csv_output_folder + study_name + '_torque.csv')
+                print('Nothing is found when looking into:', self.dir_csv_output_folder + study_name + file_suffix)
                 return None
             else:
                 return False

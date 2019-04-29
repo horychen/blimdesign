@@ -1,9 +1,13 @@
 import pyrhonen_procedure_as_function 
-bool_post_processing = False # solve or post-processing
+bool_post_processing = True # solve or post-processing
 
 # Situation when default_setting does not match spec may happen. What???
 filename = './default_setting.py'
 exec(compile(open(filename, "rb").read(), filename, 'exec'), globals(), locals())
+
+文件名 = filename
+from math import pi as π
+print(文件名)
 
 
 
@@ -99,29 +103,29 @@ if True:
         # run_folder = r'run#504/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = 1000 Hz
 
 
-        # fea_config_dict['local_sensitivity_analysis'] = False
-        # fea_config_dict['bool_refined_bounds'] = True
-        # run_folder = r'run#505/' # Optimize with refined bounds (popsize is 70=7*10 now)
-
-        # fea_config_dict['local_sensitivity_analysis'] = False
-        # fea_config_dict['bool_refined_bounds'] = False
-        # run_folder = r'run#506/' # Optimize without refined bounds (popsize is 70=7*10 now) the mec_power is changed from 100kW to 75kW.
-
-
+        fea_config_dict['local_sensitivity_analysis'] = False
+        fea_config_dict['bool_refined_bounds'] = True
+        run_folder = r'run#505/' # Optimize with refined bounds (popsize is 70=7*10 now)
 
         fea_config_dict['local_sensitivity_analysis'] = False
         fea_config_dict['bool_refined_bounds'] = False
-        if '01' in fea_config_dict['pc_name']:
+        run_folder = r'run#506/' # Optimize without refined bounds (popsize is 70=7*10 now) the mec_power is changed from 100kW to 75kW.
+
+
+        # spec_4poleOD150mm1500Hz82kW.py
+        fea_config_dict['local_sensitivity_analysis'] = False
+        fea_config_dict['bool_refined_bounds'] = False
+        if '730' in fea_config_dict['pc_name']:
             fea_config_dict['use_weights'] = 'O1'
             run_folder = r'run#50701/'
-        elif '02' in fea_config_dict['pc_name']:
+        elif '730' in fea_config_dict['pc_name']:
             fea_config_dict['use_weights'] = 'O2'
             run_folder = r'run#50702/'
         elif '730' in fea_config_dict['pc_name']:
             fea_config_dict['use_weights'] = 'O3'
             run_folder = r'run#507/' # Optimize without refined bounds (popsize is 70=7*10 now) the mec_power is changed from 100kW to 75kW. Use weights O3
         else:
-            raise 
+            raise
 
         # quit()
 
@@ -184,7 +188,7 @@ if True:
                             'mut':        0.8,
                             'crossp':     0.7,
                             'popsize':    35, # 5~10 \times number of geometry parameters --JAC223
-                            'iterations': 30,
+                            'iterations': 50,
                             'narrow_bounds_normalized':[[],
                                                         [],
                                                         [],

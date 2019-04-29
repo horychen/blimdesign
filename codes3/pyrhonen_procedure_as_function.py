@@ -1393,7 +1393,7 @@ def get_outer_rotor_radius_yield(speed_rpm, yield_stress=None, material_density_
 
 def get_tip_speed(speed_rpm, rotor_radius):
     Omega = speed_rpm/(60)*2*pi
-    print('Induction motors with a laminated squirrel cage rotor, rotor surface speed ≤200 m/s. --Figure 6.4')
+    print('Induction motors with a laminated squirrel cage rotor, rotor surface speed <=200 m/s. --Figure 6.4')
     return rotor_radius * Omega
 
 def get_stack_length_critical_speed(speed_rpm, rotor_radius, material_density_rho=None, Youngs_modulus_of_elasticity=None, safety_factor_to_speed=1.5): # natural frequency

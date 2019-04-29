@@ -493,7 +493,15 @@ def add_plots(axeses, dm, title=None, label=None, zorder=None, time_list=None, s
 def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv_output_folder, fea_config_dict, femm_solver):
     # originate from fobj
 
-    dm = read_csv_results_4_general_purpose(tran_study_name, dir_csv_output_folder, fea_config_dict, femm_solver)
+    try:
+        dm = read_csv_results_4_general_purpose(tran_study_name, dir_csv_output_folder, fea_config_dict, femm_solver)
+    except Exception as e:
+        print(e)
+        logging.getLogger(__name__).error('Error when loading csv results for Tran2TSS. Check the Report of JMAG Designer. (Maybe Material is not added.)', exc_info=True)
+        print('Will re-build and re-run the JMAG project...')
+        return None
+        # raise e
+
     basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()
     sfv = suspension_force_vector(ForConX_list, ForConY_list, range_ss=fea_config_dict['number_of_steps_2ndTTS']) # samples in the tail that are in steady state
     str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle = \
@@ -1373,10 +1381,9 @@ def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ri
 class SwarmDataAnalyzer(object):
     """docstring for SwarmDataAnalyzer"""
     def __init__(self, dir_run=None, run_integer=None, bool_sensitivity_analysis=True):
-        if run_integer is not None:
-            self.run_integer = run_integer
-            dir_run = r'D:\OneDrive - UW-Madison\c\pop\run#%d/'%(run_integer)
 
+        self.dir_run = dir_run
+        self.run_integer = run_integer
         with open(dir_run+'swarm_data.txt', 'r') as f:
             self.buf = f.readlines()[1:]
 
@@ -2171,13 +2178,13 @@ class SwarmDataAnalyzer(object):
 
 def build_sensitivity_bar_charts(spec, sw):
     run_integer = int(sw.fea_config_dict['run_folder'][4:-1])
-    swda = SwarmDataAnalyzer(run_integer=run_integer, bool_sensitivity_analysis=True) 
+    swda = SwarmDataAnalyzer(dir_run=sw.dir_run, run_integer=run_integer, bool_sensitivity_analysis=True) 
     swda.build_basic_info(spec, sw)
     swda.sensitivity_bar_charts()
 
 def build_Pareto_plot(spec, sw):
     run_integer = int(sw.fea_config_dict['run_folder'][4:-1])
-    swda = SwarmDataAnalyzer(run_integer=run_integer, bool_sensitivity_analysis=False) 
+    swda = SwarmDataAnalyzer(dir_run=sw.dir_run, run_integer=run_integer, bool_sensitivity_analysis=False) 
     swda.build_basic_info(spec, sw)
 
     # Plotting the Pareto plot
