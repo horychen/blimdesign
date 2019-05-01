@@ -379,7 +379,8 @@ class desgin_specification(object):
 
                  ''', file=fname)
         print('\nRequired Torque: %g Nm'% required_torque, file=fname)
-        print('\nTip speed: %g m/s' %(get_tip_speed(speed_rpm, rotor_outer_radius_r_or)), file=fname)
+        tip_speed = get_tip_speed(speed_rpm, rotor_outer_radius_r_or)
+        print('\nTip speed: %g m/s' %(tip_speed), file=fname)
         print('\nCentrifugal stress: %g MPa' %(1e-6*check_stress_due_to_centrifugal_force(speed_rpm, rotor_outer_radius_r_or)), file=fname)
         print('\nRotor outer diameter $D_{or}=%g$ mm'% (rotor_outer_diameter_Dr*1e3), file=fname)
         print('\nRotor outer radius $r_{or}=%g$ mm'% (rotor_outer_radius_r_or*1e3), file=fname)
@@ -411,6 +412,9 @@ class desgin_specification(object):
             else:
                 air_gap_length_delta *= 1.25
 
+        if tip_speed>100:
+            air_gap_length_delta_high_speed = 0.001 + (rotor_outer_diameter_Dr / 0.07 + tip_speed/400) * 1e-3 # 第二版(6.25)
+
         stack_length_eff = stack_length + 2 * air_gap_length_delta
 
         air_gap_diameter_D = 1*air_gap_length_delta + rotor_outer_diameter_Dr
@@ -425,6 +429,8 @@ class desgin_specification(object):
                 We double $\delta$ for high speed machines, as suggested by Pyrhonen---increase air gap length by 50\%--100\%.
                 % (看integrated box 硕士论文 'Kevin S. Campbell: this is too small. 3.5 mm is good! 3.1.3，Pyrhonen09给的只适用50Hz电机，其实pyrhonen自己也有提到气隙要加大100%哦) ''', file=fname)
         print('\nAir gap length: $\\delta=%g$ mm' % (air_gap_length_delta*1e3), file=fname)
+        if tip_speed>100:
+            print('\nAir gap length (high speed): $\\delta_{hs} = %g$ mm' % (air_gap_length_delta_high_speed*1e3), file=fname)
         print('\nEffective stack length: $L_{st,{\\rm eff}}=%g$ mm'% (stack_length_eff*1e3), file=fname)
 
 

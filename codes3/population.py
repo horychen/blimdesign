@@ -43,7 +43,7 @@ class swarm(object):
             msg = 'Please activate one initial design. Refer %s.' % (self.initial_design_file)
             logger = logging.getLogger(__name__)
             logger.warn(msg)
-            raise Exception('no match for Active_Qr')
+            raise Exception('no match for Active_Qr: %d'%(fea_config_dict['Active_Qr']))
 
         # directories part II
         if im.DriveW_Freq == 1000: # New design for 1000 Hz machine. some patch for my scrappy codes (lot of bugs are fixed, we need a new name).
@@ -1190,7 +1190,7 @@ class swarm(object):
 
             breakdown_force = max(np.sqrt(np.array(l_ForCon_X)**2 + np.array(l_ForCon_Y)**2))
 
-            index, breakdown_torque = utility.get_max_and_index(l_TorCon)
+            index, breakdown_torque = utility.get_index_and_max(l_TorCon)
             slip_freq_breakdown_torque = l_slip_freq[index]
             return slip_freq_breakdown_torque, breakdown_torque, breakdown_force
         except NameError as e:
@@ -2203,7 +2203,7 @@ class swarm(object):
         ax_cur.grid()
         ax_cur.set_xlabel('Time [s]'); 
         ax_cur.set_ylabel('Rotor slot current [A]')
-        # plt.figtext(0.5, 0.01, txt, wrap=True, horizontalalignment='center', fontsize=12)
+            # plt.figtext(0.5, 0.01, txt, wrap=True, horizontalalignment='center', fontsize=12)
 
         ax_cur2.legend(fontsize=18)
         ax_cur2.grid()
@@ -2211,15 +2211,15 @@ class swarm(object):
         ax_cur2.set_ylabel('Rotor slot current [A]', fontsize=18)
         ax_cur2.set_xlim([0, 0.09]); 
         ax_cur2.tick_params(axis='both', which='major', labelsize=18)
-        # ax_cur2.set_xticklabels(ax_cur2.get_xticklabels(), fontsize=16)
-        fig_cur2.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\Qr36_rotor_current_1000A.png', dpi=150)
+            # ax_cur2.set_xticklabels(ax_cur2.get_xticklabels(), fontsize=16)
+        # fig_cur2.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\Qr36_rotor_current_1000A.png', dpi=150)
 
 
         fig_main.tight_layout()
         if int(self.im.Qr) == 36:
             fig_main.savefig('FEA_Model_Comparisons.png', dpi=150)
-            # fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 BlessIMDesign\p2019_iemdc_bearingless_induction full paper\images\FEA_Model_Comparisons.png', dpi=150)
-            fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\New_FEA_Model_Comparisons.png', dpi=150)
+                # fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 BlessIMDesign\p2019_iemdc_bearingless_induction full paper\images\FEA_Model_Comparisons.png', dpi=150)
+            # fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\New_FEA_Model_Comparisons.png', dpi=150)
         
 
     def timeStepSensitivity(self):

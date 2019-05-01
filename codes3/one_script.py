@@ -59,6 +59,8 @@ if not bool_post_processing:
     if '730' in fea_config_dict['pc_name']:
         os.system('cd /d '+ r'"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX" && z_nul"')
 
+# quit()
+
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Add to Database
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -188,7 +190,7 @@ if True:
                             'mut':        0.8,
                             'crossp':     0.7,
                             'popsize':    35, # 5~10 \times number of geometry parameters --JAC223
-                            'iterations': 50,
+                            'iterations': 70,
                             'narrow_bounds_normalized':[[],
                                                         [],
                                                         [],
@@ -380,7 +382,7 @@ if True:
             study.GetDesignTable().AddCase()
             study.GetDesignTable().SetValue(1, 0, 45000) # r/min
             study.GetDesignTable().AddCase()
-            study.GetDesignTable().SetValue(2, 0, 30000)
+            study.GetDesignTable().SetValue(2, 0, 15000) # r/min
             study.GetDesignTable().AddParameterVariableName(u"MeshSizeControl (ElementSizeOnPart): Size")
             study.GetDesignTable().AddCase()
             study.GetDesignTable().SetValue(3, 1, 0.5) # mm
@@ -412,8 +414,8 @@ if True:
             sw.app.GetDataManager().CreateParametricDataWithParameter(study.GetDataSet(u"VonMisesStress", 4), parameter)
 
             # Contour results
-            study.CreateScaling(u"Scale200")
-            study.GetScaling(u"Scale200").SetScalingFactor(200)
+            study.CreateScaling(u"Scale100")
+            study.GetScaling(u"Scale100").SetScalingFactor(100)
             # sw.app.View().SetOriginalModelView(True)
             sw.app.View().ShowMeshGeometry()
             sw.app.View().SetScaledDisplacementView(True)
@@ -422,7 +424,15 @@ if True:
             study.GetContour(u"MisesElement").SetResultCoordinate(u"Global Rectangular")
             study.GetContour(u"MisesElement").SetContourType(2)
             study.GetContour(u"MisesElement").SetDigitsNotationType(2)
+
+            study.GetContour(u"MisesElement").SetLogScale(True)
+            study.GetContour(u"MisesElement").SetNumLabels(u"11")
+            study.GetContour(u"MisesElement").SetPrecision(u"1")
+            study.GetContour(u"MisesElement").SetGradient(u"PurpleRed", u"11", False)
+
             sw.app.View().SetContourView(True)
+
+
 
             # study.CreateContour(u"PrincipleStressElement")
             # study.GetContour(u"PrincipleStressElement").SetResultType(u"PrincipalStress", u"")
