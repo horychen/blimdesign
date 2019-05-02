@@ -1993,11 +1993,47 @@ class swarm(object):
                    chr(64+count_plot), utility.to_precision(0.5*(sfv.ss_max_force_err_abs[0]-sfv.ss_max_force_err_abs[1])/sfv.ss_avg_force_magnitude*100),
                    chr(64+count_plot), utility.to_precision(0.5*(sfv.ss_max_force_err_ang[0]-sfv.ss_max_force_err_ang[1]))))
 
-        fig_main, axeses = subplots(2, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+        def iemdc_add_plot(axes, title=None, label=None, zorder=None, time_list=None, sfv=None, torque=None, range_ss=None, alpha=0.7, length_time_list=None, color='k'):
+            if length_time_list is not None:
+                ax = axes[0]; ax.plot(time_list[:length_time_list], torque[:length_time_list], alpha=alpha, label=label, zorder=zorder, color=color)
+                ax = axes[1]; ax.plot(time_list[:length_time_list], sfv.force_abs[:length_time_list], alpha=alpha, label=label, zorder=zorder, color=color)
+            else:
+                ax = axes[0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder, color=color)
+                ax = axes[1]; ax.plot(time_list, sfv.force_abs, alpha=alpha, label=label, zorder=zorder, color=color)
+
+        fig_main, axeses = subplots(2, 2, sharex=False, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
         ax = axeses[0][0]; ax.set_xlabel('(a)',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)
         ax = axeses[0][1]; ax.set_xlabel('(b)',fontsize=14.5); ax.set_ylabel('Force Amplitude [N]',fontsize=14.5)
         ax = axeses[1][0]; ax.set_xlabel('Time [s]\n(c)',fontsize=14.5); ax.set_ylabel('Normalized Force Error Magnitude [%]',fontsize=14.5)
         ax = axeses[1][1]; ax.set_xlabel('Time [s]\n(d)',fontsize=14.5); ax.set_ylabel('Force Error Angle [deg]',fontsize=14.5)
+        for axes in axeses:
+            for ax in axes:
+                ax.set_xlim([0,0.1])
+
+        iemdc_fig1, iemdc_axes1 = subplots(2, 1, sharex=False, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+        ax = iemdc_axes1[0]; ax.set_xlabel('Time [s]',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)
+        ax = iemdc_axes1[1]; ax.set_xlabel('Time [s]',fontsize=14.5); ax.set_ylabel('Force Amplitude [N]',fontsize=14.5)
+
+        iemdc_fig2, iemdc_axes2 = subplots(2, 1, sharex=False, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+        ax = iemdc_axes2[0]; ax.set_xlabel('Time [s]',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)
+        ax = iemdc_axes2[1]; ax.set_xlabel('Time [s]',fontsize=14.5); ax.set_ylabel('Force Amplitude [N]',fontsize=14.5)
+
+        iemdc_fig3, iemdc_axes3 = subplots(2, 1, sharex=False, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+        ax = iemdc_axes3[0]; ax.set_xlabel('Time [s]',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)
+        ax = iemdc_axes3[1]; ax.set_xlabel('Time [s]',fontsize=14.5); ax.set_ylabel('Force Amplitude [N]',fontsize=14.5)
+
+        iemdc_fig4, iemdc_axes4 = subplots(2, 1, sharex=False, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+        ax = iemdc_axes4[0]; ax.set_xlabel('Time [s]',fontsize=14.5); ax.set_ylabel('Torque [Nm]',fontsize=14.5)
+        ax = iemdc_axes4[1]; ax.set_xlabel('Time [s]',fontsize=14.5); ax.set_ylabel('Force Amplitude [N]',fontsize=14.5)
+
+        for ax in iemdc_axes1:
+            ax.grid(True)
+        for ax in iemdc_axes2:
+            ax.grid(True)
+        for ax in iemdc_axes3:
+            ax.grid(True)
+        for ax in iemdc_axes4:
+            ax.grid(True)
 
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         # TranRef400
@@ -2017,7 +2053,18 @@ class swarm(object):
                   range_ss=sfv.range_ss) 
         print('\tbasic info:', basic_info)
 
-        # Current of TranRef
+        iemdc_add_plot( iemdc_axes1,
+                          title=study_name,
+                          label='Transient FEA', #'TranFEARef', #400',
+                          zorder=1,
+                          time_list=time_list,
+                          sfv=sfv,
+                          torque=TorCon_list,
+                          range_ss=sfv.range_ss,
+                          length_time_list=int(len(time_list)/2),
+                          color='#1f77b4') 
+
+        # Current profile of TranRef
         fig_cur, axes_cur = subplots(2,1)
         fig_cur2, ax_cur2 = subplots(1,1)
         ax_cur = axes_cur[0]
@@ -2092,6 +2139,17 @@ class swarm(object):
                   range_ss=sfv.range_ss)
         print('\tbasic info:', basic_info)
 
+        iemdc_add_plot( iemdc_axes2,
+                          title=study_name,
+                          label='Transient FEA w/ 2 Time Step Sections',
+                          zorder=8,
+                          time_list=time_list,
+                          sfv=sfv,
+                          torque=TorCon_list,
+                          range_ss=sfv.range_ss,
+                          length_time_list=None,
+                          color='#ff7f0e') 
+
         # Current of Tran2TSS
         for key in dm.key_list:
             if 'A1' in key: # e.g., ConductorA1
@@ -2125,6 +2183,7 @@ class swarm(object):
         study_name = 'FEMM'
         rotor_position_in_deg = femm_solver_data[0]*0.1 
         time_list = rotor_position_in_deg/180.*pi / self.im.Omega
+        length_original_time_list = len(time_list)
         number_of_repeat = int(end_time / time_list[-1]) + 2
         femm_force_x = femm_solver_data[2].tolist()
         femm_force_y = femm_solver_data[3].tolist()    
@@ -2149,6 +2208,18 @@ class swarm(object):
                   range_ss=sfv.range_ss,
                   alpha=0.5) 
 
+        iemdc_add_plot( iemdc_axes3,
+                        title=study_name,
+                        label='Static FEA', #'StaticFEAwiRR',
+                        zorder=3,
+                        time_list=time_list,
+                        sfv=sfv,
+                        torque=femm_torque,
+                        range_ss=sfv.range_ss,
+                        alpha=0.5,
+                        length_time_list=length_original_time_list,
+                        color='#2ca02c') 
+        
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         # EddyCurrent
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -2159,6 +2230,7 @@ class swarm(object):
         rotor_position_in_deg = 360./self.im.Qr / len(TorCon_list) * np.arange(0, len(TorCon_list))
         # print rotor_position_in_deg
         time_list = rotor_position_in_deg/180.*pi / self.im.Omega
+        length_original_time_list = len(time_list)
         number_of_repeat = int(end_time / time_list[-1])
 
         # 延拓
@@ -2178,6 +2250,18 @@ class swarm(object):
                   sfv=sfv,
                   torque=ec_torque,
                   range_ss=sfv.range_ss) # samples in the tail that are in steady state
+
+        iemdc_add_plot( iemdc_axes4,
+                        title=study_name,
+                        label='Eddy Current FEA', #'EddyCurFEAwiRR',
+                        zorder=2,
+                        time_list=time_list,
+                        sfv=sfv,
+                        torque=ec_torque,
+                        range_ss=sfv.range_ss,  # samples in the tail that are in steady state
+                        length_time_list=length_original_time_list,
+                        color='#d62728') 
+
 
         # Force Vector plot
         ax = figure().gca()
@@ -2212,13 +2296,14 @@ class swarm(object):
         ax_cur2.set_xlim([0, 0.09]); 
         ax_cur2.tick_params(axis='both', which='major', labelsize=18)
             # ax_cur2.set_xticklabels(ax_cur2.get_xticklabels(), fontsize=16)
-        # fig_cur2.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\Qr36_rotor_current_1000A.png', dpi=150)
-
 
         fig_main.tight_layout()
         if int(self.im.Qr) == 36:
-            fig_main.savefig('FEA_Model_Comparisons.png', dpi=150)
-                # fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 BlessIMDesign\p2019_iemdc_bearingless_induction full paper\images\FEA_Model_Comparisons.png', dpi=150)
+            pass
+            # fig_cur2.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\Qr36_rotor_current_1000A.png', dpi=150)
+            pass
+            # fig_main.savefig('FEA_Model_Comparisons.png', dpi=150)
+            #     # fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 BlessIMDesign\p2019_iemdc_bearingless_induction full paper\images\FEA_Model_Comparisons.png', dpi=150)
             # fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\New_FEA_Model_Comparisons.png', dpi=150)
         
 
@@ -2268,6 +2353,8 @@ class swarm(object):
         axes[0].legend()
         axes[1].grid()
         axes[1].legend()
+
+
 
 
     # ECCE19
