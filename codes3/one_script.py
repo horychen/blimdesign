@@ -1,5 +1,5 @@
 import pyrhonen_procedure_as_function 
-bool_post_processing = True # solve or post-processing
+bool_post_processing = False # solve or post-processing
 
 # Situation when default_setting does not match spec may happen. What???
 filename = './default_setting.py'
@@ -20,15 +20,15 @@ spec = pyrhonen_procedure_as_function.desgin_specification(
         DPNV_or_SEPA = True, # Dual purpose no voltage or Separate winding
         p = p,
         ps = 2 if p==1 else 1,
-        mec_power = 82e3, # kW
-        ExcitationFreq = p*750, # Hz
+        mec_power = 80e3, # kW
+        ExcitationFreq = p*780, # Hz
         ExcitationFreqSimulated = p*500, # Hz This sets to DriveW_Freq that is actually used in FE simulation.
         VoltageRating = 480, # Vrms (line-to-line, Wye-Connect)
         TangentialStress = 12000, # Pa
         Qs = 24,
         Qr = 16,
         Js = 3.7e6, # Arms/m^2
-        Jr = 5.75e6,  #7.25e6, #7.5e6, #6.575e6, # Arms/m^2
+        Jr = 7.5e6,  #7.25e6, #7.5e6, #6.575e6, # Arms/m^2
         Steel = 'M19Gauge29', # Arnon-7
         lamination_stacking_factor_kFe = 0.95, # from http://www.femm.info/wiki/spmloss # 0.91 for Arnon
         Coil = 'Cu',
@@ -42,7 +42,7 @@ spec = pyrhonen_procedure_as_function.desgin_specification(
         rotor_yoke_flux_density_Byr  = 1.1 + 0.3 if p==1 else 1.1, # Tesla
         guess_air_gap_flux_density = 0.8, # 0.8, # Tesla | 0.7 ~ 0.9 | Table 6.3
         guess_efficiency = 0.95,
-        guess_power_factor = 0.7,
+        guess_power_factor = 0.6, 
         debug_or_release = True, # 如果是debug，数据库里有记录就删掉重新跑；如果release且有记录，那就报错。=debug_or_release = True # 如果是debug，数据库里有记录就删掉重新跑；如果release且有记录，那就报错。
         bool_skew_stator = None,
         bool_skew_rotor = None,
@@ -55,11 +55,12 @@ print(spec.build_name())
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Automatic Report Generation
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-if not bool_post_processing:
-    if '730' in fea_config_dict['pc_name']:
-        os.system('cd /d '+ r'"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX" && z_nul"')
-
+# if not bool_post_processing:
+if '730' in fea_config_dict['pc_name']:
+    os.system('cd /d '+ r'"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX" && z_nul"')
 # quit()
+
+
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Add to Database
@@ -87,49 +88,68 @@ if True:
         fea_config_dict['Active_Qr'] = 16
         fea_config_dict['use_weights'] = 'O1' # 'O2' # 'O3'
 
-        # # Prototype OD150 two pole motor
-        # if False:
-        #     fea_config_dict['local_sensitivity_analysis'] = True
-        #     fea_config_dict['bool_refined_bounds'] = False
-        #     run_folder = r'run#500/' # Sensitivity analysis for Qr=16 and p=1
+        # Prototype OD150 two pole motor
+        if False:
+            fea_config_dict['local_sensitivity_analysis'] = True
+            fea_config_dict['bool_refined_bounds'] = False
+            run_folder = r'run#500/' # Sensitivity analysis for Qr=16 and p=1
 
-        #     fea_config_dict['local_sensitivity_analysis'] = False
-        #     fea_config_dict['bool_refined_bounds'] = True
-        #     run_folder = r'run#501/' # Optimize with refined bounds
+            fea_config_dict['local_sensitivity_analysis'] = False
+            fea_config_dict['bool_refined_bounds'] = True
+            run_folder = r'run#501/' # Optimize with refined bounds
 
-        # # Prototype OD150 four pole motor
-        # fea_config_dict['local_sensitivity_analysis'] = True
-        # fea_config_dict['bool_refined_bounds'] = False
-        # run_folder = r'run#502/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 2*"50Hz delta") ExcitationFreqSimulated = ExcitationFreq = 1500 Hz
-        # run_folder = r'run#503/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = ExcitationFreq = 1500 Hz
-        # run_folder = r'run#504/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = 1000 Hz
-
-
-        fea_config_dict['local_sensitivity_analysis'] = False
-        fea_config_dict['bool_refined_bounds'] = True
-        run_folder = r'run#505/' # Optimize with refined bounds (popsize is 70=7*10 now)
-
-        fea_config_dict['local_sensitivity_analysis'] = False
-        fea_config_dict['bool_refined_bounds'] = False
-        run_folder = r'run#506/' # Optimize without refined bounds (popsize is 70=7*10 now) the mec_power is changed from 100kW to 75kW.
-
-
-        # spec_4poleOD150mm1500Hz82kW.py
-        fea_config_dict['local_sensitivity_analysis'] = False
-        fea_config_dict['bool_refined_bounds'] = False
-        if '730' in fea_config_dict['pc_name']:
-            fea_config_dict['use_weights'] = 'O1'
-            run_folder = r'run#50701/'
-        elif '730' in fea_config_dict['pc_name']:
-            fea_config_dict['use_weights'] = 'O2'
-            run_folder = r'run#50702/'
-        elif '730' in fea_config_dict['pc_name']:
-            fea_config_dict['use_weights'] = 'O3'
-            run_folder = r'run#507/' # Optimize without refined bounds (popsize is 70=7*10 now) the mec_power is changed from 100kW to 75kW. Use weights O3
+        # Prototype OD150 four pole motor
         else:
-            raise
+            # # Prototype OD150 four pole motor
+            # fea_config_dict['local_sensitivity_analysis'] = True
+            # fea_config_dict['bool_refined_bounds'] = False
+            # run_folder = r'run#502/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 2*"50Hz delta") ExcitationFreqSimulated = ExcitationFreq = 1500 Hz
+            # run_folder = r'run#503/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = ExcitationFreq = 1500 Hz
+            # run_folder = r'run#504/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = 1000 Hz
 
-        # quit()
+
+
+            # fea_config_dict['local_sensitivity_analysis'] = False
+            # fea_config_dict['bool_refined_bounds'] = True
+            # run_folder = r'run#505/' # Optimize with refined bounds (popsize is 70=7*10 now)
+
+            # fea_config_dict['local_sensitivity_analysis'] = False
+            # fea_config_dict['bool_refined_bounds'] = False
+            # run_folder = r'run#506/' # Optimize without refined bounds (popsize is 70=7*10 now) the mec_power is changed from 100kW to 75kW.
+
+
+            # # spec_4poleOD150mm1500Hz82kW.py
+            # fea_config_dict['local_sensitivity_analysis'] = False
+            # fea_config_dict['bool_refined_bounds'] = False
+            # if '730' in fea_config_dict['pc_name']:
+            #     fea_config_dict['use_weights'] = 'O1'
+            #     run_folder = r'run#50701/'
+            # # elif '730' in fea_config_dict['pc_name']:
+            # #     fea_config_dict['use_weights'] = 'O2'
+            # #     run_folder = r'run#50702/'
+            # # elif '730' in fea_config_dict['pc_name']:
+            # #     fea_config_dict['use_weights'] = 'O3'
+            # #     run_folder = r'run#507/' # Optimize without refined bounds (popsize is 70=7*10 now) the mec_power is changed from 100kW to 75kW. Use weights O3
+            # else:
+            #    raise
+
+            # # spec_4poleOD150mm1500Hz82kW.py
+            # fea_config_dict['local_sensitivity_analysis'] = False
+            # fea_config_dict['bool_refined_bounds'] = False
+            # fea_config_dict['use_weights'] = 'O1'
+            # run_folder = r'run#50901/' # PF is now set to 0.6 but OD is over 150 mm
+
+            # # spec_4poleOD150mm1500Hz82kW.py
+            # fea_config_dict['local_sensitivity_analysis'] = False
+            # fea_config_dict['bool_refined_bounds'] = False
+            # fea_config_dict['use_weights'] = 'O1R'
+            # run_folder = r'run#510/' # PF is now set to 0.6 but OD is over 150 mm
+
+            # spec_4poleOD150mm1500Hz82kW.py
+            fea_config_dict['local_sensitivity_analysis'] = False
+            fea_config_dict['bool_refined_bounds'] = False
+            fea_config_dict['use_weights'] = 'O1'
+            run_folder = r'run#511/' # PF is now set to 0.6 and OD < 150 mm
 
     # run folder
     fea_config_dict['run_folder'] = run_folder
@@ -199,6 +219,15 @@ if True:
                                                         [],
                                                         [] ],
                             'bounds':[]}
+
+        print('the auto bounds are:', de_config_dict['original_bounds'])
+        if '511' in run_folder or '508' in run_folder:
+            de_config_dict['original_bounds'][0][0] += 2.5
+            de_config_dict['original_bounds'][3][0] += 2.5
+            de_config_dict['original_bounds'][0][1] += 2
+            de_config_dict['original_bounds'][3][1] += 2
+            print('the extended bounds are:', de_config_dict['original_bounds'])
+        # quit()
 
         # Sensitivity Analysis based narrowing bounds
         if fea_config_dict['bool_refined_bounds'] == True:
@@ -295,6 +324,7 @@ if True:
         # if optimization_flat == True:
         # generate the initial generation
         sw.generate_pop()
+        # quit()
 
         # add initial_design of Pyrhonen09 to the initial generation
         if sw.fea_config_dict['local_sensitivity_analysis'] == False:
@@ -330,14 +360,88 @@ if True:
 # 5. Post-processing
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         import utility
-        best_design_denorm = utility.build_Pareto_plot(spec, sw)
+        swda = utility.build_Pareto_plot(spec, sw)
+        # sw.fobj(999, individual_denorm)
+
+        # Final LaTeX Report
+        print('According to Pyrhonen09, 300 MPa is the typical yield stress of iron core.')
+        initial_design = utility.Pyrhonen_design(sw.im, de_config_dict['bounds'])
+        print (initial_design.design_parameters_denorm)
+        print (swda.best_design_denorm)
+        print (de_config_dict['bounds'])
+
+        best_report_dir_prefix = '../release/OneReport/BestReport_TEX/contents/'
+        file_name = 'final_report'
+        file_suffix = '.tex'
+        fname = open(best_report_dir_prefix+file_name+'_s01'+file_suffix, 'w', encoding='utf-8')
+        def combine_lists_alternating_2(list1, list2):
+            if abs(len(list1) - len(list2))<=1:
+                result = [None]*(len(list1)+len(list2))
+                result[::2] = list1
+                result[1::2] = list2
+                return result
+            else:
+                raise Exception('Try this (not tested).') # https://stackoverflow.com/questions/3678869/pythonic-way-to-combine-two-lists-in-an-alternating-fashion
+                import itertools 
+                return [x for x in itertools.chain.from_iterable(itertools.izip_longest(list1,list2)) if x]
+        def combine_lists_alternating_4(list1, list2, list3, list4):
+            result = [None]*(len(list1)+len(list2)+len(list3)+len(list4))
+            result[::4] = list1
+            result[1::4] = list2
+            result[2::4] = list3
+            result[3::4] = list4
+            return result
+        lower_bounds = [el[0] for el in de_config_dict['bounds']]
+        upper_bounds = [el[1] for el in de_config_dict['bounds']]
+        design_data = combine_lists_alternating_4(  initial_design.design_parameters_denorm, 
+                                                    swda.best_design_denorm,
+                                                    lower_bounds,
+                                                    upper_bounds,)
+        latex_table = r'''
+            \begin{table*}[!t]
+              \caption{Comparison of the key geometry parameters between best design and initial design}
+              \centering
+                \begin{tabular}{ccccc}
+                    \hline
+                    \hline
+                    \thead{Geometry parameters} &
+                    \thead{Initial\\\relax design} &
+                    \thead{The best\\\relax design} &
+                    \thead{Lower\\\relax bounds} &
+                    \thead{Upper\\\relax bounds} \\
+                    \hline
+                    Stator tooth width $w_{st}$             & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+                    Air gap length $L_g$                    & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+                    Rotor slot open width $w_{ro}$          & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+                    Rotor tooth width $w_{rt}$              & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+                    Rotor slot open depth $d_{ro}$          & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+                    Stator slot open angle $\theta_{so}$    & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+                    Stator slot open depth $d_{so}$         & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+                    \hline
+                    \vspace{-2.5ex}
+                    \\
+                    \multicolumn{3}{l}{*Note: Blah.}
+                \end{tabular}
+              \label{tab:001}
+              \vspace{-3ex}
+            \end{table*}
+            ''' % tuple(design_data)
+        print('''\\subsection{Best Design of Objective Function %s}\n\n
+                    ''' % (fea_config_dict['use_weights']) + latex_table, file=fname)
+        print(swda.str_best_design_details, file=fname)
+        fname.close()
+
+        os.system('cd /d '+ r'"D:\OneDrive - UW-Madison\c\release\OneReport\BestReport_TEX" && z_nul"') # 必须先关闭文件！否则编译不起来的
+        # import subprocess
+        # subprocess.call(r"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX\z_nul", shell=True)
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 6. Check mechanical strength for the best design
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         quit()
+
         im_best = population.bearingless_induction_motor_design.local_design_variant(sw.im, \
-                     -1, -1, best_design_denorm)
+                     -1, -1, swda.best_design_denorm)
 
         # initialize JMAG Designer
         sw.designer_init()
@@ -443,81 +547,7 @@ if True:
             sw.app.Save()
 
 
-        # Final LaTeX Report
-        print('According to Pyrhonen09, 300 MPa is the typical yield stress of iron core.')
-        initial_design = utility.Pyrhonen_design(sw.im, de_config_dict['bounds'])
-        print (initial_design.design_parameters_denorm)
-        print (best_design_denorm)
-        print (de_config_dict['bounds'])
-
-        one_report_dir_prefix = '../release/OneReport/OneReport_TEX/contents/'
-        file_name = 'pyrhonen_procedure'
-        file_suffix = '.tex'
-        fname = open(one_report_dir_prefix+file_name+'_s20'+file_suffix, 'w', encoding='utf-8')
-
-        def combine_lists_alternating_2(list1, list2):
-            if abs(len(list1) - len(list2))<=1:
-                result = [None]*(len(list1)+len(list2))
-                result[::2] = list1
-                result[1::2] = list2
-                return result
-            else:
-                raise Exception('Try this (not tested).') # https://stackoverflow.com/questions/3678869/pythonic-way-to-combine-two-lists-in-an-alternating-fashion
-                import itertools 
-                return [x for x in itertools.chain.from_iterable(itertools.izip_longest(list1,list2)) if x]
-
-        def combine_lists_alternating_4(list1, list2, list3, list4):
-            result = [None]*(len(list1)+len(list2)+len(list3)+len(list4))
-            result[::4] = list1
-            result[1::4] = list2
-            result[2::4] = list3
-            result[3::4] = list4
-            return result
-
-        lower_bounds = [el[0] for el in de_config_dict['bounds']]
-        upper_bounds = [el[1] for el in de_config_dict['bounds']]
-        design_data = combine_lists_alternating_4(  initial_design.design_parameters_denorm, 
-                                                    best_design_denorm,
-                                                    lower_bounds,
-                                                    upper_bounds,)
-
-        latex_table = r'''
-\begin{table*}[!t]
-  \caption{Comparison of the key geometry parameters between best design and initial design}
-  \centering
-    \begin{tabular}{ccccc}
-        \hline
-        \hline
-        \thead{Geometry parameters} &
-        \thead{Initial\\\relax design} &
-        \thead{The best\\\relax design} &
-        \thead{Lower\\\relax bounds} &
-        \thead{Upper\\\relax bounds} \\
-        \hline
-        Stator tooth width $w_{st}$             & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
-        Air gap length $L_g$                    & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
-        Rotor slot open width $w_{ro}$          & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
-        Rotor tooth width $w_{rt}$              & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
-        Rotor slot open depth $d_{ro}$          & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
-        Stator slot open angle $\theta_{so}$    & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
-        Stator slot open depth $d_{so}$         & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
-        \hline
-        \vspace{-2.5ex}
-        \\
-        \multicolumn{3}{l}{*Note: Blah.}
-    \end{tabular}
-  \label{tab:001}
-  \vspace{-3ex}
-\end{table*}
-''' % tuple(design_data)
-        print('''\\subsection{Best Design of Objective Function %s}\n\n
-                    ''' % (fea_config_dict['use_weights']) + latex_table, file=fname)
-        fname.close()
-        os.system('cd /d '+ r'"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX" && z_nul"') # 必须先关闭文件！否则编译不起来的
-        # import subprocess
-        # subprocess.call(r"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX\z_nul", shell=True)
-
-        from pylab import show
-        show()
+        # from pylab import show
+        # show()
 
 

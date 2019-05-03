@@ -166,7 +166,8 @@ class swarm(object):
                         raise Exception('It seemed that Swarm failed to write living pop after writing the generation pop. Manually delete the extra lines in your gen# and fit# files to be consistent with liv# file.')
 
         # search for completed generation files
-        generations = [file[4:8] for file in os.listdir(self.dir_run) if 'gen' in file and not 'ongoing' in file]
+        generations_complete = [file[4:8] for file in os.listdir(self.dir_run) if 'gen' in file and not 'ongoing' in file]
+        generations_complete_and_onging = [file[4:8] for file in os.listdir(self.dir_run) if 'gen' in file]
 
         # initialize for de-normalization
         popsize = self.de_config_dict['popsize']
@@ -184,8 +185,8 @@ class swarm(object):
             self.ongoing_pop = (self.ongoing_pop_denorm - min_b) / diff
 
 
-        # check for number of generations
-        if len(generations) == 0:
+        # check for number of generations_complete
+        if len(generations_complete) == 0:
             logger = logging.getLogger(__name__)
             logger.debug('There is no swarm yet. Generate the initial random swarm...')
     
@@ -225,20 +226,19 @@ class swarm(object):
             logger.debug('Initial pop (de-normalized) is saved as %s', self.dir_run + 'gen#0000.txt')
 
         else:
-            # number_current_generation begins at 0
-            self.number_current_generation = max([int(el) for el in generations])
+            # number_current_generation begins at 0.
+            self.number_current_generation = max([int(el) for el in generations_complete])
 
-            if len(generations) == 1:
+            # 第零代是特殊的，可能跑完了，也可能没跑完，所以要把ongoing也数进来判断。
+            if len(generations_complete_and_onging) == 1:
                 self.init_pop_denorm = self.pop_reader(self.get_gen_file(self.number_current_generation)) # gen#0000
                 self.init_fitness = None
-
                 logger = logging.getLogger(__name__)
-                logger.debug('The initial pop (i.e., gen#%s) is found in run folder. Use it.', generations[0])
+                logger.debug('The initial pop (i.e., gen#%s) is found in run folder. Use it.', generations_complete[0])
             else:
-
                 # get the latest generation of swarm data and 
                 # restore the living pop from file liv#xxxx.txt
-                # then combine then if the size of living pop is smaller than that of last-gen
+                # then combine if the size of living pop is smaller than that of last-gen
                 self.init_pop_denorm, self.init_fitness = self.read_completed_living_pop(self.number_current_generation) # this is completed
                                       # also read fitness of last completed living pop as init_fitness 
 
@@ -405,6 +405,7 @@ class swarm(object):
 
     # @unblockPrinting
     def fobj(self, individual_index, individual_denorm):
+        print('Call fobj with gen#%dind#%d'%(self.number_current_generation, individual_index))
         # based on the individual_denorm data, create design variant of the initial design of Pyrhonen09
         logger = logging.getLogger(__name__)
         mylatch = self.im
@@ -1001,10 +1002,11 @@ class swarm(object):
 
     def read_completed_living_pop(self, no_current_generation):
         logger = logging.getLogger(__name__)
-        if no_current_generation == 0:
-            raise Exception('This is reached unexpectedly. However, this function returns right results.')
-            return self.pop_reader(self.get_gen_file(no_current_generation))
-        else:
+        # if no_current_generation == 0:
+        #     raise Exception('This is reached unexpectedly. However, this function returns right results.')
+        #     return self.pop_reader(self.get_gen_file(no_current_generation))
+        # else:
+        if True:
             fname_last_gen = self.get_gen_file(no_current_generation)
             fname_last_liv = self.dir_run + 'liv#%04d.txt'%(no_current_generation)
             fname_last_liv_fit = self.dir_run + 'liv_fit#%04d.txt'%(no_current_generation)

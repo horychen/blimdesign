@@ -414,6 +414,7 @@ class desgin_specification(object):
 
         if tip_speed>100:
             air_gap_length_delta_high_speed = 0.001 + (rotor_outer_diameter_Dr / 0.07 + tip_speed/400) * 1e-3 # 第二版(6.25)
+            print('High-Speed motor detected. air_gap_length_delta_high_speed =', air_gap_length_delta_high_speed)
 
         stack_length_eff = stack_length + 2 * air_gap_length_delta
 
@@ -722,6 +723,7 @@ class desgin_specification(object):
             # power_factor = 0.6  #0.85
 
             stator_phase_current_rms = self.mec_power / (no_phase_m*self.guess_efficiency*stator_phase_voltage_rms*self.guess_power_factor)
+            self.stator_phase_current_rms = stator_phase_current_rms
 
             rotor_current_referred = stator_phase_current_rms * self.guess_power_factor
             rotor_current_actual = no_conductors_per_slot_zQ / number_parallel_branch * self.Qs / self.Qr * rotor_current_referred
