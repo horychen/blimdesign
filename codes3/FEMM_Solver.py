@@ -1921,9 +1921,9 @@ class FEMM_Solver(object):
         
         rho_Copper = (3.76*TEMPERATURE_OF_COIL+873)*1e-9/55.
 
-        if False: # 4 pole motor (full pitch)
+        if self.im.DriveW_poles==4: # 4 pole motor (full pitch)
             # Copper Loss - Stator Slot
-            coil_pitch_by_slot_count = im.Qs / im.DriveW_poles # 整距！        
+            coil_pitch_by_slot_count = im.wily.coil_pitch # im.Qs / im.DriveW_poles # 整距！        
             length_endArcConductor = coil_pitch_by_slot_count/im.Qs * (0.5*(im.Radius_OuterRotor + im.Length_AirGap + im.Radius_InnerStatorYoke)) * 2*pi # [mm] arc length = pi * diameter  
             length_conductor = (im.stack_length + length_endArcConductor) * 1e-3 # mm to m  ## imagine: two conductors + two end conducotors = one loop (in and out)
             # 
@@ -1954,9 +1954,10 @@ class FEMM_Solver(object):
                 rotor_copper_loss += resistance_per_bar * current_rms_value**2 * im.DriveW_turns # pole-specific rotor winding
                 print('rotor_copper_loss', rotor_copper_loss)
 
-        else: # 2 pole motor (short pitch)
+        elif self.im.DriveW_poles==2: # 2 pole motor (short pitch)
             # Copper Loss - Stator Slot
-            coil_pitch_by_slot_count = 9 # 12 = im.Qs / im.DriveW_poles
+
+            coil_pitch_by_slot_count = im.wily.coil_pitch #9 # 12 = im.Qs / im.DriveW_poles
             length_endArcConductor = coil_pitch_by_slot_count/im.Qs * (0.5*(im.Radius_OuterRotor + im.Length_AirGap + im.Radius_InnerStatorYoke)) * 2*pi # [mm] arc length = pi * diameter  
             length_conductor = (im.stack_length + length_endArcConductor) * 1e-3 # mm to m  ## imagine: two conductors + two end conducotors = one loop (in and out)
             # 

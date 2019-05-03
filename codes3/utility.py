@@ -610,8 +610,8 @@ class suspension_force_vector(object):
         # method 2 suggested by Eric 
         self.force_error_angle = max( [ abs(self.ss_max_force_err_ang[0]), 
                                         abs(self.ss_max_force_err_ang[1]) ] )
-        self.normalized_force_error_magnitude = max( [  abs(self.force_err_abs[0]), 
-                                                        abs(self.force_err_abs[1]) ] ) / self.ss_avg_force_magnitude
+        self.normalized_force_error_magnitude = max( [  abs(self.ss_max_force_err_abs[0]), 
+                                                        abs(self.ss_max_force_err_abs[1]) ] ) / self.ss_avg_force_magnitude
 
 def pyplot_clear(axeses):
     # self.fig_main.clf()
@@ -1321,6 +1321,8 @@ def use_weights(which='O1'):
         return [ 1,1,1,1,1,  0 ]
     if which == 'O3':
         return [ 1,0,1,0,0,  1 ]
+    if which == 'O1R':
+        return [ 1, 0.2,   1, 0.1, 0.1,   0 ]
     return None
 
 def compute_list_cost(weights, rotor_volume, rotor_weight, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss):
@@ -1556,7 +1558,7 @@ class SwarmDataAnalyzer(object):
         print ('Distribution of total individuals:', popsize*no_generations, 'No. generations', no_generations)
         # legend()
         fig.tight_layout()
-        show()
+        # show()
 
     def my_scatter_plot(self, x, y, O, fig=None, ax=None, s=15, marker='.', index_list=None): # index_list is for filtered case
         O1, O2 = None, None
@@ -1601,7 +1603,75 @@ class SwarmDataAnalyzer(object):
                     #         break
                     # print (next(itertools.islice(self.design_parameters_generator(), index_list[best_index], index_list[best_index]+1)))
                     # print (list(self.design_parameters_generator())[index_list[best_index]])
-
+                data = [float(el) for el in self.best_design_display.split('\n')[3].split(',')]
+                print(data)
+                # unpacking
+                PF, _, torque, Trip, Fmag, Em, Ea, \
+                    jmag_stator_copper_loss, jmag_rotor_copper_loss, iron_loss, eddy_loss, hyst_loss, \
+                    femm_stator_copper_loss, femm_rotor_copper_loss, windage_loss, total_loss = data
+                self.speed_rpm        
+                self.Omega            
+                self.mec_power        
+                self.required_torque  
+                self.Radius_OuterRotor
+                self.stack_length     
+                self.Qs               
+                self.Qr               
+                self.rotor_volume # 这个体积是对应原来的叠长的！
+                self.rotor_weight     
+                self.weights_name     
+                self.weights_used     
+                self.stack_length     
+                self.stack_length_max 
+                rated_stack_length = self.stack_length / torque * self.required_torque
+                rated_total_loss   = total_loss / self.stack_length * rated_stack_length # 这样简单计算，端部的损耗就多计入了。
+                eta = 1 - total_loss/self.mec_power
+                self.str_best_design_details = f'''
+                \\begin{{table*}}[!t]
+                  \\caption{{Design Release Data}}
+                  \\centering
+                    \\begin{{tabular}}{{rl}}
+                      \\hline
+                      \\hline
+                      \\thead{{Item}} &
+                      \\thead{{Value}} \\\\
+                      \\hline
+                      TRV [kNm/$\\rm m^3$]                                  & {torque/self.rotor_volume*1e-3          :.1f} \\\\
+                      FRW [N/kg]                                            & {Fmag/self.rotor_weight                 :.1f} \\\\
+                      Torque ripple [\\%]                                   & {Trip*100                               :.1f} \\\\
+                      Error angle [deg]                                     & {Ea                                     :.1f} \\\\
+                      Error magnitude [\\%]                                 & {Em*100                                 :.1f} \\\\
+                      Efficiency at rated load (include windage loss) [\\%] & {eta*100                                :.1f} \\\\
+                      Power Factor at rated load                            & {PF                                     :.2f} \\\\
+                      Stator OD [mm]                                        & {2*self.sw.im.Radius_OuterStatorYoke    :.1f} \\\\
+                      Rotor OD [mm]                                         & {2*self.sw.im.Radius_OuterRotor         :.1f} \\\\
+                      Stack length [mm]                                     & {rated_stack_length                     :.1f} \\\\
+                      Rotor volume [$\\rm m^3$]                             & {self.rotor_volume                        :g} \\\\
+                      Mass of the rotor [kg]                                & {self.rotor_weight                        :g} \\\\
+                      Airgap length [mm]                                    & {self.sw.im.Length_AirGap               :.2f} \\\\
+                      Sleeve thickness [mm]                                 & {0                                      :.1f} \\\\
+                      Suspension poles                                      & {int(self.sw.im.BeariW_poles)             :g} \\\\
+                      Torque poles                                          & {int(self.sw.im.DriveW_poles)             :g} \\\\
+                      Motor Electric Frequency [Hz]                         & {self.ExcitationFreqSimulated             :g} \\\\
+                      Motor mechanical speed (r/min)                        & {self.speed_rpm                           :g} \\\\
+                      Stator slots                                          & {int(self.Qs)                             :g} \\\\
+                      Stator slot fill factor                               & {0.5                                    :.1f} \\\\
+                      Rotor slots                                           & {int(self.Qr)                             :g} \\\\
+                      Rotor slot fill factor                                & {1.0                                    :.1f} \\\\
+                      Stator Conductor current density (Arms/$\\rm mm^2$)   & {self.spec.Js                             :g} \\\\
+                      Rotor Conductor current density (Arms/$\\rm mm^2$)    & {self.spec.Jr                             :g} \\\\
+                      Lamination Material                                   & {self.spec.Steel                            } \\\\
+                      Motor Phase Current (Arms)                            & {self.spec.stator_phase_current_rms     :.1f} \\\\
+                      Motor Phase Voltage (Vrms)                            & {self.spec.VoltageRating                :.1f} \\\\
+                      Criteria for candidate design:                        & {self.sw.fea_config_dict['use_weights']     } \\\\
+                    \\hline
+                    \\vspace{{-2.5ex}}
+                    \\\\
+                \\end{{tabular}}
+              \\label{{tab:001}}
+              \\vspace{{-3ex}}
+            \\end{{table*}}
+            '''
             # quit()
             xy_best = (x[best_index], y[best_index])
             handle_best = ax.scatter(*xy_best, s=s*3, marker='s', facecolors='none', edgecolors='r')
@@ -2151,9 +2221,10 @@ class SwarmDataAnalyzer(object):
 
     def build_basic_info(self, spec, sw):
         # Basic information
-        self.speed_rpm         = spec.ExcitationFreqSimulated * 60 / spec.p # rpm
+        self.ExcitationFreqSimulated = spec.ExcitationFreqSimulated
+        self.speed_rpm         = self.ExcitationFreqSimulated * 60 / spec.p # rpm
         self.Omega             = self.speed_rpm / 60. * 2*np.pi
-        self.mec_power         = spec.mec_power / spec.ExcitationFreq * spec.ExcitationFreqSimulated
+        self.mec_power         = spec.mec_power / spec.ExcitationFreq * self.ExcitationFreqSimulated
         self.required_torque   = self.mec_power / self.Omega # Nm
         self.Radius_OuterRotor = sw.im.Radius_OuterRotor
         self.stack_length      = sw.im.stack_length
@@ -2165,6 +2236,8 @@ class SwarmDataAnalyzer(object):
         self.weights_used      = use_weights(which=sw.fea_config_dict['use_weights'])
         self.stack_length      = sw.im.stack_length
         self.stack_length_max  = spec.Stack_Length_Max
+        self.spec              = spec
+        self.sw                = sw
         print('-'*50 + '\nutility.py')
         print('Qs=%d, rotor_volume=%g'%(self.Qs, self.rotor_volume), 'm^3')
         print('Qr=%d, rotor_weight=%g'%(self.Qr, self.rotor_weight), 'N')
@@ -2188,7 +2261,7 @@ def build_Pareto_plot(spec, sw):
     swda.build_basic_info(spec, sw)
 
     # Plotting the Pareto plot
-    from pylab import plt, subplots, show
+    from pylab import plt, subplots#, show
     plt.rcParams["font.family"] = "Times New Roman"
 
     fig, ax = subplots(1, 1, sharex=False, dpi=150, figsize=(12, 6), facecolor='w', edgecolor='k')
@@ -2209,7 +2282,7 @@ def build_Pareto_plot(spec, sw):
     #     swda.pareto_plot_eta_vs_stack_legnth(fig, ax, marker='^', bool_filtered=True) # Prototype DPNV O1
 
     # show()
-    return swda.best_design_denorm
+    return swda # swda.best_design_denorm
 
 
 
