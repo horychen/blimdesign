@@ -1,9 +1,8 @@
 #coding:u8
-#execfile('D:/OneDrive - UW-Madison/c/codes/release_design.py')
-exec(compile(open('D:/OneDrive - UW-Madison/c/codes/default_setting.py').read(), 'D:/OneDrive - UW-Madison/c/codes/default_setting.py', 'exec'))
+filename = './default_setting.py'
+exec(compile(open(filename, "rb").read(), filename, 'exec'), globals(), locals())
 
-
-fea_config_dict['Active_Qr'] = 32
+fea_config_dict['Active_Qr'] = 16
 
 if fea_config_dict['Active_Qr'] == 32:
     # run_integer = '120' # minimize O1 with narrowed bounds according to sensitivity analysis (run#116)

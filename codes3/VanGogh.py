@@ -40,241 +40,6 @@ class VanGogh(object):
             self.draw_rotor_without_non_accurate_shapely()
             self.draw_stator_without_non_accurate_shapely()
 
-    def draw_stator(self, fraction):
-        im = self.im
-
-        origin = Point(0,0)
-        Stator_Sector_Angle = 2*pi/im.Qs*0.5
-        Rotor_Sector_Angle = 2*pi/im.Qr*0.5
-
-        ''' Part: Stator '''
-        if self.child_index == JMAG:
-            self.init_sketch_statorCore()
-        # Draw Points as direction of CCW
-        # P1
-        P1 = (-im.Radius_OuterRotor-im.Length_AirGap, 0)
-
-        # P2
-        # Parallel to Line? No they are actually not parallel
-        P2_angle = Stator_Sector_Angle -im.Angle_StatorSlotOpen*0.5/180*pi
-        k = -tan(P2_angle) # slope
-        l_sector_parallel = LineString([(0,0), (-im.Radius_OuterStatorYoke, -im.Radius_OuterStatorYoke*k)])
-        c = self.create_circle(origin, im.Radius_OuterRotor+im.Length_AirGap)
-        P2 = self.get_node_at_intersection(c,l_sector_parallel)
-        self.draw_arc(P2, P1, self.get_postive_angle(P2))
-
-
-        # P3
-        c = self.create_circle(origin, im.Radius_OuterRotor+im.Length_AirGap+im.Width_StatorTeethHeadThickness)
-        P3 = self.get_node_at_intersection(c,l_sector_parallel)
-        self.draw_line(P2, P3)
-
-        # P4
-        c = self.create_circle(origin, im.Radius_OuterRotor+im.Length_AirGap+im.Width_StatorTeethHeadThickness+im.Width_StatorTeethNeck)
-        l = LineString([(0, 0.5*im.Width_StatorTeethBody), (-im.Radius_OuterStatorYoke, 0.5*im.Width_StatorTeethBody)])
-        P4 = self.get_node_at_intersection(c,l)
-        self.draw_line(P3, P4)
-
-        # P5
-        c = self.create_circle(origin, im.Radius_InnerStatorYoke)
-        P5 = self.get_node_at_intersection(c,l)
-        self.draw_line(P4, P5)
-
-        # P6
-        k = -tan(Stator_Sector_Angle)
-        l_sector = LineString([(0,0), (-im.Radius_OuterStatorYoke, -im.Radius_OuterStatorYoke*k)])
-        # P6 = self.get_node_at_intersection(c,l_sector)
-        P6 = [ -im.Radius_InnerStatorYoke*cos(Stator_Sector_Angle), im.Radius_InnerStatorYoke*sin(Stator_Sector_Angle) ]
-        self.draw_arc(P6, P5, Stator_Sector_Angle - self.get_postive_angle(P5))
-
-        # P7
-        # c = self.create_circle(origin, im.Radius_OuterStatorYoke)
-        # P7 = self.get_node_at_intersection(c,l_sector)
-        P7 = [ -im.Radius_OuterStatorYoke*cos(Stator_Sector_Angle), im.Radius_OuterStatorYoke*sin(Stator_Sector_Angle) ]
-
-        # P8
-        P8 = (-im.Radius_OuterStatorYoke, 0)
-
-        if self.child_index == JMAG:
-            self.draw_line(P6, P7)
-            self.draw_arc(P7, P8, Stator_Sector_Angle)
-            self.draw_line(P8, P1)
-        # if self.child_index == JMAG:
-            self.mirror_and_copyrotate(im.Qs, None, fraction,
-                                        symmetry_type=2,  # 2: x-axis
-                                        )
-        # if self.child_index == JMAG:
-            self.init_sketch_coil()
-
-        # run#118
-        # print 'Stator: P1-P8:'
-        # print P1
-        # print P2
-        # print P3
-        # print P4
-        # print P5
-        # print P6
-        # print P7
-        # print P8
-        # quit() 
-
-        # P_Coil
-        l = LineString([(P3[0], P3[1]), (P3[0], im.Radius_OuterStatorYoke)])
-        P_Coil = self.get_node_at_intersection(l_sector, l)
-
-        if self.child_index == JMAG: # F*ck you, Shapely for putting me through this!
-            #     temp = 0.7071067811865476*(P_Coil[1] - P4[1])
-            #     P4 = [                      P4[0], P4[1] + temp]
-            #     P5 = [P5[0] + 0.7071067811865476*(P4[0] - P5[0]), P5[1] + temp]
-            #     P6 = []
-            # we use sin cos to find P6 and P7, now this suffices.
-            P6[1] -= 0.01
-            # Conclusion: do not use the intersection between l_sector and a circle!
-            # Conclusion: do not use the intersection between l_sector and a circle!
-            # Conclusion: do not use the intersection between l_sector and a circle!
-            # 总之，如果overlap了，merge一下是没事的，麻烦就在Coil它不能merge，所以上层绕组和下层绕组之间就产生了很多Edge Parts。
-
-        self.draw_line(P4, P_Coil)
-        self.draw_line(P6, P_Coil)
-
-        if self.child_index == JMAG:
-            # draw the outline of stator core for coil to form a region in JMAG
-            self.draw_line(P4, P5)
-            self.draw_arc(P6, P5, Stator_Sector_Angle - self.get_postive_angle(P5))
-            self.mirror_and_copyrotate(im.Qs, None, fraction,
-                                        edge4ref=self.artist_list[1], #'Line.2' 
-                                        # symmetry_type=2,
-                                        merge=False, # two layers of windings
-                                        do_you_have_region_in_the_mirror=True # In short, this should be true if merge is false...
-                                        )
-            # it is super wierd that use edge Line.2 as symmetry axis will lead to redundant parts imported into JMAG Designers (Extra Coil and Stator Core Parts)
-            # symmetry_type=2 will not solve this problem either
-            # This is actually caused by the overlap of different regions, because the precision of shapely is shit!
-
-        # FEMM does not model coil and stator core separately        
-        if self.child_index == FEMM:
-            self.mirror_and_copyrotate(im.Qs, im.Radius_OuterStatorYoke, fraction)
-
-    def draw_rotor(self, fraction):
-        # print 'draw rotor with fraction=%d'%(fraction)
-        im = self.im
-
-        origin = Point(0,0)
-        Stator_Sector_Angle = 2*pi/im.Qs*0.5
-        Rotor_Sector_Angle = 2*pi/im.Qr*0.5
-
-        ''' Part: Rotor '''
-        if self.child_index == JMAG:
-            self.init_sketch_rotorCore()
-        # Draw Points as direction of CCW
-        # P1
-        # femm.mi_addnode(-im.Radius_Shaft, 0)
-        P1 = (-im.Radius_Shaft, 0)
-
-        # P2
-        c = self.create_circle(origin, im.Radius_Shaft)
-        # Line: y = k*x, with k = -tan(2*pi/im.Qr*0.5)
-        P2_angle = P3_angle = Rotor_Sector_Angle
-        k = -tan(P2_angle)
-        l_sector = LineString([(0,0), (-im.Radius_OuterStatorYoke, -im.Radius_OuterStatorYoke*k)])
-        try:
-                # two ways to get P2
-                # P2 = self.get_node_at_intersection(c,l_sector)
-                # print P2
-            P2 = ( -im.Radius_Shaft*cos(Rotor_Sector_Angle), im.Radius_Shaft*sin(Rotor_Sector_Angle) )
-                # print P2
-        except Exception as e:
-            raise e # IOError: [Errno 9] Bad file descriptor??? it is possible that the .fem file is scaned by anti-virus software?
-
-        # P3
-        try:
-            c = self.create_circle(origin, im.Radius_OuterRotor)
-                # two ways to get P3
-                # P3 = self.get_node_at_intersection(c,l_sector)
-                # print P3
-            P3 = ( -im.Radius_OuterRotor*cos(Rotor_Sector_Angle), im.Radius_OuterRotor*sin(Rotor_Sector_Angle) )
-                # print P3
-        except Exception as e:
-            raise e # IOError: [Errno 9] Bad file descriptor??? it is possible that the .fem file is scaned by anti-virus software?
-
-        # P4
-        l = LineString([(-im.Location_RotorBarCenter, 0.5*im.Width_RotorSlotOpen), (-im.Radius_OuterRotor, 0.5*im.Width_RotorSlotOpen)])
-        P4 = self.get_node_at_intersection(c,l)
-        self.draw_arc(P3, P4, P3_angle - self.get_postive_angle(P4))
-
-        # P5
-        p = Point(-im.Location_RotorBarCenter, 0)
-        c = self.create_circle(p, im.Radius_of_RotorSlot)
-        P5 = self.get_node_at_intersection(c,l)
-        self.draw_line(P4, P5)
-
-        if True: # 近似方法，直接取两个圆心正上方的点
-            # P6
-            # femm.mi_addnode(-im.Location_RotorBarCenter, im.Radius_of_RotorSlot)
-            P6 = (-im.Location_RotorBarCenter, im.Radius_of_RotorSlot)
-            self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, c.centroid.coords[0]))
-
-            # P7
-            # femm.mi_addnode(-im.Location_RotorBarCenter2, im.Radius_of_RotorSlot2)
-            P7 = (-im.Location_RotorBarCenter2, im.Radius_of_RotorSlot2)
-            self.draw_line(P6, P7)
-
-        else: # Exact Approach: compute the tangent points of the two circles
-            if im.Location_RotorBarCenter == im.Location_RotorBarCenter2:
-                P6 = (-im.Location_RotorBarCenter, im.Radius_of_RotorSlot)
-                P7 = P6
-            else:
-                P6, P7 = get_tangent_points_of_two_circles((-im.Location_RotorBarCenter,0), im.Radius_of_RotorSlot, 
-                                                           (-im.Location_RotorBarCenter2,0), im.Radius_of_RotorSlot2)
-                if abs(P6[0]) > abs(P7[0]):
-                    pass
-                else:
-                    raise Exception('P6 should be outer of P7: get_tangent_points_of_two_circles().')
-            self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, c.centroid.coords[0]))
-            self.draw_line(P6, P7)
-
-        # P8
-        # femm.mi_addnode(-im.Location_RotorBarCenter2+im.Radius_of_RotorSlot2, 0)
-        P8 = (-im.Location_RotorBarCenter2+im.Radius_of_RotorSlot2, 0)
-        self.draw_arc(P8, P7, 0.5*pi)
-        if self.child_index == FEMM:
-            self.some_solver_related_operations_rotor_before_mirror_rotation(im, P6, P8) # call this before mirror_and_copyrotate
-
-        if self.child_index == JMAG:
-            self.draw_line(P8, P1)
-            self.draw_arc(P2, P1, P2_angle)
-            self.draw_line(P2, P3)
-
-        # if self.child_index == JAMG:
-            self.mirror_and_copyrotate(im.Qr, im.Radius_OuterRotor, fraction,
-                                        symmetry_type=2) 
-
-        # if self.child_index == JAMG:
-            self.init_sketch_cage()
-
-        # P_Bar
-        P_Bar = (-im.Location_RotorBarCenter-im.Radius_of_RotorSlot, 0)
-        self.draw_arc(P5, P_Bar, self.get_postive_angle(P5))
-
-        if self.child_index == JMAG:
-            self.add_line(P_Bar, P8)
-            # draw the outline of stator core for coil to form a region in JMAG
-            self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, c.centroid.coords[0]))
-            self.draw_line(P6, P7)
-            self.draw_arc(P8, P7, 0.5*pi)
-
-            self.mirror_and_copyrotate(im.Qr, None, fraction,
-                                        symmetry_type=2
-                                        # merge=False, # bars are not connected to each other, so you don't have to specify merge=False, they will not merge anyway...
-                                        # do_you_have_region_in_the_mirror=True # In short, this should be true if merge is false...
-                                        )
-
-        if self.child_index == FEMM:
-            self.mirror_and_copyrotate(im.Qr, im.Radius_OuterRotor, fraction)
-
-        # if self.child_index == FEMM:
-            self.some_solver_related_operations_fraction(im, fraction)
-
     def draw_rotor_without_non_accurate_shapely(self, fraction=1):
         # Shapely is very poor in accuracy, use your high school geometry knowledge to derive the coordinates!
 
@@ -335,21 +100,69 @@ class VanGogh(object):
             self.draw_arc(P2, P1, P2_angle)
             # self.draw_line(P2, P3, ls='-.')
 
-        # P_Bar
-        P_Bar = (-im.Location_RotorBarCenter-im.Radius_of_RotorSlot, 0)
-        self.draw_arc(P5, P_Bar, self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0), ls=':')
+        # 导条
+        self.bar_or_coil = True
+        if self.bar_or_coil == True:
+            # P_Bar
+            P_Bar = (-im.Location_RotorBarCenter-im.Radius_of_RotorSlot, 0)
+            self.draw_arc(P5, P_Bar, self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0), ls=':')
 
-        if self.child_index == JMAG:
-            self.add_line(P_Bar, P8)
-            # draw the outline of stator core for coil to form a region in JMAG
-            self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0))
-            self.draw_arc(P8, P7, 0.5*pi, center=(-im.Location_RotorBarCenter2, 0))
+            if self.child_index == JMAG:
+                self.add_line(P_Bar, P8)
 
-            self.mirror_and_copyrotate(im.Qr, None, fraction,
-                                        symmetry_type=2
-                                        # merge=False, # bars are not connected to each other, so you don't have to specify merge=False, they will not merge anyway...
-                                        # do_you_have_region_in_the_mirror=True # In short, this should be true if merge is false...
-                                        )
+                # draw the outline of stator core for coil to form a region in JMAG
+                self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0))
+                self.draw_arc(P8, P7, 0.5*pi, center=(-im.Location_RotorBarCenter2, 0))
+
+                self.mirror_and_copyrotate(im.Qr, None, fraction,
+                                            symmetry_type=2
+                                            # merge=False, # bars are not connected to each other, so you don't have to specify merge=False, they will not merge anyway...
+                                            # do_you_have_region_in_the_mirror=True # In short, this should be true if merge is false...
+                                            )
+        # 导线
+        else:
+            if self.child_index == JMAG:
+                self.draw_arc(P5, [P5[0], -P5[1]], self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0), ls=':')
+
+                # draw the outline of rotor core for coil to form a region in JMAG
+                self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0))
+                self.draw_arc(P8, P7, 0.5*pi, center=(-im.Location_RotorBarCenter2, 0))
+
+                # mirrored 
+                self.draw_arc(P6, [P5[0], -P5[1]], 0.5*pi - self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0))
+                self.draw_arc(P8, [P7[0], -P7[1]], 0.5*pi, center=(-im.Location_RotorBarCenter2, 0))
+
+                raise 
+                # geomApp = app.CreateGeometryEditor()
+                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").CreateWireTemplate()
+                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"Wire Template.3").SetProperty(u"Name", u"Wire Template.3")
+                # refarray = [0 for i in range(8)]
+                # refarray[0] = u"edgeregion(TSketchArc47)"
+                # refarray[1] = u"edgeregion(TSketchArc39)"
+                # refarray[2] = u"edgeregion(TSketchArc125)"
+                # refarray[3] = u"edgeregion(TSketchArc122)"
+                # refarray[4] = u"edgeregion(TSketchArc45)"
+                # refarray[5] = u"edgeregion(TSketchArc118)"
+                # refarray[6] = u"edgeregion(TSketchLine44)"
+                # refarray[7] = u"edgeregion(TSketchLine121)"
+                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"Wire Template.3").SetProperty(u"BoundaryGeometry", refarray)
+                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"Wire Template.3").SetProperty(u"CircleLayoutType", 1)
+                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"Wire Template.3").SetProperty(u"WireCount", 16)
+                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"Wire Template.3").SetProperty(u"FillFactor", 54.0924492984424)
+                # geomApp.View().SelectWorldPos(-36.9913673, 0.751290023, -0.00271606445, 0)
+                # geomApp.View().SelectWorldPos(-37.2995834, 2.33090138, -0.00271606445, 0)
+                # geomApp.View().SelectWorldPos(-37.3766365, 2.73543596, -0.00271606445, 0)
+                # geomApp.View().SelectByRectangleWorldPos(-36.201561, -4.44987011, -0.00271606445, -21.5612621, 3.23628855, -0.00271606445, 0)
+                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"Wire Template.3").SetProperty(u"Name", u"RotorCoilSet")
+                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"RotorCoilSet").SetProperty(u"Name", u"RotorSlotCoil")
+                # geomApp = app.CreateGeometryEditor()
+                # geomApp.GetDocument().UpdateModel(0, 0)
+
+
+            else:
+                raise Exception('Not suppported.')
+
+
 
         if self.child_index == FEMM:
             self.mirror_and_copyrotate(im.Qr, im.Radius_OuterRotor, fraction)

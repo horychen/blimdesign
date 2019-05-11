@@ -1323,6 +1323,8 @@ def use_weights(which='O1'):
         return [ 1,0,1,0,0,  1 ]
     if which == 'O1R':
         return [ 1, 0.2,   1, 0.1, 0.1,   0 ]
+    if which == 'O4':
+        return [ 2,2,1,1,1,  0 ]
     return None
 
 def compute_list_cost(weights, rotor_volume, rotor_weight, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss):
@@ -1584,8 +1586,8 @@ class SwarmDataAnalyzer(object):
         if True:
             # Decide which one is the best in this Pareto plot
             best_index, best_O = get_index_and_min(O)
-            # best_index, best_O = get_index_and_max(y[:-1]) # the last one is initial design???
-
+            # best_index, best_O = get_index_and_min(O[:best_index]+O[best_index+1:])
+ 
             # index_list being not None means filtered data are used. 注意，部分个体被滤除掉了，所以index_list是断断续续的，所以是必需的。
             if index_list is not None:
                 print('run_integer:', self.run_integer)

@@ -83,10 +83,12 @@ if True:
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-
-    if True: # ECCE
-        fea_config_dict['Active_Qr'] = 16
-        fea_config_dict['use_weights'] = 'O1' # 'O2' # 'O3'
+    
+    # Run settings
+    fea_config_dict['Active_Qr'] = 16
+    fea_config_dict['use_weights'] = 'O1' # 'O2' # 'O3'
+    if True:
+        # global search
 
         # Prototype OD150 two pole motor
         if False:
@@ -150,6 +152,31 @@ if True:
             fea_config_dict['bool_refined_bounds'] = False
             fea_config_dict['use_weights'] = 'O1'
             run_folder = r'run#511/' # PF is now set to 0.6 and OD < 150 mm
+
+            fea_config_dict['use_weights'] = 'O4'
+            # if which == 'O4':
+            #     return [ 2,2,1,1,1,  0 ]            
+            run_folder = r'run#512/' # Searching for low torque ripple
+            run_folder = r'run#513/' # Searching for low torque ripple
+
+    else:
+        # local tuning (add 99 suffix)
+
+        # run#511gen#0000ind#0025-ID16-0-25
+        # 6.84866,1.07652,1.77721,8.64138,1.05135,2.63571,2.12527        
+        # spec_4poleOD150mm1500Hz82kW.py
+        fea_config_dict['local_sensitivity_analysis'] = False
+        fea_config_dict['bool_refined_bounds'] = -1 # Manually set the bounds
+        fea_config_dict['use_weights'] = 'O1'
+        # First tune
+        run_folder = r'run#51199/'
+        # Second tune
+        run_folder = r'run#51198/' # Rotor slot open depth d ro 1.00 0.95 0.95 1.16 (low bound is reached)
+        # Third tune
+        run_folder = r'run#51197/' # Rotor slot open depth d ro 1.00 0.76 0.76 0.95 (low bound is reached again)
+
+        # look for low torque ripple design
+        run_folder = r'run#51196/' 
 
     # run folder
     fea_config_dict['run_folder'] = run_folder
@@ -263,7 +290,6 @@ if True:
                     print('ind=',ind, '---manually set the proper bounds based on the initial design: 7.00075,1.26943,0.924664,4.93052,1,3,1')
                     de_config_dict['narrow_bounds_normalized'][ind][0] = 4.93052 / 5
 
-
             for bnd1, bnd2 in zip(de_config_dict['original_bounds'], de_config_dict['narrow_bounds_normalized']):
                 diff = bnd1[1] - bnd1[0]
                 de_config_dict['bounds'].append( [ bnd1[0]+diff*bnd2[0] , bnd1[0]+diff*bnd2[1] ]) # 注意，都是乘以original_bounds的上限哦！
@@ -271,6 +297,45 @@ if True:
             print('original_bounds:', de_config_dict['original_bounds'])
             print('refined bounds:', de_config_dict['bounds'])
             print('narrow_bounds_normalized:', de_config_dict['narrow_bounds_normalized'])
+        elif fea_config_dict['bool_refined_bounds'] == -1:
+            print('Manually set the bounds... Before:', de_config_dict['original_bounds'])
+            if '51199' in fea_config_dict['run_folder']:
+                best_design_denorm = [6.84866,1.07652,1.77721,8.64138,1.05135,2.63571,2.12527] # best design from run#511
+                for ind, geom_param in enumerate(best_design_denorm):
+                    de_config_dict['original_bounds'][ind] = [geom_param*0.9, geom_param*1.1]
+            elif '51198' in fea_config_dict['run_folder']:
+                best_design_denorm = [6.71879,1.01978,1.76687,8.33909,0.946215,2.47339,2.08366] # best design from run#51199
+                de_config_dict['original_bounds'][0] = [best_design_denorm[0]*0.9, best_design_denorm[0]*1.1]
+                de_config_dict['original_bounds'][1] = [best_design_denorm[1]*0.9, best_design_denorm[1]*1.1]
+                de_config_dict['original_bounds'][2] = [best_design_denorm[2]*0.9, best_design_denorm[2]*1.1]
+                de_config_dict['original_bounds'][3] = [best_design_denorm[3]*0.9, best_design_denorm[3]*1.1]
+                de_config_dict['original_bounds'][4] = [best_design_denorm[4]*0.8, best_design_denorm[4]*1.0]
+                de_config_dict['original_bounds'][5] = [best_design_denorm[5]*0.9, best_design_denorm[5]*1.1]
+                de_config_dict['original_bounds'][6] = [best_design_denorm[6]*0.9, best_design_denorm[6]*1.1]
+            elif '51197' in fea_config_dict['run_folder']:
+                best_design_denorm = [6.66737,0.967267,1.7789,8.86449,0.756972,2.46541,2.08662] # best design from run#51198
+                de_config_dict['original_bounds'][0] = [best_design_denorm[0]*0.9, best_design_denorm[0]*1.1]
+                de_config_dict['original_bounds'][1] = [best_design_denorm[1]*0.9, best_design_denorm[1]*1.1]
+                de_config_dict['original_bounds'][2] = [best_design_denorm[2]*0.9, best_design_denorm[2]*1.1]
+                de_config_dict['original_bounds'][3] = [best_design_denorm[3]*0.9, best_design_denorm[3]*1.1]
+                de_config_dict['original_bounds'][4] = [best_design_denorm[4]*0.7, best_design_denorm[4]*1.0]
+                de_config_dict['original_bounds'][5] = [best_design_denorm[5]*0.9, best_design_denorm[5]*1.1]
+                de_config_dict['original_bounds'][6] = [best_design_denorm[6]*0.9, best_design_denorm[6]*1.1]
+            elif '51196' in fea_config_dict['run_folder']:
+                best_design_denorm = [4.48363,1.46,1.19787,6.25996,0.506877,9.25457,0.5] # best design from run#501 (it is originally a 2 pole motor)
+                de_config_dict['original_bounds'][0] = [best_design_denorm[0]*0.9, best_design_denorm[0]*1.1]
+                de_config_dict['original_bounds'][1] = [best_design_denorm[1]*0.9, best_design_denorm[1]*1.1]
+                de_config_dict['original_bounds'][2] = [best_design_denorm[2]*0.9, best_design_denorm[2]*1.1]
+                de_config_dict['original_bounds'][3] = [best_design_denorm[3]*0.9, best_design_denorm[3]*1.1]
+                de_config_dict['original_bounds'][4] = [0.5, best_design_denorm[4]*1.1]
+                de_config_dict['original_bounds'][5] = [best_design_denorm[5]*0.9, best_design_denorm[5]*1.1]
+                de_config_dict['original_bounds'][6] = [0.5, best_design_denorm[6]*1.1]
+            else:
+                raise
+            print('Manually set the bounds... After:', de_config_dict['original_bounds'])
+            print(best_design_denorm)
+            de_config_dict['bounds'] = de_config_dict['original_bounds']
+            # quit()
         else:
             print('No refined bounds are applied.')
             de_config_dict['bounds'] = de_config_dict['original_bounds']
@@ -438,6 +503,8 @@ if True:
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 6. Check mechanical strength for the best design
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        from pylab import show
+        show()
         quit()
 
         im_best = population.bearingless_induction_motor_design.local_design_variant(sw.im, \
@@ -468,6 +535,7 @@ if True:
             raise Exception('Drawing failed')
         elif DRAW_SUCCESS == -1:
             print('Model Already Exists')
+        quit()
 
         model = sw.app.GetCurrentModel()
         if model.NumStudies() == 0:
@@ -477,6 +545,7 @@ if True:
             study = im_best.add_structural_study(sw.app, model, expected_csv_output_dir) # 文件夹名应该与jproj同名
         else:
             study = model.GetStudy(0)
+
 
         if study.AnyCaseHasResult():
             pass
@@ -547,7 +616,7 @@ if True:
             sw.app.Save()
 
 
-        # from pylab import show
-        # show()
+        from pylab import show
+        show()
 
 
