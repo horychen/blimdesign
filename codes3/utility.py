@@ -1402,7 +1402,7 @@ class SwarmDataAnalyzer(object):
                 self.reference_design = self.buf[:21]
                 self.buf = self.buf[21:]
             else:
-                raise Exception('Please remove duplicate results in swarm_data.txt.')
+                raise Exception('Please remove duplicate results in swarm_data.txt for run#', run_integer)
 
         # now we have the actual pop size
         self.buf_length = len(self.buf)

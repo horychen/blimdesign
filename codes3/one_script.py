@@ -147,17 +147,28 @@ if True:
             # fea_config_dict['use_weights'] = 'O1R'
             # run_folder = r'run#510/' # PF is now set to 0.6 but OD is over 150 mm
 
-            # spec_4poleOD150mm1500Hz82kW.py
-            fea_config_dict['local_sensitivity_analysis'] = False
-            fea_config_dict['bool_refined_bounds'] = False
-            fea_config_dict['use_weights'] = 'O1'
-            run_folder = r'run#511/' # PF is now set to 0.6 and OD < 150 mm
+            # # spec_4poleOD150mm1500Hz82kW.py
+            # fea_config_dict['local_sensitivity_analysis'] = False
+            # fea_config_dict['bool_refined_bounds'] = False
+            # fea_config_dict['use_weights'] = 'O1'
+            # run_folder = r'run#511/' # PF is now set to 0.6 and OD < 150 mm
 
-            fea_config_dict['use_weights'] = 'O4'
-            # if which == 'O4':
-            #     return [ 2,2,1,1,1,  0 ]            
-            run_folder = r'run#512/' # Searching for low torque ripple
-            run_folder = r'run#513/' # Searching for low torque ripple
+            # # fea_config_dict['use_weights'] = 'O4'
+            # # if which == 'O4':
+            # #     return [ 2,2,1,1,1,  0 ]            
+            # run_folder = r'run#512/' # Searching for low torque ripple
+            # run_folder = r'run#513/' # Searching for low torque ripple
+            # run_folder = r'run#514/' # Searching for low torque ripple
+            # run_folder = r'run#515/' # Searching for low torque ripple
+            # run_folder = r'run#516/' # Searching for low torque ripple
+
+            # run_folder = r'run#517/' # 修改round bar代码
+            # run_folder = r'run#518/' # 修改round bar代码（smaller radius of rotor slot is used now)
+
+            fea_config_dict['local_sensitivity_analysis'] = True
+            fea_config_dict['bool_refined_bounds'] = False
+            fea_config_dict['use_weights'] = 'O2'
+            run_folder = r'run#520/' # 修改round bar代码（smaller radius of rotor slot is used now)
 
     else:
         # local tuning (add 99 suffix)
@@ -209,12 +220,12 @@ if True:
     b_dr_max, b_dr_min = max(list_b_dr), min(list_b_dr)
     print(b_ds_max, b_ds_min, 'initial design:', 1e3*spec.stator_tooth_width_b_ds, 'mm')
     print(b_dr_max, b_dr_min, 'initial design:', 1e3*spec.rotor_tooth_width_b_dr, 'mm')
-    if b_ds_min<2.5:
+    if b_ds_min<4:
         print('Too small lower bound b_ds (%g) is detected. Set it to 2.5 mm.'%(b_ds_min))
-        b_ds_min = 2.5
-    if b_dr_min<2.5:
+        b_ds_min = 4
+    if b_dr_min<4:
         print('Too small lower bound b_dr (%g) is detected. Set it to 2.5 mm.'%(b_dr_min))
-        b_dr_min = 2.5
+        b_dr_min = 4
     if 1e3*spec.stator_tooth_width_b_ds < b_ds_min  and 1e3*spec.stator_tooth_width_b_ds > b_ds_max:
         raise Exception('The initial design is not within the bounds.')
     if 1e3*spec.rotor_tooth_width_b_dr < b_dr_min  and 1e3*spec.rotor_tooth_width_b_dr > b_dr_max:
@@ -364,8 +375,13 @@ if True:
     if fea_config_dict['local_sensitivity_analysis'] == True:
         if os.path.exists(fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt'):
             import utility
-            utility.build_sensitivity_bar_charts(spec, sw)
-            quit()
+            try:
+                utility.build_sensitivity_bar_charts(spec, sw)
+                quit()
+            except:
+                os.remove(fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt')
+                print('Remove ' + fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt')
+                print('Continue for sensitivity analysis...')
         else:
             print('Now begin to generate results for sensitivity analysis...')
 

@@ -435,13 +435,14 @@ class swarm(object):
                     app.SaveAs(expected_project_file)
                     logger.debug('Create JMAG project file: %s'%(expected_project_file))
                 else:
-                    print('An existing model is found. This is not expected. In order to make sure femm and jmag share the exact model, the femm results will be deleted if found.')
-                    if os.path.exists(self.femm_output_file_path):
-                        os.remove(self.femm_output_file_path)
-                        print('Removed:', self.femm_output_file_path)
-                        if os.path.exists(self.femm_output_file_path[:-4]+'.fem'):
-                            os.remove(self.femm_output_file_path[:-4]+'.fem')
-                            print('Removed:', self.femm_output_file_path[:-4]+'.fem')
+                    if self.number_current_generation > 0:
+                        print('An existing model is found. This is not expected. In order to make sure femm and jmag share the exact model, the femm results will be deleted if found.')
+                        if os.path.exists(self.femm_output_file_path):
+                            os.remove(self.femm_output_file_path)
+                            print('Removed:', self.femm_output_file_path)
+                            if os.path.exists(self.femm_output_file_path[:-4]+'.fem'):
+                                os.remove(self.femm_output_file_path[:-4]+'.fem')
+                                print('Removed:', self.femm_output_file_path[:-4]+'.fem')
                     app.Load(expected_project_file)
                     logger.debug('Load JMAG project file: %s'%(expected_project_file))
                     logger.debug('Existing models of %d are found in %s', app.NumModels(), app.GetDefaultModelFolderPath())
@@ -542,7 +543,7 @@ class swarm(object):
             # check for existing results
 
             if os.path.exists(self.femm_output_file_path):
-                raise Exception('This should never be reached')
+                # raise Exception('This should never be reached')
 
                 # # 本来想在这里多加一层保险，如果上一次优化是在运行完 wait_greedy_search 之后中断的，那么在 femm_temp/ 下就会有 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 存在。
                 # # 但是，从第二代以后开始，所有在gen#文件里的个体都是随机生成的，也就是说，每次中断重新跑，这一代的这个个体都是新的 trial_denorm，所以旧的 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 必须被删除。
@@ -553,22 +554,22 @@ class swarm(object):
                 # #         os.remove(femm_output_file_path[-4:]+'.fem')
                 # # 正确的做法是在刚刚初始化 pop 的时候检查！
 
-                # with open(self.femm_output_file_path, 'r') as f:
-                #     data = f.readlines()
+                with open(self.femm_output_file_path, 'r') as f:
+                    data = f.readlines()
 
-                #     slip_freq_breakdown_torque                  = float(data[0][:-1])
-                #     breakdown_torque                            = float(data[1][:-1])
+                    slip_freq_breakdown_torque                  = float(data[0][:-1])
+                    breakdown_torque                            = float(data[1][:-1])
 
-                #     self.femm_solver.stator_slot_area           = float(data[2][:-1])
-                #     self.femm_solver.rotor_slot_area            = float(data[3][:-1])
+                    self.femm_solver.stator_slot_area           = float(data[2][:-1])
+                    self.femm_solver.rotor_slot_area            = float(data[3][:-1])
 
-                #     self.femm_solver.vals_results_rotor_current = []
-                #     for row in data[4:]:
-                #         index = row.find(',')
-                #         self.femm_solver.vals_results_rotor_current.append(float(row[:index]) + 1j*float(row[index+1:-1]))
-                #     # self.femm_solver.list_rotor_current_amp = [abs(el) for el in vals_results_rotor_current]
-                #     # print 'debug,'
-                #     # print self.femm_solver.vals_results_rotor_current
+                    self.femm_solver.vals_results_rotor_current = []
+                    for row in data[4:]:
+                        index = row.find(',')
+                        self.femm_solver.vals_results_rotor_current.append(float(row[:index]) + 1j*float(row[index+1:-1]))
+                    # self.femm_solver.list_rotor_current_amp = [abs(el) for el in vals_results_rotor_current]
+                    # print 'debug,'
+                    # print self.femm_solver.vals_results_rotor_current
             else:
 
                 # no direct returning of results, wait for it later when you need it.
@@ -2895,43 +2896,44 @@ class bearingless_induction_motor_design(object):
 
 
         #07: Some Checking
-        if abs(self.Location_RotorBarCenter2 - self.Location_RotorBarCenter) < 0.1*(self.Radius_of_RotorSlot + self.Radius_of_RotorSlot2):
-            logger = logging.getLogger(__name__)
-            logger.debug('Warning: There is no need to use a drop shape rotor, because the centers of the inner and outer circles are too close: %g, %g.' % (self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
-            self.use_drop_shape_rotor_bar = False
+        # if abs(self.Location_RotorBarCenter2 - self.Location_RotorBarCenter) < 0.1*(self.Radius_of_RotorSlot + self.Radius_of_RotorSlot2):
+        #     logger = logging.getLogger(__name__)
+        #     logger.debug('Warning: There is no need to use a drop shape rotor, because the centers of the inner and outer circles are too close: %g, %g.' % (self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
+        #     self.use_drop_shape_rotor_bar = False
         
-            # for VanGogh (FEMM) to work properly （如何不把两者设置成一样的，那么FEMM画出来的（很短的droop shape slot）和JMAG画出来的（Round shape圆形槽）则不一样。
-            self.Location_RotorBarCenter2_backup = self.Location_RotorBarCenter2
-            self.Location_RotorBarCenter2 = self.Location_RotorBarCenter 
-            # use the larger slot radius
-            if self.Radius_of_RotorSlot > self.Radius_of_RotorSlot2:
-                self.Radius_of_RotorSlot2 = self.Radius_of_RotorSlot
-            if self.Radius_of_RotorSlot2 > self.Radius_of_RotorSlot:
-                self.Radius_of_RotorSlot = self.Radius_of_RotorSlot2
+        #     # for VanGogh (FEMM) to work properly （如何不把两者设置成一样的，那么FEMM画出来的（很短的droop shape slot）和JMAG画出来的（Round shape圆形槽）则不一样。
+        #     self.Location_RotorBarCenter2_backup = self.Location_RotorBarCenter2
+        #     self.Location_RotorBarCenter2 = self.Location_RotorBarCenter 
+        #     # use the larger slot radius
+        #     if self.Radius_of_RotorSlot > self.Radius_of_RotorSlot2:
+        #         self.Radius_of_RotorSlot2 = self.Radius_of_RotorSlot
+        #     if self.Radius_of_RotorSlot2 > self.Radius_of_RotorSlot:
+        #         self.Radius_of_RotorSlot = self.Radius_of_RotorSlot2
 
-        else:
-            self.use_drop_shape_rotor_bar = True
+        # else:
+        self.use_drop_shape_rotor_bar = True
 
-            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-            # For a low Qr value, there is a chance that the Location_RotorBarCenter2 is larger than Location_RotorBarCenter,
-            # This means the round bar should be used instead of drop shape bar.
-            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-            if self.use_drop_shape_rotor_bar == True:
-                # logger.debug('Location_RotorBarCenter:1,2: %g, %g.'%(self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # For a low Qr value, there is a chance that the Location_RotorBarCenter2 is larger than Location_RotorBarCenter,
+        # This means the round bar should be used instead of drop shape bar.
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        if self.use_drop_shape_rotor_bar == True:
+            # logger.debug('Location_RotorBarCenter:1,2: %g, %g.'%(self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
 
-                if self.Location_RotorBarCenter2 >= self.Location_RotorBarCenter:
-                    logger = logging.getLogger(__name__)
-                    logger.debug('Location_RotorBarCenter2 suggests to use round bar.')
-                    self.use_drop_shape_rotor_bar = False
+            if self.Location_RotorBarCenter2 >= self.Location_RotorBarCenter:
+                logger = logging.getLogger(__name__)
+                logger.debug('Location_RotorBarCenter2 suggests to use round bar.')
+                self.use_drop_shape_rotor_bar = False
 
-                    # for VanGogh (FEMM) to work properly
-                    self.Location_RotorBarCenter2_backup = self.Location_RotorBarCenter2
-                    self.Location_RotorBarCenter2 = self.Location_RotorBarCenter 
-                    # use the larger slot radius
-                    if self.Radius_of_RotorSlot > self.Radius_of_RotorSlot2:
-                        self.Radius_of_RotorSlot2 = self.Radius_of_RotorSlot
-                    if self.Radius_of_RotorSlot2 > self.Radius_of_RotorSlot:
-                        self.Radius_of_RotorSlot = self.Radius_of_RotorSlot2
+                # for VanGogh (FEMM) to work properly
+                self.Location_RotorBarCenter2_backup = self.Location_RotorBarCenter2
+                self.Location_RotorBarCenter2 = self.Location_RotorBarCenter 
+                # use the larger slot radius (this is problematic)
+                # use the smaller slot radius
+                if self.Radius_of_RotorSlot > self.Radius_of_RotorSlot2:
+                    self.Radius_of_RotorSlot = self.Radius_of_RotorSlot2
+                if self.Radius_of_RotorSlot2 > self.Radius_of_RotorSlot:
+                    self.Radius_of_RotorSlot2 = self.Radius_of_RotorSlot
 
         if abs(self.Qs-self.Qr)<1:
             print('Warning: Must not use a same Qs and Qr, to avoid synchronous torques created by slot harmonics. - (7.111)')
