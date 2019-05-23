@@ -145,6 +145,8 @@ class desgin_specification(object):
                     guess_air_gap_flux_density = None,
                     guess_efficiency = None,
                     guess_power_factor = None,
+                    safety_factor_to_yield = None,
+                    safety_factor_to_critical_speed = None,
                     debug_or_release= None,
                     bool_skew_stator = None,
                     bool_skew_rotor = None,
@@ -177,6 +179,8 @@ class desgin_specification(object):
         self.guess_air_gap_flux_density = guess_air_gap_flux_density
         self.guess_efficiency = guess_efficiency
         self.guess_power_factor = guess_power_factor
+        self.safety_factor_to_yield = safety_factor_to_yield
+        self.safety_factor_to_critical_speed = safety_factor_to_critical_speed
         self.debug_or_release = debug_or_release
         self.bool_skew_stator = bool_skew_stator
         self.bool_skew_rotor  = bool_skew_rotor 
@@ -190,7 +194,7 @@ class desgin_specification(object):
 
     def build_name(self, bLatex=False):
         u'''转子类型+基本信息+槽配合+电负荷+导电材料+温度+导磁材料+磁负荷+叠压系数+假设+目的'''
-        name = '%s%sp%dps%d_%dkW%dHz%dVtan%d_Qs%dQr%dJs%gJr%g%s%d%s%d@%dK_%s@%d_Bt%gs%grBy%gs%gr_b%.2fEff%gPf%g_%s%s%s%s' % (
+        name = '%s%sp%dps%d_%dkW%dHz%dVtan%d_Qs%dQr%dJs%gJr%g%s%d%s%d@%dK_%s@%d_Bt%gs%grBy%gs%gr_b%.2fEff%gPf%gSFy%gSFcs%g_%s%s%s%s' % (
                 'PS' if self.PS_or_SC else 'SC',
                 'DPNV' if self.DPNV_or_SEPA else 'SEPA',
                 self.p,
@@ -217,6 +221,8 @@ class desgin_specification(object):
                 self.guess_air_gap_flux_density,
                 self.guess_efficiency,
                 self.guess_power_factor,
+                self.safety_factor_to_yield,
+                self.safety_factor_to_critical_speed,
                 'debug' if self.debug_or_release else 'release',
                 'Sskew' if self.bool_skew_stator is not None else '',
                 'Rskew' if self.bool_skew_rotor  is not None else '',
@@ -338,8 +344,7 @@ class desgin_specification(object):
         print('rotor_outer_radius_r_or is', rotor_outer_radius_r_or)
 
         # Considering machanical loading
-        safety_factor_to_yield = 1.5
-        rotor_radius_max = get_outer_rotor_radius_yield(speed_rpm, safety_factor_to_yield=safety_factor_to_yield)
+        rotor_radius_max = get_outer_rotor_radius_yield(speed_rpm, safety_factor_to_yield=self.safety_factor_to_yield)
         if rotor_outer_radius_r_or>rotor_radius_max:
             rotor_outer_radius_r_or = rotor_radius_max
             rotor_outer_diameter_Dr = 2 * rotor_outer_radius_r_or
@@ -347,8 +352,7 @@ class desgin_specification(object):
             bool_mechanical_dominate = True
         print('rotor_outer_radius_r_or is', rotor_outer_radius_r_or, 'under mechanical limit')
 
-        safety_factor_to_speed = 1.5
-        stack_length_max = get_stack_length_critical_speed(speed_rpm, rotor_outer_radius_r_or, safety_factor_to_speed=safety_factor_to_speed)
+        stack_length_max = get_stack_length_critical_speed(speed_rpm, rotor_outer_radius_r_or, safety_factor_to_critical_speed=self.safety_factor_to_critical_speed)
         self.Stack_Length_Max = stack_length_max*1e3
         if stack_length>stack_length_max:
             raise Exception('For current safety factor and power rating, no design can be sought under first critical speed.')
@@ -380,7 +384,7 @@ class desgin_specification(object):
                  ''', file=fname)
         print('\nRequired Torque: %g Nm'% required_torque, file=fname)
         tip_speed = get_tip_speed(speed_rpm, rotor_outer_radius_r_or)
-        print('\nTip speed: %g m/s' %(tip_speed), file=fname)
+        print('\nTip speed: %g m/s with a safety factor to yield of %g' %(tip_speed, safety_factor_to_yield), file=fname)
         print('\nCentrifugal stress: %g MPa' %(1e-6*check_stress_due_to_centrifugal_force(speed_rpm, rotor_outer_radius_r_or)), file=fname)
         print('\nRotor outer diameter $D_{or}=%g$ mm'% (rotor_outer_diameter_Dr*1e3), file=fname)
         print('\nRotor outer radius $r_{or}=%g$ mm'% (rotor_outer_radius_r_or*1e3), file=fname)
@@ -390,7 +394,7 @@ class desgin_specification(object):
         else:
             print('\nUse recommended length ratio: $\\chi=%g$' % length_ratio_chi, file=fname)
         print('\nStack length: $L_{st}=%g$ mm'% (stack_length*1e3), file=fname)
-        print('\nStack length (max): $L_{st,\\max}=%g$ mm ($k=%g$)'% (stack_length_max*1e3, safety_factor_to_speed), file=fname)
+        print('\nStack length (max): $L_{st,\\max}=%g$ mm ($k=%g$)'% (stack_length_max*1e3, safety_factor_to_critical_speed), file=fname)
 
 
 
@@ -613,6 +617,7 @@ class desgin_specification(object):
 
         print('\nNumber of parallel branch: $a=%d$' % number_parallel_branch, file=fname)
         print('\nNumber of conductors per slot: $z_Q=%g$'%no_conductors_per_slot_zQ, file=fname)
+        print('\nThe actual number of series coil turns $N_a$ is %d' % (no_series_coil_turns_N/number_parallel_branch), file=fname)
         print('\nAir gap length: $\\delta=%g$ mm' % (air_gap_length_delta*1e3), file=fname)
         print('\n[Guess] Air gap flux density: $B_\\delta=%g$ T' % (self.guess_air_gap_flux_density), file=fname)
 
@@ -644,7 +649,7 @@ class desgin_specification(object):
             # re-compute other B_delta related values
             if True:
                 air_gap_flux_Phi_m = alpha_i * self.guess_air_gap_flux_density * pole_pitch_tau_p * stack_length_eff
-                no_series_coil_turns_N = sqrt(2)*desired_emf_Em / (2*pi*self.ExcitationFreq * kw1 * air_gap_flux_Phi_m) # p306
+                no_series_coil_turns_N = sqrt(2)*desired_emf_Em / (2*pi*self.ExcitationFreq * kw1 * air_gap_flux_Phi_m) # p306 # 2ndEdition p316 (6.32)
                 print('\nNew air gap flux: $\\Phi_m=%g$ Wb'% (air_gap_flux_Phi_m), file=fname)
 
                 print('\nPhase stator voltage: $U_1=%g$ Vrms'% (stator_phase_voltage_rms), file=fname)
@@ -670,7 +675,7 @@ class desgin_specification(object):
                     number_parallel_branch = 2
                 else:
                     number_parallel_branch = 1
-                no_conductors_per_slot_zQ = 2* no_phase_m * no_series_coil_turns_N /self.Qs * number_parallel_branch # (7.8)
+                no_conductors_per_slot_zQ = 2* no_phase_m * no_series_coil_turns_N /self.Qs * number_parallel_branch # (7.8) # 2ndEdition (4.63)!!! (2.9) (6.52)
 
                 print('\nNumber of parallel branch: $a=%d$' % number_parallel_branch, file=fname)
                 print('\nNumber of conductors per slot: $z_Q=%g$'%no_conductors_per_slot_zQ, file=fname)
@@ -1404,7 +1409,7 @@ def get_tip_speed(speed_rpm, rotor_radius):
     print('Induction motors with a laminated squirrel cage rotor, rotor surface speed <=200 m/s. --Figure 6.4')
     return rotor_radius * Omega
 
-def get_stack_length_critical_speed(speed_rpm, rotor_radius, material_density_rho=None, Youngs_modulus_of_elasticity=None, safety_factor_to_speed=1.5): # natural frequency
+def get_stack_length_critical_speed(speed_rpm, rotor_radius, material_density_rho=None, Youngs_modulus_of_elasticity=None, safety_factor_to_critical_speed=1.5): # natural frequency
     Omega = speed_rpm/(60)*2*pi
 
     if material_density_rho is None:
@@ -1416,7 +1421,7 @@ def get_stack_length_critical_speed(speed_rpm, rotor_radius, material_density_rh
     second_moment_of_inertia_of_area_I = pi*(D_out**4 - D_in**4) / 64 
     order_critical = 1
     stack_length_max =  sqrt(
-                              (order_critical**2 * pi**2) / (safety_factor_to_speed*Omega) \
+                              (order_critical**2 * pi**2) / (safety_factor_to_critical_speed*Omega) \
                               * sqrt( Youngs_modulus_of_elasticity * second_moment_of_inertia_of_area_I \
                                       / (material_density_rho* cross_section_area_S) ) )
     return stack_length_max

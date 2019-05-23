@@ -2796,7 +2796,8 @@ class bearingless_induction_motor_design(object):
 
 
         #05 Windings & Excitation
-        self.wily = winding_layout(self.fea_config_dict['DPNV'], self.Qs, self.DriveW_poles/2)
+        if self.fea_config_dict is not None:
+            self.wily = winding_layout(self.fea_config_dict['DPNV'], self.Qs, self.DriveW_poles/2)
 
         # if self.fea_config_dict is not None:
         #     if self.fea_config_dict['DPNV'] == False: 
@@ -2888,7 +2889,9 @@ class bearingless_induction_motor_design(object):
         self.BeariW_Rs         = self.DriveW_Rs * self.BeariW_turns / self.DriveW_turns
         self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975 # extra 2.5% as bearing current
         self.BeariW_Freq       = self.DriveW_Freq
-        self.dict_coil_connection = {41:self.wily.l41, 42:self.wily.l42, 21:self.wily.l21, 22:self.wily.l22} # 这里的2和4等价于leftlayer和rightlayer。
+
+        if self.fea_config_dict is not None:
+            self.dict_coil_connection = {41:self.wily.l41, 42:self.wily.l42, 21:self.wily.l21, 22:self.wily.l22} # 这里的2和4等价于leftlayer和rightlayer。
 
         #06 Meshing & Solver Properties
         self.max_nonlinear_iteration = 50 # 30 for transient solve

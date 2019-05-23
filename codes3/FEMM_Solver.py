@@ -395,7 +395,7 @@ class FEMM_Solver(object):
             THETA = - angle_per_slot + 0.5*angle_per_slot + 3.0/360
 
             # for phase, up_or_down in zip(im.l_leftlayer1,im.l_leftlayer2):
-            for phase, up_or_down in zip(im.l21,im.l22):
+            for phase, up_or_down in zip(im.wily.l21,im.wily.l22):
                 circuit_name = 'b' + phase
                 THETA += angle_per_slot
                 X = R*cos(THETA); Y = R*sin(THETA)

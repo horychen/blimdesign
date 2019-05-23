@@ -774,6 +774,10 @@ if __name__ == '!__main__':
     im_list = []
     with open(r'D:\OneDrive - UW-Madison\c\pop\initial_design.txt', 'r') as f: 
         for row in csv_row_reader(f):
+            # fea_config_dict = {}
+            # fea_config_dict['DPNV'] = True
+            # fea_config_dict['flag_optimization'] = False
+            # fea_config_dict['End_Ring_Resistance'] = 0.0
             im = bearingless_induction_motor_design([row[0]]+[float(el) for el in row[1:]], None)
             im_list.append(im)
     # print im.show(toString=True)
@@ -1562,8 +1566,10 @@ if __name__ == '!__main__':
 # winding diagram for four pole dpnv motor
 if __name__ == '__main__':
 
+    bool_4pole_2pole = True
+
     # generate the dict of list: dl
-    if True: # 4 pole motor
+    if bool_4pole_2pole: # 4 pole motor
         # ExampleQ24p2m3ps1y6
         l41 = ['C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B']
         l42 = ['+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
@@ -1616,7 +1622,7 @@ if __name__ == '__main__':
     # Motor Spec
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     Qs = 24
-    if False: # 4 pole motor: full pitch is 6
+    if bool_4pole_2pole: # 4 pole motor: full pitch is 6
         coil_pitch = 6 
     else: # 2 pole motor: full pitch is 12
         coil_pitch = 9
@@ -1838,7 +1844,7 @@ if __name__ == '__main__':
                 slope = draw_end_turns(x, coil_pitch)
                 # show()
 
-        if False: # 4 pole motor
+        if bool_4pole_2pole: # 4 pole motor
             if phase == 'u': 
                 # The key to determine this terminal location is to stick to the dual purpose feature 
                 # meanwhile considering the fact that ub and ud will not change current direction, while ua and uc will change when under suspension excitation.

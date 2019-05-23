@@ -1,5 +1,5 @@
 import pyrhonen_procedure_as_function 
-bool_post_processing = False # solve or post-processing
+bool_post_processing = True # solve or post-processing
 
 # Situation when default_setting does not match spec may happen. What???
 filename = './default_setting.py'
@@ -9,26 +9,24 @@ exec(compile(open(filename, "rb").read(), filename, 'exec'), globals(), locals()
 from math import pi as π
 print(文件名)
 
-
-
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Design Specification
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-p = 2
+p = 1
 spec = pyrhonen_procedure_as_function.desgin_specification(
         PS_or_SC = True, # Pole Specific or Squirrel Cage
         DPNV_or_SEPA = True, # Dual purpose no voltage or Separate winding
         p = p,
         ps = 2 if p==1 else 1,
-        mec_power = 80e3, # kW
-        ExcitationFreq = p*780, # Hz
-        ExcitationFreqSimulated = p*500, # Hz This sets to DriveW_Freq that is actually used in FE simulation.
+        mec_power = 100e3, # kW
+        ExcitationFreq = 880, # Hz
+        ExcitationFreqSimulated = 500, # Hz This sets to DriveW_Freq that is actually used in FE simulation.
         VoltageRating = 480, # Vrms (line-to-line, Wye-Connect)
         TangentialStress = 12000, # Pa
         Qs = 24,
         Qr = 16,
         Js = 3.7e6, # Arms/m^2
-        Jr = 7.5e6,  #7.25e6, #7.5e6, #6.575e6, # Arms/m^2
+        Jr = 7.25e6, #7.5e6, #6.575e6, # Arms/m^2
         Steel = 'M19Gauge29', # Arnon-7
         lamination_stacking_factor_kFe = 0.95, # from http://www.femm.info/wiki/spmloss # 0.91 for Arnon
         Coil = 'Cu',
@@ -38,12 +36,14 @@ spec = pyrhonen_procedure_as_function.desgin_specification(
         Temperature = 75, # deg Celsius
         stator_tooth_flux_density_B_ds = 1.4, # Tesla
         rotor_tooth_flux_density_B_dr  = 1.5, # Tesla
-        stator_yoke_flux_density_Bys = 1.1, # Tesla
+        stator_yoke_flux_density_Bys = 1.2, # Tesla
         rotor_yoke_flux_density_Byr  = 1.1 + 0.3 if p==1 else 1.1, # Tesla
         guess_air_gap_flux_density = 0.8, # 0.8, # Tesla | 0.7 ~ 0.9 | Table 6.3
         guess_efficiency = 0.95,
-        guess_power_factor = 0.6, 
-        debug_or_release = True, # 如果是debug，数据库里有记录就删掉重新跑；如果release且有记录，那就报错。=debug_or_release = True # 如果是debug，数据库里有记录就删掉重新跑；如果release且有记录，那就报错。
+        guess_power_factor = 0.7,
+        safety_factor_to_yield = 1.5,
+        safety_factor_to_critical_speed = 1.5,
+        debug_or_release = True, # 如果是debug，数据库里有记录就删掉重新跑；如果release且有记录，那就报错。
         bool_skew_stator = None,
         bool_skew_rotor = None,
 )
@@ -87,11 +87,11 @@ if True:
     # Run settings
     fea_config_dict['Active_Qr'] = 16
     fea_config_dict['use_weights'] = 'O1' # 'O2' # 'O3'
-    if True:
+    if False:
         # global search
 
         # Prototype OD150 two pole motor
-        if False:
+        if True:
             fea_config_dict['local_sensitivity_analysis'] = True
             fea_config_dict['bool_refined_bounds'] = False
             run_folder = r'run#500/' # Sensitivity analysis for Qr=16 and p=1
@@ -170,6 +170,12 @@ if True:
             fea_config_dict['use_weights'] = 'O2'
             run_folder = r'run#520/' # 修改round bar代码（smaller radius of rotor slot is used now)
 
+            fea_config_dict['local_sensitivity_analysis'] = False
+            fea_config_dict['bool_refined_bounds'] = True
+            fea_config_dict['use_weights'] = 'O2'
+            run_folder = r'run#52001/' # Optimize with refined bounds (Air gap length minimum is 1.90 mm)
+            run_folder = r'run#52002/' # Optimize with refined bounds (Air gap length maximum is 2.12 mm)
+
     else:
         # local tuning (add 99 suffix)
 
@@ -186,8 +192,17 @@ if True:
         # Third tune
         run_folder = r'run#51197/' # Rotor slot open depth d ro 1.00 0.76 0.76 0.95 (low bound is reached again)
 
-        # look for low torque ripple design
-        run_folder = r'run#51196/' 
+        # # look for low torque ripple design
+        # run_folder = r'run#51196/'
+
+
+
+        ##################
+        # 2 pole motor local tuning
+        run_folder = r'run#50101/' # tune 501
+        run_folder = r'run#50102/' # tune 50101
+
+
 
     # run folder
     fea_config_dict['run_folder'] = run_folder
@@ -257,7 +272,7 @@ if True:
                                                         [],
                                                         [] ],
                             'bounds':[]}
-
+        print('Run: ' +run_folder)
         print('the auto bounds are:', de_config_dict['original_bounds'])
         if '511' in run_folder or '508' in run_folder:
             de_config_dict['original_bounds'][0][0] += 2.5
@@ -270,27 +285,39 @@ if True:
         # Sensitivity Analysis based narrowing bounds
         if fea_config_dict['bool_refined_bounds'] == True:
             numver_of_variants = 20.0
-            if fea_config_dict['Active_Qr'] == 16: 
+            if fea_config_dict['Active_Qr'] == 16:
+                if '501' in run_folder:
+                    # from utility.py:run500 O1
+                    raw_narrow_bounds = [   [15, 16, 17, 18, 19, 20],
+                                            [6, 7, 8, 9, 10, 1,1, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                            [0, 1, 5, 6, 7, 8],
+                                            [19, 28], # 这里出了BUG，由于loop_for_bound没有遍历到initial design的Jr bds bdr组合，导致initial design的转子齿=5.38mm大于该边界上界5.05mm，结果是，所有改变转子齿的design variant都比initial design差，所以这里特地加大上界。
+                                            [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                            [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                            [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
+                        # original: [[2, 4.483629], [0.8, 3], [0.5, 3], [2, 5.042], [0.5, 3], [1, 10], [0.5, 3]], 
+                        # refined:  [[3.86, 4.483629], [1.46, 3.0], [0.5, 1.5], [4.89, 6.26], [0.5, 3.0], [2.8, 10.0], [0.5, 3.0]]}
 
-                # from utility.py:run500 O1
-                raw_narrow_bounds = [   [15, 16, 17, 18, 19, 20],
-                                        [6, 7, 8, 9, 10, 1,1, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                        [0, 1, 5, 6, 7, 8],
-                                        [19, 28], # 这里出了BUG，由于loop_for_bound没有遍历到initial design的Jr bds bdr组合，导致initial design的转子齿=5.38mm大于该边界上界5.05mm，结果是，所有改变转子齿的design variant都比initial design差，所以这里特地加大上界。
-                                        [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                        [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                        [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
-                    # original: [[2, 4.483629], [0.8, 3], [0.5, 3], [2, 5.042], [0.5, 3], [1, 10], [0.5, 3]], 
-                    # refined:  [[3.86, 4.483629], [1.46, 3.0], [0.5, 1.5], [4.89, 6.26], [0.5, 3.0], [2.8, 10.0], [0.5, 3.0]]}
+                # # from utility.py:run504 O2
+                # raw_narrow_bounds = [   [13, 15],
+                #                         [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                #                         [1, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                #                         [14, 15, 18, 19, 20],
+                #                         [0, 1, 2, 3, 4, 5],
+                #                         [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                #                         [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
 
-                # from utility.py:run504 O2
-                raw_narrow_bounds = [   [13, 15],
-                                        [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                        [1, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                        [14, 15, 18, 19, 20],
-                                        [0, 1, 2, 3, 4, 5],
-                                        [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                        [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
+                if '520' in run_folder:
+                    # from utility.py:run520 O2
+                    raw_narrow_bounds = [   [13, 14, 15, 16, 17, 18, 19, 20],
+                                            [3, 4, 5, 6, 7, 8, 9, 10, 11, 12], # [10, 17, 18, 19, 20], # for 52001 increased air gap length
+                                            [8, 9, 10, 11, 12, 13, 14, 15, 16],
+                                            [14, 16, 17, 18, 20],
+                                            [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+                                            [2, 3, 4, 13, 14, 15, 16, 17],
+                                            [3, 4, 5, 6, 7, 8]]
+
+                print('raw_narrow_bounds', raw_narrow_bounds)
 
             for ind, bound in enumerate(raw_narrow_bounds):
                 de_config_dict['narrow_bounds_normalized'][ind].append(bound[0] /numver_of_variants)
@@ -341,6 +368,24 @@ if True:
                 de_config_dict['original_bounds'][4] = [0.5, best_design_denorm[4]*1.1]
                 de_config_dict['original_bounds'][5] = [best_design_denorm[5]*0.9, best_design_denorm[5]*1.1]
                 de_config_dict['original_bounds'][6] = [0.5, best_design_denorm[6]*1.1]
+            elif '50101' in fea_config_dict['run_folder']:
+                best_design_denorm = [4.48363,1.46,1.19787,6.25996,0.506877,9.25457,0.5] # best design from run#501gen#0012ind#0018-ID16-12-18
+                de_config_dict['original_bounds'][0] = [best_design_denorm[0]*0.9, best_design_denorm[0]*1.1]
+                de_config_dict['original_bounds'][1] = [best_design_denorm[1]*0.9, best_design_denorm[1]*1.1]
+                de_config_dict['original_bounds'][2] = [best_design_denorm[2]*0.9, best_design_denorm[2]*1.1]
+                de_config_dict['original_bounds'][3] = [best_design_denorm[3]*0.9, best_design_denorm[3]*1.1]
+                de_config_dict['original_bounds'][4] = [best_design_denorm[4]*1.0, best_design_denorm[4]*1.1]
+                de_config_dict['original_bounds'][5] = [best_design_denorm[5]*0.9, best_design_denorm[5]*1.1]
+                de_config_dict['original_bounds'][6] = [best_design_denorm[6]*1.0, best_design_denorm[6]*1.1]
+            elif '50102' in fea_config_dict['run_folder']:
+                best_design_denorm = [4.93199,1.314,1.31636,6.55715,0.557565,9.09551,0.5] # best design from run#50101gen#0005ind#0034-ID16-5-34
+                de_config_dict['original_bounds'][0] = [best_design_denorm[0]*1.0, best_design_denorm[0]*1.2]
+                de_config_dict['original_bounds'][1] = [best_design_denorm[1]*0.9, best_design_denorm[1]*1.1]
+                de_config_dict['original_bounds'][2] = [best_design_denorm[2]*1.0, best_design_denorm[2]*1.2]
+                de_config_dict['original_bounds'][3] = [best_design_denorm[3]*0.9, best_design_denorm[3]*1.1]
+                de_config_dict['original_bounds'][4] = [best_design_denorm[4]*1.0, best_design_denorm[4]*1.2]
+                de_config_dict['original_bounds'][5] = [best_design_denorm[5]*0.9, best_design_denorm[5]*1.1]
+                de_config_dict['original_bounds'][6] = [best_design_denorm[6]*1.0, best_design_denorm[6]*1.1]
             else:
                 raise
             print('Manually set the bounds... After:', de_config_dict['original_bounds'])
@@ -378,7 +423,8 @@ if True:
             try:
                 utility.build_sensitivity_bar_charts(spec, sw)
                 quit()
-            except:
+            except Exception as e:
+                raise e
                 os.remove(fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt')
                 print('Remove ' + fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt')
                 print('Continue for sensitivity analysis...')
@@ -551,7 +597,7 @@ if True:
             raise Exception('Drawing failed')
         elif DRAW_SUCCESS == -1:
             print('Model Already Exists')
-        quit()
+        # quit()
 
         model = sw.app.GetCurrentModel()
         if model.NumStudies() == 0:

@@ -1641,21 +1641,22 @@ class SwarmDataAnalyzer(object):
                       TRV [kNm/$\\rm m^3$]                                  & {torque/self.rotor_volume*1e-3          :.1f} \\\\
                       FRW [N/kg]                                            & {Fmag/self.rotor_weight                 :.1f} \\\\
                       Torque ripple [\\%]                                   & {Trip*100                               :.1f} \\\\
-                      Error angle [deg]                                     & {Ea                                     :.1f} \\\\
-                      Error magnitude [\\%]                                 & {Em*100                                 :.1f} \\\\
+                      Force Error angle [deg]                               & {Ea                                     :.1f} \\\\
+                      Force Error magnitude [\\%]                           & {Em*100                                 :.1f} \\\\
                       Efficiency at rated load (include windage loss) [\\%] & {eta*100                                :.1f} \\\\
                       Power Factor at rated load                            & {PF                                     :.2f} \\\\
                       Stator OD [mm]                                        & {2*self.sw.im.Radius_OuterStatorYoke    :.1f} \\\\
                       Rotor OD [mm]                                         & {2*self.sw.im.Radius_OuterRotor         :.1f} \\\\
                       Stack length [mm]                                     & {rated_stack_length                     :.1f} \\\\
                       Rotor volume [$\\rm m^3$]                             & {self.rotor_volume                        :g} \\\\
-                      Mass of the rotor [kg]                                & {self.rotor_weight                        :g} \\\\
-                      Airgap length [mm]                                    & {self.sw.im.Length_AirGap               :.2f} \\\\
+                      Weight of the rotor [N]                               & {self.rotor_weight                        :g} \\\\
+                      Airgap length [mm]                                    & {self.best_design_denorm[1]             :.2f} \\\\
                       Sleeve thickness [mm]                                 & {0                                      :.1f} \\\\
                       Suspension poles                                      & {int(self.sw.im.BeariW_poles)             :g} \\\\
                       Torque poles                                          & {int(self.sw.im.DriveW_poles)             :g} \\\\
                       Motor Electric Frequency [Hz]                         & {self.ExcitationFreqSimulated             :g} \\\\
                       Motor mechanical speed (r/min)                        & {self.speed_rpm                           :g} \\\\
+                      Rated Power [W]                                       & {self.mec_power                           :g} \\\\
                       Stator slots                                          & {int(self.Qs)                             :g} \\\\
                       Stator slot fill factor                               & {0.5                                    :.1f} \\\\
                       Rotor slots                                           & {int(self.Qr)                             :g} \\\\
@@ -1751,7 +1752,7 @@ class SwarmDataAnalyzer(object):
             filtered_filtered_O_list = []
             filtered_index_list = []
             for x_el, y_el, O_el, index in zip(x, y, filtered_O_list, list(range(len(filtered_O_list)))):
-                if x_el < self.stack_length_max:
+                if x_el < self.stack_length_max*2: ######################################################################## *2
                     filtered_x.append(x_el)
                     filtered_y.append(y_el)
                     filtered_filtered_O_list.append(O_el)
