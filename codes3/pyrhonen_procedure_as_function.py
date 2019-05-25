@@ -147,6 +147,7 @@ class desgin_specification(object):
                     guess_power_factor = None,
                     safety_factor_to_yield = None,
                     safety_factor_to_critical_speed = None,
+                    use_drop_shape_rotor_bar = None,
                     debug_or_release= None,
                     bool_skew_stator = None,
                     bool_skew_rotor = None,
@@ -181,6 +182,7 @@ class desgin_specification(object):
         self.guess_power_factor = guess_power_factor
         self.safety_factor_to_yield = safety_factor_to_yield
         self.safety_factor_to_critical_speed = safety_factor_to_critical_speed
+        self.use_drop_shape_rotor_bar = use_drop_shape_rotor_bar
         self.debug_or_release = debug_or_release
         self.bool_skew_stator = bool_skew_stator
         self.bool_skew_rotor  = bool_skew_rotor 
@@ -194,7 +196,7 @@ class desgin_specification(object):
 
     def build_name(self, bLatex=False):
         u'''转子类型+基本信息+槽配合+电负荷+导电材料+温度+导磁材料+磁负荷+叠压系数+假设+目的'''
-        name = '%s%sp%dps%d_%dkW%dHz%dVtan%d_Qs%dQr%dJs%gJr%g%s%d%s%d@%dK_%s@%d_Bt%gs%grBy%gs%gr_b%.2fEff%gPf%gSFy%gSFcs%g_%s%s%s%s' % (
+        name = '%s%sp%dps%d_%dkW%dHz%dVtan%d_Qs%dQr%dJs%gJr%g%s%d%s%d@%dK_%s@%d_Bt%gs%grBy%gs%gr_b%.2fEff%gPf%gSFy%gSFcs%g_%s%s%s%s%s' % (
                 'PS' if self.PS_or_SC else 'SC',
                 'DPNV' if self.DPNV_or_SEPA else 'SEPA',
                 self.p,
@@ -223,6 +225,7 @@ class desgin_specification(object):
                 self.guess_power_factor,
                 self.safety_factor_to_yield,
                 self.safety_factor_to_critical_speed,
+                'drop'  if self.use_drop_shape_rotor_bar else 'rod',
                 'debug' if self.debug_or_release else 'release',
                 'Sskew' if self.bool_skew_stator is not None else '',
                 'Rskew' if self.bool_skew_rotor  is not None else '',
@@ -384,17 +387,17 @@ class desgin_specification(object):
                  ''', file=fname)
         print('\nRequired Torque: %g Nm'% required_torque, file=fname)
         tip_speed = get_tip_speed(speed_rpm, rotor_outer_radius_r_or)
-        print('\nTip speed: %g m/s with a safety factor to yield of %g' %(tip_speed, safety_factor_to_yield), file=fname)
+        print('\nTip speed: %g m/s with a safety factor to yield of %g' %(tip_speed, self.safety_factor_to_yield), file=fname)
         print('\nCentrifugal stress: %g MPa' %(1e-6*check_stress_due_to_centrifugal_force(speed_rpm, rotor_outer_radius_r_or)), file=fname)
         print('\nRotor outer diameter $D_{or}=%g$ mm'% (rotor_outer_diameter_Dr*1e3), file=fname)
         print('\nRotor outer radius $r_{or}=%g$ mm'% (rotor_outer_radius_r_or*1e3), file=fname)
             # print 'Yegu Kang: rotor_outer_diameter_Dr, 95 mm'
         if bool_mechanical_dominate:
-            print('\nRadially restricted by the machanical loading, and the maximal rotor radius is %g mm ($k_\\sigma=%g$)' % (rotor_radius_max*1e3, safety_factor_to_yield), file=fname)
+            print('\nRadially restricted by the machanical loading, and the maximal rotor radius is %g mm ($k_\\sigma=%g$)' % (rotor_radius_max*1e3, self.safety_factor_to_yield), file=fname)
         else:
             print('\nUse recommended length ratio: $\\chi=%g$' % length_ratio_chi, file=fname)
         print('\nStack length: $L_{st}=%g$ mm'% (stack_length*1e3), file=fname)
-        print('\nStack length (max): $L_{st,\\max}=%g$ mm ($k=%g$)'% (stack_length_max*1e3, safety_factor_to_critical_speed), file=fname)
+        print('\nStack length (max): $L_{st,\\max}=%g$ mm ($k=%g$)'% (stack_length_max*1e3, self.safety_factor_to_critical_speed), file=fname)
 
 
 

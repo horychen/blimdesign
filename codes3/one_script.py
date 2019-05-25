@@ -1,5 +1,5 @@
 import pyrhonen_procedure_as_function 
-bool_post_processing = True # solve or post-processing
+bool_post_processing = False # solve or post-processing
 
 # Situation when default_setting does not match spec may happen. What???
 filename = './default_setting.py'
@@ -11,6 +11,11 @@ print(文件名)
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Design Specification
+# 1. Specify desgin_specification
+# 2. Give a run folder including determining:
+#       i) t is sensitivity analysis or not
+#       ii) it uses refined bounds or it is local tuning with local bounds based on the best design from another run
+# 3. D
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 p = 1
 spec = pyrhonen_procedure_as_function.desgin_specification(
@@ -43,6 +48,7 @@ spec = pyrhonen_procedure_as_function.desgin_specification(
         guess_power_factor = 0.7,
         safety_factor_to_yield = 1.5,
         safety_factor_to_critical_speed = 1.5,
+        use_drop_shape_rotor_bar = False,
         debug_or_release = True, # 如果是debug，数据库里有记录就删掉重新跑；如果release且有记录，那就报错。
         bool_skew_stator = None,
         bool_skew_rotor = None,
@@ -50,7 +56,8 @@ spec = pyrhonen_procedure_as_function.desgin_specification(
 # spec.show()
 print(spec.build_name())
 bool_bad_specifications = spec.pyrhonen_procedure()
-print(spec.build_name())
+print(spec.build_name()) # TODO：自动修正转子电流密度的设置值？
+fea_config_dict['use_drop_shape_rotor_bar'] = spec.use_drop_shape_rotor_bar
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Automatic Report Generation
@@ -87,7 +94,7 @@ if True:
     # Run settings
     fea_config_dict['Active_Qr'] = 16
     fea_config_dict['use_weights'] = 'O1' # 'O2' # 'O3'
-    if False:
+    if True:
         # global search
 
         # Prototype OD150 two pole motor
@@ -99,6 +106,36 @@ if True:
             fea_config_dict['local_sensitivity_analysis'] = False
             fea_config_dict['bool_refined_bounds'] = True
             run_folder = r'run#501/' # Optimize with refined bounds
+
+
+
+
+            # Round bar motor: population.py@Line2917
+            fea_config_dict['local_sensitivity_analysis'] = True
+            fea_config_dict['bool_refined_bounds'] = False
+            run_folder = r'run#525/' # Sensitivity analysis for Qr=16 and p=1
+
+            # 傻逼了，这里应该是O2的，难怪结果那么奇怪！
+            fea_config_dict['local_sensitivity_analysis'] = False
+            fea_config_dict['bool_refined_bounds'] = True
+            run_folder = r'run#52501/' # Optimize with refined bounds
+
+            fea_config_dict['local_sensitivity_analysis'] = False
+            fea_config_dict['bool_refined_bounds'] = False
+            run_folder = r'run#526/'
+
+
+
+            fea_config_dict['use_weights'] = 'O2'
+
+            fea_config_dict['local_sensitivity_analysis'] = False
+            fea_config_dict['bool_refined_bounds'] = True
+            run_folder = r'run#52502/' # Optimize with refined bounds
+
+            fea_config_dict['local_sensitivity_analysis'] = False
+            fea_config_dict['bool_refined_bounds'] = False
+            run_folder = r'run#527/'
+
 
         # Prototype OD150 four pole motor
         else:
@@ -208,6 +245,7 @@ if True:
     fea_config_dict['run_folder'] = run_folder
     # logging file
     logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ones_'+fea_config_dict['run_folder'][:-1])
+
     # rebuild the name
     build_model_name_prefix(fea_config_dict)
 
@@ -235,12 +273,15 @@ if True:
     b_dr_max, b_dr_min = max(list_b_dr), min(list_b_dr)
     print(b_ds_max, b_ds_min, 'initial design:', 1e3*spec.stator_tooth_width_b_ds, 'mm')
     print(b_dr_max, b_dr_min, 'initial design:', 1e3*spec.rotor_tooth_width_b_dr, 'mm')
-    if b_ds_min<4:
-        print('Too small lower bound b_ds (%g) is detected. Set it to 2.5 mm.'%(b_ds_min))
-        b_ds_min = 4
-    if b_dr_min<4:
-        print('Too small lower bound b_dr (%g) is detected. Set it to 2.5 mm.'%(b_dr_min))
-        b_dr_min = 4
+    if b_ds_min<3:
+        print('Too small lower bound b_ds (%g) is detected. Set it to 3 mm.'%(b_ds_min))
+        b_ds_min = 3
+    if fea_config_dict['use_drop_shape_rotor_bar'] == True:
+        if b_dr_min<3:
+            print('Too small lower bound b_dr (%g) is detected. Set it to 3 mm.'%(b_dr_min))
+            b_dr_min = 3
+    else:
+        pass
     if 1e3*spec.stator_tooth_width_b_ds < b_ds_min  and 1e3*spec.stator_tooth_width_b_ds > b_ds_max:
         raise Exception('The initial design is not within the bounds.')
     if 1e3*spec.rotor_tooth_width_b_dr < b_dr_min  and 1e3*spec.rotor_tooth_width_b_dr > b_dr_max:
@@ -253,6 +294,9 @@ if True:
 #    A 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     if fea_config_dict['flag_optimization'] == True:
+        if '527' in run_folder or '526' in run_folder:
+            b_ds_max += 1
+            b_dr_max += 1
         de_config_dict = {  'original_bounds':[ [b_ds_min, b_ds_max],#--# stator_tooth_width_b_ds
                                                 [     0.8,        3],   # air_gap_length_delta
                                                 [    5e-1,        3],   # Width_RotorSlotOpen 
@@ -276,8 +320,8 @@ if True:
         print('the auto bounds are:', de_config_dict['original_bounds'])
         if '511' in run_folder or '508' in run_folder:
             de_config_dict['original_bounds'][0][0] += 2.5
-            de_config_dict['original_bounds'][3][0] += 2.5
             de_config_dict['original_bounds'][0][1] += 2
+            de_config_dict['original_bounds'][3][0] += 2.5
             de_config_dict['original_bounds'][3][1] += 2
             print('the extended bounds are:', de_config_dict['original_bounds'])
         # quit()
@@ -317,6 +361,16 @@ if True:
                                             [2, 3, 4, 13, 14, 15, 16, 17],
                                             [3, 4, 5, 6, 7, 8]]
 
+                if '5250' in run_folder:
+                    # from utility.py:run525 O2
+                    raw_narrow_bounds = [   [20, 100], # 0~20: 4~4.5 mm
+                                            [7, 8, 9, 10, 11, 12], #, 13, 14], #, 15, 16, 17, 18, 19, 20],
+                                            [6, 8],
+                                            [3, 4, 5, 6, 7],
+                                            [4, 5],
+                                            [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                            [0, 1, 2, 3, 4]]
+
                 print('raw_narrow_bounds', raw_narrow_bounds)
 
             for ind, bound in enumerate(raw_narrow_bounds):
@@ -335,6 +389,7 @@ if True:
             print('original_bounds:', de_config_dict['original_bounds'])
             print('refined bounds:', de_config_dict['bounds'])
             print('narrow_bounds_normalized:', de_config_dict['narrow_bounds_normalized'])
+            # quit()
         elif fea_config_dict['bool_refined_bounds'] == -1:
             print('Manually set the bounds... Before:', de_config_dict['original_bounds'])
             if '51199' in fea_config_dict['run_folder']:

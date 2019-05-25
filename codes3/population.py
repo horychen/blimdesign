@@ -2914,7 +2914,7 @@ class bearingless_induction_motor_design(object):
         #         self.Radius_of_RotorSlot = self.Radius_of_RotorSlot2
 
         # else:
-        self.use_drop_shape_rotor_bar = True
+        self.use_drop_shape_rotor_bar = self.fea_config_dict['use_drop_shape_rotor_bar'] # Since 5/23/2019
 
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         # For a low Qr value, there is a chance that the Location_RotorBarCenter2 is larger than Location_RotorBarCenter,
@@ -3126,6 +3126,8 @@ class bearingless_induction_motor_design(object):
         self.MODEL_ROTATE = False # during optimization, rotate at model level is not needed.
         logger = logging.getLogger(__name__) 
         logger.info('im_variant ID %s is initialized.', self.ID)
+
+        self.use_drop_shape_rotor_bar = self.fea_config_dict['use_drop_shape_rotor_bar'] # since 5/23/2019
 
         # thermal penalty for reduced rotor slot area (copper hot) and rotor tooth width (iron hot)
         # try:

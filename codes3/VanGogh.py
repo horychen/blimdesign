@@ -28,6 +28,7 @@ class VanGogh(object):
             utility.blockPrint()
             self.draw_stator_without_non_accurate_shapely(fraction)
             self.draw_rotor_without_non_accurate_shapely(fraction)
+            # self.draw_rotor_eMach(fraction)
             utility.enablePrint()
 
             # self.draw_stator(fraction)
@@ -71,17 +72,23 @@ class VanGogh(object):
         P5 = (-im.Location_RotorBarCenter-sqrt(im.Radius_of_RotorSlot**2 - (0.5*im.Width_RotorSlotOpen)**2), 0.5*im.Width_RotorSlotOpen)
         self.draw_line(P4, P5)
 
-        # P6
-        P6 = (-im.Location_RotorBarCenter, im.Radius_of_RotorSlot)
-        self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0))
+        if im.use_drop_shape_rotor_bar == True:
+            # P6
+            P6 = (-im.Location_RotorBarCenter, im.Radius_of_RotorSlot)
+            self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0))
 
-        # P7
-        P7 = (-im.Location_RotorBarCenter2, im.Radius_of_RotorSlot2)
-        self.draw_line(P6, P7)
+            # P7
+            P7 = (-im.Location_RotorBarCenter2, im.Radius_of_RotorSlot2)
+            self.draw_line(P6, P7)
 
-        # P8
-        P8 = (-im.Location_RotorBarCenter2+im.Radius_of_RotorSlot2, 0)
-        self.draw_arc(P8, P7, 0.5*pi, center=(-im.Location_RotorBarCenter2, 0))
+            # P8
+            P8 = (-im.Location_RotorBarCenter2+im.Radius_of_RotorSlot2, 0)
+            self.draw_arc(P8, P7, 0.5*pi, center=(-im.Location_RotorBarCenter2, 0))
+
+        else:
+            P6 = P7 = None
+            P8 = (-im.Location_RotorBarCenter+im.Radius_of_RotorSlot, 0)
+            self.draw_arc(P8, P5, pi - self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0))
 
         if self.child_index == FEMM:
             self.some_solver_related_operations_rotor_before_mirror_rotation(im, P6, P8) # call this before mirror_and_copyrotate
@@ -101,67 +108,27 @@ class VanGogh(object):
             # self.draw_line(P2, P3, ls='-.')
 
         # 导条
-        self.bar_or_coil = True
-        if self.bar_or_coil == True:
-            # P_Bar
-            P_Bar = (-im.Location_RotorBarCenter-im.Radius_of_RotorSlot, 0)
-            self.draw_arc(P5, P_Bar, self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0), ls=':')
+        # P_Bar
+        P_Bar = (-im.Location_RotorBarCenter-im.Radius_of_RotorSlot, 0)
+        self.draw_arc(P5, P_Bar, self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0), ls=':')
 
-            if self.child_index == JMAG:
-                self.add_line(P_Bar, P8)
+        if self.child_index == JMAG:
+            self.add_line(P_Bar, P8)
 
-                # draw the outline of stator core for coil to form a region in JMAG
-                self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0))
-                self.draw_arc(P8, P7, 0.5*pi, center=(-im.Location_RotorBarCenter2, 0))
-
-                self.mirror_and_copyrotate(im.Qr, None, fraction,
-                                            symmetry_type=2
-                                            # merge=False, # bars are not connected to each other, so you don't have to specify merge=False, they will not merge anyway...
-                                            # do_you_have_region_in_the_mirror=True # In short, this should be true if merge is false...
-                                            )
-        # 导线
-        else:
-            if self.child_index == JMAG:
-                self.draw_arc(P5, [P5[0], -P5[1]], self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0), ls=':')
+            if im.use_drop_shape_rotor_bar == True:
 
                 # draw the outline of rotor core for coil to form a region in JMAG
                 self.draw_arc(P6, P5, 0.5*pi - self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0))
                 self.draw_arc(P8, P7, 0.5*pi, center=(-im.Location_RotorBarCenter2, 0))
 
-                # mirrored 
-                self.draw_arc(P6, [P5[0], -P5[1]], 0.5*pi - self.get_postive_angle(P5, (-im.Location_RotorBarCenter, 0)), center=(-im.Location_RotorBarCenter, 0))
-                self.draw_arc(P8, [P7[0], -P7[1]], 0.5*pi, center=(-im.Location_RotorBarCenter2, 0))
-
-                raise 
-                # geomApp = app.CreateGeometryEditor()
-                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").CreateWireTemplate()
-                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"Wire Template.3").SetProperty(u"Name", u"Wire Template.3")
-                # refarray = [0 for i in range(8)]
-                # refarray[0] = u"edgeregion(TSketchArc47)"
-                # refarray[1] = u"edgeregion(TSketchArc39)"
-                # refarray[2] = u"edgeregion(TSketchArc125)"
-                # refarray[3] = u"edgeregion(TSketchArc122)"
-                # refarray[4] = u"edgeregion(TSketchArc45)"
-                # refarray[5] = u"edgeregion(TSketchArc118)"
-                # refarray[6] = u"edgeregion(TSketchLine44)"
-                # refarray[7] = u"edgeregion(TSketchLine121)"
-                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"Wire Template.3").SetProperty(u"BoundaryGeometry", refarray)
-                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"Wire Template.3").SetProperty(u"CircleLayoutType", 1)
-                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"Wire Template.3").SetProperty(u"WireCount", 16)
-                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"Wire Template.3").SetProperty(u"FillFactor", 54.0924492984424)
-                # geomApp.View().SelectWorldPos(-36.9913673, 0.751290023, -0.00271606445, 0)
-                # geomApp.View().SelectWorldPos(-37.2995834, 2.33090138, -0.00271606445, 0)
-                # geomApp.View().SelectWorldPos(-37.3766365, 2.73543596, -0.00271606445, 0)
-                # geomApp.View().SelectByRectangleWorldPos(-36.201561, -4.44987011, -0.00271606445, -21.5612621, 3.23628855, -0.00271606445, 0)
-                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"Wire Template.3").SetProperty(u"Name", u"RotorCoilSet")
-                # geomApp.GetDocument().GetAssembly().GetItem(u"Cage").GetItem(u"RotorCoilSet").SetProperty(u"Name", u"RotorSlotCoil")
-                # geomApp = app.CreateGeometryEditor()
-                # geomApp.GetDocument().UpdateModel(0, 0)
-
-
             else:
-                raise Exception('Not suppported.')
+                raise Exception('Not implemented error')
 
+            self.mirror_and_copyrotate(im.Qr, None, fraction,
+                                        symmetry_type=2
+                                        # merge=False, # bars are not connected to each other, so you don't have to specify merge=False, they will not merge anyway...
+                                        # do_you_have_region_in_the_mirror=True # In short, this should be true if merge is false...
+                                        )
 
 
         if self.child_index == FEMM:
@@ -365,33 +332,40 @@ class VanGogh(object):
             P5 = [x[0],y[0]]
         else:
             P5 = [x[1],y[1]]
-        CenterP7P8 = [-(R_or - d_ro - w_rs1 - d_rs), 0]
-        [P6, P7] = utilityTangentPointsOfTwoCircles(CenterP5P6, CenterP7P8, w_rs1, w_rs2)
-        if P6[1] < 0:
-            P6[1] = -1*P6[1]
-            P7[1] = -1*P7[1]
-        if P6[0] > P7[0]:
-            P6, P7 = P7, P6
-        P8 = [-(R_or - d_ro - w_rs1 - d_rs - w_rs2), 0]        
+        if self.im.use_drop_shape_rotor_bar == True:
+            CenterP7P8 = [-(R_or - d_ro - w_rs1 - d_rs), 0]
+            [P6, P7] = utilityTangentPointsOfTwoCircles(CenterP5P6, CenterP7P8, w_rs1, w_rs2)
+            if P6[1] < 0:
+                P6[1] = -1*P6[1]
+                P7[1] = -1*P7[1]
+            if P6[0] > P7[0]:
+                P6, P7 = P7, P6
+            P8 = [-(R_or - d_ro - w_rs1 - d_rs - w_rs2), 0]
+        else:
+            P6 = P7 = None
+            P8 = [-(R_or - d_ro - 2*w_rs1), 0]
 
         self.listKeyPoints = [P1, P2, P3, P4, P5, P6, P7, P8];
-            
+
         drawer = self
         arc21  = drawer.drawArc([0,0],P2,P1)
         line23 = drawer.drawLine(P2,P3)
         arc34  = drawer.drawArc([0,0],P3,P4)
         line45 = drawer.drawLine(P4,P5)
-        arc65  = drawer.drawArc(CenterP5P6,P6,P5)
-        line67 = drawer.drawLine(P6,P7)
-        arc87  = drawer.drawArc(CenterP7P8,P8,P7)
         line81 = drawer.drawLine(P8,P1)
-
-        segments = [arc21 ,line23,arc34 ,line45,arc65 ,line67,arc87 ,line81]
+        if self.im.use_drop_shape_rotor_bar == True:
+            arc65  = drawer.drawArc(CenterP5P6,P6,P5)
+            line67 = drawer.drawLine(P6,P7)
+            arc87  = drawer.drawArc(CenterP7P8,P8,P7)
+            segments = [arc21 ,line23,arc34 ,line45,arc65 ,line67,arc87 ,line81]
+        else:
+            arc85  = drawer.drawArc(CenterP5P6,P8,P5) # CenterP5P6 is the same as CenterP5P8
+            segments = [arc21 ,line23,arc34 ,line45,arc85 ,line81]
         csToken = segments
         
         im = self.im
         if self.child_index == FEMM:
-            self.some_solver_related_operations_rotor_before_mirror_rotation(im, P6, P8) # call this before mirror_and_copyrotate
+            self.some_solver_related_operations_rotor_before_mirror_rotation(im, P6, P8) # call this before mirror_and_copyrotate to asign segment size to the arc to reduce element number
 
         if self.child_index == JMAG:
             # JMAG needs to explictly draw the rotor slot.

@@ -54,15 +54,23 @@ class VanGogh_FEMM(VanGogh):
         femm.mi_addsegment(p1[0],p1[1],p2[0],p2[1])
 
     def some_solver_related_operations_rotor_before_mirror_rotation(self, im, P6, P8):
-        # constraint to reduce element number @rotor-P6
-        femm.mi_selectarcsegment(P6[0], P6[1])
-        femm.mi_setarcsegmentprop(8, "<None>", False, 100)
-        femm.mi_clearselected()
 
-        # constraint to reduce element number @rotor-P8
-        femm.mi_selectarcsegment(P8[0], P8[1])
-        femm.mi_setarcsegmentprop(8, "<None>", False, 100)
-        femm.mi_clearselected()
+        if im.use_drop_shape_rotor_bar == True:
+            # constraint to reduce element number @rotor-P6
+            femm.mi_selectarcsegment(P6[0], P6[1])
+            femm.mi_setarcsegmentprop(8, "<None>", False, 100)
+            femm.mi_clearselected()
+
+            # constraint to reduce element number @rotor-P8
+            femm.mi_selectarcsegment(P8[0], P8[1])
+            femm.mi_setarcsegmentprop(8, "<None>", False, 100)
+            femm.mi_clearselected()
+        else:
+            # constraint to reduce element number @rotor-P8
+            femm.mi_selectarcsegment(P8[0], P8[1])
+            femm.mi_setarcsegmentprop(8, "<None>", False, 100)
+            femm.mi_clearselected()
+
 
     def some_solver_related_operations_fraction(self, im, fraction):
         # Boundary
@@ -264,7 +272,8 @@ class FEMM_Solver(object):
         # Rotor Winding
         if fraction == 1:
             # Pole-Specific Rotor Winding
-            R = 0.5*(im.Location_RotorBarCenter + im.Location_RotorBarCenter2)
+            # R = 0.5*(im.Location_RotorBarCenter + im.Location_RotorBarCenter2)
+            R = im.Location_RotorBarCenter # Since 5/23/2019
             angle_per_slot = 2*pi/im.Qr
             THETA_BAR = pi - angle_per_slot
 
@@ -296,7 +305,8 @@ class FEMM_Solver(object):
                 block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit=circuit_name, turns=-1)
         elif fraction == 4 or fraction == 2:
             # poly-four-bar-Cage + no bearing current excitated <=> pole specific winding 
-            R = 0.5*(im.Location_RotorBarCenter + im.Location_RotorBarCenter2)
+            # R = 0.5*(im.Location_RotorBarCenter + im.Location_RotorBarCenter2)
+            R = im.Location_RotorBarCenter # Since 5/23/2019
             angle_per_slot = 2*pi/im.Qr
             THETA_BAR = pi - angle_per_slot + EPS # add EPS for the half bar
 
@@ -1397,7 +1407,8 @@ class FEMM_Solver(object):
             # physical amount of Cage
             im = self.im
             vals_results_rotor_current = []
-            R = 0.5*(im.Location_RotorBarCenter + im.Location_RotorBarCenter2)
+            # R = 0.5*(im.Location_RotorBarCenter + im.Location_RotorBarCenter2)
+            R = im.Location_RotorBarCenter # Since 5/23/2019
             angle_per_slot = 2*pi/im.Qr
             THETA_BAR = pi - angle_per_slot + EPS # add EPS for the half bar
             # print 'number of rotor_slot per partial model', self.rotor_slot_per_pole * int(4/fraction)
