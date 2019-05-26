@@ -3,6 +3,12 @@ import os
 import datetime
 import itertools
 
+
+def my_execfile(filename, g=None, l=None):
+    # g=globals(), l=locals()
+    exec(compile(open(filename, "rb").read(), filename, 'exec'), g, l)
+
+
 def communicate_database(spec):
     try:
         import mysql.connector
@@ -297,22 +303,22 @@ class Pyrhonen_design(object):
         from math import pi
         Qr = im.Qr
 
-        # unit: mm and deg
-        self.stator_tooth_width_b_ds        = im.Width_StatorTeethBody
+        # unit: mm 
         self.air_gap_length_delta           = im.Length_AirGap
-        self.b1                             = im.Width_RotorSlotOpen
+        self.stator_tooth_width_b_ds        = im.Width_StatorTeethBody
         self.rotor_tooth_width_b_dr         = ( 2*pi*(im.Radius_OuterRotor - im.Length_HeadNeckRotorSlot)  - im.Radius_of_RotorSlot * (2*Qr+2*pi) ) / Qr
-        self.Length_HeadNeckRotorSlot       = im.Length_HeadNeckRotorSlot
-        self.Angle_StatorSlotOpen           = im.Angle_StatorSlotOpen
+        self.Angle_StatorSlotOpen           = im.Angle_StatorSlotOpen # deg
+        self.b1                             = im.Width_RotorSlotOpen
         self.Width_StatorTeethHeadThickness = im.Width_StatorTeethHeadThickness
+        self.Length_HeadNeckRotorSlot       = im.Length_HeadNeckRotorSlot
 
-        self.design_parameters_denorm = [   self.stator_tooth_width_b_ds,
-                                            self.air_gap_length_delta,
-                                            self.b1,
+        self.design_parameters_denorm = [   self.air_gap_length_delta,
+                                            self.stator_tooth_width_b_ds,
                                             self.rotor_tooth_width_b_dr,
-                                            self.Length_HeadNeckRotorSlot,
                                             self.Angle_StatorSlotOpen,
-                                            self.Width_StatorTeethHeadThickness]
+                                            self.b1,
+                                            self.Width_StatorTeethHeadThickness,
+                                            self.Length_HeadNeckRotorSlot ]
 
         if bounds is None:
             self.design_parameters_denorm
@@ -1384,7 +1390,11 @@ def fobj_list(l_torque_average, l_ss_avg_force_magnitude, l_normalized_torque_ri
 
 class SwarmDataAnalyzer(object):
     """docstring for SwarmDataAnalyzer"""
-    def __init__(self, dir_run=None, run_integer=None, bool_sensitivity_analysis=True):
+    def __init__(self, sw, spec, dir_run=None, run_integer=None, bool_sensitivity_analysis=True):
+
+        number_of_variant = sw.fea_config_dict['local_sensitivity_analysis_number_of_variants'] + 1
+        self.sw = sw
+        self.spec = spec
 
         self.dir_run = dir_run
         self.run_integer = run_integer
@@ -1394,13 +1404,13 @@ class SwarmDataAnalyzer(object):
         self.number_of_designs = len(self.buf) / 21 # 此21是指每个个体的结果占21行，非彼20+1哦。
 
         if bool_sensitivity_analysis:
-            if self.number_of_designs == 21*7:
+            if self.number_of_designs == number_of_variant*7:
                 print('These are legacy results without the initial design within the swarm_data.txt. ')
 
-            elif self.number_of_designs == 21*7 + 1:
+            elif self.number_of_designs == number_of_variant*7 + 1:
                 print('Initial design is among the pop and used as reference design.')
-                self.reference_design = self.buf[:21]
-                self.buf = self.buf[21:]
+                self.reference_design = self.buf[:21] # 此21是指每个个体的结果占21行，非彼20+1哦。
+                self.buf = self.buf[21:] # 此21是指每个个体的结果占21行，非彼20+1哦。
             else:
                 raise Exception('Please remove duplicate results in swarm_data.txt for run#', run_integer)
 
@@ -1411,6 +1421,8 @@ class SwarmDataAnalyzer(object):
         msg = 'self.buf_length %% 21 = %d, / 21 = %d' % (self.buf_length % 21, self.number_of_designs)
         logger = logging.getLogger(__name__)
         logger.debug(msg)
+
+        self.build_basic_info()
 
     def design_display_generator(self):
         for i in range(int(self.number_of_designs)):
@@ -1650,7 +1662,7 @@ class SwarmDataAnalyzer(object):
                       Stack length [mm]                                     & {rated_stack_length                     :.1f} \\\\
                       Rotor volume [$\\rm m^3$]                             & {self.rotor_volume                        :g} \\\\
                       Weight of the rotor [N]                               & {self.rotor_weight                        :g} \\\\
-                      Airgap length [mm]                                    & {self.best_design_denorm[1]             :.2f} \\\\
+                      Airgap length [mm]                                    & {self.best_design_denorm[0]             :.2f} \\\\
                       Sleeve thickness [mm]                                 & {0                                      :.1f} \\\\
                       Suspension poles                                      & {int(self.sw.im.BeariW_poles)             :g} \\\\
                       Torque poles                                          & {int(self.sw.im.DriveW_poles)             :g} \\\\
@@ -1889,7 +1901,8 @@ class SwarmDataAnalyzer(object):
 
     def sensitivity_bar_charts(self):
         # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
-        number_of_variant = 20 + 1
+        number_of_variant = self.sw.fea_config_dict['local_sensitivity_analysis_number_of_variants'] + 1
+
 
         from pylab import subplots
         fig, axeses = subplots(4, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
@@ -1905,13 +1918,14 @@ class SwarmDataAnalyzer(object):
         # O2_prototype_ax.plot(O2_prototype_data[4], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
 
         # Extract data
-        param_list = ['stator_tooth_width_b_ds',
+        param_list = [
         'air_gap_length_delta',
-        'Width_RotorSlotOpen ',
+        'stator_tooth_width_b_ds',
         'rotor_tooth_width_b_dr',
-        'Length_HeadNeckRotorSlot',
         'Angle_StatorSlotOpen',
-        'Width_StatorTeethHeadThickness']
+        'Width_RotorSlotOpen ',
+        'Width_StatorTeethHeadThickness',
+        'Length_HeadNeckRotorSlot']
         y_label_list = ['PF', r'$\eta$ [100%]', r'$T_{em} [N]$', r'$T_{rip}$ [100%]', r'$|F|$ [N]', r'$E_m$ [100%]', r'$E_a$ [deg]', 
                         r'$P_{Cu,s,JMAG}$', r'$P_{Cu,r,JMAG}$', r'$P_{Fe}$ [W]', r'$P_{eddy}$', r'$P_{hyst}$', r'$P_{Cu,s,FEMM}$', r'$P_{Cu,r,FEMM}$', 
                         r'Windage loss', r'Total loss']
@@ -1938,7 +1952,7 @@ class SwarmDataAnalyzer(object):
                     # if j == 6:
                     ax_list[ind].plot(y_vs_design_parameter, 'o-', lw=0.75, label=str(j)+' '+param_list[j], alpha=0.5)
                 except IndexError as e:
-                    print('Check the length of y should be 7*21=147, or else you should remove the redundant results in swarm_data.txt (they are produced because of the interrupted/resumed script run.)')
+                    print('Check the length of y should be 7*(%d+1)=147, or else you should remove the redundant results in swarm_data.txt (they are produced because of the interrupted/resumed script run.)'%(number_of_variant))
                     raise e
                 print('\tj=', j, param_list[j], '\t\t Max-Min:', max(y_vs_design_parameter) - min(y_vs_design_parameter))
 
@@ -1991,15 +2005,18 @@ class SwarmDataAnalyzer(object):
         from pylab import figure
         O1_ax  = figure().gca()
         O2_prototype_data = []
+        results_for_refining_bounds = {}
+        results_for_refining_bounds['O1'] = []
         for j in range(int(len(O1)/number_of_variant)): # iterate design parameters
             O1_vs_design_parameter = O1[j*number_of_variant:(j+1)*number_of_variant]
             O2_prototype_data.append(O1_vs_design_parameter)
 
             O1_ax.plot(O1_vs_design_parameter, label=str(j)+' '+param_list[j], alpha=0.5)
-            print('\t', j, param_list[j], '\t\t', max(O1_vs_design_parameter) - min(O1_vs_design_parameter), '\t\t', end=' ')
+            print('\t', j, param_list[j], '\t\t max O1 - min O1:', max(O1_vs_design_parameter) - min(O1_vs_design_parameter), '\t\t', end=' ')
 
             # narrow bounds (refine bounds)
-            print([ind for ind, el in enumerate(O1_vs_design_parameter) if el < O1_ref*1.005]) #'<- to derive new original_bounds.'
+            results_for_refining_bounds['O1'].append( [ind for ind, el in enumerate(O1_vs_design_parameter) if el < O1_ref*1.05] )
+            print(results_for_refining_bounds['O1'][j]) #'<- to derive new original_bounds.'
 
             O1_max.append(max(O1_vs_design_parameter))
             O1_min.append(min(O1_vs_design_parameter))            
@@ -2036,17 +2053,19 @@ class SwarmDataAnalyzer(object):
         O2_min = []
         O2_ax  = figure().gca()
         O2_ecce_data = []
+        results_for_refining_bounds['O2'] = []
         for j in range(int(len(O2)/number_of_variant)): # iterate design parameters: range(7)
             O2_vs_design_parameter = O2[j*number_of_variant:(j+1)*number_of_variant]
             O2_ecce_data.append(O2_vs_design_parameter)
 
             # narrow bounds (refine bounds)
             O2_ax.plot(O2_vs_design_parameter, 'o-', label=str(j)+' '+param_list[j], alpha=0.5)
-            print('\t', j, param_list[j], '\t\t', max(O2_vs_design_parameter) - min(O2_vs_design_parameter), '\t\t', end=' ')
-            print([ind for ind, el in enumerate(O2_vs_design_parameter) if el < O2_ref*1.005]) #'<- to derive new original_bounds.'
+            print('\t', j, param_list[j], '\t\t max O2 - min O2:', max(O2_vs_design_parameter) - min(O2_vs_design_parameter), '\t\t', end=' ')
+            results_for_refining_bounds['O2'].append( [ind for ind, el in enumerate(O2_vs_design_parameter) if el < O2_ref*1.05] )
+            print(results_for_refining_bounds['O2'][j]) #'<- to derive new original_bounds.'
 
             O2_max.append(max(O2_vs_design_parameter))
-            O2_min.append(min(O2_vs_design_parameter))            
+            O2_min.append(min(O2_vs_design_parameter))
         O2_ax.legend()
         O2_ax.grid()
         O2_ax.set_ylabel('O2 [1]')
@@ -2221,8 +2240,11 @@ class SwarmDataAnalyzer(object):
         # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\sensitivity_results.png', dpi=150)
 
         plt.show()
+        return results_for_refining_bounds
 
-    def build_basic_info(self, spec, sw):
+    def build_basic_info(self):
+        spec = self.spec
+        sw = self.sw
         # Basic information
         self.ExcitationFreqSimulated = spec.ExcitationFreqSimulated
         self.speed_rpm         = self.ExcitationFreqSimulated * 60 / spec.p # rpm
@@ -2239,8 +2261,8 @@ class SwarmDataAnalyzer(object):
         self.weights_used      = use_weights(which=sw.fea_config_dict['use_weights'])
         self.stack_length      = sw.im.stack_length
         self.stack_length_max  = spec.Stack_Length_Max
-        self.spec              = spec
-        self.sw                = sw
+        # self.spec              = spec
+        # self.sw                = sw
         print('-'*50 + '\nutility.py')
         print('Qs=%d, rotor_volume=%g'%(self.Qs, self.rotor_volume), 'm^3')
         print('Qr=%d, rotor_weight=%g'%(self.Qr, self.rotor_weight), 'N')
@@ -2254,14 +2276,12 @@ class SwarmDataAnalyzer(object):
 
 def build_sensitivity_bar_charts(spec, sw):
     run_integer = int(sw.fea_config_dict['run_folder'][4:-1])
-    swda = SwarmDataAnalyzer(dir_run=sw.dir_run, run_integer=run_integer, bool_sensitivity_analysis=True) 
-    swda.build_basic_info(spec, sw)
-    swda.sensitivity_bar_charts()
+    swda = SwarmDataAnalyzer(sw, spec, dir_run=sw.dir_run, run_integer=run_integer, bool_sensitivity_analysis=True)
+    return swda.sensitivity_bar_charts()
 
 def build_Pareto_plot(spec, sw):
     run_integer = int(sw.fea_config_dict['run_folder'][4:-1])
-    swda = SwarmDataAnalyzer(dir_run=sw.dir_run, run_integer=run_integer, bool_sensitivity_analysis=False) 
-    swda.build_basic_info(spec, sw)
+    swda = SwarmDataAnalyzer(sw, spec, dir_run=sw.dir_run, run_integer=run_integer, bool_sensitivity_analysis=False) 
 
     # Plotting the Pareto plot
     from pylab import plt, subplots#, show

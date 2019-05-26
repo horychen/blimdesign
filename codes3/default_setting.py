@@ -1,15 +1,18 @@
-# coding:utf-8
 import os
+# 文件名 = filename
+# from math import pi as π
+# print(文件名)
 
 fea_config_dict = {
     ##########################
     # Sysetm Control
     ##########################
-    'designer.Show':False,
+    'designer.Show': False,
     'OnlyTableResults':False, # modified later according to pc_name # the only reason we want save mesh results are to obtain voltage profile for power factor evaluation
         # multiple cpu (SMP=2)
         # use directSolver over ICCG Solver
     'local_sensitivity_analysis':False,
+    'local_sensitivity_analysis_number_of_variants': 10, # 20
     'flag_optimization':True, # also use true for sensitivity analysis
     'Restart':False, # restart from frequency analysis is not needed, because SSATA is checked and JMAG 17103l version is used.
 
@@ -109,15 +112,19 @@ sys_path.append(fea_config_dict['dir_lib'])
 import population
 import FEMM_Solver
 import utility
+
 import importlib
 importlib.reload(population) # relaod for JMAG's python environment
 importlib.reload(FEMM_Solver)
 importlib.reload(utility)
 
-run_list = [1,1,0,0,0] # use JMAG only
+import pyrhonen_procedure_as_function
+import numpy as np
+
+# run_list = [1,1,0,0,0] # use JMAG only
 run_list = [0,1,0,0,0] # use FEMM to search for breakdown slip
 fea_config_dict['jmag_run_list'] = run_list
-def build_model_name_prefix(run_folder, UID=None):
+def build_model_name_prefix(fea_config_dict, UID=None):
     if fea_config_dict['flag_optimization'] == True:
         fea_config_dict['model_name_prefix'] = 'OP'
     else:

@@ -1,13 +1,28 @@
-#coding:u8
-
 from pylab import *
 import sys
 import os
 
-print('Pyrhonen 2009 Chapter 7.')
+# General Information
+# Steel
+    # Yield Stress of M19 Steel:
+        # 350 MPa \cite{lovelace2004mechanical}
+        # % The typical yield stress of steel is 300 MPa \cite{pyrhonen2009design}.
+    # Density:
+        # Silicon steels around 2 to 3% silicon composition have a density about 7.65 gr/cc.  The cold rolling process is volume conserving.  Just currious why you care about the density. from https://www.quora.com/What-is-the-material-density-for-M19-silicon-steel
+
+print('-'*20+'\nPyrhonen 2009 Chapter 7.')
 one_report_dir_prefix = '../release/OneReport/OneReport_TEX/contents/'
 file_name = 'pyrhonen_procedure'
 file_suffix = '.tex'
+
+def get_parallel_tooth_height(area_rotor_slot_Sur, rotor_tooth_width_b_dr, Qr, rotor_outer_radius_r_or_eff):
+    # rotor slot height depends on rotor_tooth_width_b_dr and rotor current (power factor)
+    temp = (2*pi*rotor_outer_radius_r_or_eff - Qr*rotor_tooth_width_b_dr)
+    rotor_Delta = temp**2 - 4*pi*area_rotor_slot_Sur*Qr
+    rotor_tooth_height_h_dr_plus  = ( +sqrt(rotor_Delta) + temp ) / (2*pi)
+    rotor_tooth_height_h_dr_minus = ( -sqrt(rotor_Delta) + temp ) / (2*pi)
+    rotor_tooth_height_h_dr = rotor_tooth_height_h_dr_minus
+    return rotor_tooth_height_h_dr, rotor_tooth_height_h_dr_plus, rotor_Delta
 
 class winding_layout(object):
     def __init__(self, DPNV_or_SEPA, Qs, p):
@@ -148,6 +163,7 @@ class desgin_specification(object):
                     safety_factor_to_yield = None,
                     safety_factor_to_critical_speed = None,
                     use_drop_shape_rotor_bar = None,
+                    tip_speed = None,
                     debug_or_release= None,
                     bool_skew_stator = None,
                     bool_skew_rotor = None,
@@ -183,20 +199,23 @@ class desgin_specification(object):
         self.safety_factor_to_yield = safety_factor_to_yield
         self.safety_factor_to_critical_speed = safety_factor_to_critical_speed
         self.use_drop_shape_rotor_bar = use_drop_shape_rotor_bar
+        self.tip_speed = tip_speed
         self.debug_or_release = debug_or_release
         self.bool_skew_stator = bool_skew_stator
         self.bool_skew_rotor  = bool_skew_rotor 
 
         self.winding_layout = winding_layout(self.DPNV_or_SEPA, self.Qs, self.p)
 
-        self.geometry = geometry_data()
+        self.bool_high_speed_design = self.tip_speed is not None
+
+        self.geometry = geometry_data() # not used
 
         self.loc_txt_file = '../' + 'pop/' + r'initial_design.txt'
         open(self.loc_txt_file, 'w').close() # clean slate to begin with
 
     def build_name(self, bLatex=False):
         u'''转子类型+基本信息+槽配合+电负荷+导电材料+温度+导磁材料+磁负荷+叠压系数+假设+目的'''
-        name = '%s%sp%dps%d_%dkW%dHz%dVtan%d_Qs%dQr%dJs%gJr%g%s%d%s%d@%dK_%s@%d_Bt%gs%grBy%gs%gr_b%.2fEff%gPf%gSFy%gSFcs%g_%s%s%s%s%s' % (
+        name = '%s%sp%dps%d_%dkW%dHz%dVtan%d_Qs%dQr%dJs%gJr%g%s%d%s%d@%dK_%s@%d_Bt%gs%grBy%gs%gr_b%.2fEff%gPf%g' % (
                 'PS' if self.PS_or_SC else 'SC',
                 'DPNV' if self.DPNV_or_SEPA else 'SEPA',
                 self.p,
@@ -222,15 +241,27 @@ class desgin_specification(object):
                 self.rotor_yoke_flux_density_Byr,
                 self.guess_air_gap_flux_density,
                 self.guess_efficiency,
-                self.guess_power_factor,
-                self.safety_factor_to_yield,
-                self.safety_factor_to_critical_speed,
-                'drop'  if self.use_drop_shape_rotor_bar else 'rod',
-                'debug' if self.debug_or_release else 'release',
-                'Sskew' if self.bool_skew_stator is not None else '',
-                'Rskew' if self.bool_skew_rotor  is not None else '',
-                'Pitch%d'%(self.winding_layout.coil_pitch),
+                self.guess_power_factor
                 )
+        if self.tip_speed is None:
+            name_part2 = "SFy%gSFcs%g"%(
+                    self.safety_factor_to_yield,
+                    self.safety_factor_to_critical_speed,
+                    )
+        else:
+            name_part2 = "tip%.0f"%(
+                    self.tip_speed
+                    )
+        name_part3 = "_%s%s%s%s%s"%(
+                    'drop'  if self.use_drop_shape_rotor_bar else 'rod',
+                    'Pitch%d'%(self.winding_layout.coil_pitch),
+                    'Sskew' if self.bool_skew_stator is not None else '',
+                    'Rskew' if self.bool_skew_rotor  is not None else '',
+                    'debug' if self.debug_or_release else 'release'
+                    )
+
+        name += name_part2 + name_part3
+
         if bLatex:
             return name.replace('_', '\\_')
         else:
@@ -336,24 +367,30 @@ class desgin_specification(object):
         required_torque = self.mec_power/(2*pi*speed_rpm)*60
         rotor_volume_Vr = required_torque/(2*self.TangentialStress)
         
-        #     Usually, the ratio of the length of the machine to the air-gap diameter χ = l/D is
-        # selected for operation of the rotor below the first critical rotation speed. --P296
-        length_ratio_chi = pi/(2*self.p) * self.p**(1/3.) # Table 6.5
-
-        # Considering only electromagnetic performances
-        rotor_outer_diameter_Dr = (4/pi*rotor_volume_Vr*length_ratio_chi)**(1/3.)
-        rotor_outer_radius_r_or = 0.5 * rotor_outer_diameter_Dr
-        stack_length = rotor_outer_diameter_Dr * length_ratio_chi
-        print('rotor_outer_radius_r_or is', rotor_outer_radius_r_or)
-
-        # Considering machanical loading
-        rotor_radius_max = get_outer_rotor_radius_yield(speed_rpm, safety_factor_to_yield=self.safety_factor_to_yield)
-        if rotor_outer_radius_r_or>rotor_radius_max:
-            rotor_outer_radius_r_or = rotor_radius_max
-            rotor_outer_diameter_Dr = 2 * rotor_outer_radius_r_or
+        if self.bool_high_speed_design == True:
+            length_ratio_chi = None
+            rotor_outer_radius_r_or = eric_specify_tip_speed_get_radius(self.tip_speed, speed_rpm)
+            rotor_outer_diameter_Dr = rotor_outer_radius_r_or*2
             stack_length = rotor_volume_Vr / (pi * rotor_outer_radius_r_or**2)
-            bool_mechanical_dominate = True
-        print('rotor_outer_radius_r_or is', rotor_outer_radius_r_or, 'under mechanical limit')
+        else:
+            #     Usually, the ratio of the length of the machine to the air-gap diameter χ = l/D is
+            # selected for operation of the rotor below the first critical rotation speed. --P296
+            length_ratio_chi = pi/(2*self.p) * self.p**(1/3.) # Table 6.5
+
+            # Considering only electromagnetic performances
+            rotor_outer_diameter_Dr = (4/pi*rotor_volume_Vr*length_ratio_chi)**(1/3.)
+            rotor_outer_radius_r_or = 0.5 * rotor_outer_diameter_Dr
+            stack_length = rotor_outer_diameter_Dr * length_ratio_chi
+            print('rotor_outer_radius_r_or is', rotor_outer_radius_r_or)
+
+            # Considering machanical loading
+            rotor_radius_max = get_outer_rotor_radius_yield(speed_rpm, safety_factor_to_yield=self.safety_factor_to_yield)
+            if rotor_outer_radius_r_or>rotor_radius_max:
+                rotor_outer_radius_r_or = rotor_radius_max
+                rotor_outer_diameter_Dr = 2 * rotor_outer_radius_r_or
+                stack_length = rotor_volume_Vr / (pi * rotor_outer_radius_r_or**2)
+                bool_mechanical_dominate = True
+            print('rotor_outer_radius_r_or is', rotor_outer_radius_r_or, 'under mechanical limit')
 
         stack_length_max = get_stack_length_critical_speed(speed_rpm, rotor_outer_radius_r_or, safety_factor_to_critical_speed=self.safety_factor_to_critical_speed)
         self.Stack_Length_Max = stack_length_max*1e3
@@ -386,16 +423,26 @@ class desgin_specification(object):
 
                  ''', file=fname)
         print('\nRequired Torque: %g Nm'% required_torque, file=fname)
-        tip_speed = get_tip_speed(speed_rpm, rotor_outer_radius_r_or)
-        print('\nTip speed: %g m/s with a safety factor to yield of %g' %(tip_speed, self.safety_factor_to_yield), file=fname)
+
+        if self.bool_high_speed_design == True:
+            print('\nTip speed: %g m/s (specified)' % (self.tip_speed), file=fname)
+        else:
+            tip_speed = get_tip_speed(speed_rpm, rotor_outer_radius_r_or)
+            print('\nTip speed: %g m/s with a safety factor to yield of %g' %(tip_speed, self.safety_factor_to_yield), file=fname)
+
+            self.tip_speed = tip_speed
+
+            # print 'Yegu Kang: rotor_outer_diameter_Dr, 95 mm'
+
+            if bool_mechanical_dominate:
+                print('\nRadially restricted by the machanical loading, and the maximal rotor radius is %g mm ($k_\\sigma=%g$)' % (rotor_radius_max*1e3, self.safety_factor_to_yield), file=fname)
+            else:
+                print('\nUse recommended length ratio: $\\chi=%g$' % length_ratio_chi, file=fname)
+
         print('\nCentrifugal stress: %g MPa' %(1e-6*check_stress_due_to_centrifugal_force(speed_rpm, rotor_outer_radius_r_or)), file=fname)
         print('\nRotor outer diameter $D_{or}=%g$ mm'% (rotor_outer_diameter_Dr*1e3), file=fname)
         print('\nRotor outer radius $r_{or}=%g$ mm'% (rotor_outer_radius_r_or*1e3), file=fname)
-            # print 'Yegu Kang: rotor_outer_diameter_Dr, 95 mm'
-        if bool_mechanical_dominate:
-            print('\nRadially restricted by the machanical loading, and the maximal rotor radius is %g mm ($k_\\sigma=%g$)' % (rotor_radius_max*1e3, self.safety_factor_to_yield), file=fname)
-        else:
-            print('\nUse recommended length ratio: $\\chi=%g$' % length_ratio_chi, file=fname)
+
         print('\nStack length: $L_{st}=%g$ mm'% (stack_length*1e3), file=fname)
         print('\nStack length (max): $L_{st,\\max}=%g$ mm ($k=%g$)'% (stack_length_max*1e3, self.safety_factor_to_critical_speed), file=fname)
 
@@ -419,9 +466,9 @@ class desgin_specification(object):
             else:
                 air_gap_length_delta *= 1.25
 
-        if tip_speed>100:
-            air_gap_length_delta_high_speed = 0.001 + (rotor_outer_diameter_Dr / 0.07 + tip_speed/400) * 1e-3 # 第二版(6.25)
-            print('High-Speed motor detected. air_gap_length_delta_high_speed =', air_gap_length_delta_high_speed)
+        if self.tip_speed>100:
+            air_gap_length_delta_high_speed = 0.001 + (rotor_outer_diameter_Dr / 0.07 + self.tip_speed/400) * 1e-3 # 第二版(6.25)
+            print('High-Speed motor detected. The air_gap_length_delta_high_speed =', air_gap_length_delta_high_speed)
 
         stack_length_eff = stack_length + 2 * air_gap_length_delta
 
@@ -437,7 +484,7 @@ class desgin_specification(object):
                 We double $\delta$ for high speed machines, as suggested by Pyrhonen---increase air gap length by 50\%--100\%.
                 % (看integrated box 硕士论文 'Kevin S. Campbell: this is too small. 3.5 mm is good! 3.1.3，Pyrhonen09给的只适用50Hz电机，其实pyrhonen自己也有提到气隙要加大100%哦) ''', file=fname)
         print('\nAir gap length: $\\delta=%g$ mm' % (air_gap_length_delta*1e3), file=fname)
-        if tip_speed>100:
+        if self.tip_speed>100:
             print('\nAir gap length (high speed): $\\delta_{hs} = %g$ mm' % (air_gap_length_delta_high_speed*1e3), file=fname)
         print('\nEffective stack length: $L_{st,{\\rm eff}}=%g$ mm'% (stack_length_eff*1e3), file=fname)
 
@@ -735,6 +782,7 @@ class desgin_specification(object):
 
             rotor_current_referred = stator_phase_current_rms * self.guess_power_factor
             rotor_current_actual = no_conductors_per_slot_zQ / number_parallel_branch * self.Qs / self.Qr * rotor_current_referred
+            self.rotor_current_actual = rotor_current_actual
 
             # Stator current density (Pyrhonen09@Example6.4)
             # Js = 3.7e6 # typical value is 3.7e6 Arms/m^2 = Js
@@ -829,6 +877,7 @@ class desgin_specification(object):
             # if True:
             count_Jr_search = 0
             while True:
+                print('-'*20)
                 count_Jr_search += 1
                 if count_Jr_search>100:
                     if bool_enough_rotor_slot_space == False:
@@ -853,13 +902,8 @@ class desgin_specification(object):
                 # guess this local design values or adapt from other designs
                 length_headNeckRotorSlot = 1e-3 # for 2 pole motor # 1e-3 m for 4 pole motor
 
-                # rotor slot height depends on rotor_tooth_width_b_dr and rotor current (power factor)
                 rotor_outer_radius_r_or_eff = rotor_outer_radius_r_or - length_headNeckRotorSlot
-                temp = (2*pi*rotor_outer_radius_r_or_eff - self.Qr*rotor_tooth_width_b_dr)
-                rotor_Delta = temp**2 - 4*pi*area_rotor_slot_Sur*self.Qr
-                rotor_tooth_height_h_dr_plus  = ( +sqrt(rotor_Delta) + temp ) / (2*pi)
-                rotor_tooth_height_h_dr_minus = ( -sqrt(rotor_Delta) + temp ) / (2*pi)
-                rotor_tooth_height_h_dr = rotor_tooth_height_h_dr_minus
+                rotor_tooth_height_h_dr, rotor_tooth_height_h_dr_plus, rotor_Delta = get_parallel_tooth_height(area_rotor_slot_Sur, rotor_tooth_width_b_dr, self.Qr, rotor_outer_radius_r_or_eff)
 
                 if isnan(rotor_tooth_height_h_dr) == True:
                     bool_enough_rotor_slot_space = False
@@ -882,7 +926,7 @@ class desgin_specification(object):
             print('\nRorot space factor: $k_{Al}=%g$' % self.space_factor_kAl, file=fname)
             print('\nRotor slot area: $S_{ur}=%g$ $\\rm mm^2$'% (area_rotor_slot_Sur*1e6), file=fname)
             print('\nRotor tooth height $h_{dr}(+)=%g$ mm' % (rotor_tooth_height_h_dr_plus*1e3), file=fname) # too large to be right answer
-            print('\nRotor tooth height $h_{dr}(-)=%g$ mm' % (rotor_tooth_height_h_dr_minus*1e3), file=fname)
+            print('\nRotor tooth height $h_{dr}(-)=%g$ mm' % (rotor_tooth_height_h_dr*1e3), file=fname)
             print('\nQuadratic equation Delta: $\\Delta=%g$'%rotor_Delta, file=fname)
             # The slot depth equals the tooth height hs = hd Pyrhonen09@p309
             rotor_slot_height_h_sr = rotor_tooth_height_h_dr
@@ -1111,7 +1155,7 @@ class desgin_specification(object):
         print('\nStator outer diameter: $Dse=%g$ mm '% (stator_outer_diameter_Dse*1e3), file=fname)
         print('\nRotor inner diameter: $Dri=%g$ mm '% (rotor_inner_diameter_Dri*1e3), file=fname)
         print('\nRotor outer diameter: $D_{or}=%g$ mm'% (1e3*2*rotor_outer_radius_r_or), file=fname)
-        print('Yegu Kang: stator_outer_diameter fixed at 250 mm.')
+        # print('Yegu Kang: stator_outer_diameter fixed at 250 mm.')
 
         # B@yoke
         By_list     = [    0,  0.5,   0.6, 0.7,   0.8,  0.9, 0.95,  1.0, 1.08,   1.1, 1.2,   1.3,   1.4, 1.5,  1.6,  1.7,   1.8,  1.9,   2.0] # Figure 3.17
@@ -1211,7 +1255,7 @@ class desgin_specification(object):
         # ax.set_ylabel(r'$c$')
         # ax.grid()
         # show()
-        print('-'*100)
+        print('-'*20)
         fname = None
 
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -1293,22 +1337,28 @@ class desgin_specification(object):
             Angle_StatorSlotOpen           = design_parameters[5]             # [5]       # stator slot opening [deg]
             Width_StatorTeethHeadThickness = design_parameters[6]             # [6]       # stator tooth head length [mm]
         '''
-        print('stator_tooth_width_b_ds =', stator_tooth_width_b_ds, file=fname)
-        print('air_gap_length_delta =', air_gap_length_delta, file=fname)         
-        print('b1 (rotor slot opening) =', b1, file=fname) 
-        print('rotor_tooth_width_b_dr =', rotor_tooth_width_b_dr, file=fname)
-        print('Length_HeadNeckRotorSlot =', Length_HeadNeckRotorSlot, file=fname)
-        print('Angle_StatorSlotOpen =', Angle_StatorSlotOpen, file=fname)
-        print('Width_StatorTeethHeadThickness =', Width_StatorTeethHeadThickness, file=fname)
 
-        self.stator_tooth_width_b_ds        = stator_tooth_width_b_ds
-        self.air_gap_length_delta           = air_gap_length_delta
-        self.b1                             = b1
-        self.rotor_tooth_width_b_dr         = rotor_tooth_width_b_dr
-        self.Length_HeadNeckRotorSlot       = Length_HeadNeckRotorSlot
-        self.Angle_StatorSlotOpen           = Angle_StatorSlotOpen
-        self.Width_StatorTeethHeadThickness = Width_StatorTeethHeadThickness
+        self.delta      = 1e3*air_gap_length_delta      # delta
+        self.w_st       = 1e3*stator_tooth_width_b_ds   # w_st
+        self.w_rt       = 1e3*rotor_tooth_width_b_dr    # w_rt
+        self.theta_so   = Angle_StatorSlotOpen          # theta_so
+        self.w_ro       = 1e3*b1                        # w_ro
+        self.d_so       = Width_StatorTeethHeadThickness# d_so
+        self.d_ro       = Length_HeadNeckRotorSlot      # d_ro
+
+        print('-'*20+'\ndelta', '%g mm'%self.delta, file=fname)
+        print('w_st',           '%g mm'%self.w_st, file=fname)
+        print('w_rt',           '%g mm'%self.w_rt, file=fname)
+        print('theta_so',       '%g deg'%self.theta_so, file=fname)
+        print('w_ro',           '%g mm'%self.w_ro, file=fname)
+        print('d_so',           '%g mm'%self.d_so, file=fname)
+        print('d_ro',           '%g mm'%self.d_ro, '\n'+'-'*20, file=fname)
         
+        self.Radius_of_RotorSlot = Radius_of_RotorSlot # 外圆 of 转子槽
+
+        self.Radius_OuterRotor = Radius_OuterRotor
+        self.Radius_OuterStatorYoke = Radius_OuterStatorYoke
+
         return True if self.Jr_backup < self.Jr else False # bool_bad_specifications
 
 
@@ -1406,6 +1456,11 @@ def get_outer_rotor_radius_yield(speed_rpm, yield_stress=None, material_density_
 
     rotor_radius_max = sqrt( yield_stress / (get_C_prime(Poisson_ratio_nu, bBore) * material_density_rho * Omega**2) )
     return rotor_radius_max
+
+def eric_specify_tip_speed_get_radius(tip_speed, speed_rpm):
+    Omega = speed_rpm/(60)*2*pi
+    rotor_radius = tip_speed/Omega
+    return rotor_radius
 
 def get_tip_speed(speed_rpm, rotor_radius):
     Omega = speed_rpm/(60)*2*pi

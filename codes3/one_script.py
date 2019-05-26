@@ -1,482 +1,191 @@
-import pyrhonen_procedure_as_function 
+from utility import my_execfile
 bool_post_processing = False # solve or post-processing
-
-# Situation when default_setting does not match spec may happen. What???
-filename = './default_setting.py'
-exec(compile(open(filename, "rb").read(), filename, 'exec'), globals(), locals())
-
-文件名 = filename
-from math import pi as π
-print(文件名)
-
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# Design Specification
-# 1. Specify desgin_specification
-# 2. Give a run folder including determining:
-#       i) t is sensitivity analysis or not
-#       ii) it uses refined bounds or it is local tuning with local bounds based on the best design from another run
-# 3. D
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-p = 1
-spec = pyrhonen_procedure_as_function.desgin_specification(
-        PS_or_SC = True, # Pole Specific or Squirrel Cage
-        DPNV_or_SEPA = True, # Dual purpose no voltage or Separate winding
-        p = p,
-        ps = 2 if p==1 else 1,
-        mec_power = 100e3, # kW
-        ExcitationFreq = 880, # Hz
-        ExcitationFreqSimulated = 500, # Hz This sets to DriveW_Freq that is actually used in FE simulation.
-        VoltageRating = 480, # Vrms (line-to-line, Wye-Connect)
-        TangentialStress = 12000, # Pa
-        Qs = 24,
-        Qr = 16,
-        Js = 3.7e6, # Arms/m^2
-        Jr = 7.25e6, #7.5e6, #6.575e6, # Arms/m^2
-        Steel = 'M19Gauge29', # Arnon-7
-        lamination_stacking_factor_kFe = 0.95, # from http://www.femm.info/wiki/spmloss # 0.91 for Arnon
-        Coil = 'Cu',
-        space_factor_kCu = 0.5, # Stator slot fill/packign factor
-        Conductor = 'Cu',
-        space_factor_kAl = 1.0, # Rotor slot fill/packing factor
-        Temperature = 75, # deg Celsius
-        stator_tooth_flux_density_B_ds = 1.4, # Tesla
-        rotor_tooth_flux_density_B_dr  = 1.5, # Tesla
-        stator_yoke_flux_density_Bys = 1.2, # Tesla
-        rotor_yoke_flux_density_Byr  = 1.1 + 0.3 if p==1 else 1.1, # Tesla
-        guess_air_gap_flux_density = 0.8, # 0.8, # Tesla | 0.7 ~ 0.9 | Table 6.3
-        guess_efficiency = 0.95,
-        guess_power_factor = 0.7,
-        safety_factor_to_yield = 1.5,
-        safety_factor_to_critical_speed = 1.5,
-        use_drop_shape_rotor_bar = False,
-        debug_or_release = True, # 如果是debug，数据库里有记录就删掉重新跑；如果release且有记录，那就报错。
-        bool_skew_stator = None,
-        bool_skew_rotor = None,
-)
-# spec.show()
-print(spec.build_name())
-bool_bad_specifications = spec.pyrhonen_procedure()
-print(spec.build_name()) # TODO：自动修正转子电流密度的设置值？
-fea_config_dict['use_drop_shape_rotor_bar'] = spec.use_drop_shape_rotor_bar
-
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# Automatic Report Generation
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# if not bool_post_processing:
-if '730' in fea_config_dict['pc_name']:
-    os.system('cd /d '+ r'"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX" && z_nul"')
-# quit()
-
-
-
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# Add to Database
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-if bool_bad_specifications:
-    print('\nThe specifiaction can not be fulfilled. Read script log or OneReport.pdf for information and revise the specifiaction for $J_r$ or else your design name is wrong.')
-else:
-    print('\nThe specifiaction is meet. Now check the database of blimuw if on Y730.')
-    if '730' in fea_config_dict['pc_name']:
-        utility.communicate_database(spec)
-
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# Automatic Performance Evaluation
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # winding analysis? 之前的python代码利用起来啊
-    # 希望的效果是：设定好一个设计，马上进行运行求解，把我要看的数据都以latex报告的形式呈现出来。
-    # OP_PS_Qr36_M19Gauge29_DPNV_NoEndRing.jproj
-if True:
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    
-    # Run settings
-    fea_config_dict['Active_Qr'] = 16
-    fea_config_dict['use_weights'] = 'O1' # 'O2' # 'O3'
-    if True:
-        # global search
+my_execfile('./default_setting.py', g=globals(), l=locals()) # define fea_config_dict
 
-        # Prototype OD150 two pole motor
-        if True:
-            fea_config_dict['local_sensitivity_analysis'] = True
-            fea_config_dict['bool_refined_bounds'] = False
-            run_folder = r'run#500/' # Sensitivity analysis for Qr=16 and p=1
+if True:
+    # my_execfile('./spec_2poleOD150mm880Hz.py', g=globals(), l=locals()) # define spec
+    # fea_config_dict['local_sensitivity_analysis'] = False
+    # fea_config_dict['bool_refined_bounds'] = False
+    # # fea_config_dict['use_weights'] = 'O2'
+    # # run_folder = r'run#527/'
+    # fea_config_dict['use_weights'] = 'O1'
+    # run_folder = r'run#528/'
 
-            fea_config_dict['local_sensitivity_analysis'] = False
-            fea_config_dict['bool_refined_bounds'] = True
-            run_folder = r'run#501/' # Optimize with refined bounds
+    my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals()) # define spec
+    fea_config_dict['local_sensitivity_analysis'] = True
+    fea_config_dict['bool_refined_bounds'] = False
+    fea_config_dict['use_weights'] = 'O2'
+    # run_folder = r'run#530/' # 圆形槽JMAG绘制失败BUG
+    run_folder = r'run#531/'
 
+    # fea_config_dict['local_sensitivity_analysis'] = False
+    # fea_config_dict['bool_refined_bounds'] = False
+    # fea_config_dict['use_weights'] = 'O2'
+    # run_folder = r'run#532/'
 
+    my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    fea_config_dict['local_sensitivity_analysis'] = False
+    fea_config_dict['bool_refined_bounds'] = False
+    fea_config_dict['use_weights'] = 'O2'
+    run_folder = r'run#53001/'
 
-
-            # Round bar motor: population.py@Line2917
-            fea_config_dict['local_sensitivity_analysis'] = True
-            fea_config_dict['bool_refined_bounds'] = False
-            run_folder = r'run#525/' # Sensitivity analysis for Qr=16 and p=1
-
-            # 傻逼了，这里应该是O2的，难怪结果那么奇怪！
-            fea_config_dict['local_sensitivity_analysis'] = False
-            fea_config_dict['bool_refined_bounds'] = True
-            run_folder = r'run#52501/' # Optimize with refined bounds
-
-            fea_config_dict['local_sensitivity_analysis'] = False
-            fea_config_dict['bool_refined_bounds'] = False
-            run_folder = r'run#526/'
-
-
-
-            fea_config_dict['use_weights'] = 'O2'
-
-            fea_config_dict['local_sensitivity_analysis'] = False
-            fea_config_dict['bool_refined_bounds'] = True
-            run_folder = r'run#52502/' # Optimize with refined bounds
-
-            fea_config_dict['local_sensitivity_analysis'] = False
-            fea_config_dict['bool_refined_bounds'] = False
-            run_folder = r'run#527/'
+    my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    fea_config_dict['local_sensitivity_analysis'] = False
+    fea_config_dict['bool_refined_bounds'] = False
+    fea_config_dict['use_weights'] = 'O2'
+    run_folder = r'run#53002/'
 
 
-        # Prototype OD150 four pole motor
+
+fea_config_dict['run_folder'] = run_folder
+fea_config_dict['Active_Qr'] = spec.Qr
+fea_config_dict['use_drop_shape_rotor_bar'] = spec.use_drop_shape_rotor_bar
+
+class acm_designer(object):
+    def __init__(self, fea_config_dict, spec):
+
+        build_model_name_prefix(fea_config_dict) # rebuild the model name for fea_config_dict
+
+        self.fea_config_dict = fea_config_dict
+        self.spec = spec
+
+    def init_logger(self, prefix='ones_'):
+        self.logger = utility.myLogger(self.fea_config_dict['dir_codes'], prefix=prefix+self.fea_config_dict['run_folder'][:-1])
+
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # Automatic Report Generation
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    def build_oneReport(self):
+        if '730' in self.fea_config_dict['pc_name']:
+            os.system('cd /d "'+ self.fea_config_dict['dir_parent'] + 'release/OneReport/OneReport_TEX" && z_nul"')
+
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # Talk to Database
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    def talk_to_mysql_database(self):
+        if self.spec.bool_bad_specifications:
+            print('\nThe specifiaction can not be fulfilled. Read script log or OneReport.pdf for information and revise the specifiaction for $J_r$ or else your design name is wrong.')
         else:
-            # # Prototype OD150 four pole motor
-            # fea_config_dict['local_sensitivity_analysis'] = True
-            # fea_config_dict['bool_refined_bounds'] = False
-            # run_folder = r'run#502/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 2*"50Hz delta") ExcitationFreqSimulated = ExcitationFreq = 1500 Hz
-            # run_folder = r'run#503/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = ExcitationFreq = 1500 Hz
-            # run_folder = r'run#504/' # Sensitivity analysis for Qr=16 and p=2 (Air gap length is 1.5*"50Hz delta") ExcitationFreqSimulated = 1000 Hz
+            print('\nThe specifiaction is meet. Now check the database of blimuw if on Y730.')
+            if '730' in self.fea_config_dict['pc_name']:
+                utility.communicate_database(self.spec)
 
-
-
-            # fea_config_dict['local_sensitivity_analysis'] = False
-            # fea_config_dict['bool_refined_bounds'] = True
-            # run_folder = r'run#505/' # Optimize with refined bounds (popsize is 70=7*10 now)
-
-            # fea_config_dict['local_sensitivity_analysis'] = False
-            # fea_config_dict['bool_refined_bounds'] = False
-            # run_folder = r'run#506/' # Optimize without refined bounds (popsize is 70=7*10 now) the mec_power is changed from 100kW to 75kW.
-
-
-            # # spec_4poleOD150mm1500Hz82kW.py
-            # fea_config_dict['local_sensitivity_analysis'] = False
-            # fea_config_dict['bool_refined_bounds'] = False
-            # if '730' in fea_config_dict['pc_name']:
-            #     fea_config_dict['use_weights'] = 'O1'
-            #     run_folder = r'run#50701/'
-            # # elif '730' in fea_config_dict['pc_name']:
-            # #     fea_config_dict['use_weights'] = 'O2'
-            # #     run_folder = r'run#50702/'
-            # # elif '730' in fea_config_dict['pc_name']:
-            # #     fea_config_dict['use_weights'] = 'O3'
-            # #     run_folder = r'run#507/' # Optimize without refined bounds (popsize is 70=7*10 now) the mec_power is changed from 100kW to 75kW. Use weights O3
-            # else:
-            #    raise
-
-            # # spec_4poleOD150mm1500Hz82kW.py
-            # fea_config_dict['local_sensitivity_analysis'] = False
-            # fea_config_dict['bool_refined_bounds'] = False
-            # fea_config_dict['use_weights'] = 'O1'
-            # run_folder = r'run#50901/' # PF is now set to 0.6 but OD is over 150 mm
-
-            # # spec_4poleOD150mm1500Hz82kW.py
-            # fea_config_dict['local_sensitivity_analysis'] = False
-            # fea_config_dict['bool_refined_bounds'] = False
-            # fea_config_dict['use_weights'] = 'O1R'
-            # run_folder = r'run#510/' # PF is now set to 0.6 but OD is over 150 mm
-
-            # # spec_4poleOD150mm1500Hz82kW.py
-            # fea_config_dict['local_sensitivity_analysis'] = False
-            # fea_config_dict['bool_refined_bounds'] = False
-            # fea_config_dict['use_weights'] = 'O1'
-            # run_folder = r'run#511/' # PF is now set to 0.6 and OD < 150 mm
-
-            # # fea_config_dict['use_weights'] = 'O4'
-            # # if which == 'O4':
-            # #     return [ 2,2,1,1,1,  0 ]            
-            # run_folder = r'run#512/' # Searching for low torque ripple
-            # run_folder = r'run#513/' # Searching for low torque ripple
-            # run_folder = r'run#514/' # Searching for low torque ripple
-            # run_folder = r'run#515/' # Searching for low torque ripple
-            # run_folder = r'run#516/' # Searching for low torque ripple
-
-            # run_folder = r'run#517/' # 修改round bar代码
-            # run_folder = r'run#518/' # 修改round bar代码（smaller radius of rotor slot is used now)
-
-            fea_config_dict['local_sensitivity_analysis'] = True
-            fea_config_dict['bool_refined_bounds'] = False
-            fea_config_dict['use_weights'] = 'O2'
-            run_folder = r'run#520/' # 修改round bar代码（smaller radius of rotor slot is used now)
-
-            fea_config_dict['local_sensitivity_analysis'] = False
-            fea_config_dict['bool_refined_bounds'] = True
-            fea_config_dict['use_weights'] = 'O2'
-            run_folder = r'run#52001/' # Optimize with refined bounds (Air gap length minimum is 1.90 mm)
-            run_folder = r'run#52002/' # Optimize with refined bounds (Air gap length maximum is 2.12 mm)
-
-    else:
-        # local tuning (add 99 suffix)
-
-        # run#511gen#0000ind#0025-ID16-0-25
-        # 6.84866,1.07652,1.77721,8.64138,1.05135,2.63571,2.12527        
-        # spec_4poleOD150mm1500Hz82kW.py
-        fea_config_dict['local_sensitivity_analysis'] = False
-        fea_config_dict['bool_refined_bounds'] = -1 # Manually set the bounds
-        fea_config_dict['use_weights'] = 'O1'
-        # First tune
-        run_folder = r'run#51199/'
-        # Second tune
-        run_folder = r'run#51198/' # Rotor slot open depth d ro 1.00 0.95 0.95 1.16 (low bound is reached)
-        # Third tune
-        run_folder = r'run#51197/' # Rotor slot open depth d ro 1.00 0.76 0.76 0.95 (low bound is reached again)
-
-        # # look for low torque ripple design
-        # run_folder = r'run#51196/'
-
-
-
-        ##################
-        # 2 pole motor local tuning
-        run_folder = r'run#50101/' # tune 501
-        run_folder = r'run#50102/' # tune 50101
-
-
-
-    # run folder
-    fea_config_dict['run_folder'] = run_folder
-    # logging file
-    logger = utility.myLogger(fea_config_dict['dir_codes'], prefix='ones_'+fea_config_dict['run_folder'][:-1])
-
-    # rebuild the name
-    build_model_name_prefix(fea_config_dict)
-
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# 1. Bounds for DE optimiazation
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # save some time when degbuging
-    loc_txt_file = '../' + 'pop/' + 'loop_for_bounds_%s.txt'%(run_folder[:-1])
-    if not os.path.exists(loc_txt_file):
-        import copy
-        spec_latch = copy.deepcopy(spec) # 后面调用loop_for_bounds的时候回覆盖掉这里的initial_design的结果的。
-        # run for tooth width bounds
-        loc_txt_file = pyrhonen_procedure_as_function.loop_for_bounds(spec, run_folder)
-        spec = spec_latch
-    # read in tooth width data
-    list_b_dr = []
-    list_b_ds = []
-    with open(loc_txt_file, 'r') as f:
-        buf = f.readlines()
-        for row in buf:
-            design = [float(el) for el in row.split(',')]
-            list_b_ds.append(design[15])
-            list_b_dr.append(design[30]*1e3)
-    b_ds_max, b_ds_min = max(list_b_ds), min(list_b_ds)
-    b_dr_max, b_dr_min = max(list_b_dr), min(list_b_dr)
-    print(b_ds_max, b_ds_min, 'initial design:', 1e3*spec.stator_tooth_width_b_ds, 'mm')
-    print(b_dr_max, b_dr_min, 'initial design:', 1e3*spec.rotor_tooth_width_b_dr, 'mm')
-    if b_ds_min<3:
-        print('Too small lower bound b_ds (%g) is detected. Set it to 3 mm.'%(b_ds_min))
-        b_ds_min = 3
-    if fea_config_dict['use_drop_shape_rotor_bar'] == True:
-        if b_dr_min<3:
-            print('Too small lower bound b_dr (%g) is detected. Set it to 3 mm.'%(b_dr_min))
-            b_dr_min = 3
-    else:
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # Automatic Performance Evaluation
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    def evaluate_design(self, im):
         pass
-    if 1e3*spec.stator_tooth_width_b_ds < b_ds_min  and 1e3*spec.stator_tooth_width_b_ds > b_ds_max:
-        raise Exception('The initial design is not within the bounds.')
-    if 1e3*spec.rotor_tooth_width_b_dr < b_dr_min  and 1e3*spec.rotor_tooth_width_b_dr > b_dr_max:
-        raise Exception('The initial design is not within the bounds.')
+        # winding analysis? 之前的python代码利用起来啊
+        # 希望的效果是：设定好一个设计，马上进行运行求解，把我要看的数据都以latex报告的形式呈现出来。
+        # OP_PS_Qr36_M19Gauge29_DPNV_NoEndRing.jproj
 
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG)
-#    Bounds: 1e-1也还是太小了（第三次报错），至少0.5mm长吧 
-#    # 1e-1 is the least geometry value. 
-#    A 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    if fea_config_dict['flag_optimization'] == True:
-        if '527' in run_folder or '526' in run_folder:
-            b_ds_max += 1
-            b_dr_max += 1
-        de_config_dict = {  'original_bounds':[ [b_ds_min, b_ds_max],#--# stator_tooth_width_b_ds
-                                                [     0.8,        3],   # air_gap_length_delta
-                                                [    5e-1,        3],   # Width_RotorSlotOpen 
-                                                [b_dr_min, b_dr_max],#--# rotor_tooth_width_b_dr # It allows for large rotor tooth because we raise Jr and recall this is for less slots---Qr=16.
-                                                [    5e-1,        3],   # Length_HeadNeckRotorSlot
-                                                [       1,       11],   # Angle_StatorSlotOpen
-                                                [    5e-1,        3] ], # Width_StatorTeethHeadThickness
-                            'mut':        0.8,
-                            'crossp':     0.7,
-                            'popsize':    35, # 5~10 \times number of geometry parameters --JAC223
-                            'iterations': 70,
-                            'narrow_bounds_normalized':[[],
-                                                        [],
-                                                        [],
-                                                        [],
-                                                        [],
-                                                        [],
-                                                        [] ],
-                            'bounds':[]}
-        print('Run: ' +run_folder)
-        print('the auto bounds are:', de_config_dict['original_bounds'])
-        if '511' in run_folder or '508' in run_folder:
-            de_config_dict['original_bounds'][0][0] += 2.5
-            de_config_dict['original_bounds'][0][1] += 2
-            de_config_dict['original_bounds'][3][0] += 2.5
-            de_config_dict['original_bounds'][3][1] += 2
-            print('the extended bounds are:', de_config_dict['original_bounds'])
-        # quit()
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # 1. Bounds for DE optimiazation
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    def get_original_bounds(self):
 
-        # Sensitivity Analysis based narrowing bounds
-        if fea_config_dict['bool_refined_bounds'] == True:
-            numver_of_variants = 20.0
-            if fea_config_dict['Active_Qr'] == 16:
-                if '501' in run_folder:
-                    # from utility.py:run500 O1
-                    raw_narrow_bounds = [   [15, 16, 17, 18, 19, 20],
-                                            [6, 7, 8, 9, 10, 1,1, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                            [0, 1, 5, 6, 7, 8],
-                                            [19, 28], # 这里出了BUG，由于loop_for_bound没有遍历到initial design的Jr bds bdr组合，导致initial design的转子齿=5.38mm大于该边界上界5.05mm，结果是，所有改变转子齿的design variant都比initial design差，所以这里特地加大上界。
-                                            [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                            [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                            [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
-                        # original: [[2, 4.483629], [0.8, 3], [0.5, 3], [2, 5.042], [0.5, 3], [1, 10], [0.5, 3]], 
-                        # refined:  [[3.86, 4.483629], [1.46, 3.0], [0.5, 1.5], [4.89, 6.26], [0.5, 3.0], [2.8, 10.0], [0.5, 3.0]]}
+        from math import tan, pi
+        定子齿宽最小值 = 1
+        定子齿宽最大值 = tan(2*pi/self.spec.Qs*0.5)*self.spec.Radius_OuterRotor * 2 # 圆（半径为Radius_OuterRotor）的外接正多边形（Regular polygon）的边长
+        # print(定子齿宽最大值, 2*pi*self.spec.Radius_OuterRotor/self.spec.Qs) # 跟弧长比应该比较接近说明对了
 
-                # # from utility.py:run504 O2
-                # raw_narrow_bounds = [   [13, 15],
-                #                         [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                #                         [1, 2, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                #                         [14, 15, 18, 19, 20],
-                #                         [0, 1, 2, 3, 4, 5],
-                #                         [0, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                #                         [0, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
+        转子齿宽最小值 = 1
+        内接圆的半径 = self.spec.Radius_OuterRotor - (self.spec.d_ro + self.spec.Radius_of_RotorSlot)
+        转子齿宽最大值 = tan(2*pi/self.spec.Qr*0.5)*内接圆的半径 * 2 
+        # print(转子齿宽最大值, 2*pi*内接圆的半径/self.spec.Qr) # 跟弧长比应该比较接近说明对了
 
-                if '520' in run_folder:
-                    # from utility.py:run520 O2
-                    raw_narrow_bounds = [   [13, 14, 15, 16, 17, 18, 19, 20],
-                                            [3, 4, 5, 6, 7, 8, 9, 10, 11, 12], # [10, 17, 18, 19, 20], # for 52001 increased air gap length
-                                            [8, 9, 10, 11, 12, 13, 14, 15, 16],
-                                            [14, 16, 17, 18, 20],
-                                            [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
-                                            [2, 3, 4, 13, 14, 15, 16, 17],
-                                            [3, 4, 5, 6, 7, 8]]
+        self.original_bounds = [ [           0.8,              3],          # air_gap_length_delta
+                                 [定子齿宽最小值, 定子齿宽最大值],#--# stator_tooth_width_b_ds
+                                 [转子齿宽最小值, 转子齿宽最大值],#--# rotor_tooth_width_b_dr
+                                 [             1,             11],           # Angle_StatorSlotOpen
+                                 [          5e-1,              3],           # Width_RotorSlotOpen 
+                                 [          5e-1,              3],           # Width_StatorTeethHeadThickness
+                                 [          5e-1,              3] ]          # Length_HeadNeckRotorSlot
+        # 定子齿范围检查
+        # 定子齿再宽，都可以无限加长轭部来满足导电面积。
+        # stator_inner_radius_r_is_eff = stator_inner_radius_r_is + (width_statorTeethHeadThickness + width_StatorTeethNeck)
+        # temp = (2*pi*stator_inner_radius_r_is_eff - self.Qs*stator_tooth_width_b_ds)
+        # stator_tooth_height_h_ds = ( sqrt(temp**2 + 4*pi*area_stator_slot_Sus*self.Qs) - temp ) / (2*pi)
 
-                if '5250' in run_folder:
-                    # from utility.py:run525 O2
-                    raw_narrow_bounds = [   [20, 100], # 0~20: 4~4.5 mm
-                                            [7, 8, 9, 10, 11, 12], #, 13, 14], #, 15, 16, 17, 18, 19, 20],
-                                            [6, 8],
-                                            [3, 4, 5, 6, 7],
-                                            [4, 5],
-                                            [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                            [0, 1, 2, 3, 4]]
-
-                print('raw_narrow_bounds', raw_narrow_bounds)
-
-            for ind, bound in enumerate(raw_narrow_bounds):
-                de_config_dict['narrow_bounds_normalized'][ind].append(bound[0] /numver_of_variants)
-                de_config_dict['narrow_bounds_normalized'][ind].append(bound[-1]/numver_of_variants)
-
-                if de_config_dict['narrow_bounds_normalized'][ind][0] == de_config_dict['narrow_bounds_normalized'][ind][1]:
-                    raise Exception('Upper bound equals to lower bound. Take a check here.')
-                    print('ind=',ind, '---manually set the proper bounds based on the initial design: 7.00075,1.26943,0.924664,4.93052,1,3,1')
-                    de_config_dict['narrow_bounds_normalized'][ind][0] = 4.93052 / 5
-
-            for bnd1, bnd2 in zip(de_config_dict['original_bounds'], de_config_dict['narrow_bounds_normalized']):
-                diff = bnd1[1] - bnd1[0]
-                de_config_dict['bounds'].append( [ bnd1[0]+diff*bnd2[0] , bnd1[0]+diff*bnd2[1] ]) # 注意，都是乘以original_bounds的上限哦！
-
-            print('original_bounds:', de_config_dict['original_bounds'])
-            print('refined bounds:', de_config_dict['bounds'])
-            print('narrow_bounds_normalized:', de_config_dict['narrow_bounds_normalized'])
-            # quit()
-        elif fea_config_dict['bool_refined_bounds'] == -1:
-            print('Manually set the bounds... Before:', de_config_dict['original_bounds'])
-            if '51199' in fea_config_dict['run_folder']:
-                best_design_denorm = [6.84866,1.07652,1.77721,8.64138,1.05135,2.63571,2.12527] # best design from run#511
-                for ind, geom_param in enumerate(best_design_denorm):
-                    de_config_dict['original_bounds'][ind] = [geom_param*0.9, geom_param*1.1]
-            elif '51198' in fea_config_dict['run_folder']:
-                best_design_denorm = [6.71879,1.01978,1.76687,8.33909,0.946215,2.47339,2.08366] # best design from run#51199
-                de_config_dict['original_bounds'][0] = [best_design_denorm[0]*0.9, best_design_denorm[0]*1.1]
-                de_config_dict['original_bounds'][1] = [best_design_denorm[1]*0.9, best_design_denorm[1]*1.1]
-                de_config_dict['original_bounds'][2] = [best_design_denorm[2]*0.9, best_design_denorm[2]*1.1]
-                de_config_dict['original_bounds'][3] = [best_design_denorm[3]*0.9, best_design_denorm[3]*1.1]
-                de_config_dict['original_bounds'][4] = [best_design_denorm[4]*0.8, best_design_denorm[4]*1.0]
-                de_config_dict['original_bounds'][5] = [best_design_denorm[5]*0.9, best_design_denorm[5]*1.1]
-                de_config_dict['original_bounds'][6] = [best_design_denorm[6]*0.9, best_design_denorm[6]*1.1]
-            elif '51197' in fea_config_dict['run_folder']:
-                best_design_denorm = [6.66737,0.967267,1.7789,8.86449,0.756972,2.46541,2.08662] # best design from run#51198
-                de_config_dict['original_bounds'][0] = [best_design_denorm[0]*0.9, best_design_denorm[0]*1.1]
-                de_config_dict['original_bounds'][1] = [best_design_denorm[1]*0.9, best_design_denorm[1]*1.1]
-                de_config_dict['original_bounds'][2] = [best_design_denorm[2]*0.9, best_design_denorm[2]*1.1]
-                de_config_dict['original_bounds'][3] = [best_design_denorm[3]*0.9, best_design_denorm[3]*1.1]
-                de_config_dict['original_bounds'][4] = [best_design_denorm[4]*0.7, best_design_denorm[4]*1.0]
-                de_config_dict['original_bounds'][5] = [best_design_denorm[5]*0.9, best_design_denorm[5]*1.1]
-                de_config_dict['original_bounds'][6] = [best_design_denorm[6]*0.9, best_design_denorm[6]*1.1]
-            elif '51196' in fea_config_dict['run_folder']:
-                best_design_denorm = [4.48363,1.46,1.19787,6.25996,0.506877,9.25457,0.5] # best design from run#501 (it is originally a 2 pole motor)
-                de_config_dict['original_bounds'][0] = [best_design_denorm[0]*0.9, best_design_denorm[0]*1.1]
-                de_config_dict['original_bounds'][1] = [best_design_denorm[1]*0.9, best_design_denorm[1]*1.1]
-                de_config_dict['original_bounds'][2] = [best_design_denorm[2]*0.9, best_design_denorm[2]*1.1]
-                de_config_dict['original_bounds'][3] = [best_design_denorm[3]*0.9, best_design_denorm[3]*1.1]
-                de_config_dict['original_bounds'][4] = [0.5, best_design_denorm[4]*1.1]
-                de_config_dict['original_bounds'][5] = [best_design_denorm[5]*0.9, best_design_denorm[5]*1.1]
-                de_config_dict['original_bounds'][6] = [0.5, best_design_denorm[6]*1.1]
-            elif '50101' in fea_config_dict['run_folder']:
-                best_design_denorm = [4.48363,1.46,1.19787,6.25996,0.506877,9.25457,0.5] # best design from run#501gen#0012ind#0018-ID16-12-18
-                de_config_dict['original_bounds'][0] = [best_design_denorm[0]*0.9, best_design_denorm[0]*1.1]
-                de_config_dict['original_bounds'][1] = [best_design_denorm[1]*0.9, best_design_denorm[1]*1.1]
-                de_config_dict['original_bounds'][2] = [best_design_denorm[2]*0.9, best_design_denorm[2]*1.1]
-                de_config_dict['original_bounds'][3] = [best_design_denorm[3]*0.9, best_design_denorm[3]*1.1]
-                de_config_dict['original_bounds'][4] = [best_design_denorm[4]*1.0, best_design_denorm[4]*1.1]
-                de_config_dict['original_bounds'][5] = [best_design_denorm[5]*0.9, best_design_denorm[5]*1.1]
-                de_config_dict['original_bounds'][6] = [best_design_denorm[6]*1.0, best_design_denorm[6]*1.1]
-            elif '50102' in fea_config_dict['run_folder']:
-                best_design_denorm = [4.93199,1.314,1.31636,6.55715,0.557565,9.09551,0.5] # best design from run#50101gen#0005ind#0034-ID16-5-34
-                de_config_dict['original_bounds'][0] = [best_design_denorm[0]*1.0, best_design_denorm[0]*1.2]
-                de_config_dict['original_bounds'][1] = [best_design_denorm[1]*0.9, best_design_denorm[1]*1.1]
-                de_config_dict['original_bounds'][2] = [best_design_denorm[2]*1.0, best_design_denorm[2]*1.2]
-                de_config_dict['original_bounds'][3] = [best_design_denorm[3]*0.9, best_design_denorm[3]*1.1]
-                de_config_dict['original_bounds'][4] = [best_design_denorm[4]*1.0, best_design_denorm[4]*1.2]
-                de_config_dict['original_bounds'][5] = [best_design_denorm[5]*0.9, best_design_denorm[5]*1.1]
-                de_config_dict['original_bounds'][6] = [best_design_denorm[6]*1.0, best_design_denorm[6]*1.1]
+        # 转子齿范围检查
+        下界, 上界 = self.original_bounds[2][0], self.original_bounds[2][1]
+        步长 = (上界-下界)*0.05
+        list_valid_tooth_width = []
+        for rotor_tooth_width_b_dr in np.arange(下界, 上界, 步长):
+            print('b_dr =', rotor_tooth_width_b_dr)
+            list_valid_tooth_width.append( self.check_valid_rotor_slot_height(rotor_tooth_width_b_dr, 8e6) ) # 8e6 from Pyrhonen's book for copper
+        print(list_valid_tooth_width)
+        有效上界 = 下界
+        for ind, el in enumerate(list_valid_tooth_width):
+            if el == True:
+                break
             else:
-                raise
-            print('Manually set the bounds... After:', de_config_dict['original_bounds'])
-            print(best_design_denorm)
-            de_config_dict['bounds'] = de_config_dict['original_bounds']
-            # quit()
+                有效上界 += 步长
+        self.original_bounds[2][1] = 有效上界
+
+        return self.original_bounds
+
+    def check_valid_rotor_slot_height(self, rotor_tooth_width_b_dr, J_max):
+
+        area_conductor_rotor_Scr = self.spec.rotor_current_actual / J_max
+        area_rotor_slot_Sur = area_conductor_rotor_Scr
+        
+        rotor_outer_radius_r_or_eff = 1e-3*(self.spec.Radius_OuterRotor - self.spec.d_ro)
+
+        slot_height, _, _ = pyrhonen_procedure_as_function.get_parallel_tooth_height(area_rotor_slot_Sur, rotor_tooth_width_b_dr, self.spec.Qr, rotor_outer_radius_r_or_eff)
+        return np.isnan(slot_height)
+
+
+    def get_de_config(self):
+
+        self.de_config_dict = { 'original_bounds': self.get_original_bounds(),
+                                'mut':        0.8,
+                                'crossp':     0.7,
+                                'popsize':    35, # 5~10 \times number of geometry parameters --JAC223
+                                'iterations': 70,
+                                'narrow_bounds_normalized':[[],
+                                                            [],
+                                                            [],
+                                                            [],
+                                                            [],
+                                                            [],
+                                                            [] ], # != []*7 （完全是两回事）
+                                'bounds':None}
+        return self.de_config_dict
+
+    def run_local_sensitivity_analysis(self, the_bounds, design_denorm=None):
+        # if design_denorm not in the_bounds: then raise 
+        if design_denorm is not None:
+            for ind, el in enumerate(design_denorm):
+                if el < the_bounds[ind][0] or el > the_bounds[ind][1]:
+                    raise Exception('给的设计不在边界的内部')
+
+        self.logger.debug('---------\nBegin Local Sensitivity Analysis')
+
+        # de_config_dict['bounds'] 还没有被赋值
+        self.de_config_dict['bounds'] = the_bounds
+
+        self.init_swarm() # define app.sw
+        self.sw.generate_pop(specified_initial_design_denorm=design_denorm)
+        de_generator = self.sw.de()
+        for result in de_generator:
+            print(result)
+
+    def collect_results_of_local_sensitivity_analysis(self):
+        if self.fea_config_dict['local_sensitivity_analysis'] == True:
+            run_folder = self.fea_config_dict['run_folder'][:-1] + 'lsa/'
         else:
-            print('No refined bounds are applied.')
-            de_config_dict['bounds'] = de_config_dict['original_bounds']
-    else:
-        raise
-        de_config_dict = {  'bounds':     [ [   3, 9],   # stator_tooth_width_b_ds
-                                            [ 0.8, 4],   # air_gap_length_delta
-                                            [5e-1, 3],   # Width_RotorSlotOpen 
-                                            [ 2.5, 6],   # rotor_tooth_width_b_dr # 8 is too large, 6 is almost too large
-                                            [5e-1, 3],   # Length_HeadNeckRotorSlot
-                                            [   1, 10],  # Angle_StatorSlotOpen
-                                            [5e-1, 3] ], # Width_StatorTeethHeadThickness
-                            'mut':        0.8,
-                            'crossp':     0.7,
-                            'popsize':    20,
-                            'iterations': 1 }
-    print(de_config_dict)
+            run_folder = self.fea_config_dict['run_folder']
 
-    # init the swarm
-    sw = population.swarm(fea_config_dict, de_config_dict=de_config_dict)
-    # sw.show(which='all')
-    # print sw.im.show(toString=True)
-    # quit()
-
-    # Sensitivity Bar Charts
-    if fea_config_dict['local_sensitivity_analysis'] == True:
+        # Sensitivity Bar Charts
         if os.path.exists(fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt'):
-            import utility
             try:
-                utility.build_sensitivity_bar_charts(spec, sw)
+                results_for_refining_bounds = utility.build_sensitivity_bar_charts(self.spec, self.sw)
+                print(results_for_refining_bounds)
                 quit()
             except Exception as e:
                 raise e
@@ -484,34 +193,90 @@ if True:
                 print('Remove ' + fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt')
                 print('Continue for sensitivity analysis...')
         else:
-            print('Now begin to generate results for sensitivity analysis...')
+            print('swarm_data.txt not found.')
 
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# 3. Initialize FEMM Solver (if required)
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    if fea_config_dict['jmag_run_list'][0] == 0:
-        # and let jmag know about it
-        sw.femm_solver = FEMM_Solver.FEMM_Solver(sw.im, flag_read_from_jmag=False, freq=2.23) # eddy+static
+        return results_for_refining_bounds
 
+    def get_refined_bounds(self, the_bounds, raw_narrowing_factors):
+        # raw_narrowing_factors = [   [20, 100], # 0~20: 4~4.5 mm
+        #                         [7, 8, 9, 10, 11, 12], #, 13, 14], #, 15, 16, 17, 18, 19, 20],
+        #                         [6, 8],
+        #                         [3, 4, 5, 6, 7],
+        #                         [4, 5],
+        #                         [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+        #                         [0, 1, 2, 3, 4]]
 
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# 4. Run DE Optimization
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    count_abort = 0
-    # while True:
-    if False == bool_post_processing:
-        
+        # Sensitivity Analysis based narrowing bounds
+        numver_of_variants = 20.0
+
+        if '5250' in run_folder:
+            # from utility.py:run525 O2
+            raw_narrow_bounds = [   [20, 100], # 0~20: 4~4.5 mm
+                                    [7, 8, 9, 10, 11, 12], #, 13, 14], #, 15, 16, 17, 18, 19, 20],
+                                    [6, 8],
+                                    [3, 4, 5, 6, 7],
+                                    [4, 5],
+                                    [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+                                    [0, 1, 2, 3, 4]]
+
+        print('raw_narrow_bounds', raw_narrow_bounds)
+
+        for ind, bound in enumerate(raw_narrow_bounds):
+            de_config_dict['narrow_bounds_normalized'][ind].append(bound[0] /numver_of_variants)
+            de_config_dict['narrow_bounds_normalized'][ind].append(bound[-1]/numver_of_variants)
+
+            if de_config_dict['narrow_bounds_normalized'][ind][0] == de_config_dict['narrow_bounds_normalized'][ind][1]:
+                raise Exception('Upper bound equals to lower bound. Take a check here.')
+                print('ind=',ind, '---manually set the proper bounds based on the initial design: 7.00075,1.26943,0.924664,4.93052,1,3,1')
+                de_config_dict['narrow_bounds_normalized'][ind][0] = 4.93052 / 5
+
+        for bnd1, bnd2 in zip(de_config_dict['original_bounds'], de_config_dict['narrow_bounds_normalized']):
+            diff = bnd1[1] - bnd1[0]
+            de_config_dict['bounds'].append( [ bnd1[0]+diff*bnd2[0] , bnd1[0]+diff*bnd2[1] ]) # 注意，都是乘以original_bounds的上限哦！
+
+        print('original_bounds:', de_config_dict['original_bounds'])
+        print('refined bounds:', de_config_dict['bounds'])
+        print('narrow_bounds_normalized:', de_config_dict['narrow_bounds_normalized'])
+        # quit()
+
+    def build_local_bounds_from_best_design(self, best_design):
+        raise
+        return local_bounds
+
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # 2. Initilize Swarm and Initial Pyrhonen's Design (Run this part in JMAG) and femm solver (if required by run_list)
+    #    Bounds: 1e-1也还是太小了（第三次报错），至少0.5mm长吧 
+    #    # 1e-1 is the least geometry value. 
+    #    A 1e-2 will leads to：转子闭口槽极限，会导致edge过小，从而报错：small arc entity exists.png
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    def init_swarm(self):
+        self.sw = population.swarm(self.fea_config_dict, de_config_dict=self.de_config_dict)
+        # sw.show(which='all')
+        # print sw.im.show(toString=True)
+        # quit()
+
+        if self.fea_config_dict['jmag_run_list'][0] == 0:
+            self.sw.init_femm_solver() # define app.sw.femm_solver        
+
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # 3. Run DE Optimization
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    def run_de(self):
+        sw = self.sw
+        logger = self.logger
+
+        count_abort = 0
         logger.debug('-------------------------count_abort=%d' % (count_abort))
 
         # if optimization_flat == True:
         # generate the initial generation
-        sw.generate_pop()
+        sw.generate_pop(specified_initial_design_denorm=None)
         # quit()
 
         # add initial_design of Pyrhonen09 to the initial generation
         if sw.fea_config_dict['local_sensitivity_analysis'] == False:
             if count_abort == 0:
-                utility.add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger)
+                utility.add_Pyrhonen_design_to_first_generation(sw, self.de_config_dict, logger)
 
         # write FEA config to disk
         sw.write_to_file_fea_config_dict()
@@ -536,21 +301,23 @@ if True:
                 logger.info('Done.')
                 utility.send_notification('Done.')
 
-    elif True == bool_post_processing:
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # 4. Post-processing
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    def best_design_by_weights(self, use_weights):
+        if use_weights != self.fea_config_dict['use_weights']:
+            raise Exception('Not implemented')
 
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# 5. Post-processing
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        import utility
-        swda = utility.build_Pareto_plot(spec, sw)
+        # import utility
+        swda = utility.build_Pareto_plot(self.spec, self.sw)
         # sw.fobj(999, individual_denorm)
 
         # Final LaTeX Report
         print('According to Pyrhonen09, 300 MPa is the typical yield stress of iron core.')
-        initial_design = utility.Pyrhonen_design(sw.im, de_config_dict['bounds'])
+        initial_design = utility.Pyrhonen_design(self.sw.im, self.de_config_dict['bounds'])
         print (initial_design.design_parameters_denorm)
         print (swda.best_design_denorm)
-        print (de_config_dict['bounds'])
+        print (self.de_config_dict['bounds'])
 
         best_report_dir_prefix = '../release/OneReport/BestReport_TEX/contents/'
         file_name = 'final_report'
@@ -573,8 +340,8 @@ if True:
             result[2::4] = list3
             result[3::4] = list4
             return result
-        lower_bounds = [el[0] for el in de_config_dict['bounds']]
-        upper_bounds = [el[1] for el in de_config_dict['bounds']]
+        lower_bounds = [el[0] for el in self.de_config_dict['bounds']]
+        upper_bounds = [el[1] for el in self.de_config_dict['bounds']]
         design_data = combine_lists_alternating_4(  initial_design.design_parameters_denorm, 
                                                     swda.best_design_denorm,
                                                     lower_bounds,
@@ -592,13 +359,13 @@ if True:
                     \thead{Lower\\\relax bounds} &
                     \thead{Upper\\\relax bounds} \\
                     \hline
-                    Stator tooth width $w_{st}$             & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
                     Air gap length $L_g$                    & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
-                    Rotor slot open width $w_{ro}$          & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+                    Stator tooth width $w_{st}$             & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
                     Rotor tooth width $w_{rt}$              & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
-                    Rotor slot open depth $d_{ro}$          & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
                     Stator slot open angle $\theta_{so}$    & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+                    Rotor slot open width $w_{ro}$          & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
                     Stator slot open depth $d_{so}$         & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
+                    Rotor slot open depth $d_{ro}$          & $%.2f$ & $%.2f$ & $%.2f$ & $%.2f$ \\
                     \hline
                     \vspace{-2.5ex}
                     \\
@@ -609,7 +376,7 @@ if True:
             \end{table*}
             ''' % tuple(design_data)
         print('''\\subsection{Best Design of Objective Function %s}\n\n
-                    ''' % (fea_config_dict['use_weights']) + latex_table, file=fname)
+                    ''' % (self.fea_config_dict['use_weights']) + latex_table, file=fname)
         print(swda.str_best_design_details, file=fname)
         fname.close()
 
@@ -617,15 +384,13 @@ if True:
         # import subprocess
         # subprocess.call(r"D:\OneDrive - UW-Madison\c\release\OneReport\OneReport_TEX\z_nul", shell=True)
 
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-# 6. Check mechanical strength for the best design
-#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        from pylab import show
-        show()
-        quit()
-
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # 5. Check mechanical strength for the best design
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    def run_static_structural_fea(self, design_denorm):
+        sw = self.sw
         im_best = population.bearingless_induction_motor_design.local_design_variant(sw.im, \
-                     -1, -1, swda.best_design_denorm)
+                     -1, -1, design_denorm)
 
         # initialize JMAG Designer
         sw.designer_init()
@@ -735,5 +500,53 @@ if True:
 
         from pylab import show
         show()
+
+app = acm_designer(fea_config_dict, spec)
+if 'Y730' in fea_config_dict['pc_name']:
+    app.build_oneReport()
+    app.talk_to_mysql_database()
+# quit()
+app.init_logger()
+# app.evaluate_design(spec.sw.im)
+
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# Optimization
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+if True:
+    # 微分进化的配置
+    app.get_de_config()
+    print('Run: ' + run_folder + '\nThe auto generated bounds are:', app.de_config_dict['original_bounds'])
+    # quit()
+
+    # 如果需要局部敏感性分析，那就先跑了再说
+    if fea_config_dict['local_sensitivity_analysis'] == True:
+        app.run_local_sensitivity_analysis(app.de_config_dict['original_bounds'], design_denorm=None)
+        results_for_refining_bounds = app.collect_results_of_local_sensitivity_analysis()
+
+    # Build the final bounds
+    if fea_config_dict['bool_refined_bounds'] == -1:
+        app.de_config_dict['bounds'] = app.build_local_bounds_from_best_design(None)
+    elif fea_config_dict['bool_refined_bounds'] == False:
+        app.de_config_dict['bounds'] = app.de_config_dict['original_bounds']
+    elif fea_config_dict['bool_refined_bounds'] == True:
+        app.de_config_dict['bounds'] = app.get_refined_bounds(app.de_config_dict['original_bounds'], results_for_refining_bounds)
+    else:
+        raise
+    print('The final bounds are', app.de_config_dict['bounds'])
+
+    if False == bool_post_processing:
+        if fea_config_dict['flag_optimization'] == True:
+            app.init_swarm() # define app.sw
+            app.run_de()
+        else:
+            print('Do something.')
+
+    elif True == bool_post_processing:
+        app.init_swarm()
+        swda = app.best_design_by_weights(fea_config_dict['use_weights'])
+        from pylab import show
+        show()
+        quit()
+        run_static_structural_fea(swda.best_design_denorm)
 
 

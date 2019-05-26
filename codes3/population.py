@@ -9,6 +9,7 @@ import os
 from pylab import plot, legend, grid, figure, subplots, array, mpl, show
 import utility
 from VanGogh import VanGogh
+import FEMM_Solver
 
 from time import time as clock_time
 
@@ -63,12 +64,18 @@ class swarm(object):
         if not os.path.exists(self.dir_csv_output_folder):
             os.makedirs(self.dir_csv_output_folder)
 
-        self.run_folder             = fea_config_dict['run_folder']
+        if fea_config_dict['local_sensitivity_analysis'] == True:
+            self.run_folder         = fea_config_dict['run_folder'][:-1] + 'lsa/'
+        else:
+            self.run_folder         = fea_config_dict['run_folder']
+
         self.dir_run                = self.dir_parent + 'pop/' + self.run_folder
+
         if fea_config_dict['flag_optimization'] == True:
             self.dir_project_files  = fea_config_dict['dir_project_files'] + self.run_folder
         else:
             self.dir_project_files  = fea_config_dict['dir_project_files']
+
         self.dir_jcf                = self.dir_project_files + 'jcf/'
         self.pc_name                = fea_config_dict['pc_name']
         self.fea_config_dict        = fea_config_dict
@@ -84,13 +91,17 @@ class swarm(object):
         self.fig_main, self.axeses = subplots(2, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
         utility.pyplot_clear(self.axeses)
 
+    def init_femm_solver(self):
+        # and let jmag know about it
+        self.femm_solver = FEMM_Solver.FEMM_Solver(self.im, flag_read_from_jmag=False, freq=2.233) # eddy+static
+
     def write_to_file_fea_config_dict(self):
         with open(self.dir_run + '../FEA_CONFIG-%s.txt'%(self.fea_config_dict['model_name_prefix']), 'w') as f:
             for key, val in self.fea_config_dict.items():
                 # print key, val
                 f.write('%s:%s\n' % (key, str(val)) )
 
-    def generate_pop(self):
+    def generate_pop(self, specified_initial_design_denorm=None):
         # csv_output folder is used for optimziation
         self.dir_csv_output_folder  = self.fea_config_dict['dir_parent'] + 'csv_opti/' + self.run_folder
 
@@ -193,16 +204,19 @@ class swarm(object):
             # generate the initial random swarm from the initial design
             self.init_pop = np.random.rand(popsize, dimensions) # normalized design parameters between 0 and 1
 
-            def local_sensitivity_analysis(self):
+            def local_sensitivity_analysis(self, specified_initial_design_denorm):
                 # 敏感性检查：以基本设计为准，检查不同的参数取极值时的电机性能变化！这是最简单有效的办法。七个设计参数，那么就有14种极值设计。
-                initial_design_denorm = np.array( utility.Pyrhonen_design(self.im).design_parameters_denorm )
+                if specified_initial_design_denorm is None:
+                    initial_design_denorm = np.array( utility.Pyrhonen_design(self.im).design_parameters_denorm )
+                else:
+                    initial_design_denorm = specified_initial_design_denorm
                 initial_design = (initial_design_denorm - min_b) / diff
                 print(initial_design_denorm.tolist())
                 print(initial_design.tolist())
                 base_design = initial_design.tolist()
                 print('base_design:', base_design, '\n-------------')
                 # quit()
-                number_of_variants = 20
+                number_of_variants = self.fea_config_dict['local_sensitivity_analysis_number_of_variants']
                 self.init_pop = [initial_design] # include initial design!
                 for i in range(len(base_design)): # 7 design parameters
                     for j in range(number_of_variants+1): # 21 variants interval
@@ -214,7 +228,7 @@ class swarm(object):
                 #     print ind, el
 
             if self.fea_config_dict['local_sensitivity_analysis'] == True:
-                local_sensitivity_analysis(self)
+                local_sensitivity_analysis(self, specified_initial_design_denorm)
 
             self.init_pop_denorm = min_b + self.init_pop * diff
             self.init_fitness = None
@@ -249,28 +263,28 @@ class swarm(object):
             # normalize for init_pop
             self.init_pop = (np.array(self.init_pop_denorm) - min_b) / diff
 
-            # 检查popsize是否变大了 # TODO: 文件完整性检查
-            solved_popsize = len(self.init_pop)
-            if popsize > solved_popsize:
-                logger.warn('The popsize is changed from last run. From %d to %d' % (solved_popsize, popsize))
-                logger.debug('init_pop before:\n' + '\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop))
+            if self.fea_config_dict['local_sensitivity_analysis'] == False:
+                # 检查popsize是否变大了 # TODO: 文件完整性检查
+                solved_popsize = len(self.init_pop)
+                if popsize > solved_popsize:
+                    logger.warn('The popsize is changed from last run. From %d to %d' % (solved_popsize, popsize))
+                    logger.debug('init_pop before:\n' + '\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop))
 
-                # append new random designs 
-                self.init_pop = self.init_pop.tolist()
-                self.init_pop += np.random.rand(popsize-solved_popsize, dimensions).tolist() # normalized design parameters between 0 and 1
-                self.init_pop_denorm = min_b + np.array(self.init_pop) * diff
+                    # append new random designs 
+                    self.init_pop = self.init_pop.tolist()
+                    self.init_pop += np.random.rand(popsize-solved_popsize, dimensions).tolist() # normalized design parameters between 0 and 1
+                    self.init_pop_denorm = min_b + np.array(self.init_pop) * diff
 
-                logger.debug('init_pop after:\n' + '\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop))
+                    logger.debug('init_pop after:\n' + '\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop))
 
-                # and save to file named gen#xxxx.txt as well as liv#xxxx.txt
-                # because those just born are in the meantime living!
-                # we will over-write to file later along with fitness data
-                # self.append_population_data(self.init_pop_denorm[solved_popsize:])
-                # logger.debug('init_pop before:\n' + '\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop))
-            elif popsize < solved_popsize:
-                logger = logging.getLogger(__name__)
-                logger.warn('Reducing popsize during a run---feature is not supported. If you are testing local sensitivity analysis, then delete the run folder (under pop/ and csv_opti/) and run again.')
-                if self.fea_config_dict['local_sensitivity_analysis'] == False:
+                    # and save to file named gen#xxxx.txt as well as liv#xxxx.txt
+                    # because those just born are in the meantime living!
+                    # we will over-write to file later along with fitness data
+                    # self.append_population_data(self.init_pop_denorm[solved_popsize:])
+                    # logger.debug('init_pop before:\n' + '\n'.join(','.join('%.16f'%(x) for x in y) for y in self.init_pop))
+                elif popsize < solved_popsize:
+                    logger = logging.getLogger(__name__)
+                    logger.warn('Reducing popsize during a run---feature is not supported. If you are testing local sensitivity analysis, then delete the run folder (under pop/ and csv_opti/) and run again.')
                     raise Exception('Reducing popsize during a run---feature is not supported. If you are testing local sensitivity analysis, then delete the run folder (under pop/ and csv_opti/) and run again.')
 
         # # add a database using the swarm_data.txt file
@@ -602,6 +616,8 @@ class swarm(object):
         count_tran2tss_loop = 0
         while True: # this is added in case of, e.g., iron loss data are not present while other data are already there.
             count_tran2tss_loop += 1 
+            if count_tran2tss_loop == 4:
+                raise Exception('This counter should not reach 4.')
             tran2tss_study_name = im_variant.individual_name + 'Tran2TSS'
             # bool_skip_transient = False
 
@@ -876,6 +892,7 @@ class swarm(object):
         #     pass
 
         if self.fea_config_dict['local_sensitivity_analysis'] == True:
+            return
             raise Exception('The local sensitivity analysis is done.')
 
         # Begin DE with pop, fitness of a completed generation
@@ -2308,7 +2325,7 @@ class swarm(object):
             # fig_main.savefig('FEA_Model_Comparisons.png', dpi=150)
             #     # fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 BlessIMDesign\p2019_iemdc_bearingless_induction full paper\images\FEA_Model_Comparisons.png', dpi=150)
             # fig_main.savefig(r'D:\OneDrive\[00]GetWorking\31 Bearingless_Induction_FEA_Model\p2019_iemdc_bearingless_induction full paper\images\New_FEA_Model_Comparisons.png', dpi=150)
-        
+
 
     def timeStepSensitivity(self):
         from pylab import figure, show, subplots, xlim, ylim
@@ -3031,15 +3048,16 @@ class bearingless_induction_motor_design(object):
         # Never assign anything to im, you can build your self after calling cls and assign stuff to self
 
         # unpack design_parameters
-        stator_tooth_width_b_ds       = design_parameters[0]*1e-3 # m
-        air_gap_length_delta          = design_parameters[1]*1e-3 # m
-        Width_RotorSlotOpen           = design_parameters[2]      # mm, rotor slot opening
-        rotor_tooth_width_b_dr        = design_parameters[3]*1e-3 # m
-        Length_HeadNeckRotorSlot      = design_parameters[4]
+        air_gap_length_delta          = design_parameters[0]*1e-3 # m
+        stator_tooth_width_b_ds       = design_parameters[1]*1e-3 # m
+        rotor_tooth_width_b_dr        = design_parameters[2]*1e-3 # m
+
+        Width_RotorSlotOpen           = design_parameters[4]      # mm, rotor slot opening
+        Length_HeadNeckRotorSlot      = design_parameters[6]
 
         # Constranint #2
         # stator_tooth_width_b_ds imposes constraint on stator slot height
-        Width_StatorTeethHeadThickness = design_parameters[6]
+        Width_StatorTeethHeadThickness = design_parameters[5]
         Width_StatorTeethNeck = 0.5 * Width_StatorTeethHeadThickness
 
         area_stator_slot_Sus    = im.parameters_for_imposing_constraints_among_design_parameters[0]
@@ -3088,18 +3106,18 @@ class bearingless_induction_motor_design(object):
                 im.Qr,
                 im.Radius_OuterStatorYoke,
                 0.5*stator_yoke_diameter_Dsyi * 1e3, # 定子内轭部处的半径由需要的定子槽面积和定子齿宽来决定。
-                design_parameters[1],                # [1] # Length_AirGap
+                design_parameters[0],                # [1] # Length_AirGap
                 im.Radius_OuterRotor,
                 im.Radius_Shaft, 
-                Length_HeadNeckRotorSlot,            # [4]
-                Radius_of_RotorSlot,                 # inferred from [3]
+                Length_HeadNeckRotorSlot,            # [6]
+                Radius_of_RotorSlot,                 # inferred from [2]
                 Location_RotorBarCenter, 
-                Width_RotorSlotOpen,                 # [2]
+                Width_RotorSlotOpen,                 # [4]
                 Radius_of_RotorSlot2,
                 Location_RotorBarCenter2,
-                design_parameters[5],                # [5] # Angle_StatorSlotOpen
-                design_parameters[0],                # [0] # Width_StatorTeethBody
-                Width_StatorTeethHeadThickness,      # [6]
+                design_parameters[3],                # [3] # Angle_StatorSlotOpen
+                design_parameters[1],                # [1] # Width_StatorTeethBody
+                Width_StatorTeethHeadThickness,      # [5]
                 Width_StatorTeethNeck,
                 im.DriveW_poles, 
                 im.DriveW_turns, # turns per slot
@@ -3129,13 +3147,38 @@ class bearingless_induction_motor_design(object):
 
         self.use_drop_shape_rotor_bar = self.fea_config_dict['use_drop_shape_rotor_bar'] # since 5/23/2019
 
+        if self.use_drop_shape_rotor_bar == True:
+            # logger.debug('Location_RotorBarCenter:1,2: %g, %g.'%(self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
+
+            if self.Location_RotorBarCenter2 >= self.Location_RotorBarCenter:
+                logger = logging.getLogger(__name__)
+                logger.debug('Location_RotorBarCenter2 suggests to use round bar.')
+                print('Location_RotorBarCenter2 suggests to use round bar.\n'*3)
+                self.use_drop_shape_rotor_bar = False
+
+                # for VanGogh (FEMM) to work properly
+                self.Location_RotorBarCenter2_backup = self.Location_RotorBarCenter2
+                self.Location_RotorBarCenter2 = self.Location_RotorBarCenter 
+                # use the larger slot radius (this is problematic)
+                # use the smaller slot radius
+                if self.Radius_of_RotorSlot > self.Radius_of_RotorSlot2:
+                    self.Radius_of_RotorSlot = self.Radius_of_RotorSlot2
+                if self.Radius_of_RotorSlot2 > self.Radius_of_RotorSlot:
+                    self.Radius_of_RotorSlot2 = self.Radius_of_RotorSlot
+
+
         # thermal penalty for reduced rotor slot area (copper hot) and rotor tooth width (iron hot)
         # try:
             # thermal_penalty
         # except:
             # thermal_penalty = 0.0
         if thermal_penalty != 0:
-            with open(self.fea_config_dict['dir_parent'] + 'pop/' + self.fea_config_dict['run_folder'] + 'thermal_penalty_individuals.txt', 'a') as f:
+            if self.fea_config_dict['local_sensitivity_analysis'] == True:
+                run_folder = self.fea_config_dict['run_folder'][:-1] + 'lsa/'
+            else:
+                run_folder = self.fea_config_dict['run_folder']
+
+            with open(self.fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'thermal_penalty_individuals.txt', 'a') as f:
                 f.write(self.get_individual_name() + ',%g,%g,%g\n'%(thermal_penalty, rotor_tooth_width_b_dr, new__area_rotor_slot_Sur))
         self.thermal_penalty = thermal_penalty
         return self
@@ -4907,7 +4950,6 @@ class TrimDrawer(object):
         self.doc.GetSketchManager().SketchTrim(x,y)
         # l1 trim 完以后还是l1，除非你切中间，这样会多生成一个Line，你自己捕捉一下吧
 
-
     def trim_c(self, who,x,y):
         SketchName = self.SketchName
         self.doc.GetSelection().Clear()
@@ -5419,7 +5461,8 @@ class TrimDrawer(object):
             self.trim_l(l42, l42.GetEndVertex().GetX()-EPS, l42.GetEndVertex().GetY()-EPS)
 
             region = self.create_region(["Arc","Arc.2","Line","Line.2"])
-        else:    
+        else:
+            print('Round bar rotor slot is being plotted\n'*3)
             region = self.create_region(["Circle"])
 
         if self.im.MODEL_ROTATE:
@@ -5441,6 +5484,7 @@ class TrimDrawer(object):
 
 
         self.region_circular_pattern_360_origin(region, self.im.Qr)
+        # raise
 
         sketch.CloseSketch()
     def plot_coil(self, name=None):
