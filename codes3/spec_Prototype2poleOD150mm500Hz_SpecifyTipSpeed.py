@@ -45,5 +45,5 @@ spec = pyrhonen_procedure_as_function.desgin_specification(
 )
 # self.show()
 print(spec.build_name())
-spec.bool_bad_specifications = spec.pyrhonen_procedure()
+spec.bool_bad_specifications = spec.pyrhonen_procedure(fea_config_dict['pc_name'])
 print(spec.build_name()) # TODO：自动修正转子电流密度的设置值？

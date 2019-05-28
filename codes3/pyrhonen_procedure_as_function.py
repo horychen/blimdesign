@@ -284,7 +284,7 @@ class desgin_specification(object):
             return '\n- Bearingless Induction Motor Design SPecs\n\t' + ', \n\t'.join("%s = %s" % item for item in tuple_list)
 
     # @blockPrinting
-    def pyrhonen_procedure(self, bool_loop_Jr=True):
+    def pyrhonen_procedure(self, pc_name, bool_loop_Jr=True):
         # for self.TangentialStress in arange(12000, 33001, 3000): # self.TangentialStress - this value will change the motor size, so it is not suited for loop for optimization bounds
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -302,7 +302,7 @@ class desgin_specification(object):
         else:
             bool_standard_voltage_rating = False
 
-        fname = open(one_report_dir_prefix+file_name+'_s01'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s01'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Initial Design Parameters}''', file=fname)
         print('\nDesign Name:\\\\{\\tiny %s}' % self.build_name(bLatex=True), file=fname)
         if self.PS_or_SC:
