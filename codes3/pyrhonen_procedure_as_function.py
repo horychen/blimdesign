@@ -1238,7 +1238,8 @@ class desgin_specification(object):
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # 18. Collect Key Geometry Parameters for Performance Evaluation
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        fname.close() # 别忘了关闭文件！
+        if 'Y730' in pc_name:
+            fname.close() # 别忘了关闭文件！
         
         # fig, axes = subplots(1,3, dpi=80)
         # ax = axes[0]

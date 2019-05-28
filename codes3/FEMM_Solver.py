@@ -1266,7 +1266,7 @@ class FEMM_Solver(object):
         if self.im.fea_config_dict['Steel'] == 'M19Gauge29':
             # femm.mi_getmaterial('M-19 Steel') # for Stator & Rotor Iron Cores (Nonlinear with B-H curve)
             femm.mi_addmaterial('M19Gauge29',0,0, 0,0, 0,0.3556,0, 0.95) # no lamination for testing consistency with JMAG
-            hdata, bdata = np.loadtxt(self.dir_codes + '../Arnon5/M-19-Steel-BH-Curve-afterJMAGsmooth.txt', unpack=True, usecols=(0,1))
+            hdata, bdata = np.loadtxt(self.dir_codes + './M-19-Steel-BH-Curve-afterJMAGsmooth.BH', unpack=True, usecols=(0,1))
             for n in range(0,len(bdata)):
                 femm.mi_addbhpoint('M19Gauge29', bdata[n], hdata[n])
 
