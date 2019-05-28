@@ -348,7 +348,7 @@ class desgin_specification(object):
             machine_constant_Cmec = 150 # kW s / m^3. Figure 6.3 <- This is what Eric calls the penalty on the 2 pole IM---you loss power density.
         else:
             machine_constant_Cmec = 250 # kW s / m^3. 这里的电机常数都是按100kW去查的表哦，偏大了。不过电机常数在这里只用于检查AJ值的合理性。
-        fname = open(one_report_dir_prefix+file_name+'_s02'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s02'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Machines Constant and Tangential Stress}
                 Tangential stress.
                 \[{\sigma _{F\tan }} = \frac{{\hat A{{\hat B}_\delta }\cos \varphi }}{2} = \frac{{A{{\hat B}_\delta }\cos \varphi }}{{\sqrt 2 }} \in [12000-21500] {\rm Pa}\]
@@ -404,7 +404,7 @@ class desgin_specification(object):
         # rotor_outer_diameter_Dr = 2*rotor_outer_radius_r_or
         # # We have: rotor_volume_Vr = pi * rotor_outer_radius_r_or**2 * stack_length, so
 
-        fname = open(one_report_dir_prefix+file_name+'_s03'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s03'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Machine Sizing}\label{subsubsec:machine_sizing}
                 Required torque.
                 \[{T_{em}} = \frac{{{P_{mec}}}}{{2\pi {n_{mec}} \times 60}}\]
@@ -478,7 +478,7 @@ class desgin_specification(object):
         stator_inner_diameter_Dis = 2*air_gap_length_delta + rotor_outer_diameter_Dr
         stator_inner_radius_r_is = 0.5*stator_inner_diameter_Dis
 
-        fname = open(one_report_dir_prefix+file_name+'_s04'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s04'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Air Gap}
                 For 50 Hz machines, we have
                 \[\delta  = \frac{{0.2 + 0.01P_{mec}^{0.4}}}{{1000}},\,p = 1\]
@@ -542,7 +542,7 @@ class desgin_specification(object):
             raise Exception('Not implemented error.')
         kw1 = kd1 * kq1 * ksq1
 
-        fname = open(one_report_dir_prefix+file_name+'_s05'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s05'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Stator Winding and Slots}
                 \[{k_{wv}} = {k_{pv}}{k_{dv}}{k_{sqv}} = \sin \left( {v\frac{W}{{{\tau _p}}}\frac{\pi }{2}} \right)\frac{{2\sin \left( {\frac{v}{m}\frac{\pi }{2}} \right)}}{{\frac{Q}{{mp}}\sin \left( {v\pi \frac{p}{Q}} \right)}}\frac{{\sin \left( {v\frac{s}{{{\tau _p}}}\frac{\pi }{2}} \right)}}{{v\frac{s}{{{\tau _p}}}\frac{\pi }{2}}}\]
                  ''', file=fname)
@@ -570,7 +570,7 @@ class desgin_specification(object):
         self.guess_air_gap_flux_density
         linear_current_density_A = machine_constant_Cmec / (pi**2/sqrt(2)*kw1*self.guess_air_gap_flux_density)
         
-        fname = open(one_report_dir_prefix+file_name+'_s06'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s06'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Air Gap Flux Density}
                     Recall machine constant.
                     \[{C_{{\rm{mec}}}} = \frac{{{\pi ^2}}}{{\sqrt 2 }}{k_{ws1}}A{{\hat B}_\delta } = 150{\rm{kWs/}}{{\rm{m}}^{\rm{3}}}\]
@@ -600,7 +600,7 @@ class desgin_specification(object):
         air_gap_flux_Phi_m = alpha_i * self.guess_air_gap_flux_density * pole_pitch_tau_p * stack_length_eff
         no_series_coil_turns_N = sqrt(2)*desired_emf_Em / (2*pi*self.ExcitationFreq * kw1 * air_gap_flux_Phi_m) # p306
 
-        fname = open(one_report_dir_prefix+file_name+'_s07'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s07'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Number of Coil Turns}
                 \[{\alpha _i} > \pi /2\]
 
@@ -635,7 +635,7 @@ class desgin_specification(object):
         else:
             no_series_coil_turns_N = min([self.p*distribution_q*i for i in range(100)], key=lambda x:abs(x - no_series_coil_turns_N))  # using lower turns value has priority # https://stackoverflow.com/questions/12141150/from-list-of-integers-get-number-closest-to-a-given-value
 
-        fname = open(one_report_dir_prefix+file_name+'_s08'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s08'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Round up Number of Coil Turns}
                     This $N$ must be multiples of $pq$ and it affects air gap B.
                     For example of $pq=4$, you get an $N$ value as 18,
@@ -690,7 +690,7 @@ class desgin_specification(object):
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         #
             self.guess_air_gap_flux_density = (sqrt(2)*desired_emf_Em) / (2*pi*self.ExcitationFreq * kw1 *  alpha_i * no_series_coil_turns_N * pole_pitch_tau_p * stack_length_eff) # p306
-            fname = open(one_report_dir_prefix+file_name+'_s09'+file_suffix, 'w', encoding='utf-8')
+            fname = open(one_report_dir_prefix+file_name+'_s09'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
             print(r'''\subsubsection{Re-calculate Air Gap Flux Density and Beginning of Loop for $\alpha_i$}
                     \[{{\hat \Phi }_m} = {\alpha _i}{{\hat B}_\delta }{\tau _p}l'\]
                     \[{{\hat B}_\delta } = \frac{{\sqrt 2 {E_m}}}{{\omega {k_{w1}}{\alpha _i}N{\tau _p}l'}}\]
@@ -747,7 +747,7 @@ class desgin_specification(object):
             rotor_tooth_apparent_flux_over_slot_pitch_Phi_dr = stack_length_eff*rotor_slot_pitch_tau_ur*self.guess_air_gap_flux_density
             rotor_tooth_width_b_dr = stack_length_eff*rotor_slot_pitch_tau_ur*self.guess_air_gap_flux_density / (self.lamination_stacking_factor_kFe*stack_length*self.rotor_tooth_flux_density_B_dr) + 0.1e-4
 
-            fname = open(one_report_dir_prefix+file_name+'_s10'+file_suffix, 'w', encoding='utf-8')
+            fname = open(one_report_dir_prefix+file_name+'_s10'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
             print(r'''\subsubsection{Tooth Flux Density}
                     Stator tooth.
                     \[\begin{array}{l}
@@ -806,7 +806,7 @@ class desgin_specification(object):
             # The slot depth equals the tooth height hs = hd Pyrhonen09@p309
             stator_slot_height_h_ss = stator_tooth_height_h_ds
 
-            fname = open(one_report_dir_prefix+file_name+'_s11'+file_suffix, 'w', encoding='utf-8')
+            fname = open(one_report_dir_prefix+file_name+'_s11'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
             print(r'''\subsubsection{Dimension of Slots}
                     Guess efficiency ($\eta=0.9$) and power factor (${\rm PF}=0.6$). According to my simulation, it is important that you take a good guess at power factor, or else your design can be low in average torque. For example, if ${\rm PF}$ is 0.8, then the average torque is only 11 Nm, while according to my FEA simulation, a ${\rm PF}=0.6$ is reported and if this value is used, then the average torque reaches 21 Nm. The key physical quantity related to power factor is the rated stator current. That is, PF decreases from 0.8 down to 0.6 and in the meantime stator current 107 A increases up to 151 A.
                     \emph{P.S.: you can take an estimate of PF from the ratio of your designed magnetizing current to the stator current.}
@@ -999,7 +999,7 @@ class desgin_specification(object):
             air_gap_length_delta_eff = Carter_factor_kC * air_gap_length_delta
             air_gap_magnetic_voltage_Um_delta = air_gap_field_strength_H * air_gap_length_delta_eff
 
-            fname = open(one_report_dir_prefix+file_name+'_s12'+file_suffix, 'w', encoding='utf-8')
+            fname = open(one_report_dir_prefix+file_name+'_s12'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
             print(r'''\subsubsection{Magnetic Voltage}
                         Look up in BH table for
                         \[\begin{array}{l}
@@ -1079,7 +1079,7 @@ class desgin_specification(object):
 
 
 
-            fname = open(one_report_dir_prefix+file_name+'_s13'+file_suffix, 'w', encoding='utf-8')
+            fname = open(one_report_dir_prefix+file_name+'_s13'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
             print(r'''\subsubsection{(End Loop) Saturation Factor}
                         \[{k_{sat}} = \frac{{{{\hat U}_{m,ds}} + {{\hat U}_{m,dr}}}}{{{{\hat U}_{m,\delta }}}}\]
                         ''', file=fname)
@@ -1113,7 +1113,7 @@ class desgin_specification(object):
         stator_yoke_height_h_ys = 0.5*air_gap_flux_Phi_m / (self.lamination_stacking_factor_kFe*stack_length*self.stator_yoke_flux_density_Bys)
         rotor_yoke_height_h_yr = 0.5*air_gap_flux_Phi_m / (self.lamination_stacking_factor_kFe*stack_length*self.rotor_yoke_flux_density_Byr)
 
-        fname = open(one_report_dir_prefix+file_name+'_s14'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s14'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Yoke Geometry}
                 \[\begin{array}{l}
                 Select\,{{\hat B}_{ys}},{{\hat B}_{yr}}\,in\,Table6.1\\
@@ -1141,7 +1141,7 @@ class desgin_specification(object):
         rotor_inner_diameter_Dri = rotor_yoke_diameter_Dryi - 2*rotor_yoke_height_h_yr
 
 
-        fname = open(one_report_dir_prefix+file_name+'_s15'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s15'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Total Magnetic Voltage \& Machine Geometry}
                     When the air-gap diameter $D_s$, the heights $h_{ds}$ and $h_{dr}$ of the teeth, and the heights $h_{ys}$ and
                     $h_{yr}$ of the stator and rotor yokes are known, we obtain the outer diameter $D_{se}$ of the stator
@@ -1203,7 +1203,7 @@ class desgin_specification(object):
                                         + 0.5*stator_yoke_magnetic_voltage_Um_ys + 0.5*rotor_yoke_magnetic_voltage_Um_yr
         stator_magnetizing_current_Is_mag = total_magnetic_voltage_Um_tot * pi* self.p / (no_phase_m * kw1 * no_series_coil_turns_N * sqrt(2))
 
-        fname = open(one_report_dir_prefix+file_name+'_s16'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s16'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Magnetizing Current Providing Total Magnetic Voltage}
                     \[q = \frac{{{Q_s}}}{{2pm}},q > 1 \Rightarrow {Q_s} = 12,18,24,30,36,42,48\]
                     \[\begin{array}{l}
@@ -1224,7 +1224,7 @@ class desgin_specification(object):
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # 17. Losses Computation and Efficiency
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        fname = open(one_report_dir_prefix+file_name+'_s17'+file_suffix, 'w', encoding='utf-8')
+        fname = open(one_report_dir_prefix+file_name+'_s17'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Efficiency and Equivalent Circuit Parameters}
                     Since the dimensions have been defined and the winding has been selected, the resistances and inductances of the machine are now calculated. 
                     The magnetizing inductance was discussed in Chapter 3, the leakage inductances in Chapter 4 and the resistances in Chapter 5. 
