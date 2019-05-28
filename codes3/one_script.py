@@ -15,23 +15,23 @@ if True:
     # fea_config_dict['use_weights'] = 'O1'
     # run_folder = r'run#528/'
 
-    my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals()) # define spec
-    fea_config_dict['local_sensitivity_analysis'] = True
-    fea_config_dict['bool_refined_bounds'] = False
-    fea_config_dict['use_weights'] = 'O2'
-    # run_folder = r'run#530/' # 圆形槽JMAG绘制失败BUG
-    run_folder = r'run#531/'
+    # my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals()) # define spec
+    # fea_config_dict['local_sensitivity_analysis'] = True
+    # fea_config_dict['bool_refined_bounds'] = False
+    # fea_config_dict['use_weights'] = 'O2'
+    # # run_folder = r'run#530/' # 圆形槽JMAG绘制失败BUG
+    # run_folder = r'run#531/'
 
     # fea_config_dict['local_sensitivity_analysis'] = False
     # fea_config_dict['bool_refined_bounds'] = False
     # fea_config_dict['use_weights'] = 'O2'
     # run_folder = r'run#532/'
 
-    my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
-    fea_config_dict['local_sensitivity_analysis'] = False
-    fea_config_dict['bool_refined_bounds'] = False
-    fea_config_dict['use_weights'] = 'O2'
-    run_folder = r'run#53001/'
+    # my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    # fea_config_dict['local_sensitivity_analysis'] = False
+    # fea_config_dict['bool_refined_bounds'] = False
+    # fea_config_dict['use_weights'] = 'O2'
+    # run_folder = r'run#53001/'
 
     my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
     fea_config_dict['local_sensitivity_analysis'] = False

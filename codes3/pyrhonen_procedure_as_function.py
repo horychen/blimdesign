@@ -949,7 +949,7 @@ class desgin_specification(object):
         #
             if 'M19' in self.Steel:
                 # M19-Gauge29 (from FEMM@spmloss example)
-                hdata, bdata = np.loadtxt('../Arnon5/M-19-Steel-BH-Curve-afterJMAGsmooth.txt', unpack=True, usecols=(0,1))
+                hdata, bdata = np.loadtxt('./M-19-Steel-BH-Curve-afterJMAGsmooth.BH', unpack=True, usecols=(0,1))
                 print('The magnetic material is M19-Gauge29.', file=fname)
             elif 'Arnon' in self.Steel and '7' in self.Steel:
                 # Arnon-7 (from ELS)
