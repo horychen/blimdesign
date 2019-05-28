@@ -7,6 +7,7 @@ bool_post_processing = False # solve or post-processing
 my_execfile('./default_setting.py', g=globals(), l=locals()) # define fea_config_dict
 
 if True:
+    # Branch Prototype
     # my_execfile('./spec_2poleOD150mm880Hz.py', g=globals(), l=locals()) # define spec
     # fea_config_dict['local_sensitivity_analysis'] = False
     # fea_config_dict['bool_refined_bounds'] = False
@@ -15,31 +16,52 @@ if True:
     # fea_config_dict['use_weights'] = 'O1'
     # run_folder = r'run#528/'
 
-    # my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals()) # define spec
-    # fea_config_dict['local_sensitivity_analysis'] = True
-    # fea_config_dict['bool_refined_bounds'] = False
-    # fea_config_dict['use_weights'] = 'O2'
-    # # run_folder = r'run#530/' # 圆形槽JMAG绘制失败BUG
-    # run_folder = r'run#531/'
 
-    # fea_config_dict['local_sensitivity_analysis'] = False
-    # fea_config_dict['bool_refined_bounds'] = False
-    # fea_config_dict['use_weights'] = 'O2'
-    # run_folder = r'run#532/'
+    if True:
+        # ECCE
 
-    # my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
-    # fea_config_dict['local_sensitivity_analysis'] = False
-    # fea_config_dict['bool_refined_bounds'] = False
-    # fea_config_dict['use_weights'] = 'O2'
-    # run_folder = r'run#53001/'
+        my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals()) # define spec
+        fea_config_dict['local_sensitivity_analysis'] = True
+        fea_config_dict['bool_refined_bounds'] = True
+        fea_config_dict['use_weights'] = 'O2'
 
-    my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
-    fea_config_dict['local_sensitivity_analysis'] = False
-    fea_config_dict['bool_refined_bounds'] = False
-    fea_config_dict['use_weights'] = 'O2'
-    run_folder = r'run#53002/'
+        # run_folder = r'run#530/' # 圆形槽JMAG绘制失败BUG
 
+        # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 2
+        # run_folder = r'run#531/' # number_of_variant = 2
 
+        # fea_config_dict['local_sensitivity_analysis'] = False
+        # fea_config_dict['bool_refined_bounds'] = False
+        # fea_config_dict['use_weights'] = 'O2'
+        # run_folder = r'run#532/'
+
+        # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 10
+        # run_folder = r'run#533/' # number_of_variant = 10
+
+        fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 20
+        run_folder = r'run#534/' # number_of_variant = 20
+
+    else:
+        # Prototype
+        pass
+
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # Severson02
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+        # fea_config_dict['local_sensitivity_analysis'] = False
+        # fea_config_dict['bool_refined_bounds'] = False
+        # fea_config_dict['use_weights'] = 'O2'
+        # run_folder = r'run#53001/'
+
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # Severson01
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+        # fea_config_dict['local_sensitivity_analysis'] = False
+        # fea_config_dict['bool_refined_bounds'] = False
+        # fea_config_dict['use_weights'] = 'O2'
+        # run_folder = r'run#53002/'
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['Active_Qr'] = spec.Qr
@@ -175,69 +197,107 @@ class acm_designer(object):
         for result in de_generator:
             print(result)
 
-    def collect_results_of_local_sensitivity_analysis(self):
+    def check_results_of_local_sensitivity_analysis(self):
         if self.fea_config_dict['local_sensitivity_analysis'] == True:
             run_folder = self.fea_config_dict['run_folder'][:-1] + 'lsa/'
         else:
             run_folder = self.fea_config_dict['run_folder']
 
         # Sensitivity Bar Charts
-        if os.path.exists(fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt'):
-            try:
-                results_for_refining_bounds = utility.build_sensitivity_bar_charts(self.spec, self.sw)
-                print(results_for_refining_bounds)
-                quit()
-            except Exception as e:
-                raise e
-                os.remove(fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt')
-                print('Remove ' + fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt')
-                print('Continue for sensitivity analysis...')
-        else:
-            print('swarm_data.txt not found.')
+        return os.path.exists(fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt')
 
-        return results_for_refining_bounds
 
-    def get_refined_bounds(self, the_bounds, raw_narrowing_factors):
-        # raw_narrowing_factors = [   [20, 100], # 0~20: 4~4.5 mm
-        #                         [7, 8, 9, 10, 11, 12], #, 13, 14], #, 15, 16, 17, 18, 19, 20],
-        #                         [6, 8],
-        #                         [3, 4, 5, 6, 7],
-        #                         [4, 5],
-        #                         [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-        #                         [0, 1, 2, 3, 4]]
+    def collect_results_of_local_sensitivity_analysis(self):
+        print('Start to collect results for local sensitivity analysis...')
+        try:
+            results_for_refining_bounds = utility.build_sensitivity_bar_charts(self.spec, self.sw)
+            # quit()
+        except Exception as e:
+            raise e
+            os.remove(fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt')
+            print('Remove ' + fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt')
+            print('Continue for sensitivity analysis...')
 
-        # Sensitivity Analysis based narrowing bounds
-        numver_of_variants = 20.0
+        self.results_for_refining_bounds = results_for_refining_bounds
+        # return results_for_refining_bounds
 
-        if '5250' in run_folder:
-            # from utility.py:run525 O2
-            raw_narrow_bounds = [   [20, 100], # 0~20: 4~4.5 mm
-                                    [7, 8, 9, 10, 11, 12], #, 13, 14], #, 15, 16, 17, 18, 19, 20],
-                                    [6, 8],
-                                    [3, 4, 5, 6, 7],
-                                    [4, 5],
-                                    [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-                                    [0, 1, 2, 3, 4]]
+    def build_refined_bounds(self, the_bounds):
 
-        print('raw_narrow_bounds', raw_narrow_bounds)
+        de_config_dict = self.de_config_dict
+        number_of_variants= self.fea_config_dict['local_sensitivity_analysis_number_of_variants'] # 故意不加1的
 
-        for ind, bound in enumerate(raw_narrow_bounds):
-            de_config_dict['narrow_bounds_normalized'][ind].append(bound[0] /numver_of_variants)
-            de_config_dict['narrow_bounds_normalized'][ind].append(bound[-1]/numver_of_variants)
+        print('-'*20, 'results_for_refining_bounds (a.k.a. results_for_refining_bounds):')
+        str_to_file = 'When you are done, replace this line with "Done", save file and close all figures.\n'
+        for key, val in self.results_for_refining_bounds.items():
+            print('---', key)
+            for el in val:
+                print('\t', el)
+            str_to_file += key + '\n' + '\n'.join( ','.join(f'{x}' for x in y) for y in val ) + '\n'
 
-            if de_config_dict['narrow_bounds_normalized'][ind][0] == de_config_dict['narrow_bounds_normalized'][ind][1]:
-                raise Exception('Upper bound equals to lower bound. Take a check here.')
-                print('ind=',ind, '---manually set the proper bounds based on the initial design: 7.00075,1.26943,0.924664,4.93052,1,3,1')
-                de_config_dict['narrow_bounds_normalized'][ind][0] = 4.93052 / 5
+        self.logger.debug('The default refining factors will be for: %s'%(self.fea_config_dict['use_weights']))
 
-        for bnd1, bnd2 in zip(de_config_dict['original_bounds'], de_config_dict['narrow_bounds_normalized']):
+        with open('./refining_factors.txt', 'w') as f:
+            f.write(str_to_file)
+        os.system('start ./refining_factors.txt')
+        from pylab import show
+        show()
+        from time import sleep
+        while True:
+            with open('./refining_factors.txt') as f:
+                buf = f.read()
+                if buf[:4] == 'Done' or buf[:4] == 'done':
+                    print('Done')
+                    break
+                else:
+                    print('.', end='')
+                    sleep(1)
+        file_backup_user_input = './refining_factors_%s.txt'%(self.fea_config_dict['run_folder'][:-1])
+        if os.path.exists(file_backup_user_input):
+            os.system('start %s'%(file_backup_user_input))
+            os.remove(file_backup_user_input)
+        os.rename('./refining_factors.txt', file_backup_user_input)
+
+        buf_list = buf.split('\n')
+        # for el in buf_list:
+        #     print(el)
+
+        print('fea_config_dict - use_weights changed from %s to %s'%(self.fea_config_dict['use_weights'], buf_list[1]))
+        self.fea_config_dict['use_weights'] = buf_list[1]
+
+        user_input_for_refining_bounds = [[float(x) for x in y.split(',')] for y in buf_list[2:2+7]]
+        print('user_input_for_refining_bounds')
+        for el in user_input_for_refining_bounds:
+            print('\t', el)
+
+        for ind, bound in enumerate(user_input_for_refining_bounds):
+            下界 = bound[0]
+            if 下界 != 0:
+                下界 -= 1
+            上界 = bound[-1]
+            if 上界 != number_of_variants:
+                上界 += 1
+            self.de_config_dict['narrow_bounds_normalized'][ind].append(下界/number_of_variants)
+            self.de_config_dict['narrow_bounds_normalized'][ind].append(上界/number_of_variants)
+
+        self.de_config_dict['bounds'] = []
+        for bnd1, bnd2 in zip(self.de_config_dict['original_bounds'], self.de_config_dict['narrow_bounds_normalized']):
             diff = bnd1[1] - bnd1[0]
-            de_config_dict['bounds'].append( [ bnd1[0]+diff*bnd2[0] , bnd1[0]+diff*bnd2[1] ]) # 注意，都是乘以original_bounds的上限哦！
+            self.de_config_dict['bounds'].append( [ bnd1[0]+diff*bnd2[0] , bnd1[0]+diff*bnd2[1] ]) # 注意，都是乘以original_bounds的上限哦！
 
-        print('original_bounds:', de_config_dict['original_bounds'])
-        print('refined bounds:', de_config_dict['bounds'])
-        print('narrow_bounds_normalized:', de_config_dict['narrow_bounds_normalized'])
-        # quit()
+        print('-'*40)
+        print('narrow_bounds_normalized:')
+        for el in self.de_config_dict['narrow_bounds_normalized']:
+            print('\t', el)
+
+        print('original_bounds:')
+        for el in self.de_config_dict['original_bounds']:
+            print('\t', el)
+
+        print('refined bounds:')
+        for el in self.de_config_dict['bounds']:
+            print('\t', el)
+
+        return de_config_dict['bounds']
 
     def build_local_bounds_from_best_design(self, best_design):
         raise
@@ -502,9 +562,9 @@ class acm_designer(object):
         show()
 
 app = acm_designer(fea_config_dict, spec)
-if 'Y730' in fea_config_dict['pc_name']:
-    app.build_oneReport()
-    app.talk_to_mysql_database()
+# if 'Y730' in fea_config_dict['pc_name']:
+#     app.build_oneReport()
+#     app.talk_to_mysql_database()
 # quit()
 app.init_logger()
 # app.evaluate_design(spec.sw.im)
@@ -520,19 +580,27 @@ if True:
 
     # 如果需要局部敏感性分析，那就先跑了再说
     if fea_config_dict['local_sensitivity_analysis'] == True:
-        app.run_local_sensitivity_analysis(app.de_config_dict['original_bounds'], design_denorm=None)
-        results_for_refining_bounds = app.collect_results_of_local_sensitivity_analysis()
+        if not app.check_results_of_local_sensitivity_analysis():
+            app.run_local_sensitivity_analysis(app.de_config_dict['original_bounds'], design_denorm=None)
+        else:
+            app.de_config_dict['bounds'] = app.de_config_dict['original_bounds']
+            app.init_swarm() # define app.sw
+            app.sw.generate_pop(specified_initial_design_denorm=None)
+        app.collect_results_of_local_sensitivity_analysis() # need sw to work
+        fea_config_dict['local_sensitivity_analysis'] = False # turn off lsa mode
 
     # Build the final bounds
     if fea_config_dict['bool_refined_bounds'] == -1:
-        app.de_config_dict['bounds'] = app.build_local_bounds_from_best_design(None)
+        app.build_local_bounds_from_best_design(None)
+    elif fea_config_dict['bool_refined_bounds'] == True:
+        app.build_refined_bounds(app.de_config_dict['original_bounds'])
     elif fea_config_dict['bool_refined_bounds'] == False:
         app.de_config_dict['bounds'] = app.de_config_dict['original_bounds']
-    elif fea_config_dict['bool_refined_bounds'] == True:
-        app.de_config_dict['bounds'] = app.get_refined_bounds(app.de_config_dict['original_bounds'], results_for_refining_bounds)
     else:
         raise
-    print('The final bounds are', app.de_config_dict['bounds'])
+    print('The final bounds are:')
+    for el in app.de_config_dict['bounds']:
+        print('\t', el)
 
     if False == bool_post_processing:
         if fea_config_dict['flag_optimization'] == True:

@@ -337,6 +337,9 @@ class Pyrhonen_design(object):
     def show_norm(self, bounds, design_parameters_denorm):
         min_b, max_b = np.asarray(bounds).T 
         diff = np.fabs(min_b - max_b)
+        print(design_parameters_denorm)
+        print(min_b)
+        print(bounds)
         self.design_parameters_norm = (design_parameters_denorm - min_b)/diff #= pop
         # print type(self.design_parameters_norm)
         print('[Normalized]:', end=' ')
@@ -1300,7 +1303,7 @@ def max_indices(arr, k):
 
 
 
-def autolabel(ax, rects, xpos='center', bias=0.0):
+def autolabel(ax, rects, xpos='center', bias=0.0, textfont=None):
     """
     Attach a text label above each bar in *rects*, displaying its height.
 
@@ -1315,7 +1318,7 @@ def autolabel(ax, rects, xpos='center', bias=0.0):
     for rect in rects:
         height = rect.get_height()
         ax.text(rect.get_x() + rect.get_width()*offset[xpos], 1.01*height+bias,
-                '%.2f'%(height), ha=ha[xpos], va='bottom', rotation=90)
+                '%.2f'%(height), ha=ha[xpos], va='bottom', rotation=90, **textfont)
 
 def efficiency_at_50kW(total_loss):
     return 50e3 / (np.array(total_loss) + 50e3)  # 用50 kW去算才对，只是这样转子铜耗数值会偏大哦。 效率计算：机械功率/(损耗+机械功率)        
@@ -1903,9 +1906,21 @@ class SwarmDataAnalyzer(object):
         # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
         number_of_variant = self.sw.fea_config_dict['local_sensitivity_analysis_number_of_variants'] + 1
 
+        from pylab import subplots, mpl
+        mpl.rcParams['legend.fontsize'] = 12
+        # mpl.rcParams['legend.family'] = 'Times New Roman'
+        mpl.rcParams['font.family'] = ['Times New Roman']
+        font = {'family' : 'Times New Roman', #'serif',
+                'color' : 'darkblue',
+                'weight' : 'normal',
+                'size' : 14,}
+        textfont = {'family' : 'Times New Roman', #'serif',
+                    'color' : 'darkblue',
+                    'weight' : 'normal',
+                    'size' : 11.5,}
+        mpl.style.use('classic')
 
-        from pylab import subplots
-        fig, axeses = subplots(4, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+        fig, axeses = subplots(4, 2, sharex=True, dpi=150, figsize=(16*0.75, 8*0.75), facecolor='w', edgecolor='k')
         ax_list = []
         for i in range(4):
             ax_list.extend(axeses[i].tolist())
@@ -1919,13 +1934,13 @@ class SwarmDataAnalyzer(object):
 
         # Extract data
         param_list = [
-        'air_gap_length_delta',
-        'stator_tooth_width_b_ds',
-        'rotor_tooth_width_b_dr',
-        'Angle_StatorSlotOpen',
-        'Width_RotorSlotOpen ',
-        'Width_StatorTeethHeadThickness',
-        'Length_HeadNeckRotorSlot']
+        r'$L_g$',# 'air_gap_length_delta',
+        r'$w_{st}$',# 'stator_tooth_width_b_ds',
+        r'$w_{rt}$',# 'rotor_tooth_width_b_dr',
+        r'$\theta_{so}$',# 'Angle_StatorSlotOpen',
+        r'$w_{ro}$',# 'Width_RotorSlotOpen ',
+        r'$d_{so}$',# 'Width_StatorTeethHeadThickness',
+        r'$d_{ro}$']# 'Length_HeadNeckRotorSlot']
         y_label_list = ['PF', r'$\eta$ [100%]', r'$T_{em} [N]$', r'$T_{rip}$ [100%]', r'$|F|$ [N]', r'$E_m$ [100%]', r'$E_a$ [deg]', 
                         r'$P_{Cu,s,JMAG}$', r'$P_{Cu,r,JMAG}$', r'$P_{Fe}$ [W]', r'$P_{eddy}$', r'$P_{hyst}$', r'$P_{Cu,s,FEMM}$', r'$P_{Cu,r,FEMM}$', 
                         r'Windage loss', r'Total loss']
@@ -1952,7 +1967,7 @@ class SwarmDataAnalyzer(object):
                     # if j == 6:
                     ax_list[ind].plot(y_vs_design_parameter, 'o-', lw=0.75, label=str(j)+' '+param_list[j], alpha=0.5)
                 except IndexError as e:
-                    print('Check the length of y should be 7*(%d+1)=147, or else you should remove the redundant results in swarm_data.txt (they are produced because of the interrupted/resumed script run.)'%(number_of_variant))
+                    print('Check the length of y should be 7*(%d+1)=%d, or else you should remove the redundant results in swarm_data.txt (they are produced because of the interrupted/resumed script run.)'%(number_of_variant, 7*number_of_variant))
                     raise e
                 print('\tj=', j, param_list[j], '\t\t Max-Min:', max(y_vs_design_parameter) - min(y_vs_design_parameter))
 
@@ -1960,18 +1975,19 @@ class SwarmDataAnalyzer(object):
                 data_min[ind].append(min(y_vs_design_parameter))            
 
             if i==1:
-                ax_list[ind].legend()
+                ax_list[ind].legend(prop={'family':'Times New Roman'})
             ax_list[ind].grid()
-            ax_list[ind].set_ylabel(y_label_list[i])
+            ax_list[ind].set_ylabel(y_label_list[i], **font)
 
+        print('\nObjectives vs. geometry variables:')
         for ind, el in enumerate(data_max):
             print(ind, 'Max', el)
-        print()
+        print('\nObjectives vs. geometry variables:')
         for ind, el in enumerate(data_min):
             print(ind, 'Min', el)
 
         if self.reference_design is not None:
-            print('-------------------- Here goes the reference design:')
+            print('\n-------------------- Here goes the reference design:')
             for el in self.reference_design[1:]:
                 print(el, end=' ')
             self.reference_data = [float(el) for el in self.reference_design[3].split(',')]
@@ -2015,28 +2031,28 @@ class SwarmDataAnalyzer(object):
             print('\t', j, param_list[j], '\t\t max O1 - min O1:', max(O1_vs_design_parameter) - min(O1_vs_design_parameter), '\t\t', end=' ')
 
             # narrow bounds (refine bounds)
-            results_for_refining_bounds['O1'].append( [ind for ind, el in enumerate(O1_vs_design_parameter) if el < O1_ref*1.05] )
+            results_for_refining_bounds['O1'].append( [ind for ind, el in enumerate(O1_vs_design_parameter) if el < O1_ref*1.0] )
             print(results_for_refining_bounds['O1'][j]) #'<- to derive new original_bounds.'
 
             O1_max.append(max(O1_vs_design_parameter))
             O1_min.append(min(O1_vs_design_parameter))            
         O1_ax.legend()
         O1_ax.grid()
-        O1_ax.set_ylabel('O1 [1]')
-        O1_ax.set_xlabel('Count of design variants')
+        O1_ax.set_ylabel('O1 [1]', **font)
+        O1_ax.set_xlabel('Count of design variants', **font)
 
-        fig_prototype = figure(500, figsize=(10, 5), facecolor='w', edgecolor='k')
-        O2_prototype_ax = fig_prototype.gca()
-        O2_prototype_ax.plot(list(range(-1, 22)), O1_ref*np.ones(23), 'k--', label='reference design')
-        O2_prototype_ax.plot(O2_prototype_data[1], 'o-', lw=0.75, alpha=0.5, label=r'$\delta$'         )
-        O2_prototype_ax.plot(O2_prototype_data[0], 'v-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,s}$')
-        O2_prototype_ax.plot(O2_prototype_data[3], 's-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,r}$')
-        O2_prototype_ax.plot(O2_prototype_data[5], '^-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,s}$')
-        O2_prototype_ax.plot(O2_prototype_data[2], 'd-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,r}$')
-        O2_prototype_ax.plot(O2_prototype_data[6], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
-        O2_prototype_ax.plot(O2_prototype_data[4], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
-        O2_prototype_ax.legend()
-        O2_prototype_ax.set_ylabel('$O_2(x)$ [1]')
+        # fig_prototype = figure(500, figsize=(10, 5), facecolor='w', edgecolor='k')
+        # O2_prototype_ax = fig_prototype.gca()
+        # O2_prototype_ax.plot(list(range(-1, 22)), O1_ref*np.ones(23), 'k--', label='Reference design')
+        # O2_prototype_ax.plot(O2_prototype_data[1], 'o-', lw=0.75, alpha=0.5, label=r'$L_g$')
+        # O2_prototype_ax.plot(O2_prototype_data[0], 'v-', lw=0.75, alpha=0.5, label=r'$w_{st}$')
+        # O2_prototype_ax.plot(O2_prototype_data[3], 's-', lw=0.75, alpha=0.5, label=r'$w_{rt}$')
+        # O2_prototype_ax.plot(O2_prototype_data[5], '^-', lw=0.75, alpha=0.5, label=r'$\theta_{so}$')
+        # O2_prototype_ax.plot(O2_prototype_data[2], 'd-', lw=0.75, alpha=0.5, label=r'$w_{ro}$')
+        # O2_prototype_ax.plot(O2_prototype_data[6], '*-', lw=0.75, alpha=0.5, label=r'$d_{so}$')
+        # O2_prototype_ax.plot(O2_prototype_data[4], 'X-', lw=0.75, alpha=0.5, label=r'$d_{ro}$')
+        # O2_prototype_ax.legend()
+        # O2_prototype_ax.set_ylabel('$O_2(x)$ [1]', **font)
 
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         # O2
@@ -2061,27 +2077,27 @@ class SwarmDataAnalyzer(object):
             # narrow bounds (refine bounds)
             O2_ax.plot(O2_vs_design_parameter, 'o-', label=str(j)+' '+param_list[j], alpha=0.5)
             print('\t', j, param_list[j], '\t\t max O2 - min O2:', max(O2_vs_design_parameter) - min(O2_vs_design_parameter), '\t\t', end=' ')
-            results_for_refining_bounds['O2'].append( [ind for ind, el in enumerate(O2_vs_design_parameter) if el < O2_ref*1.05] )
+            results_for_refining_bounds['O2'].append( [ind for ind, el in enumerate(O2_vs_design_parameter) if el < O2_ref*1.0] )
             print(results_for_refining_bounds['O2'][j]) #'<- to derive new original_bounds.'
 
             O2_max.append(max(O2_vs_design_parameter))
             O2_min.append(min(O2_vs_design_parameter))
         O2_ax.legend()
         O2_ax.grid()
-        O2_ax.set_ylabel('O2 [1]')
-        O2_ax.set_xlabel('Count of design variants')
+        O2_ax.set_ylabel('O2 [1]', **font)
+        O2_ax.set_xlabel('Count of design variants', **font)
 
         # for ecce digest
         fig_ecce = figure(figsize=(10, 5), facecolor='w', edgecolor='k')
         O2_ecce_ax = fig_ecce.gca()
-        O2_ecce_ax.plot(list(range(-1, 22)), O2_ref*np.ones(23), 'k--', label='reference design')
-        O2_ecce_ax.plot(O2_ecce_data[1], 'o-', lw=0.75, alpha=0.5, label=r'$\delta$'         )
-        O2_ecce_ax.plot(O2_ecce_data[0], 'v-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,s}$')
-        O2_ecce_ax.plot(O2_ecce_data[3], 's-', lw=0.75, alpha=0.5, label=r'$b_{\rm tooth,r}$')
-        O2_ecce_ax.plot(O2_ecce_data[5], '^-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,s}$')
-        O2_ecce_ax.plot(O2_ecce_data[2], 'd-', lw=0.75, alpha=0.5, label=r'$w_{\rm open,r}$')
-        O2_ecce_ax.plot(O2_ecce_data[6], '*-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,s}$')
-        O2_ecce_ax.plot(O2_ecce_data[4], 'X-', lw=0.75, alpha=0.5, label=r'$h_{\rm head,r}$')
+        O2_ecce_ax.plot(list(range(-1, 22)), O2_ref*np.ones(23), 'k--', label='Reference design')
+        O2_ecce_ax.plot(O2_ecce_data[1], 'o-', lw=0.75, alpha=0.5,      label=r'$L_g$')
+        O2_ecce_ax.plot(O2_ecce_data[0], 'v-', lw=0.75, alpha=0.5,      label=r'$w_{st}$')
+        O2_ecce_ax.plot(O2_ecce_data[3], 's-', lw=0.75, alpha=0.5,      label=r'$w_{rt}$')
+        O2_ecce_ax.plot(O2_ecce_data[5], '^-', lw=0.75, alpha=0.5,      label=r'$\theta_{so}$')
+        O2_ecce_ax.plot(O2_ecce_data[2], 'd-', lw=0.75, alpha=0.5,      label=r'$w_{ro}$')
+        O2_ecce_ax.plot(O2_ecce_data[6], '*-', lw=0.75, alpha=0.5,      label=r'$d_{so}$')
+        O2_ecce_ax.plot(O2_ecce_data[4], 'X-', lw=0.75, alpha=0.5,      label=r'$d_{ro}$')
 
         myfontsize = 12.5
         from pylab import plt
@@ -2114,11 +2130,11 @@ class SwarmDataAnalyzer(object):
         O2_ecce_ax.annotate('Upper bound', xytext=(18.0, 5.5),  xy=(20, 4), xycoords='data', arrowprops=dict(arrowstyle="->"))
         O2_ecce_ax.set_xlim((-0.5,20.5))
         O2_ecce_ax.set_ylim((0,14)) # 4,14
-        O2_ecce_ax.set_xlabel(r'Number of design variant', fontsize=myfontsize)
-        O2_ecce_ax.set_ylabel(r'$O_2(x)$ [1]', fontsize=myfontsize)
+        O2_ecce_ax.set_xlabel(r'Number of design variant', **font)
+        O2_ecce_ax.set_ylabel(r'$O_2(x)$ [1]', **font)
         fig_ecce.tight_layout()
         # fig_ecce.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction_full_paper\images\O2_vs_params.png', dpi=150)
-        plt.show()
+        # plt.show()
         # quit() ###################################
 
 
@@ -2171,22 +2187,24 @@ class SwarmDataAnalyzer(object):
         count = np.arange(len(y_max_vs_design_parameter_0))  # the x locations for the groups
         width = 1.0  # the width of the bars
 
-        fig, ax = plt.subplots(dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')                                      #  #1034A
-        rects2 = ax.bar(count - 3*width/8, y_min_vs_design_parameter_1, width/8, alpha=0.5, label=r'$\delta$,           Air gap length', color='#6593F5')
-        rects1 = ax.bar(count - 2*width/8, y_min_vs_design_parameter_0, width/8, alpha=0.5, label=r'$b_{\rm tooth,s}$, Stator tooth width', color='#1D2951') # https://digitalsynopsis.com/design/beautiful-color-palettes-combinations-schemes/
-        rects4 = ax.bar(count - 1*width/8, y_min_vs_design_parameter_3, width/8, alpha=0.5, label=r'$b_{\rm tooth,r}$, Rotor tooth width', color='#03396c')
-        rects6 = ax.bar(count + 0*width/8, y_min_vs_design_parameter_5, width/8, alpha=0.5, label=r'$w_{\rm open,s}$, Stator slot open', color='#6497b1')
-        rects3 = ax.bar(count + 1*width/8, y_min_vs_design_parameter_2, width/8, alpha=0.5, label=r'$w_{\rm open,r}$, Rotor slot open',  color='#0E4D92')
-        rects5 = ax.bar(count + 2*width/8, y_min_vs_design_parameter_4, width/8, alpha=0.5, label=r'$h_{\rm head,s}$, Stator head height', color='#005b96')
-        rects7 = ax.bar(count + 3*width/8, y_min_vs_design_parameter_6, width/8, alpha=0.5, label=r'$h_{\rm head,r}$, Rotor head height', color='#b3cde0') 
+        fig = figure(dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+        ax = fig.gca()
+        # fig, ax = plt.subplots(dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')                                      #  #1034A
+        rects1 = ax.bar(count - 3*width/8, y_min_vs_design_parameter_0, width/8, alpha=0.5, label=r'$L_g$, Air gap length', color='#6593F5')
+        rects2 = ax.bar(count - 2*width/8, y_min_vs_design_parameter_1, width/8, alpha=0.5, label=r'$b_{st}$, Stator tooth width', color='#1D2951') # https://digitalsynopsis.com/design/beautiful-color-palettes-combinations-schemes/
+        rects3 = ax.bar(count - 1*width/8, y_min_vs_design_parameter_2, width/8, alpha=0.5, label=r'$b_{rt}$, Rotor tooth width', color='#03396c')
+        rects4 = ax.bar(count - 0*width/8, y_min_vs_design_parameter_3, width/8, alpha=0.5, label=r'$\theta_{so}$, Stator open width', color='#6497b1')
+        rects5 = ax.bar(count + 1*width/8, y_min_vs_design_parameter_4, width/8, alpha=0.5, label=r'$w_{ro}$, Rotor open width',  color='#0E4D92')
+        rects6 = ax.bar(count + 2*width/8, y_min_vs_design_parameter_5, width/8, alpha=0.5, label=r'$d_{so}$, Stator open depth', color='#005b96')
+        rects7 = ax.bar(count + 3*width/8, y_min_vs_design_parameter_6, width/8, alpha=0.5, label=r'$d_{ro}$, Rotor open depth', color='#b3cde0') 
         print('ylim=', ax.get_ylim())
-        autolabel(ax, rects1, bias=-0.10)
-        autolabel(ax, rects2, bias=-0.10)
-        autolabel(ax, rects3, bias=-0.10)
-        autolabel(ax, rects4, bias=-0.10)
-        autolabel(ax, rects5, bias=-0.10)
-        autolabel(ax, rects6, bias=-0.10)
-        autolabel(ax, rects7, bias=-0.10)
+        autolabel(ax, rects1, bias=-0.10, textfont=textfont)
+        autolabel(ax, rects2, bias=-0.10, textfont=textfont)
+        autolabel(ax, rects3, bias=-0.10, textfont=textfont)
+        autolabel(ax, rects4, bias=-0.10, textfont=textfont)
+        autolabel(ax, rects5, bias=-0.10, textfont=textfont)
+        autolabel(ax, rects6, bias=-0.10, textfont=textfont)
+        autolabel(ax, rects7, bias=-0.10, textfont=textfont)
         one_one = np.array([1, 1])
         minus_one_one = np.array([-1, 1])
         ax.plot(rects6[0].get_x() + 0.5*width*minus_one_one, ref[0]*one_one, 'k--', lw=1.0, alpha=0.6, label='Reference design' )
@@ -2197,33 +2215,34 @@ class SwarmDataAnalyzer(object):
         ax.plot(rects6[5].get_x() + 0.5*width*minus_one_one, ref[5]*one_one, 'k--', lw=1.0, alpha=0.6 )
         ax.plot(rects6[6].get_x() + 0.5*width*minus_one_one, ref[6]*one_one, 'k--', lw=1.0, alpha=0.6 )
         ax.plot(rects6[7].get_x() + 0.5*width*minus_one_one, ref[7]*one_one, 'k--', lw=1.0, alpha=0.6 )
-        ax.legend(loc='upper right') 
-        ax.text(rects6[0].get_x() - 3.5/8*width, ref[0]*1.01, '%.2f'%(ref[0]), ha='center', va='bottom', rotation=90)
-        ax.text(rects6[1].get_x() - 3.5/8*width, ref[1]*1.01, '%.2f'%(ref[1]), ha='center', va='bottom', rotation=90)
-        ax.text(rects6[2].get_x() - 3.5/8*width, ref[2]*1.01, '%.2f'%(ref[2]), ha='center', va='bottom', rotation=90)
-        ax.text(rects6[3].get_x() - 3.5/8*width, ref[3]*1.01, '%.2f'%(ref[3]), ha='center', va='bottom', rotation=90)
-        ax.text(rects6[4].get_x() - 3.5/8*width, ref[4]*1.01, '%.2f'%(ref[4]), ha='center', va='bottom', rotation=90)
-        ax.text(rects6[5].get_x() - 3.5/8*width, ref[5]*1.01, '%.2f'%(ref[5]), ha='center', va='bottom', rotation=90)
-        ax.text(rects6[6].get_x() - 3.5/8*width, ref[6]*1.01, '%.2f'%(ref[6]), ha='center', va='bottom', rotation=90)
-        ax.text(rects6[7].get_x() - 3.5/8*width, ref[7]*1.01, '%.2f'%(ref[7]), ha='center', va='bottom', rotation=90)
+        ax.legend(loc='upper right', prop={'family':'Times New Roman'})
+        # text for indicating reference values
+        ax.text(rects6[0].get_x() - 3.5/8*width, ref[0]*1.01, '%.2f'%(ref[0]), ha='center', va='bottom', rotation=90, **textfont)
+        ax.text(rects6[1].get_x() - 3.5/8*width, ref[1]*1.01, '%.2f'%(ref[1]), ha='center', va='bottom', rotation=90, **textfont)
+        ax.text(rects6[2].get_x() - 3.5/8*width, ref[2]*1.01, '%.2f'%(ref[2]), ha='center', va='bottom', rotation=90, **textfont)
+        ax.text(rects6[3].get_x() - 3.5/8*width, ref[3]*1.01, '%.2f'%(ref[3]), ha='center', va='bottom', rotation=90, **textfont)
+        ax.text(rects6[4].get_x() - 3.5/8*width, ref[4]*1.01, '%.2f'%(ref[4]), ha='center', va='bottom', rotation=90, **textfont)
+        ax.text(rects6[5].get_x() - 3.5/8*width, ref[5]*1.01, '%.2f'%(ref[5]), ha='center', va='bottom', rotation=90, **textfont)
+        ax.text(rects6[6].get_x() - 3.5/8*width, ref[6]*1.01, '%.2f'%(ref[6]), ha='center', va='bottom', rotation=90, **textfont)
+        ax.text(rects6[7].get_x() - 3.5/8*width, ref[7]*1.01, '%.2f'%(ref[7]), ha='center', va='bottom', rotation=90, **textfont)
 
-        rects1 = ax.bar(count - 2*width/8, y_max_vs_design_parameter_0, width/8, alpha=0.5, label=r'$b_{\rm tooth,s}$', color='#1D2951') # bottom=y_min_vs_design_parameter_0, 
-        rects2 = ax.bar(count - 3*width/8, y_max_vs_design_parameter_1, width/8, alpha=0.5, label=r'$\delta$',          color='#6593F5') # bottom=y_min_vs_design_parameter_1, 
-        rects3 = ax.bar(count + 1*width/8, y_max_vs_design_parameter_2, width/8, alpha=0.5, label=r'$w_{\rm open,r}$',  color='#0E4D92') # bottom=y_min_vs_design_parameter_2, 
-        rects4 = ax.bar(count - 1*width/8, y_max_vs_design_parameter_3, width/8, alpha=0.5, label=r'$b_{\rm tooth,r}$', color='#03396c') # bottom=y_min_vs_design_parameter_3, 
-        rects5 = ax.bar(count + 2*width/8, y_max_vs_design_parameter_4, width/8, alpha=0.5, label=r'$h_{head,s}$',      color='#005b96') # bottom=y_min_vs_design_parameter_4, 
-        rects6 = ax.bar(count + 0*width/8, y_max_vs_design_parameter_5, width/8, alpha=0.5, label=r'$w_{\rm open,s}$',  color='#6497b1') # bottom=y_min_vs_design_parameter_5, 
-        rects7 = ax.bar(count + 3*width/8, y_max_vs_design_parameter_6, width/8, alpha=0.5, label=r'$h_{head,r}$',      color='#b3cde0') # bottom=y_min_vs_design_parameter_6, 
-        autolabel(ax, rects1)
-        autolabel(ax, rects2)
-        autolabel(ax, rects3)
-        autolabel(ax, rects4)
-        autolabel(ax, rects5)
-        autolabel(ax, rects6)
-        autolabel(ax, rects7)
+        rects1 = ax.bar(count - 3*width/8, y_max_vs_design_parameter_0, width/8, alpha=0.5, label=r'$L_g$,         Air gap length', color='#6593F5')    # bottom=y_min_vs_design_parameter_0, 
+        rects2 = ax.bar(count - 2*width/8, y_max_vs_design_parameter_1, width/8, alpha=0.5, label=r'$b_{st}$, Stator tooth width', color='#1D2951')     # bottom=y_min_vs_design_parameter_1, 
+        rects3 = ax.bar(count - 1*width/8, y_max_vs_design_parameter_2, width/8, alpha=0.5, label=r'$b_{rt}$, Rotor tooth width', color='#03396c')      # bottom=y_min_vs_design_parameter_2, 
+        rects4 = ax.bar(count - 0*width/8, y_max_vs_design_parameter_3, width/8, alpha=0.5, label=r'$\theta_{so}$, Stator open width', color='#6497b1') # bottom=y_min_vs_design_parameter_3, 
+        rects5 = ax.bar(count + 1*width/8, y_max_vs_design_parameter_4, width/8, alpha=0.5, label=r'$w_{ro}$, Rotor open width',  color='#0E4D92')      # bottom=y_min_vs_design_parameter_4, 
+        rects6 = ax.bar(count + 2*width/8, y_max_vs_design_parameter_5, width/8, alpha=0.5, label=r'$d_{so}$, Stator open depth', color='#005b96')      # bottom=y_min_vs_design_parameter_5, 
+        rects7 = ax.bar(count + 3*width/8, y_max_vs_design_parameter_6, width/8, alpha=0.5, label=r'$d_{ro}$, Rotor open depth', color='#b3cde0')       # bottom=y_min_vs_design_parameter_6, 
+        autolabel(ax, rects1, textfont=textfont)
+        autolabel(ax, rects2, textfont=textfont)
+        autolabel(ax, rects3, textfont=textfont)
+        autolabel(ax, rects4, textfont=textfont)
+        autolabel(ax, rects5, textfont=textfont)
+        autolabel(ax, rects6, textfont=textfont)
+        autolabel(ax, rects7, textfont=textfont)
 
         # Add some text for labels, title and custom x-axis tick labels, etc.
-        ax.set_ylabel('Normalized Objective Functions')
+        ax.set_ylabel('Normalized Objective Functions', **font)
         ax.set_xticks(count)
         # ax.set_xticklabels(('Power Factor [100%]', r'$\eta$@$T_{em}$ [100%]', r'$T_{em}$ [15.9 N]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]')))
         # ax.set_xticklabels(('Power Factor [100%]', r'$O_1$ [3]', r'$T_{em}$ [15.9 N]', r'$T_{rip}$ [10%]', r'$|F|$ [51.2 N]', r'    $E_m$ [20%]', r'      $E_a$ [10 deg]', r'$P_{\rm Cu,Fe}$ [2.5 kW]'))
@@ -2234,12 +2253,13 @@ class SwarmDataAnalyzer(object):
                             '$|F|$ [%g N]'             %(list_plotting_weights[4]), 
                             '    $E_m$ [%g%%]'         %(list_plotting_weights[5]*100), 
                             '      $E_a$ [%g deg]'     %(list_plotting_weights[6]), 
-                            '$P_{\\rm Cu,Fe}$ [%g kW]' %(list_plotting_weights[7]*1e-3) ))
+                            '$P_{\\rm Cu,Fe}$ [%g kW]' %(list_plotting_weights[7]*1e-3) ), **font)
         ax.grid()
-        fig.tight_layout()
+        ax.set_ylim([0,4])
+        # fig.tight_layout()
         # fig.savefig(r'D:\OneDrive\[00]GetWorking\32 blimopti\p2019_ecce_bearingless_induction\images\sensitivity_results.png', dpi=150)
 
-        plt.show()
+        # plt.show()
         return results_for_refining_bounds
 
     def build_basic_info(self):

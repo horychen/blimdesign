@@ -307,27 +307,6 @@ class swarm(object):
         logger = logging.getLogger(__name__)
         logger.info('Swarm is generated.')
 
-
-        # # 这是一个补丁，所以很 low 很 silly。
-        # # 【多加一层保险】，如果上一次优化是在运行完 wait_greedy_search 之后中断的，那么在 femm_temp/ 下就会有 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 存在。
-        # # 但是，从第二代以后开始，所有在gen#文件里的个体都是随机生成的，也就是说，每次中断重新跑，这一代的这个个体都是新的 trial_denorm，所以旧的 ID16-5-8Freq.csv 和 ID16-5-8Freq.fem 必须被删除。
-        # # 但是下面这样的代码是有问题，因为正常情况到了这里，self.check_csv_results(tran2tss_study_name, returnBoolean=True) 永远都应该返回 False。
-        # try:
-        #     self.size_ongoing_living # for initial generation there is no size_ongoing_living
-        # except:
-        #     pass
-        # else:
-        #     tempID = self.im.ID + '-' + str(self.number_current_generation+1) + '-' + str(self.size_ongoing_living) # 比如说index是7，意味着已经有"8"个个体被评估过了，那么我们要检查第9个，其index为"8"。
-        #     original_study_name = "ID%s" % (tempID) + "Freq"
-        #     tran2tss_study_name = "ID%s" % (tempID) + 'Tran2TSS'
-        #     femm_output_file_path = self.dir_csv_output_folder + 'femm_temp/' + original_study_name + '.csv'
-        #     if os.path.exists(femm_output_file_path) and not self.check_csv_results(tran2tss_study_name, returnBoolean=True):
-        #         os.remove(femm_output_file_path)
-        #         if os.path.exists(femm_output_file_path[:-4]+'.fem'):
-        #             os.remove(femm_output_file_path[:-4]+'.fem')
-        #         print('Removed:', femm_output_file_path)
-        #         print('Removed:', femm_output_file_path[:-4]+'.fem')
-
     def designer_init(self):
         try:
             if self.app is None:
