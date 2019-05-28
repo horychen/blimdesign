@@ -210,6 +210,8 @@ class desgin_specification(object):
 
         self.geometry = geometry_data() # not used
 
+        if not os.path.isdir('../' + 'pop/'):
+            os.mkdir('../' + 'pop/')
         self.loc_txt_file = '../' + 'pop/' + r'initial_design.txt'
         open(self.loc_txt_file, 'w').close() # clean slate to begin with
 
