@@ -1,67 +1,54 @@
 from utility import my_execfile
-bool_post_processing = False # solve or post-processing
+bool_post_processing = True # solve or post-processing
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 my_execfile('./default_setting.py', g=globals(), l=locals()) # define fea_config_dict
-
 if True:
-    # Branch Prototype
-    # my_execfile('./spec_2poleOD150mm880Hz.py', g=globals(), l=locals()) # define spec
+    # ECCE
+
+    my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals()) # define spec
+    fea_config_dict['local_sensitivity_analysis'] = True
+    fea_config_dict['bool_refined_bounds'] = True
+    fea_config_dict['use_weights'] = 'O2'
+
+    # run_folder = r'run#530/' # 圆形槽JMAG绘制失败BUG
+
+    # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 2
+    # run_folder = r'run#531/' # number_of_variant = 2
+
     # fea_config_dict['local_sensitivity_analysis'] = False
     # fea_config_dict['bool_refined_bounds'] = False
-    # # fea_config_dict['use_weights'] = 'O2'
-    # # run_folder = r'run#527/'
-    # fea_config_dict['use_weights'] = 'O1'
-    # run_folder = r'run#528/'
+    # fea_config_dict['use_weights'] = 'O2'
+    # run_folder = r'run#532/'
 
+    # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 10
+    # run_folder = r'run#533/' # number_of_variant = 10
 
-    if True:
-        # ECCE
+    fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 20
+    run_folder = r'run#534/' # number_of_variant = 20
 
-        my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals()) # define spec
-        fea_config_dict['local_sensitivity_analysis'] = True
-        fea_config_dict['bool_refined_bounds'] = True
-        fea_config_dict['use_weights'] = 'O2'
+else:
+    # Prototype
 
-        # run_folder = r'run#530/' # 圆形槽JMAG绘制失败BUG
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # Severson02
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    # fea_config_dict['local_sensitivity_analysis'] = False
+    # fea_config_dict['bool_refined_bounds'] = False
+    # fea_config_dict['use_weights'] = 'O2'
+    # run_folder = r'run#53001/'
 
-        # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 2
-        # run_folder = r'run#531/' # number_of_variant = 2
-
-        # fea_config_dict['local_sensitivity_analysis'] = False
-        # fea_config_dict['bool_refined_bounds'] = False
-        # fea_config_dict['use_weights'] = 'O2'
-        # run_folder = r'run#532/'
-
-        # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 10
-        # run_folder = r'run#533/' # number_of_variant = 10
-
-        fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 20
-        run_folder = r'run#534/' # number_of_variant = 20
-
-    else:
-        # Prototype
-        pass
-
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # Severson02
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
-        # fea_config_dict['local_sensitivity_analysis'] = False
-        # fea_config_dict['bool_refined_bounds'] = False
-        # fea_config_dict['use_weights'] = 'O2'
-        # run_folder = r'run#53001/'
-
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # Severson01
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
-        # fea_config_dict['local_sensitivity_analysis'] = False
-        # fea_config_dict['bool_refined_bounds'] = False
-        # fea_config_dict['use_weights'] = 'O2'
-        # run_folder = r'run#53002/'
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # Severson01
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    fea_config_dict['local_sensitivity_analysis'] = False
+    fea_config_dict['bool_refined_bounds'] = False
+    fea_config_dict['use_weights'] = 'O2'
+    run_folder = r'run#53002/'
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['Active_Qr'] = spec.Qr
@@ -238,6 +225,9 @@ class acm_designer(object):
 
         with open('./refining_factors.txt', 'w') as f:
             f.write(str_to_file)
+        file_backup_user_input = './refining_factors_%s.txt'%(self.fea_config_dict['run_folder'][:-1])
+        if os.path.exists(file_backup_user_input):
+            os.system('start %s'%(file_backup_user_input))
         os.system('start ./refining_factors.txt')
         from pylab import show
         show()
@@ -251,9 +241,7 @@ class acm_designer(object):
                 else:
                     print('.', end='')
                     sleep(1)
-        file_backup_user_input = './refining_factors_%s.txt'%(self.fea_config_dict['run_folder'][:-1])
         if os.path.exists(file_backup_user_input):
-            os.system('start %s'%(file_backup_user_input))
             os.remove(file_backup_user_input)
         os.rename('./refining_factors.txt', file_backup_user_input)
 
@@ -562,9 +550,9 @@ class acm_designer(object):
         show()
 
 app = acm_designer(fea_config_dict, spec)
-# if 'Y730' in fea_config_dict['pc_name']:
-#     app.build_oneReport()
-#     app.talk_to_mysql_database()
+if 'Y730' in fea_config_dict['pc_name']:
+    app.build_oneReport()
+    # app.talk_to_mysql_database()
 # quit()
 app.init_logger()
 # app.evaluate_design(spec.sw.im)
