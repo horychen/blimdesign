@@ -1,14 +1,22 @@
+import shutil
+import os
+import win32com.client
+import logging
 from utility import my_execfile
-bool_post_processing = True # solve or post-processing
+from pylab import plt
+from time import time as clock_time
+bool_post_processing = False # solve or post-processing
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-my_execfile('./default_setting.py', g=globals(), l=locals()) # define fea_config_dict
+my_execfile('./default_setting.py', g=globals(), l=locals())
+fea_config_dict
 if True:
     # ECCE
+    my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals())
+    spec
 
-    my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals()) # define spec
     fea_config_dict['local_sensitivity_analysis'] = True
     fea_config_dict['bool_refined_bounds'] = True
     fea_config_dict['use_weights'] = 'O2'
@@ -18,20 +26,21 @@ if True:
     # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 2
     # run_folder = r'run#531/' # number_of_variant = 2
 
-    # fea_config_dict['local_sensitivity_analysis'] = False
-    # fea_config_dict['bool_refined_bounds'] = False
-    # fea_config_dict['use_weights'] = 'O2'
-    # run_folder = r'run#532/'
-
     # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 10
     # run_folder = r'run#533/' # number_of_variant = 10
 
     fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 20
     run_folder = r'run#534/' # number_of_variant = 20
 
+
+    fea_config_dict['local_sensitivity_analysis'] = False
+    fea_config_dict['bool_refined_bounds'] = False
+    fea_config_dict['use_weights'] = 'O2'
+    run_folder = r'run#535/' # test with pygmo
+
 else:
     # Prototype
-
+    pass
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson02
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -44,25 +53,324 @@ else:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson01
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
-    fea_config_dict['local_sensitivity_analysis'] = False
-    fea_config_dict['bool_refined_bounds'] = False
-    fea_config_dict['use_weights'] = 'O2'
-    run_folder = r'run#53002/'
+    # my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    # fea_config_dict['local_sensitivity_analysis'] = False
+    # fea_config_dict['bool_refined_bounds'] = False
+    # fea_config_dict['use_weights'] = 'O2'
+    # run_folder = r'run#53002/'
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['Active_Qr'] = spec.Qr
 fea_config_dict['use_drop_shape_rotor_bar'] = spec.use_drop_shape_rotor_bar
+class FEA_Solver:
+    def __init__(self, fea_config_dict):
+        self.fea_config_dict = fea_config_dict
+        self.app = None
+
+        self.output_dir = self.fea_config_dict['dir_parent'] + self.fea_config_dict['run_folder']
+        self.dir_csv_output_folder = self.output_dir + 'csv/'
+        if not os.path.isdir(self.output_dir):
+            os.makedirs(self.output_dir)
+        if not os.path.isdir(self.dir_csv_output_folder):
+            os.makedirs(self.dir_csv_output_folder)
+
+        # post-process feature
+        self.fig_main, self.axeses = plt.subplots(2, 2, sharex=True, dpi=150, figsize=(16, 8), facecolor='w', edgecolor='k')
+        utility.pyplot_clear(self.axeses)
+
+        self.folder_to_be_deleted = None
+
+    def fea_bearingless_induction(self, im_template, x_denorm, counter):
+        logger = logging.getLogger(__name__)
+        print('Run FEA for individual #%d'%(counter))
+
+        # get local design variant
+        im_variant = population.bearingless_induction_motor_design.local_design_variant(im_template, 0, counter, x_denorm)
+        im_variant.name = 'ind%d'%(counter)
+        self.im_variant = im_variant
+        self.femm_solver = FEMM_Solver.FEMM_Solver(self.im_variant, flag_read_from_jmag=False, freq=50) # eddy+static
+        im = None
+
+        self.project_name          = 'proj%d'%(counter)
+        self.expected_project_file = self.output_dir + "%s.jproj"%(self.project_name)
+
+        original_study_name = im_variant.name + "Freq"
+        tran2tss_study_name = im_variant.name + 'Tran2TSS'
+
+        self.dir_femm_temp         = self.output_dir + 'femm_temp/'
+        self.femm_output_file_path = self.dir_femm_temp + original_study_name + '.csv'
+
+        self.jmag_control_state = False
+
+        # local scripts
+        def open_jmag(expected_project_file):
+            if self.app is None:
+                app = win32com.client.Dispatch('designer.Application.171')
+                if self.fea_config_dict['designer.Show'] == True:
+                    app.Show()
+                else:
+                    app.Hide()
+                # app.Quit()
+                self.app = app # means that the JMAG Designer is turned ON now.
+                self.bool_run_in_JMAG_Script_Editor = False
+            else:
+                app = self.app
+
+            print(expected_project_file)
+            if os.path.exists(expected_project_file):
+                os.remove(expected_project_file)
+            if not os.path.exists(expected_project_file):
+                app.NewProject("Untitled")
+                app.SaveAs(expected_project_file)
+                logger.debug('Create JMAG project file: %s'%(expected_project_file))
+            else:
+                raise 
+
+            return app
+
+        def draw_jmag(app):
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            # Draw the model in JMAG Designer
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            DRAW_SUCCESS = self.draw_jmag_model(app,
+                                                counter, 
+                                                im_variant,
+                                                im_variant.name)
+            if DRAW_SUCCESS == 0:
+                # TODO: skip this model and its evaluation
+                cost_function = 99999 # penalty
+                logging.getLogger(__name__).warn('Draw Failed for %s-%s\nCost function penalty = %g.%s', self.project_name, im_variant.name, cost_function, self.im_variant.show(toString=True))
+                raise Exception('Draw Failed: Are you working on the PC? Sometime you by mistake operate in the JMAG Geometry Editor, then it fails to draw.')
+                return None
+            elif DRAW_SUCCESS == -1:
+                raise
+
+            # JMAG
+            if app.NumModels()>=1:
+                model = app.GetModel(im_variant.name)
+            else:
+                logger.error('there is no model yet!')
+                raise Exception('why is there no model yet?')
+            return model
+
+        # this should be summoned even before initializing femm, and it will decide whether the femm results are reliable
+        app = open_jmag(self.expected_project_file) # will set self.jmag_control_state to True
+
+        ################################################################
+        # Begin from where left: Frequency Study
+        ################################################################
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # Eddy Current Solver for Breakdown Torque and Slip
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        if self.fea_config_dict['jmag_run_list'][0] == 0:
+            # check for existing results
+            if os.path.exists(self.femm_output_file_path):
+                raise
+            else:
+                # no direct returning of results, wait for it later when you need it.
+                femm_tic = clock_time()
+                # self.femm_solver.__init__(im_variant, flag_read_from_jmag=False, freq=50.0)
+                if im_variant.DriveW_poles == 2:
+                    self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
+                                                                        bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=1) # 转子导条必须形成通路
+                else:
+                    self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
+                                                                        bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=2)
+        else:
+            raise
+
+        ################################################################
+        # Begin from where left: Transient Study
+        ################################################################
+        model = draw_jmag(app)
+
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # TranFEAwi2TSS for ripples and iron loss
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # add or duplicate study for transient FEA denpending on jmag_run_list
+        if self.fea_config_dict['jmag_run_list'][0] == 0:
+            # FEMM+JMAG
+            study = im_variant.add_TranFEAwi2TSS_study( 50.0, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
+            self.mesh_study(im_variant, app, model, study)
+
+            # wait for femm to finish, and get your slip of breakdown
+            slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
+
+            # Now we have the slip, set it up!
+            im_variant.update_mechanical_parameters(slip_freq_breakdown_torque) # do this for records only
+            if im_variant.the_slip != slip_freq_breakdown_torque / im_variant.DriveW_Freq:
+                raise Exception('Check update_mechanical_parameters().')
+            study.GetDesignTable().GetEquation("slip").SetExpression("%g"%(im_variant.the_slip))
+
+            self.run_study(im_variant, app, study, clock_time())
+        else:
+            raise
+
+        # export Voltage if field data exists.
+        if self.fea_config_dict['delete_results_after_calculation'] == False:
+            # Export Circuit Voltage
+            ref1 = app.GetDataManager().GetDataSet("Circuit Voltage")
+            app.GetDataManager().CreateGraphModel(ref1)
+            app.GetDataManager().GetGraphModel("Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+
+        ################################################################
+        # Load data for cost function evaluation
+        ################################################################
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        # Load Results for Tran2TSS
+        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+        results_to_be_unpacked = utility.build_str_results(self.axeses, im_variant, self.project_name, tran2tss_study_name, self.dir_csv_output_folder, self.fea_config_dict, self.femm_solver)
+        # str_results, 
+        if results_to_be_unpacked is not None:
+            self.fig_main.savefig(self.output_dir + im_variant.name + 'results.png', dpi=150)
+            utility.pyplot_clear(self.axeses)
+            # show()
+
+            str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss, cost_function = results_to_be_unpacked
+
+            # write design evaluation data to file
+            with open(self.output_dir + 'swarm_data.txt', 'a') as f:
+                f.write(str_results)
+
+            return im_variant.stack_length, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss
+        else:
+            raise
+        # winding analysis? 之前的python代码利用起来啊
+        # 希望的效果是：设定好一个设计，马上进行运行求解，把我要看的数据都以latex报告的形式呈现出来。
+        # OP_PS_Qr36_M19Gauge29_DPNV_NoEndRing.jproj
+
+    def draw_jmag_model(self, app, individual_index, im_variant, model_name, bool_trimDrawer_or_vanGogh=True, doNotRotateCopy=False):
+
+        if individual_index == -1: # 后处理是-1
+            print('Draw model for post-processing')
+            if individual_index+1 + 1 <= app.NumModels():
+                logger = logging.getLogger(__name__)
+                logger.debug('The model already exists for individual with index=%d. Skip it.', individual_index)
+                return -1 # the model is already drawn
+
+        elif individual_index+1 <= app.NumModels(): # 一般是从零起步
+            logger = logging.getLogger(__name__)
+            logger.debug('The model already exists for individual with index=%d. Skip it.', individual_index)
+            return -1 # the model is already drawn
+
+        # open JMAG Geometry Editor
+        app.LaunchGeometryEditor()
+        geomApp = app.CreateGeometryEditor()
+        # geomApp.Show()
+        geomApp.NewDocument()
+        doc = geomApp.GetDocument()
+        ass = doc.GetAssembly()
+
+        # draw parts
+        try:
+            if bool_trimDrawer_or_vanGogh:
+                d = population.TrimDrawer(im_variant) # 传递的是地址哦
+                d.doc, d.ass = doc, ass
+                d.plot_shaft("Shaft")
+
+                d.plot_rotorCore("Rotor Core")
+                d.plot_cage("Cage")
+
+                d.plot_statorCore("Stator Core")
+                d.plot_coil("Coil")
+                # d.plot_airWithinRotorSlots(u"Air Within Rotor Slots")
+            else:
+                d = VanGogh_JMAG(im_variant, doNotRotateCopy=doNotRotateCopy) # 传递的是地址哦
+                d.doc, d.ass = doc, ass
+                d.draw_model()
+            self.d = d
+        except Exception as e:
+            print('See log file to plotting error.')
+            logger = logging.getLogger(__name__)
+            logger.error('The drawing is terminated. Please check whether the specified bounds are proper.', exc_info=True)
+
+            raise e
+
+            # print 'Draw Failed'
+            # if self.pc_name == 'Y730':
+            #     # and send the email to hory chen
+            #     raise e
+
+            # or you can skip this model and continue the optimization!
+            return False # indicating the model cannot be drawn with the script.
+
+        # Import Model into Designer
+        doc.SaveModel(True) # True=on : Project is also saved. 
+        model = app.GetCurrentModel() # model = app.GetModel(u"IM_DEMO_1")
+        model.SetName(model_name)
+        model.SetDescription(im_variant.model_name_prefix + '\n' + im_variant.show(toString=True))
+
+        if doNotRotateCopy:
+            im_variant.pre_process_structural(app, d.listKeyPoints)
+        else:
+            im_variant.pre_process(app)
+
+        model.CloseCadLink() # this is essential if you want to create a series of models
+        return True
+
+    def run_study(self, im_variant, app, study, toc):
+        logger = logging.getLogger(__name__)
+        if self.fea_config_dict['JMAG_Scheduler'] == False:
+            print('Run jam.exe...')
+            # if run_list[1] == True:
+            study.RunAllCases()
+            msg = 'Time spent on %s is %g s.'%(study.GetName() , clock_time() - toc)
+            logger.debug(msg)
+            print(msg)
+        else:
+            print('Submit to JMAG_Scheduler...')
+            job = study.CreateJob()
+            job.SetValue("Title", study.GetName())
+            job.SetValue("Queued", True)
+            job.Submit(False) # Fallse:CurrentCase, True:AllCases
+            logger.debug('Submit %s to queue (Tran2TSS).'%(im_variant.individual_name))
+            # wait and check
+            # study.CheckForCaseResults()
+        app.Save()
+        # if the jcf file already exists, it pops a msg window
+        # study.WriteAllSolidJcf(self.dir_jcf, im_variant.model_name+study.GetName()+'Solid', True) # True : Outputs cases that do not have results 
+        # study.WriteAllMeshJcf(self.dir_jcf, im_variant.model_name+study.GetName()+'Mesh', True)
+
+        # # run
+        # if self.fea_config_dict['JMAG_Scheduler'] == False:
+        #     study.RunAllCases()
+        #     app.Save()
+        # else:
+        #     job = study.CreateJob()
+        #     job.SetValue(u"Title", study.GetName())
+        #     job.SetValue(u"Queued", True)
+        #     job.Submit(True)
+        #     logger.debug('Submit %s to queue (Freq).'%(im_variant.individual_name))
+        #     # wait and check
+        #     # study.CheckForCaseResults()
+
+    def mesh_study(self, im_variant, app, model, study):
+
+        # this `if' judgment is effective only if JMAG-DeleteResultFiles is False 
+        # if not study.AnyCaseHasResult(): 
+        # mesh
+        im_variant.add_mesh(study, model)
+
+        # Export Image
+        app.View().ShowAllAirRegions()
+        # app.View().ShowMeshGeometry() # 2nd btn
+        app.View().ShowMesh() # 3rn btn
+        app.View().Zoom(3)
+        app.View().Pan(-im_variant.Radius_OuterRotor, 0)
+        app.ExportImageWithSize(self.output_dir + model.GetName() + '.png', 2000, 2000)
+        app.View().ShowModel() # 1st btn. close mesh view, and note that mesh data will be deleted if only ouput table results are selected.
 
 class acm_designer(object):
     def __init__(self, fea_config_dict, spec):
 
         build_model_name_prefix(fea_config_dict) # rebuild the model name for fea_config_dict
+        spec.build_im_template(fea_config_dict)
 
-        self.fea_config_dict = fea_config_dict
         self.spec = spec
+        self.solver = FEA_Solver(fea_config_dict)
+        self.fea_config_dict = fea_config_dict
 
-    def init_logger(self, prefix='ones_'):
+    def init_logger(self, prefix='pygmo_'):
         self.logger = utility.myLogger(self.fea_config_dict['dir_codes'], prefix=prefix+self.fea_config_dict['run_folder'][:-1])
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -84,18 +392,15 @@ class acm_designer(object):
                 utility.communicate_database(self.spec)
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # Automatic Performance Evaluation
+    # Automatic Performance Evaluation (This is just a wraper)
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    def evaluate_design(self, im):
-        pass
-        # winding analysis? 之前的python代码利用起来啊
-        # 希望的效果是：设定好一个设计，马上进行运行求解，把我要看的数据都以latex报告的形式呈现出来。
-        # OP_PS_Qr36_M19Gauge29_DPNV_NoEndRing.jproj
+    def evaluate_design(self, im_template, x_denorm, counter):
+        return self.solver.fea_bearingless_induction(im_template, x_denorm, counter)
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # 1. Bounds for DE optimiazation
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    def get_original_bounds(self):
+    def get_original_bounds(self, Jr_max=8e6):
 
         from math import tan, pi
         定子齿宽最小值 = 1
@@ -120,13 +425,24 @@ class acm_designer(object):
         # temp = (2*pi*stator_inner_radius_r_is_eff - self.Qs*stator_tooth_width_b_ds)
         # stator_tooth_height_h_ds = ( sqrt(temp**2 + 4*pi*area_stator_slot_Sus*self.Qs) - temp ) / (2*pi)
 
+        def check_valid_rotor_slot_height(rotor_tooth_width_b_dr, Jr_max):
+
+            area_conductor_rotor_Scr = self.spec.rotor_current_actual / Jr_max
+            area_rotor_slot_Sur = area_conductor_rotor_Scr
+            
+            rotor_outer_radius_r_or_eff = 1e-3*(self.spec.Radius_OuterRotor - self.spec.d_ro)
+
+            slot_height, _, _ = pyrhonen_procedure_as_function.get_parallel_tooth_height(area_rotor_slot_Sur, rotor_tooth_width_b_dr, self.spec.Qr, rotor_outer_radius_r_or_eff)
+            return np.isnan(slot_height)
+
+
         # 转子齿范围检查
         下界, 上界 = self.original_bounds[2][0], self.original_bounds[2][1]
         步长 = (上界-下界)*0.05
         list_valid_tooth_width = []
         for rotor_tooth_width_b_dr in np.arange(下界, 上界, 步长):
             print('b_dr =', rotor_tooth_width_b_dr)
-            list_valid_tooth_width.append( self.check_valid_rotor_slot_height(rotor_tooth_width_b_dr, 8e6) ) # 8e6 from Pyrhonen's book for copper
+            list_valid_tooth_width.append( check_valid_rotor_slot_height(rotor_tooth_width_b_dr, Jr_max) ) # 8e6 from Pyrhonen's book for copper
         print(list_valid_tooth_width)
         有效上界 = 下界
         for ind, el in enumerate(list_valid_tooth_width):
@@ -137,17 +453,6 @@ class acm_designer(object):
         self.original_bounds[2][1] = 有效上界
 
         return self.original_bounds
-
-    def check_valid_rotor_slot_height(self, rotor_tooth_width_b_dr, J_max):
-
-        area_conductor_rotor_Scr = self.spec.rotor_current_actual / J_max
-        area_rotor_slot_Sur = area_conductor_rotor_Scr
-        
-        rotor_outer_radius_r_or_eff = 1e-3*(self.spec.Radius_OuterRotor - self.spec.d_ro)
-
-        slot_height, _, _ = pyrhonen_procedure_as_function.get_parallel_tooth_height(area_rotor_slot_Sur, rotor_tooth_width_b_dr, self.spec.Qr, rotor_outer_radius_r_or_eff)
-        return np.isnan(slot_height)
-
 
     def get_de_config(self):
 
@@ -192,7 +497,6 @@ class acm_designer(object):
 
         # Sensitivity Bar Charts
         return os.path.exists(fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'swarm_data.txt')
-
 
     def collect_results_of_local_sensitivity_analysis(self):
         print('Start to collect results for local sensitivity analysis...')
@@ -548,58 +852,241 @@ class acm_designer(object):
 
         from pylab import show
         show()
-
-app = acm_designer(fea_config_dict, spec)
-if 'Y730' in fea_config_dict['pc_name']:
-    app.build_oneReport()
-    # app.talk_to_mysql_database()
+global ad
+ad = acm_designer(fea_config_dict, spec)
+# if 'Y730' in fea_config_dict['pc_name']:
+#     app.build_oneReport() # require LaTeX
+#     # app.talk_to_mysql_database() # require MySQL
 # quit()
-app.init_logger()
-# app.evaluate_design(spec.sw.im)
+ad.init_logger()
+ad.bounds_denorm = ad.get_original_bounds()
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Optimization
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+
+def my_plot(fits, vectors, ndf):
+
+    if True:
+        for fit in fits:
+            print(fit)
+        # ax = pg.plot_non_dominated_fronts(fits)
+        ax = pg.plot_non_dominated_fronts(fits, comp=[0,1], marker='o')
+        # ax = pg.plot_non_dominated_fronts(fits, comp=[0,2], marker='o')
+        # ax = pg.plot_non_dominated_fronts(fits, comp=[1,2], marker='o')
+    else:
+        print('Valid for 2D objective function space only for now.')
+        fig, axes = plt.subplots(ncols=2, nrows=1, dpi=150, facecolor='w', edgecolor='k');
+        ax = axes[0]
+
+        for index, xy in enumerate(vectors):
+            ax.plot(*xy, 's', color='0')
+            ax.text(*xy, '#%d'%(index), color='0')
+        ax.title.set_text("Decision Vector Space")
+
+        ax = axes[1]
+
+        for index, front in enumerate(ndf):
+            print('Rank/Tier', index, front)
+            the_color = '%g'%(index/len(ndf))
+            for individual in front: # individual is integer here
+                ax.plot(*fits[individual], 'o',                 color=the_color)
+                ax.text(*fits[individual], '#%d'%(individual),  color=the_color)
+
+            front = front.tolist()
+            front.sort(key = lambda individual: fits[individual][1]) # sort by y-axis value # individual is integer here
+            for individual_A, individual_B in zip(front[:-1], front[1:]): # front is already sorted
+                fits_A = fits[individual_A]
+                fits_B = fits[individual_B]
+                ax.plot([fits_A[0], fits_B[0]], 
+                        [fits_B[1], fits_B[1]], color=the_color, lw=0.25) # 取高的点的Y
+                ax.plot([fits_A[0], fits_A[0]], 
+                        [fits_A[1], fits_B[1]], color=the_color, lw=0.25) # 取低的点的X
+
+    ax.title.set_text("Pareto Front | Objective Function Space")
+def my_print(ndf, dl, dc, ndr):
+    # ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
+    # extract and print non-dominated fronts
+    # - ndf (list of 1D NumPy int array): the non dominated fronts
+    # - dl (list of 1D NumPy int array): the domination list
+    # - dc (1D NumPy int array): the domination count
+    # - ndr (1D NumPy int array): the non domination ranks
+
+    for index, front in enumerate(ndf):
+        print('Rank/Tier', index, front)
+    count = 0
+    for domination_list, domination_count, non_domination_rank in zip(dl, dc, ndr):
+        print('Individual #%d\t'%(count), 'Belong to Rank #%d\t'%(non_domination_rank), 'Dominating', domination_count, 'and they are', domination_list)
+        count += 1
+import pygmo as pg
+class Problem_BearinglessInductionDesign(object):
+
+    # Define objectives
+    def fitness(self, x):
+        # if self.counter_fitness_called == self.counter_fitness_return:
+        #     self.counter_fitness_called += 1
+        # else:
+        #     # This is a re-evaluation
+        #     raise
+
+        global ad, counter_fitness_called, counter_fitness_return, folder_to_be_deleted
+        ad, counter_fitness_called, counter_fitness_return
+        if counter_fitness_called == counter_fitness_return:
+            counter_fitness_called += 1
+        else:
+            # This is a re-evaluation
+            raise
+        print('Fitness: %d'%(counter_fitness_called))
+
+        # denormalize the chromosome
+        min_b, max_b = np.asarray(ad.bounds_denorm).T 
+        diff = np.fabs(min_b - max_b)
+        x_denorm = min_b + x * diff
+
+        # evaluate x_denorm via FEA tools
+        counter_loop = 0
+        while True:
+            counter_loop += 1
+            if counter_loop > 3:
+                raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+
+            try:
+                stack_length_mm, torque_average, normalized_torque_ripple, \
+                    ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, \
+                    jmag_loss_list, femm_loss_list, power_factor, total_loss = \
+                    ad.evaluate_design(ad.spec.im_template, x_denorm, counter_fitness_called)
+
+                # remove folder .jfiles to save space (we have to generate it first in JMAG Designer to have field data and voltage profiles)
+                if ad.solver.folder_to_be_deleted is not None:
+                    shutil.rmtree(ad.solver.folder_to_be_deleted) # .jfiles directory
+                # update to be deleted when JMAG releases the use
+                ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
+
+            except Exception as e:
+                raise e
+                msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
+                logger = logging.getLogger(__name__)
+                logger.error(msg)
+                print(msg)
+
+                msg = 'Removing all files for individual #%d and try again...'%(counter_fitness_called)
+                logger.error(msg)
+                print(msg)
+
+                # turn off JMAG Designer
+                ad.solver.app.Quit()
+                ad.solver.app = None
+
+                os.remove(ad.solver.expected_project_file) # .jproj
+                shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory
+                os.remove(ad.solver.femm_output_file_path) # . csv
+                os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
+                for file in os.listdir(ad.solver.dir_femm_temp):
+                    if 'femm_temp_' in file:
+                        os.remove(ad.solver.dir_femm_temp + file)
+
+            else:
+                break
+        # Torque
+        f1 = x[0]
+        # Efficiency @ rated power
+        f2 = x[1]
+        # Ripple performance
+        f3 = x[2]
+
+        self.counter_fitness_return += 1
+        return [f1, f2, f3]
+
+    # Return number of objectives
+    def get_nobj(self):
+        return 3
+
+    # Return bounds of decision variables (a.k.a. chromosome)
+    def get_bounds(self):
+        return ([0]*7, [1]*7)
+
+    # Return function name
+    def get_name(self):
+        return "MySchaffer function"
+
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# Multi-Objective Optimization
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 if True:
+    ################################################################
+    # MOO Step 1:
+    #   Create UserDefinedProblem and create population
+    #   The magic method __init__ cannot be fined for UDP class
+    ################################################################
+    udp = Problem_BearinglessInductionDesign()
+    global counter_fitness_called, counter_fitness_return
+    counter_fitness_called, counter_fitness_return = 0, 0
+    prob = pg.problem(udp)
+    pop = pg.population(prob, size=6) # don't forget to change neighbours to be below size (default is 20)
+    print('-'*40, '\n', pop)
+
+    ################################################################
+    # MOO Step 2:
+    #   Select algorithm (another option is pg.nsga2())
+    ################################################################
+    algo = pg.algorithm(pg.moead(gen=1, weight_generation="grid", decomposition="tchebycheff", neighbours=3, CR=1, F=0.5, eta_m=20, realb=0.9, limit=2, preserve_diversity=True)) # https://esa.github.io/pagmo2/docs/python/algorithms/py_algorithms.html#pygmo.moead
+    print('-'*40, '\n', algo)
+
+    ################################################################
+    # MOO Step 3:
+    #   Begin optimization
+    ################################################################
+    number_of_iterations = 2
+    for _ in range(number_of_iterations):
+        pop = algo.evolve(pop)
+        fits, vectors = pop.get_f(), pop.get_x()
+        ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
+        my_print(ndf, dl, dc, ndr)
+        my_plot(fits, vectors, ndf)
+
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# Weighted objective function optimmization
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+else:
     # 微分进化的配置
-    app.get_de_config()
-    print('Run: ' + run_folder + '\nThe auto generated bounds are:', app.de_config_dict['original_bounds'])
+    ad.get_de_config()
+    print('Run: ' + run_folder + '\nThe auto generated bounds are:', ad.de_config_dict['original_bounds'])
     # quit()
 
     # 如果需要局部敏感性分析，那就先跑了再说
     if fea_config_dict['local_sensitivity_analysis'] == True:
-        if not app.check_results_of_local_sensitivity_analysis():
-            app.run_local_sensitivity_analysis(app.de_config_dict['original_bounds'], design_denorm=None)
+        if not ad.check_results_of_local_sensitivity_analysis():
+            ad.run_local_sensitivity_analysis(ad.de_config_dict['original_bounds'], design_denorm=None)
         else:
-            app.de_config_dict['bounds'] = app.de_config_dict['original_bounds']
-            app.init_swarm() # define app.sw
-            app.sw.generate_pop(specified_initial_design_denorm=None)
-        app.collect_results_of_local_sensitivity_analysis() # need sw to work
+            ad.de_config_dict['bounds'] = ad.de_config_dict['original_bounds']
+            ad.init_swarm() # define ad.sw
+            ad.sw.generate_pop(specified_initial_design_denorm=None)
+        ad.collect_results_of_local_sensitivity_analysis() # need sw to work
         fea_config_dict['local_sensitivity_analysis'] = False # turn off lsa mode
 
     # Build the final bounds
     if fea_config_dict['bool_refined_bounds'] == -1:
-        app.build_local_bounds_from_best_design(None)
+        ad.build_local_bounds_from_best_design(None)
     elif fea_config_dict['bool_refined_bounds'] == True:
-        app.build_refined_bounds(app.de_config_dict['original_bounds'])
+        ad.build_refined_bounds(ad.de_config_dict['original_bounds'])
     elif fea_config_dict['bool_refined_bounds'] == False:
-        app.de_config_dict['bounds'] = app.de_config_dict['original_bounds']
+        ad.de_config_dict['bounds'] = ad.de_config_dict['original_bounds']
     else:
         raise
     print('The final bounds are:')
-    for el in app.de_config_dict['bounds']:
+    for el in ad.de_config_dict['bounds']:
         print('\t', el)
 
     if False == bool_post_processing:
         if fea_config_dict['flag_optimization'] == True:
-            app.init_swarm() # define app.sw
-            app.run_de()
+            ad.init_swarm() # define ad.sw
+            ad.run_de()
         else:
             print('Do something.')
 
     elif True == bool_post_processing:
-        app.init_swarm()
-        swda = app.best_design_by_weights(fea_config_dict['use_weights'])
+        ad.init_swarm()
+        swda = ad.best_design_by_weights(fea_config_dict['use_weights'])
         from pylab import show
         show()
         quit()

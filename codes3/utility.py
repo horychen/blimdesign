@@ -8,7 +8,6 @@ def my_execfile(filename, g=None, l=None):
     # g=globals(), l=locals()
     exec(compile(open(filename, "rb").read(), filename, 'exec'), g, l)
 
-
 def communicate_database(spec):
     try:
         import mysql.connector
@@ -1048,7 +1047,7 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             # convert rotor current results (complex number) into its amplitude
             femm_solver.list_rotor_current_amp = [abs(el) for el in femm_solver.vals_results_rotor_current] # el is complex number
             # settings not necessarily be consistent with Pyrhonen09's design: , STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1., TEMPERATURE_OF_COIL=75
-            s, r = femm_solver.get_copper_loss(femm_solver.stator_slot_area, femm_solver.rotor_slot_area)
+            s, r, sAlongStack, rAlongStack, Js, Jr = femm_solver.get_copper_loss(femm_solver.stator_slot_area, femm_solver.rotor_slot_area)
         except Exception as e:
             raise e
         enablePrint()
@@ -1065,7 +1064,7 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
     dm.Current_dict   = Current_dict
     dm.key_list       = key_list
     dm.jmag_loss_list = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
-    dm.femm_loss_list = [s, r]
+    dm.femm_loss_list = [s, r, sAlongStack, rAlongStack, Js, Jr ]
     return dm
 
 def check_csv_results_4_general_purpose(study_name, path_prefix, returnBoolean=False):
@@ -1903,6 +1902,8 @@ class SwarmDataAnalyzer(object):
             quit()   
 
     def sensitivity_bar_charts(self):
+        INDEX_TOTAL_LOSS = 15 + 4
+
         # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
         number_of_variant = self.sw.fea_config_dict['local_sensitivity_analysis_number_of_variants'] + 1
 
@@ -1951,7 +1952,7 @@ class SwarmDataAnalyzer(object):
         eta_at_50kW_min = []
         O1_max   = []
         O1_min   = []
-        for ind, i in enumerate(list(range(7))+[15]):
+        for ind, i in enumerate(list(range(7))+[INDEX_TOTAL_LOSS]):
             print('\n-----------', y_label_list[i])
             l = list(self.get_certain_objective_function(i))
             y = l
@@ -1996,14 +1997,14 @@ class SwarmDataAnalyzer(object):
                                  self.reference_data[3],
                                  self.reference_data[5],
                                  self.reference_data[6],
-                                 self.reference_data[15],
+                                 self.reference_data[INDEX_TOTAL_LOSS],
                                  weights=use_weights('O2'), rotor_volume=self.rotor_volume, rotor_weight=self.rotor_weight)
             O1_ref = fobj_scalar(self.reference_data[2],
                                  self.reference_data[4],
                                  self.reference_data[3],
                                  self.reference_data[5],
                                  self.reference_data[6],
-                                 self.reference_data[15],
+                                 self.reference_data[INDEX_TOTAL_LOSS],
                                  weights=use_weights('O1'), rotor_volume=self.rotor_volume, rotor_weight=self.rotor_weight)
         else:
             raise Exception('self.reference_design is None.')
@@ -2119,7 +2120,7 @@ class SwarmDataAnalyzer(object):
             ref[4] = self.reference_data[4]  / list_plotting_weights[4]  # 100% = FRW
             ref[5] = self.reference_data[5]  / list_plotting_weights[5]  # 100%
             ref[6] = self.reference_data[6]  / list_plotting_weights[6]  # deg
-            ref[7] = self.reference_data[15] / list_plotting_weights[7]  # W
+            ref[7] = self.reference_data[INDEX_TOTAL_LOSS] / list_plotting_weights[7]  # W
 
         O1_ax.plot(list(range(-1, 22)), O1_ref*np.ones(23), 'k--')
         O2_ax.plot(list(range(-1, 22)), O2_ref*np.ones(23), 'k--')

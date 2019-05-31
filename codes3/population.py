@@ -3157,8 +3157,9 @@ class bearingless_induction_motor_design(object):
             else:
                 run_folder = self.fea_config_dict['run_folder']
 
-            with open(self.fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'thermal_penalty_individuals.txt', 'a') as f:
-                f.write(self.get_individual_name() + ',%g,%g,%g\n'%(thermal_penalty, rotor_tooth_width_b_dr, new__area_rotor_slot_Sur))
+            print('Warn: Themal penalty is not written...')
+            # with open(self.fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'thermal_penalty_individuals.txt', 'a') as f:
+            #     f.write(self.get_individual_name() + ',%g,%g,%g\n'%(thermal_penalty, rotor_tooth_width_b_dr, new__area_rotor_slot_Sur))
         self.thermal_penalty = thermal_penalty
         return self
 
@@ -3354,7 +3355,7 @@ class bearingless_induction_motor_design(object):
         # if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2 + self.Qr + 1): the last +1 is for the air hug rotor
         # if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2 + self.Qr):
         if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2):
-            msg = 'Number of Parts is unexpected.\n' + self.show(toString=True)
+            msg = 'Number of Parts is unexpected. Should be %d but only %d.\n'%(1 + 1 + 1 + self.Qr + self.Qs*2, len(part_ID_list)) + self.show(toString=True)
             utility.send_notification(text=msg)
             raise Exception(msg)
 
@@ -4158,10 +4159,11 @@ class bearingless_induction_motor_design(object):
             # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
             study.GetStudyProperties().SetValue("DirectSolverType", 1)
 
-        # This SMP(shared memory process) is effective only if there are tons of elements. e.g., over 100,000.
-        # too many threads will in turn make them compete with each other and slow down the solve. 2 is good enough for eddy current solve. 6~8 is enough for transient solve.
-        study.GetStudyProperties().SetValue("UseMultiCPU", True)
-        study.GetStudyProperties().SetValue("MultiCPU", 2) 
+        if self.fea_config_dict['MultipleCPUs'] == True:
+            # This SMP(shared memory process) is effective only if there are tons of elements. e.g., over 100,000.
+            # too many threads will in turn make them compete with each other and slow down the solve. 2 is good enough for eddy current solve. 6~8 is enough for transient solve.
+            study.GetStudyProperties().SetValue("UseMultiCPU", True)
+            study.GetStudyProperties().SetValue("MultiCPU", 2) 
 
         # # this is for the CAD parameters to rotate the rotor. the order matters for param_no to begin at 0.
         # if self.MODEL_ROTATE:

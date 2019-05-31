@@ -1364,6 +1364,33 @@ class desgin_specification(object):
 
         return True if self.Jr_backup < self.Jr else False # bool_bad_specifications
 
+    def build_im_template(self, fea_config_dict):
+        import utility
+        import population
+        # get rid of Swarm class
+        self.initial_design_file = '../' + 'pop/' + 'initial_design.txt'
+        if True: 
+            # load initial design using the obsolete class bearingless_induction_motor_design
+            self.im_list = []
+            with open(self.initial_design_file, 'r') as f: 
+                print(self.initial_design_file)
+                for row in utility.csv_row_reader(f):
+                    im = population.bearingless_induction_motor_design([row[0]]+[float(el) for el in row[1:]], fea_config_dict, model_name_prefix='MOO')
+                    self.im_list.append(im)
+            for im in self.im_list:
+                if im.Qr == fea_config_dict['Active_Qr']:
+                    self.im_template = im
+                    print('Take the first Active_Qr match as initial design')
+                    break
+            try: 
+                self.im_template
+            except:
+                print('There is no design matching Active_Qr.')
+                msg = 'Please activate one initial design. Refer %s.' % (self.initial_design_file)
+                logger = logging.getLogger(__name__)
+                logger.warn(msg)
+                raise Exception('no match for Active_Qr: %d'%(fea_config_dict['Active_Qr']))
+
 
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
