@@ -1042,7 +1042,7 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
     rotor_copper_loss = sum(effective_part) / len(effective_part)
 
     if fea_config_dict['jmag_run_list'][0] == 0:
-        blockPrint()
+        # blockPrint()
         try:
             # convert rotor current results (complex number) into its amplitude
             femm_solver.list_rotor_current_amp = [abs(el) for el in femm_solver.vals_results_rotor_current] # el is complex number
@@ -1050,7 +1050,7 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             s, r, sAlongStack, rAlongStack, Js, Jr = femm_solver.get_copper_loss(femm_solver.stator_slot_area, femm_solver.rotor_slot_area)
         except Exception as e:
             raise e
-        enablePrint()
+        # enablePrint()
     else:
         s, r = None, None
 

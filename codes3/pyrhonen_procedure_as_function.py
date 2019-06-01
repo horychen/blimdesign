@@ -368,7 +368,8 @@ class desgin_specification(object):
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         required_torque = self.mec_power/(2*pi*speed_rpm)*60
         rotor_volume_Vr = required_torque/(2*self.TangentialStress)
-        
+        self.required_torque = required_torque    
+
         if self.bool_high_speed_design == True:
             length_ratio_chi = None
             rotor_outer_radius_r_or = eric_specify_tip_speed_get_radius(self.tip_speed, speed_rpm)

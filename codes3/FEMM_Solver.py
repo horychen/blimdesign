@@ -1441,7 +1441,7 @@ class FEMM_Solver(object):
                 rotor_slot_area = femm.mo_blockintegral(5) / (im.Qs/fraction)
                 femm.mo_clearblock()
 
-            femm.mo_close()         
+            femm.mo_close()
             # return [-el for el in vals_results_rotor_current[self.rotor_slot_per_pole:2*self.rotor_slot_per_pole]] # 用第四象限的转子电流，因为第三象限的被切了一半，麻烦！
             # vals_results_rotor_current[self.rotor_slot_per_pole:2*self.rotor_slot_per_pole]这里用的都是第四象限的转子电流了，我们后面默认用的是第三象限的转子电流，即rA1 rB1 ...，所以要反相一下(-el)
             vals_results_rotor_current = [-el for el in vals_results_rotor_current[self.rotor_slot_per_pole:2*self.rotor_slot_per_pole]]
@@ -1929,72 +1929,72 @@ class FEMM_Solver(object):
         #   because the reduction in resistance due to parallel branch will be considered into the variable resistance_per_coil.
         #   Remember that the number_of_coil_per_slot (in series) is limited by the high back EMF rather than slot area.
         im = self.im
-        rho_Copper = (3.76*TEMPERATURE_OF_COIL+873)*1e-9/55.
+        rho_Copper = (3.76*TEMPERATURE_OF_COIL+873)*1e-9/55. # resistivity
 
-        def get_resistance( coil_pitch_by_slot_count, Q, the_radius_mm,
-                            slot_area_m3, stack_length_mm, Ns, a ):
 
-            length_endArcConductor_mm = coil_pitch_by_slot_count / Q * (the_radius_mm * 2*pi) # [mm] arc length = pi * diameter  
-            length_conductor = (stack_length_mm + length_endArcConductor_mm) * 1e-3 # mm to m 
+        # Stator Copper Loss 
+        Area_slot                = stator_slot_area
+        a                        = im.wily.number_parallel_branch
+        zQ                       = im.DriveW_turns
+        coil_pitch_by_slot_count = im.wily.coil_pitch
+        Q                        = im.Qs
+        the_radius_m             = 1e-3*(0.5*(im.Radius_OuterRotor + im.Length_AirGap + im.Radius_InnerStatorYoke))
+        stack_length_m           = 1e-3*im.stack_length
+        number_of_phase          = 3
+        Ns                       = zQ * im.Qs / (2 * number_of_phase * a) # 3 phase winding
+        density_of_copper        = 8960 
+        k_R                      = 1 # AC resistance factor
+        current_rms_value        = im.DriveW_CurrentAmp / 1.4142135623730951 * (1./TORQUE_CURRENT_RATIO) # for one phase
 
-            area_conductor   = (slot_area_m3) * STATOR_SLOT_FILL_FACTOR / Ns
-            resistance_per_conductor             = rho_Copper * length_conductor / (area_conductor * a)
-            resistance_per_conductor_along_stack = resistance_per_conductor * (stack_length_mm * 1e-3 / length_conductor)
-            # im.DriveW_Rs = resistance_per_conductor * im.DriveW_turns * im.Qs / 3. # resistance per phase
+        Area_conductor_Sc        = Area_slot * STATOR_SLOT_FILL_FACTOR / zQ
+        Js = current_rms_value / (a * Area_conductor_Sc)
 
-            return area_conductor, resistance_per_conductor, resistance_per_conductor_along_stack
+        coil_span_W = coil_pitch_by_slot_count / Q * (the_radius_m * 2*pi)
+        lav = 2*stack_length_m + 2.4*coil_span_W + 0.1
+        mass_Cu             = density_of_copper * Ns * lav * Area_conductor_Sc
+        mass_Cu_along_stack = density_of_copper * Ns * (2*stack_length_m) * Area_conductor_Sc
 
-        # Copper Loss - Stator Slot
-        area_conductor, resistance_per_conductor, resistance_per_conductor_along_stack = \
-            get_resistance( im.wily.coil_pitch, im.Qs, (0.5*(im.Radius_OuterRotor + im.Length_AirGap + im.Radius_InnerStatorYoke)), 
-                            stator_slot_area, im.stack_length, im.DriveW_turns, im.wily.number_parallel_branch )
-        current_rms_value              = im.DriveW_CurrentAmp / 1.4142135623730951 * (1./TORQUE_CURRENT_RATIO)
-        stator_copper_loss             = resistance_per_conductor             * current_rms_value**2 * im.DriveW_turns*im.Qs
-        stator_copper_loss_along_stack = resistance_per_conductor_along_stack * current_rms_value**2 * im.DriveW_turns*im.Qs # this part of loss will scale as the depth of the 2D model is scaled
-        stator_current_density         = current_rms_value / area_conductor
+        stator_copper_loss             = number_of_phase * rho_Copper / density_of_copper * k_R * Js**2 * mass_Cu
+        stator_copper_loss_along_stack = number_of_phase * rho_Copper / density_of_copper * k_R * Js**2 * mass_Cu_along_stack # this part of loss will scale as the depth of the 2D model is scaled
 
-        # Copper Loss - Rotor Slot
-        area_conductor, resistance_per_conductor, resistance_per_conductor_along_stack = \
-            get_resistance( im.Qr/im.DriveW_poles, im.Qr, (im.Radius_OuterRotor - im.Radius_of_RotorSlot), 
-                            rotor_slot_area, im.stack_length, 1, 1 )
-        try:
-            self.list_rotor_current_amp
-        except:
-            raise
-            if self.flag_read_from_jmag == True:
-                self.read_current_conditions_from_JMAG()
-            else:
-                self.read_current_conditions_from_FEMM()
-        print('list_rotor_current_amp', self.list_rotor_current_amp)
+
+        # Rotor Copper Loss
+        Area_slot                = rotor_slot_area
+        a                        = 1
+        zQ                       = 1
+        coil_pitch_by_slot_count = im.Qr/im.DriveW_poles
+        Q                        = im.Qr
+        the_radius_m             = 1e-3*(im.Radius_OuterRotor - im.Radius_of_RotorSlot)
+        stack_length_m           = 1e-3*im.stack_length
+        number_of_phase          = im.Qr/im.DriveW_poles
+        Ns                       = zQ * im.Qr / (2 * number_of_phase * a) # turns in series = 2 for 4 pole winding; = 1 for 2 pole winding
+        density_of_copper        = 8960 
+        k_R                      = 1 # AC resistance factor
+        current_rms_value        = None
+
+        Area_conductor_Sc        = Area_slot * ROTOR_SLOT_FILL_FACTOR / zQ        
+        print('list_rotor_current_amp', self.list_rotor_current_amp) # self.list_rotor_current_amp is defined in population.py
         rotor_copper_loss             = 0.0
         rotor_copper_loss_along_stack = 0.0
-        print('Double check the number of slot is calculated...')
-        print('Double check the number of slot is calculated...')
-        print('Double check the number of slot is calculated...')
         sum_rotor_current_density     = 0.0
+        list_Jr = []
         for amp in self.list_rotor_current_amp:
             current_rms_value              = amp / 1.4142135623730951
-            rotor_copper_loss             += resistance_per_conductor             * current_rms_value**2 # pole-specific rotor winding
-            rotor_copper_loss_along_stack += resistance_per_conductor_along_stack * current_rms_value**2
-            rotor_current_density          = current_rms_value / area_conductor
-            sum_rotor_current_density += rotor_current_density
-            print(rotor_current_density)
-        rotor_current_density = sum_rotor_current_density / len(self.list_rotor_current_amp)
+            list_Jr.append(current_rms_value / (a * Area_conductor_Sc))
+        Jr = sum(list_Jr) / len(list_Jr) # take average for Jr
+        print('Jr=%g Arms/m^2'%(Jr))
 
-        if len(self.list_rotor_current_amp)*im.DriveW_poles == im.Qr:
-            print('FUCK')
-            print('FUCK')
-            print('FUCK')
+        coil_span_W = coil_pitch_by_slot_count / Q * (the_radius_m * 2*pi)
+        lav = 2*stack_length_m + 2.4*coil_span_W + 0.1
+        mass_Cu             = density_of_copper * Ns * lav * Area_conductor_Sc
+        mass_Cu_along_stack = density_of_copper * Ns * (2*stack_length_m) * Area_conductor_Sc
 
-        if im.DriveW_poles == 4:
-            rotor_copper_loss             *= im.DriveW_poles
-            rotor_copper_loss_along_stack *= im.DriveW_poles
-        else:
-            raise Exception('Not validated yet.')
+        rotor_copper_loss             = number_of_phase * rho_Copper / density_of_copper * k_R * Jr**2 * mass_Cu
+        rotor_copper_loss_along_stack = number_of_phase * rho_Copper / density_of_copper * k_R * Jr**2 * mass_Cu_along_stack # this part of loss will scale as the depth of the 2D model is scaled
 
         # print('stator slot area', stator_slot_area, 'm^2')
         # print('rotor slot area', rotor_slot_area, 'm^2')
-        return stator_copper_loss, rotor_copper_loss, stator_copper_loss_along_stack, rotor_copper_loss_along_stack, stator_current_density, rotor_current_density
+        return stator_copper_loss, rotor_copper_loss, stator_copper_loss_along_stack, rotor_copper_loss_along_stack, Js, Jr
 
     def get_iron_loss(self, MAX_FREQUENCY=50e3, SLOT_FILL_FACTOR=0.5, TEMPERATURE_OF_COIL=75):
         # http://www.femm.info/wiki/SPMLoss

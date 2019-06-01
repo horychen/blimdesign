@@ -38,6 +38,12 @@ if True:
     fea_config_dict['use_weights'] = 'O2'
     run_folder = r'run#535/' # test with pygmo
 
+
+    fea_config_dict['local_sensitivity_analysis'] = False
+    fea_config_dict['bool_refined_bounds'] = False
+    fea_config_dict['use_weights'] = 'O2' # this is not working
+    run_folder = r'run#536/' # test with pygmo
+
 else:
     # Prototype
     pass
@@ -415,7 +421,7 @@ class acm_designer(object):
         self.original_bounds = [ [           0.8,              3],          # air_gap_length_delta
                                  [定子齿宽最小值, 定子齿宽最大值],#--# stator_tooth_width_b_ds
                                  [转子齿宽最小值, 转子齿宽最大值],#--# rotor_tooth_width_b_dr
-                                 [             1,             11],           # Angle_StatorSlotOpen
+                                 [             1,    360/spec.Qs],           # Angle_StatorSlotOpen
                                  [          5e-1,              3],           # Width_RotorSlotOpen 
                                  [          5e-1,              3],           # Width_StatorTeethHeadThickness
                                  [          5e-1,              3] ]          # Length_HeadNeckRotorSlot
@@ -441,9 +447,9 @@ class acm_designer(object):
         步长 = (上界-下界)*0.05
         list_valid_tooth_width = []
         for rotor_tooth_width_b_dr in np.arange(下界, 上界, 步长):
-            print('b_dr =', rotor_tooth_width_b_dr)
+            # print('b_dr =', rotor_tooth_width_b_dr)
             list_valid_tooth_width.append( check_valid_rotor_slot_height(rotor_tooth_width_b_dr, Jr_max) ) # 8e6 from Pyrhonen's book for copper
-        print(list_valid_tooth_width)
+        # print(list_valid_tooth_width)
         有效上界 = 下界
         for ind, el in enumerate(list_valid_tooth_width):
             if el == True:
@@ -453,6 +459,26 @@ class acm_designer(object):
         self.original_bounds[2][1] = 有效上界
 
         return self.original_bounds
+
+    def get_classic_bounds(self):
+        self.get_original_bounds()
+        self.classic_bounds = [ [self.spec.delta*0.7, self.spec.delta*2  ],          # air_gap_length_delta
+                                [self.spec.w_st *0.5, self.spec.w_st *1.5],          #--# stator_tooth_width_b_ds
+                                [self.spec.w_rt *0.5, self.spec.w_rt *1.5],          #--# rotor_tooth_width_b_dr
+                                [                1.5,                  12],           # Angle_StatorSlotOpen
+                                [               5e-1,                   3],           # Width_RotorSlotOpen 
+                                [               5e-1,                   3],           # Width_StatorTeethHeadThickness
+                                [               5e-1,                   3] ]          # Length_HeadNeckRotorSlot
+        # classic_bounds cannot be beyond original_bounds
+        index = 0
+        for A, B in zip(self.classic_bounds, self.original_bounds):
+            if A[0] < B[0]:
+                self.classic_bounds[index] = B[0]
+            if A[1] > B[1]:
+                self.classic_bounds[index] = B[1]
+            index += 1
+            
+        return self.classic_bounds
 
     def get_de_config(self):
 
@@ -854,19 +880,154 @@ class acm_designer(object):
         show()
 global ad
 ad = acm_designer(fea_config_dict, spec)
-# if 'Y730' in fea_config_dict['pc_name']:
-#     app.build_oneReport() # require LaTeX
-#     # app.talk_to_mysql_database() # require MySQL
-# quit()
+if 'Y730' in fea_config_dict['pc_name']:
+    ad.build_oneReport() # require LaTeX
+    # ad.talk_to_mysql_database() # require MySQL
 ad.init_logger()
-ad.bounds_denorm = ad.get_original_bounds()
+
+ad.bounds_denorm = ad.get_classic_bounds()
+print('classic_bounds and original_bounds')
+for A, B in zip(ad.bounds_denorm, ad.original_bounds):
+    print(A, B)
+# quit()
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Optimization
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 
-def my_plot(fits, vectors, ndf):
+import pygmo as pg
+class Problem_BearinglessInductionDesign(object):
 
+    # Define objectives
+    def fitness(self, x):
+        global ad, counter_fitness_called, counter_fitness_return, folder_to_be_deleted
+        ad, counter_fitness_called, counter_fitness_return
+        if counter_fitness_called == counter_fitness_return:
+            counter_fitness_called += 1
+        else:
+            # This is a re-evaluation
+            raise
+        print('Fitness: %d, %d'%(counter_fitness_called, counter_fitness_return))
+
+        # denormalize the chromosome
+        min_b, max_b = np.asarray(ad.bounds_denorm).T 
+        diff = np.fabs(min_b - max_b)
+        x_denorm = min_b + x * diff
+
+        # evaluate x_denorm via FEA tools
+        counter_loop = 0
+        while True:
+            counter_loop += 1
+            if counter_loop > 3:
+                raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+
+            try:
+                stack_length_mm, torque_average, normalized_torque_ripple, \
+                    ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, \
+                    jmag_loss_list, femm_loss_list, power_factor, total_loss = \
+                    ad.evaluate_design(ad.spec.im_template, x_denorm, counter_fitness_called)
+
+                # remove folder .jfiles to save space (we have to generate it first in JMAG Designer to have field data and voltage profiles)
+                if ad.solver.folder_to_be_deleted is not None:
+                    shutil.rmtree(ad.solver.folder_to_be_deleted) # .jfiles directory
+                # update to be deleted when JMAG releases the use
+                ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
+
+            except Exception as e:
+                # raise e
+                print(e)
+
+                msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
+                logger = logging.getLogger(__name__)
+                logger.error(msg)
+                print(msg)
+
+                msg = 'Removing all files for individual #%d and try again...'%(counter_fitness_called)
+                logger.error(msg)
+                print(msg)
+
+                # turn off JMAG Designer
+                ad.solver.app.Quit()
+                ad.solver.app = None
+
+                os.remove(ad.solver.expected_project_file) # .jproj
+                shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory
+                os.remove(ad.solver.femm_output_file_path) # . csv
+                os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
+                for file in os.listdir(ad.solver.dir_femm_temp):
+                    if 'femm_temp_' in file:
+                        os.remove(ad.solver.dir_femm_temp + file)
+            else:
+                break
+
+        # caculate the fitness
+        print('-'*40)
+        print('caculate the fitness for', ad.solver.im_variant.name)
+
+        # LOSS
+        stator_copper_loss_along_stack = femm_loss_list[2]
+        rotor_copper_loss_along_stack  = femm_loss_list[3]
+
+        stator_copper_loss_in_end_turn = femm_loss_list[0] - stator_copper_loss_along_stack 
+        rotor_copper_loss_in_end_turn  = femm_loss_list[1] - rotor_copper_loss_along_stack
+
+        rated_ratio                          = ad.spec.required_torque / torque_average 
+        rated_stack_length_mm                = rated_ratio * stack_length_mm
+        rated_stator_copper_loss_along_stack = rated_ratio * stator_copper_loss_along_stack
+        rated_rotor_copper_loss_along_stack  = rated_ratio * rotor_copper_loss_along_stack
+        rated_iron_loss                      = rated_ratio * jmag_loss_list[2]
+
+        # total_loss   = copper_loss + iron_loss + windage_loss
+        rated_total_loss =  rated_stator_copper_loss_along_stack \
+                          + rated_rotor_copper_loss_along_stack \
+                          + stator_copper_loss_in_end_turn \
+                          + rotor_copper_loss_in_end_turn \
+                          + rated_iron_loss \
+                          + utility.get_windage_loss(ad.solver.im_variant)
+
+        # THERMAL
+        stator_current_density = femm_loss_list[4]
+        rotor_current_density  = femm_loss_list[5]
+        print('Current density [Arms/m^2]:', stator_current_density, rotor_current_density, sep='\n')
+        if rotor_current_density > 8e6:
+            print('rotor_current_density is over 8e6 Arms/m^2')
+
+        rated_shaft_power  = ad.solver.im_variant.Omega * ad.spec.required_torque
+        rated_efficiency   = rated_shaft_power / (rated_total_loss + rated_shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
+
+        rated_rotor_volume = np.pi*(ad.solver.im_variant.Radius_OuterRotor*1e-3)**2 * (rated_stack_length_mm*1e-3)
+
+        # This weighted list suggests that peak-to-peak torque ripple of 5% is comparable with Em of 5% or Ea of 5 deg. Ref: Ye gu ECCE 2018
+        list_weighted_ripples = [normalized_torque_ripple/0.05, normalized_force_error_magnitude/0.05, force_error_angle/5.0]
+
+        # - Torque per Rotor Volume
+        f1 = - ad.spec.required_torque / rated_rotor_volume
+        # - Efficiency @ Rated Power
+        f2 = - rated_efficiency
+        # Ripple Performance (Weighted Sum)
+        f3 = sum(list_weighted_ripples)
+
+        # Constraints (Em<0.2 and Ea<10 deg):
+        if normalized_force_error_magnitude >= 0.2 or force_error_angle > 10:
+            f1 = 0
+            f2 = 0
+
+        counter_fitness_return += 1
+        print('Fitness: %d, %d\n----------------'%(counter_fitness_called, counter_fitness_return))
+        return [f1, f2, f3]
+
+    # Return number of objectives
+    def get_nobj(self):
+        return 3
+
+    # Return bounds of decision variables (a.k.a. chromosome)
+    def get_bounds(self):
+        return ([0]*7, [1]*7)
+
+    # Return function name
+    def get_name(self):
+        return "MySchaffer function"
+def my_plot(fits, vectors, ndf):
     if True:
         for fit in fits:
             print(fit)
@@ -902,112 +1063,28 @@ def my_plot(fits, vectors, ndf):
                         [fits_B[1], fits_B[1]], color=the_color, lw=0.25) # 取高的点的Y
                 ax.plot([fits_A[0], fits_A[0]], 
                         [fits_A[1], fits_B[1]], color=the_color, lw=0.25) # 取低的点的X
-
-    ax.title.set_text("Pareto Front | Objective Function Space")
-def my_print(ndf, dl, dc, ndr):
+        ax.title.set_text("Pareto Front | Objective Function Space")
+def my_print(pop):
     # ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
     # extract and print non-dominated fronts
     # - ndf (list of 1D NumPy int array): the non dominated fronts
     # - dl (list of 1D NumPy int array): the domination list
     # - dc (1D NumPy int array): the domination count
     # - ndr (1D NumPy int array): the non domination ranks
+    fits, vectors = pop.get_f(), pop.get_x()
+    ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
 
-    for index, front in enumerate(ndf):
-        print('Rank/Tier', index, front)
-    count = 0
-    for domination_list, domination_count, non_domination_rank in zip(dl, dc, ndr):
-        print('Individual #%d\t'%(count), 'Belong to Rank #%d\t'%(non_domination_rank), 'Dominating', domination_count, 'and they are', domination_list)
-        count += 1
-import pygmo as pg
-class Problem_BearinglessInductionDesign(object):
+    with open('MOO_log.txt', 'w', encoding='utf-8') as fname:
+        print('-'*40, file=fname)
+        for index, front in enumerate(ndf):
+            print('Rank/Tier', index, front, file=fname)
+        count = 0
+        for domination_list, domination_count, non_domination_rank in zip(dl, dc, ndr):
+            print('Individual #%d\t'%(count), 'Belong to Rank #%d\t'%(non_domination_rank), 'Dominating', domination_count, 'and they are', domination_list, file=fname)
+            count += 1
 
-    # Define objectives
-    def fitness(self, x):
-        # if self.counter_fitness_called == self.counter_fitness_return:
-        #     self.counter_fitness_called += 1
-        # else:
-        #     # This is a re-evaluation
-        #     raise
-
-        global ad, counter_fitness_called, counter_fitness_return, folder_to_be_deleted
-        ad, counter_fitness_called, counter_fitness_return
-        if counter_fitness_called == counter_fitness_return:
-            counter_fitness_called += 1
-        else:
-            # This is a re-evaluation
-            raise
-        print('Fitness: %d'%(counter_fitness_called))
-
-        # denormalize the chromosome
-        min_b, max_b = np.asarray(ad.bounds_denorm).T 
-        diff = np.fabs(min_b - max_b)
-        x_denorm = min_b + x * diff
-
-        # evaluate x_denorm via FEA tools
-        counter_loop = 0
-        while True:
-            counter_loop += 1
-            if counter_loop > 3:
-                raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
-
-            try:
-                stack_length_mm, torque_average, normalized_torque_ripple, \
-                    ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, \
-                    jmag_loss_list, femm_loss_list, power_factor, total_loss = \
-                    ad.evaluate_design(ad.spec.im_template, x_denorm, counter_fitness_called)
-
-                # remove folder .jfiles to save space (we have to generate it first in JMAG Designer to have field data and voltage profiles)
-                if ad.solver.folder_to_be_deleted is not None:
-                    shutil.rmtree(ad.solver.folder_to_be_deleted) # .jfiles directory
-                # update to be deleted when JMAG releases the use
-                ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
-
-            except Exception as e:
-                raise e
-                msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
-                logger = logging.getLogger(__name__)
-                logger.error(msg)
-                print(msg)
-
-                msg = 'Removing all files for individual #%d and try again...'%(counter_fitness_called)
-                logger.error(msg)
-                print(msg)
-
-                # turn off JMAG Designer
-                ad.solver.app.Quit()
-                ad.solver.app = None
-
-                os.remove(ad.solver.expected_project_file) # .jproj
-                shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory
-                os.remove(ad.solver.femm_output_file_path) # . csv
-                os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
-                for file in os.listdir(ad.solver.dir_femm_temp):
-                    if 'femm_temp_' in file:
-                        os.remove(ad.solver.dir_femm_temp + file)
-
-            else:
-                break
-        # Torque
-        f1 = x[0]
-        # Efficiency @ rated power
-        f2 = x[1]
-        # Ripple performance
-        f3 = x[2]
-
-        self.counter_fitness_return += 1
-        return [f1, f2, f3]
-
-    # Return number of objectives
-    def get_nobj(self):
-        return 3
-
-    # Return bounds of decision variables (a.k.a. chromosome)
-    def get_bounds(self):
-        return ([0]*7, [1]*7)
-
-    # Return function name
-    def get_name(self):
-        return "MySchaffer function"
+        # print(fits, vectors, ndf)
+        print(pop, file=fname)
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Multi-Objective Optimization
@@ -1022,14 +1099,14 @@ if True:
     global counter_fitness_called, counter_fitness_return
     counter_fitness_called, counter_fitness_return = 0, 0
     prob = pg.problem(udp)
-    pop = pg.population(prob, size=6) # don't forget to change neighbours to be below size (default is 20)
+    pop = pg.population(prob, size=36) # don't forget to change neighbours to be below size (default is 20)
     print('-'*40, '\n', pop)
 
     ################################################################
     # MOO Step 2:
     #   Select algorithm (another option is pg.nsga2())
     ################################################################
-    algo = pg.algorithm(pg.moead(gen=1, weight_generation="grid", decomposition="tchebycheff", neighbours=3, CR=1, F=0.5, eta_m=20, realb=0.9, limit=2, preserve_diversity=True)) # https://esa.github.io/pagmo2/docs/python/algorithms/py_algorithms.html#pygmo.moead
+    algo = pg.algorithm(pg.moead(gen=1, weight_generation="grid", decomposition="tchebycheff", neighbours=20, CR=1, F=0.5, eta_m=20, realb=0.9, limit=2, preserve_diversity=True)) # https://esa.github.io/pagmo2/docs/python/algorithms/py_algorithms.html#pygmo.moead
     print('-'*40, '\n', algo)
 
     ################################################################
@@ -1039,10 +1116,8 @@ if True:
     number_of_iterations = 2
     for _ in range(number_of_iterations):
         pop = algo.evolve(pop)
-        fits, vectors = pop.get_f(), pop.get_x()
-        ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
-        my_print(ndf, dl, dc, ndr)
-        my_plot(fits, vectors, ndf)
+        my_print(pop)
+        # my_plot(fits, vectors, ndf)
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Weighted objective function optimmization
