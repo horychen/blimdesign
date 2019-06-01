@@ -121,6 +121,29 @@ class FEA_Solver:
                 # app.Quit()
                 self.app = app # means that the JMAG Designer is turned ON now.
                 self.bool_run_in_JMAG_Script_Editor = False
+
+                def add_steel(self):
+                    print('[First run on this computer detected]', self.fea_config_dict['Steel'], 'is added to jmag material library.')
+
+                    if 'M15' in self.fea_config_dict['Steel']:
+                        add_M1xSteel(self.app, self.dir_parent, steel_name="M-15 Steel")
+                    elif 'M19' in self.fea_config_dict['Steel']:
+                        add_M1xSteel(self.app, self.dir_parent)
+                    elif 'Arnon5' == self.fea_config_dict['Steel']:
+                        add_Arnon5(self.app, self.dir_parent)        
+
+                # too avoid tons of the same material in JAMG's material library
+                fname = self.fea_config_dict['dir_parent'] + '.jmag_state.txt'
+                if not os.path.exists(fnmae):
+                    with open(fname, 'w') as f:
+                        f.write(self.fea_config_dict['pc_name'] + '/' + self.fea_config_dict['Steel'] + '\n')
+                    add_steel(self)
+                else:
+                    with open(fname, 'r') as f:
+                        for line in f.readlines():
+                            if self.fea_config_dict['pc_name'] + '/' + self.fea_config_dict['Steel'] not in line:
+                                add_steel(self)
+
             else:
                 app = self.app
 
