@@ -50,20 +50,20 @@ else:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson02
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
-    # fea_config_dict['local_sensitivity_analysis'] = False
-    # fea_config_dict['bool_refined_bounds'] = False
-    # fea_config_dict['use_weights'] = 'O2'
-    # run_folder = r'run#53001/'
+    my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    fea_config_dict['local_sensitivity_analysis'] = False
+    fea_config_dict['bool_refined_bounds'] = False
+    fea_config_dict['use_weights'] = 'O2'
+    run_folder = r'run#54029/'
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson01
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
-    # fea_config_dict['local_sensitivity_analysis'] = False
-    # fea_config_dict['bool_refined_bounds'] = False
-    # fea_config_dict['use_weights'] = 'O2'
-    # run_folder = r'run#53002/'
+    my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    fea_config_dict['local_sensitivity_analysis'] = False
+    fea_config_dict['bool_refined_bounds'] = False
+    fea_config_dict['use_weights'] = 'O2'
+    run_folder = r'run#53019/'
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['Active_Qr'] = spec.Qr
@@ -85,6 +85,8 @@ class FEA_Solver:
         utility.pyplot_clear(self.axeses)
 
         self.folder_to_be_deleted = None
+
+        open(self.output_dir+'MOO_log.txt', 'w').close()
 
     def fea_bearingless_induction(self, im_template, x_denorm, counter):
         logger = logging.getLogger(__name__)
@@ -900,6 +902,8 @@ class Problem_BearinglessInductionDesign(object):
 
     # Define objectives
     def fitness(self, x):
+        # return [x[0], x[1], x[2]]
+
         global ad, counter_fitness_called, counter_fitness_return, folder_to_be_deleted
         ad, counter_fitness_called, counter_fitness_return
         if counter_fitness_called == counter_fitness_return:
@@ -1026,7 +1030,7 @@ class Problem_BearinglessInductionDesign(object):
 
     # Return function name
     def get_name(self):
-        return "MySchaffer function"
+        return "Bearingless Induction Motor Design"
 def my_plot(fits, vectors, ndf):
     if True:
         for fit in fits:
@@ -1064,7 +1068,7 @@ def my_plot(fits, vectors, ndf):
                 ax.plot([fits_A[0], fits_A[0]], 
                         [fits_A[1], fits_B[1]], color=the_color, lw=0.25) # 取低的点的X
         ax.title.set_text("Pareto Front | Objective Function Space")
-def my_print(pop):
+def my_print(pop, _):
     # ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
     # extract and print non-dominated fronts
     # - ndf (list of 1D NumPy int array): the non dominated fronts
@@ -1074,8 +1078,8 @@ def my_print(pop):
     fits, vectors = pop.get_f(), pop.get_x()
     ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
 
-    with open('MOO_log.txt', 'w', encoding='utf-8') as fname:
-        print('-'*40, file=fname)
+    with open(ad.solver.output_dir+'MOO_log.txt', 'a', encoding='utf-8') as fname:
+        print('-'*40, 'Generation:', _, file=fname)
         for index, front in enumerate(ndf):
             print('Rank/Tier', index, front, file=fname)
         count = 0
@@ -1100,7 +1104,7 @@ if True:
     counter_fitness_called, counter_fitness_return = 0, 0
     prob = pg.problem(udp)
     pop = pg.population(prob, size=36) # don't forget to change neighbours to be below size (default is 20)
-    print('-'*40, '\n', pop)
+    print('-'*40, '\nInitial pop:', pop)
 
     ################################################################
     # MOO Step 2:
@@ -1113,10 +1117,10 @@ if True:
     # MOO Step 3:
     #   Begin optimization
     ################################################################
-    number_of_iterations = 2
+    number_of_iterations = 3
     for _ in range(number_of_iterations):
         pop = algo.evolve(pop)
-        my_print(pop)
+        my_print(pop, _)
         # my_plot(fits, vectors, ndf)
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
