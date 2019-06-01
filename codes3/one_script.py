@@ -42,7 +42,7 @@ if True:
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2' # this is not working
-    run_folder = r'run#536/' # test with pygmo
+    run_folder = r'run#537/' # test with pygmo
 
 else:
     # Prototype
@@ -955,7 +955,7 @@ class Problem_BearinglessInductionDesign(object):
                 ad.solver.app = None
 
                 os.remove(ad.solver.expected_project_file) # .jproj
-                shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory
+                # shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory # .jplot file in this folder will be used by JSOL softwares even JMAG Designer is closed.
                 os.remove(ad.solver.femm_output_file_path) # . csv
                 os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
                 for file in os.listdir(ad.solver.dir_femm_temp):
@@ -1117,7 +1117,7 @@ if True:
     # MOO Step 3:
     #   Begin optimization
     ################################################################
-    number_of_iterations = 3
+    number_of_iterations = 50
     for _ in range(number_of_iterations):
         pop = algo.evolve(pop)
         my_print(pop, _)
