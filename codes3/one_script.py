@@ -914,7 +914,7 @@ ad.bounds_denorm = ad.get_classic_bounds()
 print('classic_bounds and original_bounds')
 for A, B in zip(ad.bounds_denorm, ad.original_bounds):
     print(A, B)
-# quit()
+quit()
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Optimization
@@ -1113,14 +1113,13 @@ def my_print(pop, _):
         # print(fits, vectors, ndf)
         print(pop, file=fname)
 
-if bool_post_processing:
-    plot pareto plot for three objectives...
-
-    swda = ad.best_design_by_weights(fea_config_dict['use_weights'])
-    from pylab import show
-    show()
-    quit()
-    run_static_structural_fea(swda.best_design_denorm)
+# if bool_post_processing:
+#     plot pareto plot for three objectives...
+#     swda = ad.best_design_by_weights(fea_config_dict['use_weights'])
+#     from pylab import show
+#     show()
+#     quit()
+#     run_static_structural_fea(swda.best_design_denorm)
 
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -1133,8 +1132,8 @@ if True:
     #   The magic method __init__ cannot be fined for UDP class
     ################################################################
     udp = Problem_BearinglessInductionDesign()
-    global counter_fitness_called, counter_fitness_return
-    counter_fitness_called, counter_fitness_return = 0, 0
+    global counter_fitness_called, counter_fitness_return, flag_restart
+    counter_fitness_called, counter_fitness_return, flag_restart = 0, 0, False
     prob = pg.problem(udp)
     pop = pg.population(prob, size=36) # don't forget to change neighbours to be below size (default is 20)
     print('-'*40, '\nInitial pop:', pop)

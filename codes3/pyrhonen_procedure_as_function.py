@@ -442,7 +442,7 @@ class desgin_specification(object):
             else:
                 print('\nUse recommended length ratio: $\\chi=%g$' % length_ratio_chi, file=fname)
 
-        print('\nCentrifugal stress: %g MPa' %(1e-6*check_stress_due_to_centrifugal_force(speed_rpm, rotor_outer_radius_r_or)), file=fname)
+        print('\nCentrifugal stress: %g MPa' %(1e-6*check_stress_due_to_centrifugal_force_Pyrhonen14(speed_rpm, rotor_outer_radius_r_or)), file=fname)
         print('\nRotor outer diameter $D_{or}=%g$ mm'% (rotor_outer_diameter_Dr*1e3), file=fname)
         print('\nRotor outer radius $r_{or}=%g$ mm'% (rotor_outer_radius_r_or*1e3), file=fname)
 
@@ -1141,6 +1141,14 @@ class desgin_specification(object):
         rotor_yoke_diameter_Dryi = rotor_outer_diameter_Dr - 2*rotor_tooth_height_h_dr
         rotor_inner_diameter_Dri = rotor_yoke_diameter_Dryi - 2*rotor_yoke_height_h_yr
 
+        print('Gerada 2011 TIE:')
+        rin = rotor_inner_diameter_Dri * 0.5
+        rout = rotor_outer_radius_r_or
+        r_list = np.arange(rin, rout, 2*1e-3)
+        stress_list = check_stress_due_to_centrifugal_force_Gerada11(r_list*1e3, speed_rpm, rout*1e3, rin*1e3)
+        for r, stress in zip(r_list, stress_list):
+            print('\t%g mm, %g MPa'% (r*1e3, stress))
+
 
         fname = open(one_report_dir_prefix+file_name+'_s15'+file_suffix, 'w', encoding='utf-8') if 'Y730' in pc_name else None
         print(r'''\subsubsection{Total Magnetic Voltage \& Machine Geometry}
@@ -1466,13 +1474,28 @@ def get_C_prime(Poisson_ratio_nu, bBore):
     # Copper Cu 0.34 Titanium Ti 0.34
     # Iron Fe 0.29 Cobalt Co 0.31
 
-def check_stress_due_to_centrifugal_force(speed_rpm, rotor_radius, material_density_rho=None, Poisson_ratio_nu=None, bBore=True):
+def check_stress_due_to_centrifugal_force_Pyrhonen14(speed_rpm, rotor_radius, material_density_rho=None, Poisson_ratio_nu=None, bBore=True):
     Omega = speed_rpm/(60)*2*pi
 
     if material_density_rho is None: # Example 6.3
         material_density_rho, Poisson_ratio_nu, _ = get_material_data()
 
     return get_C_prime(Poisson_ratio_nu, bBore) * material_density_rho * rotor_radius**2 * Omega**2
+
+def check_stress_due_to_centrifugal_force_Gerada11(R_list, speed_rpm, Rout, Rin, material_density_rho=None, Poisson_ratio_nu=None):
+    Omega = speed_rpm/(60)*2*pi
+
+    if material_density_rho is None: # Example 6.3
+        material_density_rho, Poisson_ratio_nu, _ = get_material_data()
+
+    m = inverse_Poisson_ratio_m = 1.0 / Poisson_ratio_nu
+
+    sigma_at_R_list = [ material_density_rho * Omega**2 / (8e12)* ( 
+                                                                    (3*m-2)/(m-1) * (Rin**2 + Rout**2 + Rin**2 * Rout**2/R**2) - (m+2)/(m-1)*R**2
+                                                                  ) for R in R_list
+                      ]
+
+    return sigma_at_R_list
 
 def get_outer_rotor_radius_yield(speed_rpm, yield_stress=None, material_density_rho=None, Poisson_ratio_nu=None, bBore=True, safety_factor_to_yield=1.5): # centrifugal force
     if yield_stress is None: # Example 6.3

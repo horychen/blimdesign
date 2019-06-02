@@ -119,6 +119,10 @@ while True:
     breakdown_slipfreq_1st = list_slipfreq[index_1st]
     print('The max is #%d'%index_1st, breakdown_torque_1st, 'Nm')
 
+    # 按Eric启发，这里可以添加一个判断，如果1st max是上一步的频率点，比如说 3 Hz 或者 4 Hz，那么说明最大点不在 1st max 和 2nd max 之间，而是在 1st max 和 3rd max之间。
+    # 按Eric启发，这里可以添加一个判断，如果1st max是上一步的频率点，比如说 3 Hz 或者 4 Hz，那么说明最大点不在 1st max 和 2nd max 之间，而是在 1st max 和 3rd max之间。
+    # 按Eric启发，这里可以添加一个判断，如果1st max是上一步的频率点，比如说 3 Hz 或者 4 Hz，那么说明最大点不在 1st max 和 2nd max 之间，而是在 1st max 和 3rd max之间。
+
     # find the 2nd max
     list_torque_copy[index_1st] = -999999
     index_2nd, breakdown_torque_2nd = max(enumerate(list_torque_copy), key=operator.itemgetter(1))
@@ -139,7 +143,6 @@ while True:
         with open(dir_femm_temp + 'femm_found.csv', 'w') as f:
             f.write('%g\n%g\n'%(breakdown_slipfreq_1st, breakdown_torque_1st)) #, Qs_stator_slot_area, Qr_rotor_slot_area))
         break
-
 
     else:
         print('Not yet.')
