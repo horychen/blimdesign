@@ -126,11 +126,11 @@ class FEA_Solver:
                     print('[First run on this computer detected]', self.fea_config_dict['Steel'], 'is added to jmag material library.')
 
                     if 'M15' in self.fea_config_dict['Steel']:
-                        population.add_M1xSteel(self.app, self.dir_parent, steel_name="M-15 Steel")
+                        population.add_M1xSteel(self.app, self.fea_config_dict['dir_parent'], steel_name="M-15 Steel")
                     elif 'M19' in self.fea_config_dict['Steel']:
-                        population.add_M1xSteel(self.app, self.dir_parent)
+                        population.add_M1xSteel(self.app, self.fea_config_dict['dir_parent'])
                     elif 'Arnon5' == self.fea_config_dict['Steel']:
-                        population.add_Arnon5(self.app, self.dir_parent)        
+                        population.add_Arnon5(self.app, self.fea_config_dict['dir_parent'])        
 
                 # too avoid tons of the same material in JAMG's material library
                 fname = self.fea_config_dict['dir_parent'] + '.jmag_state.txt'
@@ -1112,6 +1112,16 @@ def my_print(pop, _):
 
         # print(fits, vectors, ndf)
         print(pop, file=fname)
+
+if bool_post_processing:
+    plot pareto plot for three objectives...
+
+    swda = ad.best_design_by_weights(fea_config_dict['use_weights'])
+    from pylab import show
+    show()
+    quit()
+    run_static_structural_fea(swda.best_design_denorm)
+
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Multi-Objective Optimization
