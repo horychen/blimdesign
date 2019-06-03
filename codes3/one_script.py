@@ -1025,7 +1025,7 @@ class Problem_BearinglessInductionDesign(object):
         rated_rotor_volume = np.pi*(ad.solver.im_variant.Radius_OuterRotor*1e-3)**2 * (rated_stack_length_mm*1e-3)
 
         # This weighted list suggests that peak-to-peak torque ripple of 5% is comparable with Em of 5% or Ea of 5 deg. Ref: Ye gu ECCE 2018
-        list_weighted_ripples = [normalized_torque_ripple/0.05, normalized_force_error_magnitude/0.05, force_error_angle/5.0]
+        list_weighted_ripples = [normalized_torque_ripple/0.05, normalized_force_error_magnitude/0.05, force_error_angle]
 
         # - Torque per Rotor Volume
         f1 = - ad.spec.required_torque / rated_rotor_volume
@@ -1035,7 +1035,7 @@ class Problem_BearinglessInductionDesign(object):
         f3 = sum(list_weighted_ripples)
 
         # Constraints (Em<0.2 and Ea<10 deg):
-        if normalized_force_error_magnitude >= 0.2 or force_error_angle > 10:
+        if normalized_torque_ripple>=0.2 or normalized_force_error_magnitude >= 0.2 or force_error_angle > 10:
             f1 = 0
             f2 = 0
 
@@ -1135,7 +1135,7 @@ if True:
     global counter_fitness_called, counter_fitness_return, flag_restart
     counter_fitness_called, counter_fitness_return, flag_restart = 0, 0, False
     prob = pg.problem(udp)
-    pop = pg.population(prob, size=36) # don't forget to change neighbours to be below size (default is 20)
+    pop = pg.population(prob, size=72) # don't forget to change neighbours to be below size (default is 20)
     print('-'*40, '\nInitial pop:', pop)
 
     ################################################################

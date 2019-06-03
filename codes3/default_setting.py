@@ -23,7 +23,7 @@ fea_config_dict = {
     ##########################
     'TranRef-StepPerCycle':40, # FEMM: 5 deg   # 360 to be precise as FEMM: 0.5 deg 
     # 'FrequencyRange':range(1,6), # the first generation for PSO
-    'number_of_steps_1stTTS':32,
+    'number_of_steps_1stTTS':32, # TSS actually...
     'number_of_steps_2ndTTS':32, # use a multiples of 4! # 8*32 # steps for half period (0.5). That is, we implement two time sections, the 1st section lasts half slip period and the 2nd section lasts half fandamental period.
     'number_cycles_prolonged':1, # 150
     'FEMM_Coarse_Mesh':True,
@@ -46,6 +46,9 @@ fea_config_dict = {
     'End_Ring_Resistance':0, # 0 for consistency with FEMM with pre-determined currents # 9.69e-6, # this is still too small for Chiba's winding
     'Steel': 'M19Gauge29', #'M15','Arnon5', 
                            # 75 deg Celsus: If you modify the temperature here, you should update the initial design (the im.DriveW_Rs should be updated and it used in JMAG FEM Coil)
+    # This is actually the resistivity!
+    # This is actually the resistivity!
+    # This is actually the resistivity!
     'Bar_Conductivity':1/((3.76*75+873)*1e-9/55.), # @75 Degree Celsius # 1/((3.76*100+873)*1e-9/55.) for Copper, where temperature is 25 or 100 deg Celsius.
     # 'Bar_Conductivity':40e6, # 40e6 for Aluminium; 
 }
