@@ -44,7 +44,7 @@ if True:
     fea_config_dict['use_weights'] = 'O2' # this is not working
     run_folder = r'run#537/' # test with pygmo
 
-    run_folder = r'run#538/' # test with pygmo with new fitness and constraints
+    run_folder = r'run#538/' # test with pygmo with new fitness and constraints, Rotor current density Jr is 6.5 Arms/mm^2
 
 else:
     # Prototype
@@ -88,7 +88,56 @@ class FEA_Solver:
 
         self.folder_to_be_deleted = None
 
-        open(self.output_dir+'MOO_log.txt', 'w').close()
+        # if os.path.exists(self.output_dir+'swarm_MOO_log.txt'):
+        #     os.rename(self.output_dir+'swarm_MOO_log.txt', self.output_dir+'swarm_MOO_log_backup.txt')
+        open(self.output_dir+'swarm_MOO_log.txt', 'a').close()
+
+    def read_swarm_survivor(self, popsize):
+        with open(ad.solver.output_dir + 'swarm_survivor.txt', 'r') as f:
+            buf = f.readlines()
+
+        # 情况一：survivor的个数不足一代
+        # 情况二：survivor的个数超过一代，但却不是poopsize的整数倍，此时拿上一代的相应位置上的个体来充数。
+        survivor = None
+        return survivor
+
+    def write_swarm_survivor(self, pop):
+        with open(ad.solver.output_dir + 'swarm_survivor.txt', 'a') as f:
+            f.write('---------%d'(counter_fitness_return) \
+                    + '\n'.join(','.join('%.16f'%(x) for x in el[0].tolist() + el[1].tolist() ) for el in zip(pop.get_x(), pop.get_f()) )) # convert 2d array to string
+
+    def read_swarm_data(self):
+        if not os.path.exists(self.output_dir + 'swarm_data.txt'):
+            return None
+
+        with open(self.output_dir + 'swarm_data.txt', 'r') as f:
+            buf = f.readlines()
+            buf = buf[1:]
+            length_buf = len(buf) 
+
+            if length_buf % 21 == 0:
+                pass
+            else:
+                raise Exception('Invalid swarm_data.txt!')
+
+            number_of_chromosome = length_buf / 21
+
+            return buf, number_of_chromosome
+
+            # while True:
+            #     try:
+            #         if 'Extra Info:' in buf.pop():
+            #             info_is_at_this_line = buf[-10]
+            #             loc_first_comma = info_is_at_this_line.find(',') + 1
+            #             loc_second_comma = info_is_at_this_line.find(',', loc_first_comma+1)
+            #             counter = int(info_is_at_this_line[loc_first_comma+1, loc_second_comma])
+            #             print(counter)
+            #             quit()
+            #             break
+            #     except:
+            #         print('swarm_data.txt is empty')
+            #         return None
+
 
     def fea_bearingless_induction(self, im_template, x_denorm, counter):
         logger = logging.getLogger(__name__)
@@ -395,6 +444,8 @@ class acm_designer(object):
         self.solver = FEA_Solver(fea_config_dict)
         self.fea_config_dict = fea_config_dict
 
+        self.flag_do_not_evaluate_when_init_pop = False
+
     def init_logger(self, prefix='pygmo_'):
         self.logger = utility.myLogger(self.fea_config_dict['dir_codes'], prefix=prefix+self.fea_config_dict['run_folder'][:-1])
 
@@ -439,7 +490,7 @@ class acm_designer(object):
         转子齿宽最大值 = tan(2*pi/self.spec.Qr*0.5)*内接圆的半径 * 2 
         # print(转子齿宽最大值, 2*pi*内接圆的半径/self.spec.Qr) # 跟弧长比应该比较接近说明对了
 
-        self.original_bounds = [ [           0.8,              3],          # air_gap_length_delta
+        self.original_bounds = [ [           1.0,              3],          # air_gap_length_delta
                                  [定子齿宽最小值, 定子齿宽最大值],#--# stator_tooth_width_b_ds
                                  [转子齿宽最小值, 转子齿宽最大值],#--# rotor_tooth_width_b_dr
                                  [             1,    360/spec.Qs],           # Angle_StatorSlotOpen
@@ -483,7 +534,7 @@ class acm_designer(object):
 
     def get_classic_bounds(self):
         self.get_original_bounds()
-        self.classic_bounds = [ [self.spec.delta*0.7, self.spec.delta*2  ],          # air_gap_length_delta
+        self.classic_bounds = [ [self.spec.delta*0.9, self.spec.delta*2  ],          # air_gap_length_delta
                                 [self.spec.w_st *0.5, self.spec.w_st *1.5],          #--# stator_tooth_width_b_ds
                                 [self.spec.w_rt *0.5, self.spec.w_rt *1.5],          #--# rotor_tooth_width_b_dr
                                 [                1.5,                  12],           # Angle_StatorSlotOpen
@@ -921,9 +972,11 @@ class Problem_BearinglessInductionDesign(object):
 
     # Define objectives
     def fitness(self, x):
-        # return [x[0], x[1], x[2]]
-
         global ad, counter_fitness_called, counter_fitness_return, folder_to_be_deleted
+
+        if ad.flag_do_not_evaluate_when_init_pop == True:
+            return [0, 0, 0]
+
         ad, counter_fitness_called, counter_fitness_return
         if counter_fitness_called == counter_fitness_return:
             counter_fitness_called += 1
@@ -1089,10 +1142,34 @@ if True:
     #   The magic method __init__ cannot be fined for UDP class
     ################################################################
     udp = Problem_BearinglessInductionDesign()
-    global counter_fitness_called, counter_fitness_return, flag_restart
-    counter_fitness_called, counter_fitness_return, flag_restart = 0, 0, False
+    global counter_fitness_called, counter_fitness_return
+    counter_fitness_called, counter_fitness_return = 0, 0
     prob = pg.problem(udp)
-    pop = pg.population(prob, size=72) # don't forget to change neighbours to be below size (default is 20)
+
+    popsize = 72
+
+    # # Add Restarting Feature
+    # buf, number_of_chromosome = ad.solver.read_swarm_data()
+    # if buf is not None:
+    #     print('This is a restart of '+ fea_config_dict['run_folder'][:-1])
+    #     print(f'There are {number_of_chromosome} chromosomes found in swarm_data.txt.')
+    #     counter_fitness_called = counter_fitness_return = number_of_chromosome
+
+    #     容易犯的错误：swarm_data.txt中的个体，不代表活着的个体啊！
+
+    #     ad.flag_do_not_evaluate_when_init_pop = True
+
+    #     survivor = ad.solver.read_swarm_survivor()
+    #     if len(survivor) < popsize:
+    #         ad.flag_do_not_evaluate_when_init_pop
+
+    pop = pg.population(prob, size=popsize) # don't forget to change neighbours to be below size (default is 20)
+
+    if ad.flag_do_not_evaluate_when_init_pop == True:
+
+        for i in range(popsize):
+            pop.set_xf(i, survivor[i][:7], survivor[i][-3:])
+        ad.flag_do_not_evaluate_when_init_pop = False
     print('-'*40, '\nInitial pop:', pop)
 
     ################################################################
@@ -1109,6 +1186,8 @@ if True:
     number_of_iterations = 50
     for _ in range(number_of_iterations):
         pop = algo.evolve(pop)
+        ad.solver.write_swarm_survivor(pop)
+
         my_print(pop, _)
         # my_plot(fits, vectors, ndf)
 

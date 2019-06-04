@@ -583,14 +583,14 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
     ################################################################
     # caculate the fitness
     print('-'*40)
-    print('caculate the fitness for', im_variant.name)
+    print('Calculate the fitness for', im_variant.name)
 
     # LOSS
-    stator_copper_loss_along_stack = femm_loss_list[2]
-    rotor_copper_loss_along_stack  = femm_loss_list[3]
+    stator_copper_loss_along_stack = dm.femm_loss_list[2]
+    rotor_copper_loss_along_stack  = dm.femm_loss_list[3]
 
-    stator_copper_loss_in_end_turn = femm_loss_list[0] - stator_copper_loss_along_stack 
-    rotor_copper_loss_in_end_turn  = femm_loss_list[1] - rotor_copper_loss_along_stack
+    stator_copper_loss_in_end_turn = dm.femm_loss_list[0] - stator_copper_loss_along_stack 
+    rotor_copper_loss_in_end_turn  = dm.femm_loss_list[1] - rotor_copper_loss_along_stack
 
     rated_ratio                          = im_variant.spec.required_torque / torque_average 
     rated_stack_length_mm                = rated_ratio * stack_length_mm
@@ -609,8 +609,8 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
                       + rated_windage_loss
 
     # THERMAL
-    stator_current_density = femm_loss_list[4]
-    rotor_current_density  = femm_loss_list[5]
+    stator_current_density = dm.femm_loss_list[4]
+    rotor_current_density  = dm.femm_loss_list[5]
     # print('Current density [Arms/m^2]:', stator_current_density, rotor_current_density, sep='\n')
     # if rotor_current_density > 8e6:
     #     print('rotor_current_density is over 8e6 Arms/m^2')
@@ -650,12 +650,12 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
     # str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss, cost_function = results_to_be_unpacked
 
     # write design evaluation data to file
-    with open(self.output_dir + 'swarm_data.txt', 'a') as f:
+    with open(self.dir_csv_output_folder[:-4] + 'swarm_data.txt', 'a') as f:
         f.write(str_results)
 
     if fea_config_dict['use_weights'] == 'O1':
         cost_function = cost_function_O1
-    elif: fea_config_dict['use_weights'] == 'O2':
+    elif fea_config_dict['use_weights'] == 'O2':
         cost_function = cost_function_O2
     else:
         raise Exception('Not implemented error.')
