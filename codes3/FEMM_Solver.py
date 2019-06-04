@@ -1976,7 +1976,7 @@ class FEMM_Solver(object):
         print('list_rotor_current_amp', self.list_rotor_current_amp) # self.list_rotor_current_amp is defined in population.py
         rotor_copper_loss             = 0.0
         rotor_copper_loss_along_stack = 0.0
-        sum_rotor_current_density     = 0.0
+        # sum_rotor_current_density     = 0.0
         list_Jr = []
         for amp in self.list_rotor_current_amp:
             current_rms_value              = amp / 1.4142135623730951

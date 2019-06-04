@@ -44,6 +44,8 @@ if True:
     fea_config_dict['use_weights'] = 'O2' # this is not working
     run_folder = r'run#537/' # test with pygmo
 
+    run_folder = r'run#538/' # test with pygmo with new fitness and constraints
+
 else:
     # Prototype
     pass
@@ -251,21 +253,13 @@ class FEA_Solver:
         # Load Results for Tran2TSS
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         results_to_be_unpacked = utility.build_str_results(self.axeses, im_variant, self.project_name, tran2tss_study_name, self.dir_csv_output_folder, self.fea_config_dict, self.femm_solver)
-        # str_results, 
         if results_to_be_unpacked is not None:
             self.fig_main.savefig(self.output_dir + im_variant.name + 'results.png', dpi=150)
             utility.pyplot_clear(self.axeses)
             # show()
-
-            str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss, cost_function = results_to_be_unpacked
-
-            # write design evaluation data to file
-            with open(self.output_dir + 'swarm_data.txt', 'a') as f:
-                f.write(str_results)
-
-            return im_variant.stack_length, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss
+            return results_to_be_unpacked # im_variant.stack_length, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss
         else:
-            raise
+            raise Exception('results_to_be_unpacked is None.')
         # winding analysis? 之前的python代码利用起来啊
         # 希望的效果是：设定好一个设计，马上进行运行求解，把我要看的数据都以latex报告的形式呈现出来。
         # OP_PS_Qr36_M19Gauge29_DPNV_NoEndRing.jproj
@@ -427,6 +421,8 @@ class acm_designer(object):
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     def evaluate_design(self, im_template, x_denorm, counter):
         return self.solver.fea_bearingless_induction(im_template, x_denorm, counter)
+
+
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # 1. Bounds for DE optimiazation
@@ -914,7 +910,7 @@ ad.bounds_denorm = ad.get_classic_bounds()
 print('classic_bounds and original_bounds')
 for A, B in zip(ad.bounds_denorm, ad.original_bounds):
     print(A, B)
-quit()
+# quit()
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Optimization
@@ -949,9 +945,10 @@ class Problem_BearinglessInductionDesign(object):
                 raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
 
             try:
-                stack_length_mm, torque_average, normalized_torque_ripple, \
-                    ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, \
-                    jmag_loss_list, femm_loss_list, power_factor, total_loss = \
+                cost_function, f1, f2, f3, \
+                normalized_torque_ripple, \
+                normalized_force_error_magnitude, \
+                force_error_angle = \
                     ad.evaluate_design(ad.spec.im_template, x_denorm, counter_fitness_called)
 
                 # remove folder .jfiles to save space (we have to generate it first in JMAG Designer to have field data and voltage profiles)
@@ -977,7 +974,7 @@ class Problem_BearinglessInductionDesign(object):
                 ad.solver.app.Quit()
                 ad.solver.app = None
 
-                os.remove(ad.solver.expected_project_file) # .jproj
+                # os.remove(ad.solver.expected_project_file) # .jproj
                 # shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory # .jplot file in this folder will be used by JSOL softwares even JMAG Designer is closed.
                 os.remove(ad.solver.femm_output_file_path) # . csv
                 os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
@@ -987,52 +984,12 @@ class Problem_BearinglessInductionDesign(object):
             else:
                 break
 
-        # caculate the fitness
-        print('-'*40)
-        print('caculate the fitness for', ad.solver.im_variant.name)
-
-        # LOSS
-        stator_copper_loss_along_stack = femm_loss_list[2]
-        rotor_copper_loss_along_stack  = femm_loss_list[3]
-
-        stator_copper_loss_in_end_turn = femm_loss_list[0] - stator_copper_loss_along_stack 
-        rotor_copper_loss_in_end_turn  = femm_loss_list[1] - rotor_copper_loss_along_stack
-
-        rated_ratio                          = ad.spec.required_torque / torque_average 
-        rated_stack_length_mm                = rated_ratio * stack_length_mm
-        rated_stator_copper_loss_along_stack = rated_ratio * stator_copper_loss_along_stack
-        rated_rotor_copper_loss_along_stack  = rated_ratio * rotor_copper_loss_along_stack
-        rated_iron_loss                      = rated_ratio * jmag_loss_list[2]
-
-        # total_loss   = copper_loss + iron_loss + windage_loss
-        rated_total_loss =  rated_stator_copper_loss_along_stack \
-                          + rated_rotor_copper_loss_along_stack \
-                          + stator_copper_loss_in_end_turn \
-                          + rotor_copper_loss_in_end_turn \
-                          + rated_iron_loss \
-                          + utility.get_windage_loss(ad.solver.im_variant)
-
-        # THERMAL
-        stator_current_density = femm_loss_list[4]
-        rotor_current_density  = femm_loss_list[5]
-        print('Current density [Arms/m^2]:', stator_current_density, rotor_current_density, sep='\n')
-        if rotor_current_density > 8e6:
-            print('rotor_current_density is over 8e6 Arms/m^2')
-
-        rated_shaft_power  = ad.solver.im_variant.Omega * ad.spec.required_torque
-        rated_efficiency   = rated_shaft_power / (rated_total_loss + rated_shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
-
-        rated_rotor_volume = np.pi*(ad.solver.im_variant.Radius_OuterRotor*1e-3)**2 * (rated_stack_length_mm*1e-3)
-
-        # This weighted list suggests that peak-to-peak torque ripple of 5% is comparable with Em of 5% or Ea of 5 deg. Ref: Ye gu ECCE 2018
-        list_weighted_ripples = [normalized_torque_ripple/0.05, normalized_force_error_magnitude/0.05, force_error_angle]
-
         # - Torque per Rotor Volume
-        f1 = - ad.spec.required_torque / rated_rotor_volume
+        f1 #= - ad.spec.required_torque / rated_rotor_volume
         # - Efficiency @ Rated Power
-        f2 = - rated_efficiency
+        f2 #= - rated_efficiency
         # Ripple Performance (Weighted Sum)
-        f3 = sum(list_weighted_ripples)
+        f3 #= sum(list_weighted_ripples)
 
         # Constraints (Em<0.2 and Ea<10 deg):
         if normalized_torque_ripple>=0.2 or normalized_force_error_magnitude >= 0.2 or force_error_angle > 10:

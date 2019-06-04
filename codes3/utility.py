@@ -387,7 +387,7 @@ def send_notification(text='Hello'):
     mail.close()
     print("Notificaiont sent.")
 
-def get_windage_loss(im_variant):
+def get_windage_loss(im_variant, TEMPERATURE_OF_AIR=75):
 
     # %Air friction loss calculation
     nu_0_Air  = 13.3e-6#;  %[m^2/s] kinematic viscosity of air at 0
@@ -397,7 +397,7 @@ def get_windage_loss(im_variant):
              1,                                                     #0;         %Shrouded (1) or free surface (0)
              im_variant.Length_AirGap]                              #0];        %Airgap in mm
     Num_shaft_section = 1
-    T_Air = 75 #20:(120-20)/((SpeedMax-SpeedMin)/SpeedStep):120         #; % Air temperature []
+    T_Air = TEMPERATURE_OF_AIR #20:(120-20)/((SpeedMax-SpeedMin)/SpeedStep):120         #; % Air temperature []
     
     nu_Air  = nu_0_Air*((T_Air+273)/(0+273))**1.76
     rho_Air = rho_0_Air*(0+273)/(T_Air+273)
@@ -482,8 +482,8 @@ def add_plots(axeses, dm, title=None, label=None, zorder=None, time_list=None, s
                                                                  sfv.ss_max_force_err_ang[1])
     info += '\nExtra Info:'
     info += '\n\tAverage Force Vecotr: (%g, %g) N' % (sfv.ss_avg_force_vector[0], sfv.ss_avg_force_vector[1])
-    info += '\n\tTorque Ripple (Peak-to-Peak) %g Nm'% ( max(torque[-range_ss:]) - min(torque[-range_ss:]))
-    info += '\n\tForce Mag Ripple (Peak-to-Peak) %g N'% (sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1])
+    info += '\n\tTorque Ripple (Peak-to-Peak): %g Nm'% ( max(torque[-range_ss:]) - min(torque[-range_ss:]))
+    info += '\n\tForce Mag Ripple (Peak-to-Peak): %g N'% (sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1])
 
     # plot for torque and force
     ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
@@ -526,10 +526,10 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
     if dm.jmag_loss_list is None:
         raise Exception('Loss data is not loaded?')
     else:
-        str_results += '\n\tjmag loss info:'  + ', '.join(['%g'%(el) for el in dm.jmag_loss_list]) # dm.jmag_loss_list = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
+        str_results += '\n\tjmag loss info: '  + ', '.join(['%g'%(el) for el in dm.jmag_loss_list]) # dm.jmag_loss_list = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
 
     if fea_config_dict['jmag_run_list'][0] == 0:
-        str_results += '\n\tfemm loss info:'  + ', '.join(['%g'%(el) for el in dm.femm_loss_list])
+        str_results += '\n\tfemm loss info: '  + ', '.join(['%g'%(el) for el in dm.femm_loss_list])
 
     if fea_config_dict['delete_results_after_calculation'] == False:
         power_factor = dm.power_factor(fea_config_dict['number_of_steps_2ndTTS'], targetFreq=im_variant.DriveW_Freq)
@@ -568,25 +568,100 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
     # for easy access to codes
     machine_results = [power_factor, efficiency, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle]
     machine_results.extend(dm.jmag_loss_list)
-    if dm.femm_loss_list is not None:
-        machine_results.extend(dm.femm_loss_list)
-    else:
-        machine_results.extend([0.0, 0.0])
+    if dm.femm_loss_list is None:
+        raise
+    machine_results.extend(dm.femm_loss_list)
     machine_results.extend([windage_loss, total_loss])
 
     str_machine_results = ','.join('%g'%(el) for el in machine_results if el is not None) # note that femm_loss_list can be None called by release_design.py
     
-    cost_function, list_cost = compute_list_cost(use_weights(fea_config_dict['use_weights']), rotor_volume, rotor_weight, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list, power_factor, total_loss)
+    cost_function_O1, list_cost_O1 = compute_list_cost(use_weights('O1'), rotor_volume, rotor_weight, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list, power_factor, total_loss)
+    cost_function_O2, list_cost_O2 = compute_list_cost(use_weights('O2'), rotor_volume, rotor_weight, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list, power_factor, total_loss)
 
-    str_results = '\n-------\n%s-%s\n%d,%d,%g\n%s\n%s\n%s\n' % (
+    ################################################################
+    # NEW CODES for rated performance
+    ################################################################
+    # caculate the fitness
+    print('-'*40)
+    print('caculate the fitness for', im_variant.name)
+
+    # LOSS
+    stator_copper_loss_along_stack = femm_loss_list[2]
+    rotor_copper_loss_along_stack  = femm_loss_list[3]
+
+    stator_copper_loss_in_end_turn = femm_loss_list[0] - stator_copper_loss_along_stack 
+    rotor_copper_loss_in_end_turn  = femm_loss_list[1] - rotor_copper_loss_along_stack
+
+    rated_ratio                          = im_variant.spec.required_torque / torque_average 
+    rated_stack_length_mm                = rated_ratio * stack_length_mm
+    rated_stator_copper_loss_along_stack = rated_ratio * stator_copper_loss_along_stack
+    rated_rotor_copper_loss_along_stack  = rated_ratio * rotor_copper_loss_along_stack
+    rated_iron_loss                      = rated_ratio * jmag_loss_list[2]
+    im_variant.stack_length = rated_stack_length_mm
+    rated_windage_loss                   = get_windage_loss(im_variant)
+
+    # total_loss   = copper_loss + iron_loss + windage_loss
+    rated_total_loss =  rated_stator_copper_loss_along_stack \
+                      + rated_rotor_copper_loss_along_stack \
+                      + stator_copper_loss_in_end_turn \
+                      + rotor_copper_loss_in_end_turn \
+                      + rated_iron_loss \
+                      + rated_windage_loss
+
+    # THERMAL
+    stator_current_density = femm_loss_list[4]
+    rotor_current_density  = femm_loss_list[5]
+    # print('Current density [Arms/m^2]:', stator_current_density, rotor_current_density, sep='\n')
+    # if rotor_current_density > 8e6:
+    #     print('rotor_current_density is over 8e6 Arms/m^2')
+
+    rated_shaft_power  = im_variant.Omega * im_variant.spec.required_torque
+    rated_efficiency   = rated_shaft_power / (rated_total_loss + rated_shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
+
+    rated_rotor_volume = np.pi*(im_variant.Radius_OuterRotor*1e-3)**2 * (rated_stack_length_mm*1e-3)
+
+    # This weighted list suggests that peak-to-peak torque ripple of 5% is comparable with Em of 5% or Ea of 5 deg. Ref: Ye gu ECCE 2018
+    list_weighted_ripples = [normalized_torque_ripple/0.05, normalized_force_error_magnitude/0.05, force_error_angle]
+
+    # - Torque per Rotor Volume
+    f1 = - im_variant.spec.required_torque / rated_rotor_volume
+    # - Efficiency @ Rated Power
+    f2 = - rated_efficiency
+    # Ripple Performance (Weighted Sum)
+    f3 = sum(list_weighted_ripples)
+
+    rated_results = [rated_shaft_power, rated_efficiency,
+                                        rated_total_loss, 
+                                        rated_stator_copper_loss_along_stack, 
+                                        rated_rotor_copper_loss_along_stack, 
+                                        stator_copper_loss_in_end_turn, 
+                                        rotor_copper_loss_in_end_turn, 
+                                        rated_iron_loss, 
+                                        rated_windage_loss,
+                                        rated_rotor_volume]
+
+    str_results = '\n-------\n%s-%s\n%d,%d,O1=%g,O2=%g,f1=%g,f2=%g,f3=%g\n%s\n%s\n%s\n' % (
                     project_name, im_variant.get_individual_name(), 
-                    im_variant.number_current_generation, im_variant.individual_index, cost_function, 
+                    im_variant.number_current_generation, im_variant.individual_index, cost_function_O1, cost_function_O2, f1, f2, f3,
                     str_machine_results,
-                    ','.join(['%g'%(el) for el in list_cost]),
+                    ','.join(['%g'%(el) for el in rated_results]), # 改为输出 rated_results
                     ','.join(['%g'%(el) for el in im_variant.design_parameters]) ) + str_results
+ 
+    # str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss, cost_function = results_to_be_unpacked
 
+    # write design evaluation data to file
+    with open(self.output_dir + 'swarm_data.txt', 'a') as f:
+        f.write(str_results)
 
-    return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list, power_factor, total_loss, cost_function
+    if fea_config_dict['use_weights'] == 'O1':
+        cost_function = cost_function_O1
+    elif: fea_config_dict['use_weights'] == 'O2':
+        cost_function = cost_function_O2
+    else:
+        raise Exception('Not implemented error.')
+
+    return cost_function, f1, f2, f3, normalized_torque_ripple, normalized_force_error_magnitude, force_error_angle
+ # str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, dm.jmag_loss_list, dm.femm_loss_list, power_factor, total_loss, cost_function
 
 class suspension_force_vector(object):
     """docstring for suspension_force_vector"""
