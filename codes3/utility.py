@@ -593,10 +593,10 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
     rotor_copper_loss_in_end_turn  = dm.femm_loss_list[1] - rotor_copper_loss_along_stack
 
     rated_ratio                          = im_variant.spec.required_torque / torque_average 
-    rated_stack_length_mm                = rated_ratio * stack_length_mm
+    rated_stack_length_mm                = rated_ratio * im_variant.stack_length
     rated_stator_copper_loss_along_stack = rated_ratio * stator_copper_loss_along_stack
     rated_rotor_copper_loss_along_stack  = rated_ratio * rotor_copper_loss_along_stack
-    rated_iron_loss                      = rated_ratio * jmag_loss_list[2]
+    rated_iron_loss                      = rated_ratio * dm.jmag_loss_list[2]
     im_variant.stack_length = rated_stack_length_mm
     rated_windage_loss                   = get_windage_loss(im_variant)
 
@@ -650,7 +650,7 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
     # str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss, cost_function = results_to_be_unpacked
 
     # write design evaluation data to file
-    with open(self.dir_csv_output_folder[:-4] + 'swarm_data.txt', 'a') as f:
+    with open(dir_csv_output_folder[:-4] + 'swarm_data.txt', 'a') as f:
         f.write(str_results)
 
     if fea_config_dict['use_weights'] == 'O1':

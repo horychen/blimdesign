@@ -7,7 +7,7 @@ fea_config_dict = {
     ##########################
     # Sysetm Control
     ##########################
-    'designer.Show': True,
+    'designer.Show': False,
     'OnlyTableResults':False, # modified later according to pc_name # the only reason we want save mesh results are to obtain voltage profile for power factor evaluation
     'local_sensitivity_analysis':False,
     'local_sensitivity_analysis_number_of_variants': 20,
@@ -114,17 +114,19 @@ from sys import path as sys_path
 # for importing your package
 sys_path.append(fea_config_dict['dir_lib'])
 
-import population
-import FEMM_Solver
+# import population
+# import FEMM_Solver
 import utility
 
-import importlib
-importlib.reload(population) # relaod for JMAG's python environment
-importlib.reload(FEMM_Solver)
-importlib.reload(utility)
+# relaod for JMAG's python environment (script editor in JMAG Designer)
+# import importlib
+# importlib.reload(population) 
+# importlib.reload(FEMM_Solver)
+# importlib.reload(utility)
 
 import pyrhonen_procedure_as_function
 import numpy as np
+import logging
 
 # run_list = [1,1,0,0,0] # use JMAG only
 run_list = [0,1,0,0,0] # use FEMM to search for breakdown slip

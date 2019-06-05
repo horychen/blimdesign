@@ -3157,7 +3157,7 @@ class bearingless_induction_motor_design(object):
             else:
                 run_folder = self.fea_config_dict['run_folder']
 
-            print('Warn: Themal penalty is not written...')
+            print('Warn: Themal penalty (%g) is not written...'%(thermal_penalty))
             # with open(self.fea_config_dict['dir_parent'] + 'pop/' + run_folder + 'thermal_penalty_individuals.txt', 'a') as f:
             #     f.write(self.get_individual_name() + ',%g,%g,%g\n'%(thermal_penalty, rotor_tooth_width_b_dr, new__area_rotor_slot_Sur))
         self.thermal_penalty = thermal_penalty
