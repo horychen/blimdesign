@@ -48,20 +48,22 @@ else:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson02
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    # my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals())
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2'
-    run_folder = r'run#54029/'
+    run_folder = r'run#538021/'
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson01
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    # my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals())
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2'
-    run_folder = r'run#53019/'
+    run_folder = r'run#538011/'
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['Active_Qr'] = spec.Qr
