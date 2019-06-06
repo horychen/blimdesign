@@ -48,20 +48,22 @@ else:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson02
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    # my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals())
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2'
-    run_folder = r'run#54029/'
+    run_folder = r'run#538021/'
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson01
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    # my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
+    my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals())
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2'
-    run_folder = r'run#53019/'
+    run_folder = r'run#538011/'
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['Active_Qr'] = spec.Qr
@@ -440,7 +442,9 @@ if True:
         ad.flag_do_not_evaluate_when_init_pop = False
 
     print('-'*40, '\nPop is initialized:\n', pop)
-    # print('?????????')
+    hv = pg.hypervolume(pop)
+    quality_measure = hv.compute(ref_point=[0.,0.,100.]) # ref_point must be dominated by the pop's pareto front
+    print('quality_measure: %g'%(quality_measure))
     # raise KeyboardInterrupt
 
     # 初始化以后，pop.problem.get_fevals()就是popsize，但是如果大于popsize，说明“pop.set_x(i, pop_array[i]) # evaluate this guy”被调用了，说明还没输出过 survivors 数据，那么就写一下。
@@ -459,6 +463,7 @@ if True:
                                  realb=0.9, 
                                  limit=2, preserve_diversity=True)) # https://esa.github.io/pagmo2/docs/python/algorithms/py_algorithms.html#pygmo.moead
     print('-'*40, '\n', algo)
+    # quit()
 
 ################################################################
 # MOO Step 3:
