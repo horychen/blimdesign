@@ -2919,15 +2919,17 @@ class bearingless_induction_motor_design(object):
         if self.use_drop_shape_rotor_bar == True:
             # logger.debug('Location_RotorBarCenter:1,2: %g, %g.'%(self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
 
-            if self.Location_RotorBarCenter2 >= self.Location_RotorBarCenter:
+            if self.Location_RotorBarCenter2 >= self.Location_RotorBarCenter \
+                or abs(self.Location_RotorBarCenter2 - self.Location_RotorBarCenter)<=0.5: # To avoid small entity (Line.4). See 2019-06-06 @ 工作日志
                 logger = logging.getLogger(__name__)
-                logger.debug('Location_RotorBarCenter2 suggests to use round bar.')
+                logger.debug('Location_RotorBarCenter (%g) and Location_RotorBarCenter2 (%g) suggests to use round bar.'%(self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
                 self.use_drop_shape_rotor_bar = False
 
                 # for VanGogh (FEMM) to work properly
                 self.Location_RotorBarCenter2_backup = self.Location_RotorBarCenter2
                 self.Location_RotorBarCenter2 = self.Location_RotorBarCenter 
-                # use the larger slot radius (this is problematic)
+
+                # ~~use the larger slot radius~~ (this is problematic)
                 # use the smaller slot radius
                 if self.Radius_of_RotorSlot > self.Radius_of_RotorSlot2:
                     self.Radius_of_RotorSlot = self.Radius_of_RotorSlot2
@@ -3129,21 +3131,23 @@ class bearingless_induction_motor_design(object):
         if self.use_drop_shape_rotor_bar == True:
             # logger.debug('Location_RotorBarCenter:1,2: %g, %g.'%(self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
 
-            if self.Location_RotorBarCenter2 >= self.Location_RotorBarCenter:
+            if self.Location_RotorBarCenter2 >= self.Location_RotorBarCenter \
+                or abs(self.Location_RotorBarCenter2 - self.Location_RotorBarCenter)<=0.5: # To avoid small entity (Line.4). See 2019-06-06 @ 工作日志
                 logger = logging.getLogger(__name__)
-                logger.debug('Location_RotorBarCenter2 suggests to use round bar.')
-                print('Location_RotorBarCenter2 suggests to use round bar.\n'*3)
+                logger.debug('Location_RotorBarCenter (%g) and Location_RotorBarCenter2 (%g) suggests to use round bar.'%(self.Location_RotorBarCenter, self.Location_RotorBarCenter2))
                 self.use_drop_shape_rotor_bar = False
 
                 # for VanGogh (FEMM) to work properly
                 self.Location_RotorBarCenter2_backup = self.Location_RotorBarCenter2
                 self.Location_RotorBarCenter2 = self.Location_RotorBarCenter 
-                # use the larger slot radius (this is problematic)
+
+                # ~~use the larger slot radius~~ (this is problematic)
                 # use the smaller slot radius
                 if self.Radius_of_RotorSlot > self.Radius_of_RotorSlot2:
                     self.Radius_of_RotorSlot = self.Radius_of_RotorSlot2
                 if self.Radius_of_RotorSlot2 > self.Radius_of_RotorSlot:
                     self.Radius_of_RotorSlot2 = self.Radius_of_RotorSlot
+
 
 
         # thermal penalty for reduced rotor slot area (copper hot) and rotor tooth width (iron hot)
