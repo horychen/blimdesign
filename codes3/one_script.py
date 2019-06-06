@@ -241,8 +241,8 @@ def my_print(pop, _):
 
     with open(ad.solver.output_dir+'MOO_log.txt', 'a', encoding='utf-8') as fname:
         print('-'*40, 'Generation:', _, file=fname)
-        for index, front in enumerate(ndf):
-            print('Rank/Tier', index, front, file=fname)
+        for rank_minus_1, front in enumerate(ndf):
+            print('Rank/Tier', rank_minus_1+1, front, file=fname)
         count = 0
         for domination_list, domination_count, non_domination_rank in zip(dl, dc, ndr):
             print('Individual #%d\t'%(count), 'Belong to Rank #%d\t'%(non_domination_rank), 'Dominating', domination_count, 'and they are', domination_list, file=fname)
@@ -250,6 +250,57 @@ def my_print(pop, _):
 
         # print(fits, vectors, ndf)
         print(pop, file=fname)
+
+
+def learn_about_the_archive(swarm_data, popsize):
+    number_of_chromosome = len(swarm_data)
+    print('Archive size:', number_of_chromosome)
+    # for el in swarm_data:
+    #     print('\t', el)
+
+    pop_archive = pg.population(prob, size=number_of_chromosome)
+    for i in range(number_of_chromosome):
+        pop_archive.set_xf(i, swarm_data[i][:7], swarm_data[i][-3:])
+
+    sorted_index = pg.sort_population_mo(points=pop_archive.get_f())
+    print('Sorted by domination rank and crowding distance:', len(sorted_index))
+    print('\t', sorted_index)
+
+    # 这段代码对于重建种群来说不是必须的，单单sort_population_mo（包含fast_non_dominated_sorting和crowding_distance）就够了，
+    # 只是我想看看，具体的crowding_distance是多少，然后我想知道排在前面的多少个是属于domination rank 1的。
+    if True:
+        fits, vectors = pop_archive.get_f(), pop_archive.get_x()
+        ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
+
+        ind1, ind2 = 0, 0
+        for rank_minus_1, front in enumerate(ndf):
+
+            if ind2 == 0:
+                if len(front) < popsize:
+                    print('There are not enough chromosomes (%d) on the domination rank 1 (the best Pareto front).\nWill use rank 2 or lower to reach popsize of %d.'%(len(front), popsize))
+
+            ind2 += len(front)
+            sorted_index_at_this_front = sorted_index[ind1:ind2]
+
+            fits_at_this_front = [fits[point] for point in sorted_index_at_this_front]
+
+            # this crwdsit should be already sorted as well
+            crwdst = pg.crowding_distance(fits_at_this_front)
+
+            print('\nRank/Tier', rank_minus_1+1, 'chromosome count:', len(front), len(sorted_index_at_this_front))
+            # print('\t', sorted_index_at_this_front.tolist())
+            # print('\t', crwdst)
+            print('\tindex in pop\t|\tcrowding distance')
+            for index, cd in zip(sorted_index_at_this_front, crwdst):
+                print('\t', index, '\t\t\t|', cd)
+            ind1 = ind2
+
+    sorted_vectors = [vectors[index].tolist() for index in sorted_index]
+    sorted_fits    = [fits[index].tolist() for index in sorted_index]
+
+    swarm_data_on_pareto_front = [design_parameters_denorm + fits for design_parameters_denorm, fits in zip(sorted_vectors, sorted_fits)]
+
+    return swarm_data_on_pareto_front
 
 # if bool_post_processing:
 #     plot pareto plot for three objectives...
@@ -335,21 +386,8 @@ if True:
     # 初始化population，如果ad.flag_do_not_evaluate_when_init_pop是False，那么就说明是 new run，否则，整代个体的fitness都是[0,0,0]。
     pop = pg.population(prob, size=popsize) 
 
-    print(number_of_chromosome)
-    for el in ad.solver.swarm_data:
-        print('\t', el)
-    pop_archive = pg.population(prob, size=number_of_chromosome)
-    for i in range(number_of_chromosome):
-        pop_archive.set_xf(i, ad.solver.swarm_data[i][:7], ad.solver.swarm_data[i][-3:])
-    sorted_index = pg.sort_population_mo(points=pop_archive.get_f())
-    print(len(sorted_index))
-    print(sorted_index)
-    raise KeyboardInterrupt
-    quit()
-
     # 如果整代个体的fitness都是[0,0,0]，那就需要调用set_xf，把txt文件中的数据写入pop。如果发现数据的个数不够，那就调用set_x()来产生数据，形成初代个体。
     if ad.flag_do_not_evaluate_when_init_pop == True:
-        ad.flag_do_not_evaluate_when_init_pop = False
         pop_array = pop.get_x()
         if number_of_chromosome <= popsize:
             for i in range(popsize):
@@ -359,41 +397,56 @@ if True:
                     print(i, prob.get_fevals())
                     pop.set_x(i, pop_array[i]) # evaluate this guy
         else:
+            # 新办法，直接从swarm_data.txt（相当于archive）中判断出当前最棒的群体
+            swarm_data_on_pareto_front = learn_about_the_archive(ad.solver.swarm_data, popsize)
+            # print(swarm_data_on_pareto_front)
             for i in range(popsize):
-                pop.set_xf(i, ad.solver.survivor[i][:7], ad.solver.survivor[i][-3:])
+                pop.set_xf(i, swarm_data_on_pareto_front[i][:7], swarm_data_on_pareto_front[i][-3:])
+
+            # if False:
+                # # 老办法（蠢办法），依赖于swarm_survivor.txt
+                # for i in range(popsize):
+                #     pop.set_xf(i, ad.solver.survivor[i][:7], ad.solver.survivor[i][-3:])
+
+                # # 小测试，该式子应该永远成立，如果不成立，说明分析完一代以后，write survivor没有被正常调用。
+                # if ad.solver.survivor is not None:
+                #     if ad.solver.survivor_title_number // popsize == number_of_finished_iterations:
+                #         print('survivor_title_number is', ad.solver.survivor_title_number, 'number_of_chromosome is', number_of_chromosome)
+                #         if ad.solver.survivor_title_number == number_of_chromosome:
+                #             # 刚好swarm_data也是完整的一代
+                #             print('\t刚刚好swarm_data也是完整的一代！！！')
+                #     else:
+                #         raise
+
+                # # 手动把当前pop和swarm_data中的最新个体进行dominance比较
+                #     # 经常出现的情况，survivor和swarm_data都存在，前者总是完整的一代，也就是说，
+                #     # 搞到非初始化的某一代的中间的某个个体的时候断了，PyGMO不支持从中间搞起，那么只能我自己来根据swarm_data.txt中最后的数据来判断是否产生了值得留在种群中的个体了。
+                # if ad.solver.survivor is not None and number_of_chromosome % popsize != 0: # number_of_finished_chromosome_in_current_generation < popsize: # recall if number_of_finished_chromosome_in_current_generation == 0, it is set to popsize.
+                #     pop_array = pop.get_x()
+                #     fits_array = pop.get_f()
+
+                #     # number_of_finished_iterations = number_of_chromosome // popsize
+                #     base = number_of_finished_iterations*popsize
+                #     for i in range(number_of_chromosome % popsize):
+                #         obj_challenger = ad.solver.swarm_data[i+base][-3:]
+                #         if pg.pareto_dominance(obj_challenger, fits_array[i]):
+                #             pop.set_xf(i, ad.solver.swarm_data[i+base][:7] , obj_challenger)
+                #             print(i+base, '\t', obj_challenger, '\n\t', fits_array[i].tolist())
+                #             print('\t', pop.get_x()[i], pop.get_f()[i].tolist())
+                #         else:
+                #             print(i+base)
+
+        # 必须放到这个if的最后，因为在 learn_about_the_archive 中是有初始化一个 pop_archive 的，会调用fitness方法。
+        ad.flag_do_not_evaluate_when_init_pop = False
+
     print('-'*40, '\nPop is initialized:\n', pop)
+    # print('?????????')
+    # raise KeyboardInterrupt
 
     # 初始化以后，pop.problem.get_fevals()就是popsize，但是如果大于popsize，说明“pop.set_x(i, pop_array[i]) # evaluate this guy”被调用了，说明还没输出过 survivors 数据，那么就写一下。
     if pop.problem.get_fevals() > popsize: 
         print('Write survivors.')
         ad.solver.write_swarm_survivor(pop, counter_fitness_return)
-
-    # 小测试，该式子应该永远成立，如果不成立，说明分析完一代以后，write survivor没有被正常调用。
-    if ad.solver.survivor is not None:
-        if ad.solver.survivor_title_number // popsize == number_of_finished_iterations:
-            print('survivor_title_number is', ad.solver.survivor_title_number, 'number_of_chromosome is', number_of_chromosome)
-            if ad.solver.survivor_title_number == number_of_chromosome:
-                # 刚好swarm_data也是完整的一代
-                print('\t刚刚好swarm_data也是完整的一代！！！')
-        else:
-            raise
-
-    # 经常出现的情况，survivor和swarm_data都存在，前者总是完整的一代，也就是说，
-    # 搞到非初始化的某一代的中间的某个个体的时候断了，PyGMO不支持从中间搞起，那么只能我自己来根据swarm_data.txt中最后的数据来判断是否产生了值得留在种群中的个体了。
-    if ad.solver.survivor is not None and number_of_chromosome % popsize != 0: # number_of_finished_chromosome_in_current_generation < popsize: # recall if number_of_finished_chromosome_in_current_generation == 0, it is set to popsize.
-        pop_array = pop.get_x()
-        fits_array = pop.get_f()
-
-        # number_of_finished_iterations = number_of_chromosome // popsize
-        base = number_of_finished_iterations*popsize
-        for i in range(number_of_chromosome % popsize):
-            obj_challenger = ad.solver.swarm_data[i+base][-3:]
-            if pg.pareto_dominance(obj_challenger, fits_array[i]):
-                pop.set_xf(i, ad.solver.swarm_data[i+base][:7] , obj_challenger)
-                print(i+base, '\t', obj_challenger, '\n\t', fits_array[i].tolist())
-                print('\t', pop.get_x()[i], pop.get_f()[i].tolist())
-            else:
-                print(i+base)
 
 ################################################################
 # MOO Step 2:
@@ -406,7 +459,7 @@ if True:
                                  realb=0.9, 
                                  limit=2, preserve_diversity=True)) # https://esa.github.io/pagmo2/docs/python/algorithms/py_algorithms.html#pygmo.moead
     print('-'*40, '\n', algo)
-    quit()
+
 ################################################################
 # MOO Step 3:
 #   Begin optimization
@@ -419,14 +472,14 @@ if True:
         for _ in range(number_of_finished_iterations, number_of_iterations):
             msg = 'This is iteration #%d. '%(_)
             print(msg)
-            logger(msg)
+            logger.info(msg)
             pop = algo.evolve(pop)
 
             msg += 'Write survivors to file. '
             ad.solver.write_swarm_survivor(pop, counter_fitness_return)
 
             hv = pg.hypervolume(pop)
-            quality_measure = hv.compute(ref_point = [0.,0.,0.])
+            quality_measure = hv.compute(ref_point=[0.,0.,100.]) # ref_point must be dominated by the pop's pareto front
             msg += 'Quality measure by hyper-volume: %g'% (quality_measure)
             print(msg)
             logger.info(msg)
