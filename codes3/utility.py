@@ -620,7 +620,8 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
 
     rated_rotor_volume = np.pi*(im_variant.Radius_OuterRotor*1e-3)**2 * (rated_stack_length_mm*1e-3)
 
-    # This weighted list suggests that peak-to-peak torque ripple of 5% is comparable with Em of 5% or Ea of 5 deg. Ref: Ye gu ECCE 2018
+    # This weighted list suggests that peak-to-peak torque ripple of 5% is comparable with Em of 5% or Ea of 1 deg. Ref: Ye gu ECCE 2018
+    # Eric suggests Ea is 1 deg. But I think this may be too much emphasis on Ea so large Trip does not matter anymore (not verified yet).
     list_weighted_ripples = [normalized_torque_ripple/0.05, normalized_force_error_magnitude/0.05, force_error_angle]
 
     # - Torque per Rotor Volume

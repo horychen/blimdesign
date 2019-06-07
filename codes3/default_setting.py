@@ -125,7 +125,7 @@ import utility
 # importlib.reload(utility)
 
 import pyrhonen_procedure_as_function
-import numpy as np
+from pylab import np, plt
 import logging
 
 # run_list = [1,1,0,0,0] # use JMAG only

@@ -1,3 +1,5 @@
+# https://scipy-lectures.org/packages/3d_plotting/index.html#figure-management
+
 # coding:u8
 import shutil
 from utility import my_execfile
@@ -194,15 +196,305 @@ class Problem_BearinglessInductionDesign(object):
     def get_name(self):
         return "Bearingless Induction Motor Design"
 
-def my_plot(fits, vectors, ndf):
-    if True:
-        for fit in fits:
-            print(fit)
-        # ax = pg.plot_non_dominated_fronts(fits)
-        ax = pg.plot_non_dominated_fronts(fits, comp=[0,1], marker='o')
-        # ax = pg.plot_non_dominated_fronts(fits, comp=[0,2], marker='o')
-        # ax = pg.plot_non_dominated_fronts(fits, comp=[1,2], marker='o')
+def my_plot_non_dominated_fronts(points, marker='o', comp=[0, 1], up_to_rank_no=None):
+    # We plot
+    fronts, _, _, _ = pg.fast_non_dominated_sorting(points)
+
+    # We define the colors of the fronts (grayscale from black to white)
+    if up_to_rank_no is None:
+        cl = list(zip(np.linspace(0.1, 0.9, len(fronts)),
+                      np.linspace(0.1, 0.9, len(fronts)),
+                      np.linspace(0.1, 0.9, len(fronts))))
     else:
+        cl = list(zip(np.linspace(0.1, 0.9, up_to_rank_no),
+                      np.linspace(0.1, 0.9, up_to_rank_no),
+                      np.linspace(0.1, 0.9, up_to_rank_no)))
+
+    fig, ax = plt.subplots()
+
+    count = 0
+    for ndr, front in enumerate(fronts):
+        count += 1
+        # We plot the points
+        for idx in front:
+            ax.plot(points[idx][comp[0]], points[idx][
+                comp[1]], marker=marker, color=cl[ndr])
+        # We plot the fronts
+        # Frist compute the points coordinates
+        x = [points[idx][comp[0]] for idx in front]
+        y = [points[idx][comp[1]] for idx in front]
+        # Then sort them by the first objective
+        tmp = [(a, b) for a, b in zip(x, y)]
+        tmp = sorted(tmp, key=lambda k: k[0])
+        # Now plot using step
+        ax.step([c[0] for c in tmp], [c[1]
+                                      for c in tmp], color=cl[ndr], where='post')
+        if up_to_rank_no is None:
+            pass
+        else:
+            if count >= up_to_rank_no:
+                break
+
+    return ax
+def my_2p5d_plot_non_dominated_fronts(points, marker='o', comp=[0, 1], up_to_rank_no=1):
+    full_comp = [0, 1, 2]
+    full_comp.remove(comp[0])
+    full_comp.remove(comp[1])
+    z_comp = full_comp[0]
+
+    # We plot
+    fronts, _, _, _ = pg.fast_non_dominated_sorting(points)
+
+    # We define the colors of the fronts (grayscale from black to white)
+    cl = list(zip(np.linspace(0.9, 0.1, len(fronts)),
+                  np.linspace(0.9, 0.1, len(fronts)),
+                  np.linspace(0.9, 0.1, len(fronts))))
+
+    fig, ax = plt.subplots()
+
+    count = 0
+    for ndr, front in enumerate(fronts):
+        count += 1
+        # We plot the points
+        for idx in front:
+            ax.plot(points[idx][comp[0]], points[idx][
+                comp[1]], marker=marker, color=cl[ndr])
+        # We plot the fronts
+        # Frist compute the points coordinates
+        x = [points[idx][comp[0]] for idx in front]
+        y = [points[idx][comp[1]] for idx in front]
+        z = [points[idx][z_comp] for idx in front]
+        # Then sort them by the first objective
+        tmp = [(a, b, c) for a, b, c in zip(x, y, z)]
+        tmp = sorted(tmp, key=lambda k: k[0])
+        # Now plot using step
+        ax.step([coords[0] for coords in tmp], 
+                [coords[1] for coords in tmp], color=cl[ndr], where='post')
+
+        # Now add color according to the value of the z-axis variable usign scatter
+        scatter_handle = ax.scatter(x, y, c=z, alpha=0.5, cmap='Spectral', marker=marker, zorder=99) #'viridis'
+        # color bar
+        cbar_ax = fig.add_axes([0.925, 0.15, 0.02, 0.7])
+        cbar_ax.get_yaxis().labelpad = 10
+        clb = fig.colorbar(scatter_handle, cax=cbar_ax)
+        if z_comp == 0:
+            z_label = r'$-\rm {TRV}$ [Nm/m^3]'
+            z_text  = '%.0f'
+        elif z_comp == 1:
+            z_label = r'$-\eta$ [1]'
+            z_text  = '%.3f'
+        elif z_comp == 2:
+            z_label = r'$O_C$ [1]'
+            z_text  = '%.1f'
+        clb.ax.set_ylabel(z_label, rotation=270)
+
+        # text next scatter showing the value of the 3rd objective
+        for i, val in enumerate(z):
+            ax.annotate( z_text%(val), (x[i], y[i]) )
+        for i, val in enumerate(z):
+            ax.annotate( z_text%(val), (x[i], y[i]) )
+        for i, val in enumerate(z):
+            ax.annotate( z_text%(val), (x[i], y[i]) )
+
+        # refine the plotting
+        if comp[0] == 0:
+            ax.set_xlabel(r'$-\rm {TRV}$ [Nm/m^3]')
+        elif comp[0] == 1:
+            ax.set_xlabel(r'$-\eta$ [1]')
+        elif comp[0] == 2:
+            ax.set_xlabel(r'$O_C$ [1]')
+        if comp[1] == 0:
+            ax.set_ylabel(r'$-\rm {TRV}$ [Nm/m^3]')
+        elif comp[1] == 1:
+            ax.set_ylabel(r'$-\eta$ [1]')
+        elif comp[1] == 2:
+            ax.set_ylabel(r'$O_C$ [1]')
+        ax.grid()
+
+        # plot up to which domination rank?
+        if up_to_rank_no is None:
+            pass
+        else:
+            if count >= up_to_rank_no:
+                break
+    return ax
+def my_3d_plot_non_dominated_fronts(pop, paretoPoints, az=180, comp=[0, 1, 2], plot_option=1):
+    """
+    Plots solutions to the DTLZ problems in three dimensions. The Pareto Front is also
+    visualized if the problem id is 2,3 or 4.
+    Args:
+        pop (:class:`~pygmo.population`): population of solutions to a dtlz problem
+        az (``float``): angle of view on which the 3d-plot is created
+        comp (``list``): indexes the fitness dimension for x,y and z axis in that order
+    Returns:
+        ``matplotlib.axes.Axes``: the current ``matplotlib.axes.Axes`` instance on the current figure
+    Raises:
+        ValueError: if *pop* does not contain a DTLZ problem (veryfied by its name only) or if *comp* is not of length 3
+    Examples:
+        >>> import pygmo as pg
+        >>> udp = pg.dtlz(prob_id = 1, fdim =3, dim = 5)
+        >>> pop = pg.population(udp, 40)
+        >>> udp.plot(pop) # doctest: +SKIP
+    """
+    from mpl_toolkits.mplot3d import axes3d
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    # if (pop.problem.get_name()[:-1] != "DTLZ"):
+    #     raise(ValueError, "The problem seems not to be from the DTLZ suite")
+
+    if (len(comp) != 3):
+        raise(ValueError, "The kwarg *comp* needs to contain exactly 3 elements (ids for the x,y and z axis)")
+
+    # Create a new figure
+    fig = plt.figure(figsize=(12,8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    # plot the points
+    fits = np.transpose(pop.get_f())
+    try:
+        pass
+        # ax.plot(fits[comp[0]], fits[comp[1]], fits[comp[2]], 'ro')
+    except IndexError:
+        print('Error. Please choose correct fitness dimensions for printing!')
+
+    if False:
+        # Plot pareto front for dtlz 1
+        if plot_option==1: # (pop.problem.get_name()[-1] in ["1"]):
+
+            X, Y = np.meshgrid(np.linspace(0, 0.5, 100), np.linspace(0, 0.5, 100))
+            Z = - X - Y + 0.5
+            # remove points not in the simplex
+            for i in range(100):
+                for j in range(100):
+                    if X[i, j] < 0 or Y[i, j] < 0 or Z[i, j] < 0:
+                        Z[i, j] = float('nan')
+
+            ax.set_xlim(0, 1.)
+            ax.set_ylim(0, 1.)
+            ax.set_zlim(0, 1.)
+
+            ax.plot_wireframe(X, Y, Z, rstride=10, cstride=10)
+            plt.plot([0, 0.5], [0.5, 0], [0, 0])
+
+        # Plot pareto fronts for dtlz 2,3,4
+        if plot_option == 2: # (pop.problem.get_name()[-1] in ["2", "3", "4"]):
+            # plot the wireframe of the known optimal pareto front
+            thetas = np.linspace(0, (np.pi / 2.0), 30)
+            # gammas = np.linspace(-np.pi / 4, np.pi / 4, 30)
+            gammas = np.linspace(0, (np.pi / 2.0), 30)
+
+            x_frame = np.outer(np.cos(thetas), np.cos(gammas))
+            y_frame = np.outer(np.cos(thetas), np.sin(gammas))
+            z_frame = np.outer(np.sin(thetas), np.ones(np.size(gammas)))
+
+            ax.set_autoscalex_on(False)
+            ax.set_autoscaley_on(False)
+            ax.set_autoscalez_on(False)
+
+            ax.set_xlim(0, 1.8)
+            ax.set_ylim(0, 1.8)
+            ax.set_zlim(0, 1.8)
+
+            ax.plot_wireframe(x_frame, y_frame, z_frame)
+
+    # https://stackoverflow.com/questions/37000488/how-to-plot-multi-objectives-pareto-frontier-with-deap-in-python
+    # def simple_cull(inputPoints, dominates):
+    #     paretoPoints = set()
+    #     candidateRowNr = 0
+    #     dominatedPoints = set()
+    #     while True:
+    #         candidateRow = inputPoints[candidateRowNr]
+    #         inputPoints.remove(candidateRow)
+    #         rowNr = 0
+    #         nonDominated = True
+    #         while len(inputPoints) != 0 and rowNr < len(inputPoints):
+    #             row = inputPoints[rowNr]
+    #             if dominates(candidateRow, row):
+    #                 # If it is worse on all features remove the row from the array
+    #                 inputPoints.remove(row)
+    #                 dominatedPoints.add(tuple(row))
+    #             elif dominates(row, candidateRow):
+    #                 nonDominated = False
+    #                 dominatedPoints.add(tuple(candidateRow))
+    #                 rowNr += 1
+    #             else:
+    #                 rowNr += 1
+
+    #         if nonDominated:
+    #             # add the non-dominated point to the Pareto frontier
+    #             paretoPoints.add(tuple(candidateRow))
+
+    #         if len(inputPoints) == 0:
+    #             break
+    #     return paretoPoints, dominatedPoints
+    # def dominates(row, candidateRow):
+    #     return sum([row[x] >= candidateRow[x] for x in range(len(row))]) == len(row)  
+    # import random
+    # print(inputPoints)
+    # inputPoints = [[random.randint(70,100) for i in range(3)] for j in range(500)]
+    # print(inputPoints)
+    # quit()
+    # inputPoints = [(x,y,z) for x,y,z in zip(fits[comp[0]], fits[comp[1]], fits[comp[2]])]
+    # paretoPoints, dominatedPoints = simple_cull(inputPoints, dominates)
+    x = [coords[0] for coords in paretoPoints]
+    y = [coords[1] for coords in paretoPoints]
+    z = [coords[2] for coords in paretoPoints]
+
+    if False:
+        pass
+    else:
+        import pandas as pd
+        from pylab import cm
+        print(dir(cm))
+        df = pd.DataFrame({'x': x, 'y': y, 'z': z})
+
+        # 只有plot_trisurf这一个函数，输入是三个以为序列的，其他都要meshgrid得到二维数组的(即ndim=2的数组) 
+        # # https://jakevdp.github.io/PythonDataScienceHandbook/04.12-three-dimensional-plotting.html
+            # surf = ax.plot_trisurf(df.x, df.y, df.z, cmap=cm.magma, linewidth=0.1, edgecolor='none')
+            # surf = ax.plot_trisurf(x, y, z, cmap='viridis', edgecolor='none')
+        # surf = ax.plot_trisurf(df.x, df.y, df.z, cmap=cm.magma, linewidth=0.1)
+        surf = ax.plot_trisurf(df.x, df.y, df.z, cmap=cm.Spectral, linewidth=0.1)        
+        fig.colorbar(surf, shrink=0.5, aspect=5)
+    
+        # Try to export data from plot_trisurf # https://github.com/WoLpH/numpy-stl/issues/19
+        # print(surf.get_vector())
+
+        # plt.savefig('./plots/avgErrs_vs_C_andgamma_type_%s.png'%(k))
+        # plt.show()
+
+        # # rotate the axes and update
+        # for angle in range(0, 360):
+        #     ax.view_init(30, angle)
+        #     plt.draw()
+        #     plt.pause(.001)
+
+    ax.view_init(azim=175, elev=45) 
+    # ax.view_init(azim=az)
+    # ax.set_xlim(0, 1.)
+    # ax.set_ylim(0, 1.)
+    # ax.set_zlim(0, 10.)
+    return ax
+def my_plot(fits, vectors, ndf):
+    plt.rcParams['mathtext.fontset'] = 'stix' # 'cm'
+    plt.rcParams["font.family"] = "Times New Roman"
+    if True:
+        # for fit in fits:
+        #     print(fit)
+        # ax = pg.plot_non_dominated_fronts(fits)
+
+        # ax = my_plot_non_dominated_fronts(fits, comp=[0,1], marker='o', up_to_rank_no=3)        
+        # ax = my_plot_non_dominated_fronts(fits, comp=[0,2], marker='o', up_to_rank_no=3)
+        # ax = my_plot_non_dominated_fronts(fits, comp=[1,2], marker='o', up_to_rank_no=3)
+
+        pass
+
+        ax = my_2p5d_plot_non_dominated_fronts(fits, comp=[0,1], marker='o', up_to_rank_no=1)
+        ax = my_2p5d_plot_non_dominated_fronts(fits, comp=[0,2], marker='o', up_to_rank_no=1)
+        ax = my_2p5d_plot_non_dominated_fronts(fits, comp=[1,2], marker='o', up_to_rank_no=1)
+
+    else:
+        # Obselete. Use ax.step instead to plot
         print('Valid for 2D objective function space only for now.')
         fig, axes = plt.subplots(ncols=2, nrows=1, dpi=150, facecolor='w', edgecolor='k');
         ax = axes[0]
@@ -277,14 +569,15 @@ def learn_about_the_archive(swarm_data, popsize):
         ind1, ind2 = 0, 0
         for rank_minus_1, front in enumerate(ndf):
 
-            if ind2 == 0:
-                if len(front) < popsize:
-                    print('There are not enough chromosomes (%d) on the domination rank 1 (the best Pareto front).\nWill use rank 2 or lower to reach popsize of %d.'%(len(front), popsize))
-
             ind2 += len(front)
             sorted_index_at_this_front = sorted_index[ind1:ind2]
-
             fits_at_this_front = [fits[point] for point in sorted_index_at_this_front]
+
+            # Rank 1 Pareto Front
+            if ind1 == 0:
+                paretoPoints = fits_at_this_front
+                if len(front) < popsize:
+                    print('There are not enough chromosomes (%d) belonging to domination rank 1 (the best Pareto front).\nWill use rank 2 or lower to reach popsize of %d.'%(len(front), popsize))
 
             # this crwdsit should be already sorted as well
             crwdst = pg.crowding_distance(fits_at_this_front)
@@ -302,6 +595,10 @@ def learn_about_the_archive(swarm_data, popsize):
 
     swarm_data_on_pareto_front = [design_parameters_denorm + fits for design_parameters_denorm, fits in zip(sorted_vectors, sorted_fits)]
 
+
+    my_plot(fits, vectors, ndf)
+    my_3d_plot_non_dominated_fronts(pop_archive, paretoPoints, plot_option=1)
+    plt.show()
     return swarm_data_on_pareto_front
 
 # if bool_post_processing:
@@ -448,7 +745,7 @@ if True:
     # raise KeyboardInterrupt
 
     # 初始化以后，pop.problem.get_fevals()就是popsize，但是如果大于popsize，说明“pop.set_x(i, pop_array[i]) # evaluate this guy”被调用了，说明还没输出过 survivors 数据，那么就写一下。
-    if pop.problem.get_fevals() > popsize: 
+    if pop.problem.get_fevals() > popsize:
         print('Write survivors.')
         ad.solver.write_swarm_survivor(pop, counter_fitness_return)
 
@@ -463,7 +760,7 @@ if True:
                                  realb=0.9, 
                                  limit=2, preserve_diversity=True)) # https://esa.github.io/pagmo2/docs/python/algorithms/py_algorithms.html#pygmo.moead
     print('-'*40, '\n', algo)
-    # quit()
+    quit()
 
 ################################################################
 # MOO Step 3:

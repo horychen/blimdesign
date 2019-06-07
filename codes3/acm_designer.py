@@ -49,7 +49,7 @@ class FEA_Solver:
 
     def write_swarm_survivor(self, pop, counter_fitness_return):
         with open(self.output_dir + 'swarm_survivor.txt', 'a') as f:
-            f.write('---------%d\n'%(counter_fitness_return) \
+            f.write('\n---------%d\n'%(counter_fitness_return) \
                     + '\n'.join(','.join('%.16f'%(x) for x in el[0].tolist() + el[1].tolist() ) for el in zip(pop.get_x(), pop.get_f()) )) # convert 2d array to string
 
     def read_swarm_data(self):
