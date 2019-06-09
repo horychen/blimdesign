@@ -760,7 +760,7 @@ if True:
                                  realb=0.9, 
                                  limit=2, preserve_diversity=True)) # https://esa.github.io/pagmo2/docs/python/algorithms/py_algorithms.html#pygmo.moead
     print('-'*40, '\n', algo)
-    quit()
+    # quit()
 
 ################################################################
 # MOO Step 3:

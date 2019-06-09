@@ -3049,6 +3049,7 @@ class bearingless_induction_motor_design(object):
                                                                     im.Qs,
                                                                     Width_StatorTeethHeadThickness,
                                                                     Width_StatorTeethNeck)
+        self.stator_yoke_diameter_Dsyi = stator_yoke_diameter_Dsyi # this is used for copper loss calculation in FEMM_Solver.py
 
         # Constranint #3
         # rotor_tooth_width_b_dr imposes constraint on rotor slot height
@@ -3062,6 +3063,8 @@ class bearingless_induction_motor_design(object):
                                                                 Length_HeadNeckRotorSlot,
                                                                 im.parameters_for_imposing_constraints_among_design_parameters[2])
         rotor_slot_height_h_sr = rotor_tooth_height_h_dr
+        self.rotor_slot_height_h_sr = rotor_slot_height_h_sr # this is used for copper loss calculation in FEMM_Solver.py
+
 
         # radius of outer rotor slot
         Radius_of_RotorSlot = 1e3 * (2*pi*(im.Radius_OuterRotor - Length_HeadNeckRotorSlot)*1e-3 - rotor_tooth_width_b_dr*im.Qr) / (2*im.Qr+2*pi)

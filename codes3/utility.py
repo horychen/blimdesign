@@ -1123,7 +1123,12 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             # convert rotor current results (complex number) into its amplitude
             femm_solver.list_rotor_current_amp = [abs(el) for el in femm_solver.vals_results_rotor_current] # el is complex number
             # settings not necessarily be consistent with Pyrhonen09's design: , STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1., TEMPERATURE_OF_COIL=75
-            s, r, sAlongStack, rAlongStack, Js, Jr = femm_solver.get_copper_loss(femm_solver.stator_slot_area, femm_solver.rotor_slot_area)
+            _s, _r, _sAlongStack, _rAlongStack, _Js, _Jr = femm_solver.get_copper_loss_pyrhonen(femm_solver.stator_slot_area, femm_solver.rotor_slot_area)
+            s, r, sAlongStack, rAlongStack, Js, Jr = femm_solver.get_copper_loss_Bolognani(femm_solver.stator_slot_area, femm_solver.rotor_slot_area)
+            
+            print('Pyrhonen : %g, %g | %g, %g | %g, %g ' % (_s, _r, _sAlongStack, _rAlongStack, _Js, _Jr) )
+            print('Bolognani: %g, %g | %g, %g | %g, %g ' % (s, r, sAlongStack, rAlongStack, Js, Jr) )
+
         except Exception as e:
             raise e
         # enablePrint()
