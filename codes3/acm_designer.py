@@ -100,19 +100,25 @@ class FEA_Solver:
 
 
 
-    def fea_bearingless_induction(self, im_template, x_denorm, counter):
+    def fea_bearingless_induction(self, im_template, x_denorm, counter, counter_loop):
         logger = logging.getLogger(__name__)
         print('Run FEA for individual #%d'%(counter))
 
         # get local design variant
         im_variant = population.bearingless_induction_motor_design.local_design_variant(im_template, 0, counter, x_denorm)
-        im_variant.name = 'ind%d'%(counter)
+        if counter_loop == 1:
+            im_variant.name = 'ind%d'%(counter)
+        else:
+            im_variant.name = 'ind%d-redo%d'%(counter, counter_loop)
         im_variant.spec = im_template.spec
         self.im_variant = im_variant
         self.femm_solver = FEMM_Solver.FEMM_Solver(self.im_variant, flag_read_from_jmag=False, freq=50) # eddy+static
         im = None
 
-        self.project_name          = 'proj%d'%(counter)
+        if counter_loop == 1:
+            self.project_name          = 'proj%d'%(counter)
+        else:
+            self.project_name          = 'proj%d-redo%d'%(counter, counter_loop)
         self.expected_project_file = self.output_dir + "%s.jproj"%(self.project_name)
 
         original_study_name = im_variant.name + "Freq"
@@ -431,8 +437,8 @@ class acm_designer(object):
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Automatic Performance Evaluation (This is just a wraper)
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    def evaluate_design(self, im_template, x_denorm, counter):
-        return self.solver.fea_bearingless_induction(im_template, x_denorm, counter)
+    def evaluate_design(self, im_template, x_denorm, counter, counter_loop=1):
+        return self.solver.fea_bearingless_induction(im_template, x_denorm, counter, counter_loop)
 
 
 

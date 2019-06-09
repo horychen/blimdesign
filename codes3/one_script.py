@@ -125,7 +125,7 @@ class Problem_BearinglessInductionDesign(object):
                 normalized_torque_ripple, \
                 normalized_force_error_magnitude, \
                 force_error_angle = \
-                    ad.evaluate_design(ad.spec.im_template, x_denorm, counter_fitness_called)
+                    ad.evaluate_design(ad.spec.im_template, x_denorm, counter_fitness_called, counter_loop=counter_loop)
 
                 # remove folder .jfiles to save space (we have to generate it first in JMAG Designer to have field data and voltage profiles)
                 if ad.solver.folder_to_be_deleted is not None:
@@ -154,13 +154,19 @@ class Problem_BearinglessInductionDesign(object):
                         #     print('I think there is no need to Quit the app')
                     ad.solver.app = None
 
+                    # JMAG files
                     # os.remove(ad.solver.expected_project_file) # .jproj
                     # shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory # .jplot file in this folder will be used by JSOL softwares even JMAG Designer is closed.
-                    os.remove(ad.solver.femm_output_file_path) # . csv
-                    os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
+
+                    # FEMM files
+                    if os.path.exists(ad.solver.femm_output_file_path):
+                        os.remove(ad.solver.femm_output_file_path) # .csv
+                    if os.path.exists(ad.solver.femm_output_file_path[:-3]+'fem')
+                        os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
                     for file in os.listdir(ad.solver.dir_femm_temp):
-                        if 'femm_temp_' in file:
+                        if 'femm_temp_' in file or 'femm_found' in file:
                             os.remove(ad.solver.dir_femm_temp + file)
+
                 except Exception as e2:
                     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e) + '\n'*3 + 'Exception 2:' + str(e2))
                     raise e2
