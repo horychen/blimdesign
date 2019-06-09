@@ -3,7 +3,7 @@
 # coding:u8
 import shutil
 from utility import my_execfile
-bool_post_processing = False # solve or post-processing
+bool_post_processing = True # solve or post-processing
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
@@ -23,7 +23,6 @@ if True:
 
     # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 2
     # run_folder = r'run#531/' # number_of_variant = 2
-
     # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 10
     # run_folder = r'run#533/' # number_of_variant = 10
 
@@ -35,13 +34,11 @@ if True:
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2' # this is not working
 
-    run_folder = r'run#535/' # test with pygmo
-    run_folder = r'run#537/' # test with pygmo
-
+    # run_folder = r'run#535/' # test with pygmo
+    # run_folder = r'run#537/' # test with pygmo
     run_folder = r'run#538/' # test with pygmo with new fitness and constraints, Rotor current density Jr is 6.5 Arms/mm^2
 
-    run_folder = r'run#539/' # New copper loss formula from Bolognani 2006
-
+    # run_folder = r'run#539/' # New copper loss formula from Bolognani 2006
     run_folder = r'run#540/' # New copper loss formula from Bolognani 2006 # Fix small bugs
 else:
     # Prototype
@@ -161,7 +158,7 @@ class Problem_BearinglessInductionDesign(object):
                     # FEMM files
                     if os.path.exists(ad.solver.femm_output_file_path):
                         os.remove(ad.solver.femm_output_file_path) # .csv
-                    if os.path.exists(ad.solver.femm_output_file_path[:-3]+'fem')
+                    if os.path.exists(ad.solver.femm_output_file_path[:-3]+'fem'):
                         os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
                     for file in os.listdir(ad.solver.dir_femm_temp):
                         if 'femm_temp_' in file or 'femm_found' in file:
@@ -601,7 +598,12 @@ def learn_about_the_archive(prob, swarm_data, popsize):
                     print('There are not enough chromosomes (%d) belonging to domination rank 1 (the best Pareto front).\nWill use rank 2 or lower to reach popsize of %d.'%(len(front), popsize))
 
             # this crwdsit should be already sorted as well
-            crwdst = pg.crowding_distance(fits_at_this_front)
+            if len(fits_at_this_front) >= 2: # or else error:  A non dominated front must contain at least two points: 1 detected.
+                crwdst = pg.crowding_distance(fits_at_this_front)
+            else:
+                print('A non dominated front must contain at least two points: 1 detected.')
+                crwdst = [999999]
+
 
             print('\nRank/Tier', rank_minus_1+1, 'chromosome count:', len(front), len(sorted_index_at_this_front))
             # print('\t', sorted_index_at_this_front.tolist())
@@ -626,18 +628,33 @@ if bool_post_processing == True:
     # Combine all data 
     # plot pareto plot for three objectives...
 
-    ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#538011/' # severson01
-    number_of_chromosome = ad.solver.read_swarm_data()
-    swarm_data_severson01 = ad.solver.swarm_data
+    if fea_config_dict['run_folder'] == r'run#540/':
+        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#540011/' # severson01
+        number_of_chromosome = ad.solver.read_swarm_data()
+        swarm_data_severson01 = ad.solver.swarm_data
 
-    ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#538021/' # severson02
-    number_of_chromosome = ad.solver.read_swarm_data()
-    swarm_data_severson02 = ad.solver.swarm_data
+        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#540021/' # severson02
+        number_of_chromosome = ad.solver.read_swarm_data()
+        swarm_data_severson02 = ad.solver.swarm_data
 
-    ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + ad.solver.fea_config_dict['run_folder'] 
-    number_of_chromosome = ad.solver.read_swarm_data()
-    swarm_data_Y730 = ad.solver.swarm_data
+        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#540/' # ad.solver.fea_config_dict['run_folder'] 
+        number_of_chromosome = ad.solver.read_swarm_data()
+        swarm_data_Y730 = ad.solver.swarm_data
 
+    elif fea_config_dict['run_folder'] == r'run#538/':
+        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#538011/' # severson01
+        number_of_chromosome = ad.solver.read_swarm_data()
+        swarm_data_severson01 = ad.solver.swarm_data
+
+        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#538021/' # severson02
+        number_of_chromosome = ad.solver.read_swarm_data()
+        swarm_data_severson02 = ad.solver.swarm_data
+
+        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#538/' # ad.solver.fea_config_dict['run_folder'] 
+        number_of_chromosome = ad.solver.read_swarm_data()
+        swarm_data_Y730 = ad.solver.swarm_data
+
+    print(len(swarm_data_severson01), len(swarm_data_severson02), len(swarm_data_Y730))
     ad.solver.swarm_data = swarm_data_severson01 + swarm_data_severson02 + swarm_data_Y730 # list add
 
     udp = Problem_BearinglessInductionDesign()
