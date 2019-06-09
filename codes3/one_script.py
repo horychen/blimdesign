@@ -42,6 +42,7 @@ if True:
 
     run_folder = r'run#539/' # New copper loss formula from Bolognani 2006
 
+    run_folder = r'run#540/' # New copper loss formula from Bolognani 2006 # Fix small bugs
 else:
     # Prototype
     pass
@@ -54,7 +55,7 @@ else:
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2'
     # run_folder = r'run#538021/'
-    run_folder = r'run#539021/'
+    run_folder = r'run#540021/'
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson01
@@ -65,7 +66,7 @@ else:
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2'
     # run_folder = r'run#538011/'
-    run_folder = r'run#539011/'
+    run_folder = r'run#540011/'
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['Active_Qr'] = spec.Qr
@@ -91,6 +92,7 @@ for A, B in zip(ad.bounds_denorm, ad.original_bounds):
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 
 import pygmo as pg
+global counter_fitness_called, counter_fitness_return
 class Problem_BearinglessInductionDesign(object):
 
     # Define objectives
@@ -553,7 +555,7 @@ def my_print(pop, _):
         print(pop, file=fname)
 
 
-def learn_about_the_archive(swarm_data, popsize):
+def learn_about_the_archive(prob, swarm_data, popsize):
     number_of_chromosome = len(swarm_data)
     print('Archive size:', number_of_chromosome)
     # for el in swarm_data:
@@ -608,13 +610,35 @@ def learn_about_the_archive(swarm_data, popsize):
     plt.show()
     return swarm_data_on_pareto_front
 
-# if bool_post_processing:
-#     plot pareto plot for three objectives...
-#     swda = ad.best_design_by_weights(fea_config_dict['use_weights'])
-#     from pylab import show
-#     show()
-#     quit()
-#     run_static_structural_fea(swda.best_design_denorm)
+if bool_post_processing == True:
+    # Combine all data 
+    # plot pareto plot for three objectives...
+
+    ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#538011/' # severson01
+    number_of_chromosome = ad.solver.read_swarm_data()
+    swarm_data_severson01 = ad.solver.swarm_data
+
+    ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#538021/' # severson02
+    number_of_chromosome = ad.solver.read_swarm_data()
+    swarm_data_severson02 = ad.solver.swarm_data
+
+    ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + ad.solver.fea_config_dict['run_folder'] 
+    number_of_chromosome = ad.solver.read_swarm_data()
+    swarm_data_Y730 = ad.solver.swarm_data
+
+    ad.solver.swarm_data = swarm_data_severson01 + swarm_data_severson02 + swarm_data_Y730 # list add
+
+    udp = Problem_BearinglessInductionDesign()
+    ad.flag_do_not_evaluate_when_init_pop = True
+    counter_fitness_called, counter_fitness_return = 0, 0
+    prob = pg.problem(udp)
+
+    swarm_data_on_pareto_front = learn_about_the_archive(prob, ad.solver.swarm_data, len(ad.solver.swarm_data))
+
+    plt.show()
+    quit()
+
+    run_static_structural_fea(swda.best_design_denorm)
 
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -627,10 +651,10 @@ if True:
 #   The magic method __init__ cannot be fined for UDP class
 ################################################################
     udp = Problem_BearinglessInductionDesign()
-    global counter_fitness_called, counter_fitness_return
     counter_fitness_called, counter_fitness_return = 0, 0
     prob = pg.problem(udp)
 
+    popsize = 78
         # Traceback (most recent call last):
         #   File "D:\OneDrive - UW-Madison\c\codes3\one_script.py", line 1189, in <module>
         #     pop = algo.evolve(pop)
@@ -638,7 +662,6 @@ if True:
         # function: decomposition_weights
         # where: C:\bld\pygmo_1557474762576\_h_env\Library\include\pagmo/utils/multi_objective.hpp, 642
         # what: Population size of 72 is detected, but not supported by the 'grid' weight generation method selected. A size of 66 or 78 is possible.
-    popsize = 78
     print('-'*40 + '\nPop size is', popsize)
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -704,7 +727,7 @@ if True:
                     pop.set_x(i, pop_array[i]) # evaluate this guy
         else:
             # 新办法，直接从swarm_data.txt（相当于archive）中判断出当前最棒的群体
-            swarm_data_on_pareto_front = learn_about_the_archive(ad.solver.swarm_data, popsize)
+            swarm_data_on_pareto_front = learn_about_the_archive(prob, ad.solver.swarm_data, popsize)
             # print(swarm_data_on_pareto_front)
             for i in range(popsize):
                 pop.set_xf(i, swarm_data_on_pareto_front[i][:7], swarm_data_on_pareto_front[i][-3:])

@@ -1128,7 +1128,7 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             
             msg1 = 'Pyrhonen : %g, %g | %g, %g | %g, %g ' % (_s, _r, _sAlongStack, _rAlongStack, _Js, _Jr) 
             msg2 = 'Bolognani: %g, %g | %g, %g | %g, %g ' % (s, r, sAlongStack, rAlongStack, Js, Jr) 
-            logging.getLogger(__name__)
+            logger = logging.getLogger(__name__)
             logger.debug(msg1)
             logger.debug(msg2)
         except Exception as e:
