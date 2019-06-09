@@ -608,7 +608,7 @@ class swarm(object):
                         # if this is reached, means the while clause is working, so we delete the existing model and draw again
                         # print('In normal case, jmag_control_state should be False here, but now it is True meaning the loop of While True is triggered. Something went wrong with JMAG solver. Loop count:', count_tran2tss_loop)
                         msg = 'The second try has failed. A manual check is needed with the jmag project %s. The most likely place that goes wrong is that a linear magnetic is somehow applied so that the iron loss solver will invariably fail.' % (self.project_name)
-                        utility.send_notification(text=msg)
+                        # utility.send_notification(text=msg)
                         raise Exception(msg)
 
                     elif count_tran2tss_loop > 1:
@@ -3234,7 +3234,7 @@ class bearingless_induction_motor_design(object):
 
         if len(part_ID_list) != int(1 + 1 + 1):
             msg = 'Number of Parts is unexpected.\n' + self.show(toString=True)
-            utility.send_notification(text=msg)
+            # utility.send_notification(text=msg)
             raise Exception(msg)
 
         id_shaft = part_ID_list[0]
@@ -3364,7 +3364,7 @@ class bearingless_induction_motor_design(object):
         # if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2 + self.Qr):
         if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2):
             msg = 'Number of Parts is unexpected. Should be %d but only %d.\n'%(1 + 1 + 1 + self.Qr + self.Qs*2, len(part_ID_list)) + self.show(toString=True)
-            utility.send_notification(text=msg)
+            # utility.send_notification(text=msg)
             raise Exception(msg)
 
         id_shaft = part_ID_list[0]

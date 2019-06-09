@@ -162,8 +162,14 @@ class Problem_BearinglessInductionDesign(object):
                         if 'femm_temp_' in file:
                             os.remove(ad.solver.dir_femm_temp + file)
                 except Exception as e2:
-                    utility.send_notification('Exception 1:' + str(e) + '\n'*3 + 'Exception 2:' + str(e2))
+                    utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e) + '\n'*3 + 'Exception 2:' + str(e2))
                     raise e2
+                else:
+                    if 'Number of Parts is unexpected' in str(e):
+                        print('Shitty design is found as:\n'+str(e))
+                        print('\nEmail has been sent.\nThis design is punished by specifying f1=0, f2=0, f3=99.')
+                        f1, f2, f3 = 0, 0, 99
+                    utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e))
             else:
                 break
 
@@ -696,10 +702,11 @@ if True:
         # 如果发现ad.solver.survivor是None，那就说明是初始化pop的时候被中断了，此时就用swarm_data来生成pop。
         if ad.solver.survivor is not None:
             print('Found survivor!\nRestart the optimization based on the swarm_survivor.txt.')
-        else:
+
             if len(ad.solver.survivor) != popsize:
                 print('popsize is reduced') # 如果popsize增大了，read_swarm_survivor(popsize)就会报错了，因为-----不能被split后转为float
                 raise Exception('This is a feature not tested. However, you can cheat to change popsize by manually modify swarm_data.txt or swarm_survivor.txt.')
+        else:
             print('Gotta make do with swarm_data to generate survivor.')
 
         # 这些计数器的值永远都是评估过的chromosome的个数。
@@ -723,6 +730,7 @@ if True:
                 if i < number_of_chromosome: #number_of_finished_chromosome_in_current_generation:
                     pop.set_xf(i, ad.solver.swarm_data[i][:7], ad.solver.swarm_data[i][-3:])
                 else:
+                    print('Calling pop.set_x()---this is a restart for individual#%d during pop initialization.'%(i))
                     print(i, prob.get_fevals())
                     pop.set_x(i, pop_array[i]) # evaluate this guy
         else:
