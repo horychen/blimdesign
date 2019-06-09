@@ -161,7 +161,7 @@ class Problem_BearinglessInductionDesign(object):
                     # FEMM files
                     if os.path.exists(ad.solver.femm_output_file_path):
                         os.remove(ad.solver.femm_output_file_path) # .csv
-                    if os.path.exists(ad.solver.femm_output_file_path[:-3]+'fem')
+                    if os.path.exists(ad.solver.femm_output_file_path[:-3]+'fem'):
                         os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
                     for file in os.listdir(ad.solver.dir_femm_temp):
                         if 'femm_temp_' in file or 'femm_found' in file:
@@ -601,7 +601,12 @@ def learn_about_the_archive(prob, swarm_data, popsize):
                     print('There are not enough chromosomes (%d) belonging to domination rank 1 (the best Pareto front).\nWill use rank 2 or lower to reach popsize of %d.'%(len(front), popsize))
 
             # this crwdsit should be already sorted as well
-            crwdst = pg.crowding_distance(fits_at_this_front)
+            if len(fits_at_this_front) >= 2: # or else error:  A non dominated front must contain at least two points: 1 detected.
+                crwdst = pg.crowding_distance(fits_at_this_front)
+            else:
+                print('A non dominated front must contain at least two points: 1 detected.')
+                crwdst = [999999]
+
 
             print('\nRank/Tier', rank_minus_1+1, 'chromosome count:', len(front), len(sorted_index_at_this_front))
             # print('\t', sorted_index_at_this_front.tolist())
