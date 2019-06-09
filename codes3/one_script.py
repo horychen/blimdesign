@@ -33,16 +33,14 @@ if True:
 
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
-    fea_config_dict['use_weights'] = 'O2'
-    run_folder = r'run#535/' # test with pygmo
-
-
-    fea_config_dict['local_sensitivity_analysis'] = False
-    fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2' # this is not working
+
+    run_folder = r'run#535/' # test with pygmo
     run_folder = r'run#537/' # test with pygmo
 
     run_folder = r'run#538/' # test with pygmo with new fitness and constraints, Rotor current density Jr is 6.5 Arms/mm^2
+
+    run_folder = r'run#539/' # New copper loss formula from Bolognani 2006
 
 else:
     # Prototype
@@ -55,7 +53,8 @@ else:
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2'
-    run_folder = r'run#538021/'
+    # run_folder = r'run#538021/'
+    run_folder = r'run#539021/'
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson01
@@ -65,7 +64,8 @@ else:
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2'
-    run_folder = r'run#538011/'
+    # run_folder = r'run#538011/'
+    run_folder = r'run#539011/'
 
 fea_config_dict['run_folder'] = run_folder
 fea_config_dict['Active_Qr'] = spec.Qr
@@ -144,17 +144,24 @@ class Problem_BearinglessInductionDesign(object):
                 logger.error(msg)
                 print(msg)
 
-                # turn off JMAG Designer
-                ad.solver.app.Quit()
-                ad.solver.app = None
+                try:
+                        # turn off JMAG Designer
+                        # try:
+                        #     ad.solver.app.Quit()
+                        # except:
+                        #     print('I think there is no need to Quit the app')
+                    ad.solver.app = None
 
-                # os.remove(ad.solver.expected_project_file) # .jproj
-                # shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory # .jplot file in this folder will be used by JSOL softwares even JMAG Designer is closed.
-                os.remove(ad.solver.femm_output_file_path) # . csv
-                os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
-                for file in os.listdir(ad.solver.dir_femm_temp):
-                    if 'femm_temp_' in file:
-                        os.remove(ad.solver.dir_femm_temp + file)
+                    # os.remove(ad.solver.expected_project_file) # .jproj
+                    # shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory # .jplot file in this folder will be used by JSOL softwares even JMAG Designer is closed.
+                    os.remove(ad.solver.femm_output_file_path) # . csv
+                    os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
+                    for file in os.listdir(ad.solver.dir_femm_temp):
+                        if 'femm_temp_' in file:
+                            os.remove(ad.solver.dir_femm_temp + file)
+                except Exception as e2:
+                    utility.send_notification('Exception 1:' + str(e) + '\n'*3 + 'Exception 2:' + str(e2))
+                    raise e2
             else:
                 break
 
@@ -166,7 +173,7 @@ class Problem_BearinglessInductionDesign(object):
         f3 #= sum(list_weighted_ripples)
 
         # Constraints (Em<0.2 and Ea<10 deg):
-        if normalized_torque_ripple>=0.2 or normalized_force_error_magnitude >= 0.2 or force_error_angle > 10:
+        if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
             f1 = 0
             f2 = 0
 

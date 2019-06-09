@@ -2006,7 +2006,7 @@ class FEMM_Solver(object):
         Vol_Cu_along_stack = area_copper_S_Cu * (end_winding_length_Lew) * Q
         rotor_copper_loss_along_stack = rho_Copper * Vol_Cu_along_stack * Jr**2
 
-       print('Rotor current [Arms]:', current_rms_value, 'Jr:', Jr)
+        print('Rotor current [Arms]:', current_rms_value, 'Jr:', Jr)
 
         return stator_copper_loss, rotor_copper_loss, stator_copper_loss_along_stack, rotor_copper_loss_along_stack, Js, Jr
 
@@ -2070,7 +2070,7 @@ class FEMM_Solver(object):
         current_rms_value        = None
 
         Area_conductor_Sc        = Area_slot * ROTOR_SLOT_FILL_FACTOR / zQ        
-        print('list_rotor_current_amp', self.list_rotor_current_amp) # self.list_rotor_current_amp is defined in population.py
+        # print('list_rotor_current_amp', self.list_rotor_current_amp) # self.list_rotor_current_amp is defined in population.py
         rotor_copper_loss             = 0.0
         rotor_copper_loss_along_stack = 0.0
         # sum_rotor_current_density     = 0.0
@@ -2079,7 +2079,7 @@ class FEMM_Solver(object):
             current_rms_value              = amp / 1.4142135623730951
             list_Jr.append(current_rms_value / (a * Area_conductor_Sc))
         Jr = sum(list_Jr) / len(list_Jr) # take average for Jr
-        print('Jr=%g Arms/m^2'%(Jr))
+        # print('Jr=%g Arms/m^2'%(Jr))
 
         coil_span_W = coil_pitch_by_slot_count / Q * (the_radius_m * 2*pi)
         lav = 2*stack_length_m + 2.4*coil_span_W + 0.1
