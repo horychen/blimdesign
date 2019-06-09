@@ -1126,9 +1126,11 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             _s, _r, _sAlongStack, _rAlongStack, _Js, _Jr = femm_solver.get_copper_loss_pyrhonen(femm_solver.stator_slot_area, femm_solver.rotor_slot_area)
             s, r, sAlongStack, rAlongStack, Js, Jr = femm_solver.get_copper_loss_Bolognani(femm_solver.stator_slot_area, femm_solver.rotor_slot_area)
             
-            print('Pyrhonen : %g, %g | %g, %g | %g, %g ' % (_s, _r, _sAlongStack, _rAlongStack, _Js, _Jr) )
-            print('Bolognani: %g, %g | %g, %g | %g, %g ' % (s, r, sAlongStack, rAlongStack, Js, Jr) )
-
+            msg1 = 'Pyrhonen : %g, %g | %g, %g | %g, %g ' % (_s, _r, _sAlongStack, _rAlongStack, _Js, _Jr) 
+            msg2 = 'Bolognani: %g, %g | %g, %g | %g, %g ' % (s, r, sAlongStack, rAlongStack, Js, Jr) 
+            logging.getLogger(__name__)
+            logger.debug(msg1)
+            logger.debug(msg2)
         except Exception as e:
             raise e
         # enablePrint()
