@@ -43,14 +43,15 @@ if True:
 
 
     fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 3 # =2 would waste 1/3 of pop to evaluate the same reference design
+    fea_config_dict['local_sensitivity_analysis_percent'] = 0.05
     fea_config_dict['local_sensitivity_analysis'] = True
     run_folder = r'run#5409/' # LSA of high torque density design
 
-    # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 19 # =20 is also bad idea!
-    # fea_config_dict['local_sensitivity_analysis_percent'] = 0.2
-    # run_folder = r'run#54099/' # LSA of high torque density design
-    # # run_folder = r'run#5408/' # LSA of high efficiency design
-    # # run_folder = r'run#5407/' # LSA of low ripple performance design
+    fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 19 # =20 is also bad idea!
+    fea_config_dict['local_sensitivity_analysis_percent'] = 0.2
+    run_folder = r'run#54099/' # LSA of high torque density design
+    # run_folder = r'run#5408/' # LSA of high efficiency design
+    # run_folder = r'run#5407/' # LSA of low ripple performance design
 else:
     # Prototype
     pass

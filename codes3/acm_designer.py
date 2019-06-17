@@ -131,9 +131,20 @@ class swarm_data_container(object):
             ax = ax_list[i]
             y_data = list_y_data[i]
             y_value_reference = y_data[0]
-            ax.plot(y_value_reference*np.ones(len(y_data)), '-k', alpha=1)
+            ax.plot(y_value_reference*np.ones(len(y_data)), '-k', alpha=1, zorder=10)
             y_data = y_data[1:]
-            ax.plot(y_data, '--bo', alpha=0.5)
+            number_of_points_per_geometry_variable = len(y_data)/number_of_free_variables
+            for idx, part_of_y_data in enumerate([y_data[int(number_of_points_per_geometry_variable*_)\
+                                                        :int(number_of_points_per_geometry_variable*(_+1))]\
+                                                        for _ in range(number_of_free_variables)]):
+                if idx%2 == 0:
+                    line_style = '--bo'
+                else:
+                    line_style = '--ro'
+                ax.plot(list(range(len(y_data)))[int(number_of_points_per_geometry_variable*idx)\
+                                                :int(number_of_points_per_geometry_variable*(idx+1))], 
+                                                part_of_y_data, line_style, alpha=0.33)
+
             low, high = ax.get_ylim()
             # ax.legend()
             ax.grid()
