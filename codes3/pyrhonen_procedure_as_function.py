@@ -10,7 +10,7 @@ import os
     # Density:
         # Silicon steels around 2 to 3% silicon composition have a density about 7.65 gr/cc.  The cold rolling process is volume conserving.  Just currious why you care about the density. from https://www.quora.com/What-is-the-material-density-for-M19-silicon-steel
 
-print('-'*20+'\nPyrhonen 2009 Chapter 7.')
+# print('-'*20+'\nPyrhonen 2009 Chapter 7.')
 one_report_dir_prefix = '../release/OneReport/OneReport_TEX/contents/'
 file_name = 'pyrhonen_procedure'
 file_suffix = '.tex'

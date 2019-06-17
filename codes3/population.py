@@ -2910,7 +2910,11 @@ class bearingless_induction_motor_design(object):
         #         self.Radius_of_RotorSlot = self.Radius_of_RotorSlot2
 
         # else:
-        self.use_drop_shape_rotor_bar = self.fea_config_dict['use_drop_shape_rotor_bar'] # Since 5/23/2019
+        if self.fea_config_dict is not None:
+            self.use_drop_shape_rotor_bar = self.fea_config_dict['use_drop_shape_rotor_bar'] # Since 5/23/2019
+        else:
+            print('In population.py: use_drop_shape_rotor_bar is None or not given. Set it to True.\n'*3)
+            self.use_drop_shape_rotor_bar = True
 
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         # For a low Qr value, there is a chance that the Location_RotorBarCenter2 is larger than Location_RotorBarCenter,

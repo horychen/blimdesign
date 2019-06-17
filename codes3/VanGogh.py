@@ -736,7 +736,7 @@ def get_tangent_points_of_two_circles(center1, radius1, center2, radius2):
     return (x3, y3), (x4, y4)
 
 # Eric required plot geometry with LaTeX labels
-if __name__ == '!__main__':
+if __name__ == '__main__':
     import matplotlib.patches as mpatches
     import matplotlib.pyplot as plt
     plt.rcParams["font.family"] = "Times New Roman"
@@ -959,9 +959,10 @@ if __name__ == '!__main__':
     pyx_label_dimention(track_path_backup)
     vg.tikz.c.writePDFfile("pyx_output")
     # vg.tikz.c.writeEPSfile("pyx_output")
+    print('Write to pdf file: pyx_output.pdf.')
     quit()
 
-    # 
+    # 以下应该是旧代码，用matplotlib画电机二维截面
     BIAS = 1
     Stator_Sector_Angle = 2*pi/im.Qs*0.5
     Rotor_Sector_Angle = 2*pi/im.Qr*0.5

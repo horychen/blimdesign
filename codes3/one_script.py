@@ -40,6 +40,17 @@ if True:
 
     # run_folder = r'run#539/' # New copper loss formula from Bolognani 2006
     run_folder = r'run#540/' # New copper loss formula from Bolognani 2006 # Fix small bugs
+
+
+    fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 3 # =2 would waste 1/3 of pop to evaluate the same reference design
+    fea_config_dict['local_sensitivity_analysis'] = True
+    run_folder = r'run#5409/' # LSA of high torque density design
+
+    # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 19 # =20 is also bad idea!
+    # fea_config_dict['local_sensitivity_analysis_percent'] = 0.2
+    # run_folder = r'run#54099/' # LSA of high torque density design
+    # # run_folder = r'run#5408/' # LSA of high efficiency design
+    # # run_folder = r'run#5407/' # LSA of low ripple performance design
 else:
     # Prototype
     pass
@@ -75,7 +86,7 @@ global ad
 ad = acm_designer.acm_designer(fea_config_dict, spec)
 # if 'Y730' in fea_config_dict['pc_name']:
 #     ad.build_oneReport() # require LaTeX
-#     # ad.talk_to_mysql_database() # require MySQL
+    # ad.talk_to_mysql_database() # require MySQL
 ad.init_logger()
 
 ad.bounds_denorm = ad.get_classic_bounds()
@@ -104,7 +115,7 @@ class Problem_BearinglessInductionDesign(object):
             counter_fitness_called += 1
         else:
             # This is not reachable
-            raise
+            raise Exception('counter_fitness_called')
         print('Call fitness: %d, %d'%(counter_fitness_called, counter_fitness_return))
 
         # 不要标幺化了！统一用真的bounds，见get_bounds()
@@ -112,10 +123,15 @@ class Problem_BearinglessInductionDesign(object):
 
         # evaluate x_denorm via FEA tools
         counter_loop = 0
+        stuck_at = 0
         while True:
-            counter_loop += 1
-            if counter_loop > 3:
-                raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+            if stuck_at < counter_fitness_called:
+                stuck_at = counter_fitness_called
+                counter_loop = 0 # reset
+            if stuck_at == counter_fitness_called:
+                counter_loop += 1
+                if counter_loop > 5:
+                    raise Exception('Abort the optimization. Five attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
 
             try:
                 cost_function, f1, f2, f3, \
@@ -131,6 +147,7 @@ class Problem_BearinglessInductionDesign(object):
                 ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
 
             except Exception as e:
+
                 # raise e
                 print(e)
 
@@ -208,7 +225,7 @@ class Problem_BearinglessInductionDesign(object):
         # print(([0]*7, [1]*7))
         # quit()
         return ( min_b.tolist(), max_b.tolist() )
-        return ([0]*7, [1]*7)
+        # return ([0]*7, [1]*7)
 
     # Return function name
     def get_name(self):
@@ -260,8 +277,25 @@ def my_2p5d_plot_non_dominated_fronts(points, marker='o', comp=[0, 1], up_to_ran
     full_comp.remove(comp[1])
     z_comp = full_comp[0]
 
+    # fits, vectors = pop.get_f(), pop.get_x()
+    # ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
+
+    # with open(ad.solver.output_dir+'MOO_log.txt', 'a', encoding='utf-8') as fname:
+    #     print('-'*40, 'Generation:', _, file=fname)
+    #     for rank_minus_1, front in enumerate(ndf):
+    #         print('Rank/Tier', rank_minus_1+1, front, file=fname)
+    #     count = 0
+    #     for domination_list, domination_count, non_domination_rank in zip(dl, dc, ndr):
+    #         print('Individual #%d\t'%(count), 'Belong to Rank #%d\t'%(non_domination_rank), 'Dominating', domination_count, 'and they are', domination_list, file=fname)
+    #         count += 1
+
+    #     # print(fits, vectors, ndf)
+    #     print(pop, file=fname)
+
+
     # We plot
-    fronts, _, _, _ = pg.fast_non_dominated_sorting(points)
+    # fronts, dl, dc, ndr = pg.fast_non_dominated_sorting(points)
+    fronts, _, _, _= pg.fast_non_dominated_sorting(points)
 
     # We define the colors of the fronts (grayscale from black to white)
     cl = list(zip(np.linspace(0.9, 0.1, len(fronts)),
@@ -306,13 +340,20 @@ def my_2p5d_plot_non_dominated_fronts(points, marker='o', comp=[0, 1], up_to_ran
             z_text  = '%.1f'
         clb.ax.set_ylabel(z_label, rotation=270)
 
-        # text next scatter showing the value of the 3rd objective
-        for i, val in enumerate(z):
-            ax.annotate( z_text%(val), (x[i], y[i]) )
-        for i, val in enumerate(z):
-            ax.annotate( z_text%(val), (x[i], y[i]) )
-        for i, val in enumerate(z):
-            ax.annotate( z_text%(val), (x[i], y[i]) )
+
+        if z_comp == 2: # when OC as z-axis
+            print('-----------------------------------------------------')
+            print('-----------------------------------------------------')
+            print('-----------------------------------------------------')
+            # Add index next to the points
+            for x_coord, y_coord, z_coord, idx in zip(x, y, z, front):
+                # ax.annotate( z_text%(z_coord) + ' #%d'%(idx), (x_coord, y_coord) )
+                pass
+        else:
+            # text next scatter showing the value of the 3rd objective
+            for i, val in enumerate(z):
+                # ax.annotate( z_text%(val), (x[i], y[i]) )
+                pass
 
         # refine the plotting
         if comp[0] == 0:
@@ -335,6 +376,7 @@ def my_2p5d_plot_non_dominated_fronts(points, marker='o', comp=[0, 1], up_to_ran
         else:
             if count >= up_to_rank_no:
                 break
+    fig.savefig(r'C:\Users\horyc\Desktop/'+ '2p5D-%d%d.png'%(comp[0],comp[1]), dpi=300)
     return ax
 def my_3d_plot_non_dominated_fronts(pop, paretoPoints, az=180, comp=[0, 1, 2], plot_option=1):
     """
@@ -475,6 +517,10 @@ def my_3d_plot_non_dominated_fronts(pop, paretoPoints, az=180, comp=[0, 1, 2], p
         surf = ax.plot_trisurf(df.x, df.y, df.z, cmap=cm.Spectral, linewidth=0.1)        
         fig.colorbar(surf, shrink=0.5, aspect=5)
     
+        ax.set_xlabel(r'$\rm -TRV~Nm/m^3$')
+        ax.set_ylabel(r'$-\eta$ [1]')
+        ax.set_zlabel(r'$O_C$ [1]')
+
         # Try to export data from plot_trisurf # https://github.com/WoLpH/numpy-stl/issues/19
         # print(surf.get_vector())
 
@@ -487,7 +533,9 @@ def my_3d_plot_non_dominated_fronts(pop, paretoPoints, az=180, comp=[0, 1, 2], p
         #     plt.draw()
         #     plt.pause(.001)
 
-    ax.view_init(azim=175, elev=45) 
+    ax.view_init(azim=245, elev=15) 
+    # fig.tight_layout()
+    fig.savefig(r'C:\Users\horyc\Desktop/3D-plot.png', dpi=300, layout='tight')
     # ax.view_init(azim=az)
     # ax.set_xlim(0, 1.)
     # ax.set_ylim(0, 1.)
@@ -555,16 +603,16 @@ def my_print(pop, _):
         print('-'*40, 'Generation:', _, file=fname)
         for rank_minus_1, front in enumerate(ndf):
             print('Rank/Tier', rank_minus_1+1, front, file=fname)
-        count = 0
+        index = 0
         for domination_list, domination_count, non_domination_rank in zip(dl, dc, ndr):
-            print('Individual #%d\t'%(count), 'Belong to Rank #%d\t'%(non_domination_rank), 'Dominating', domination_count, 'and they are', domination_list, file=fname)
-            count += 1
+            print('Individual #%d\t'%(index), 'Belong to Rank #%d\t'%(non_domination_rank), 'Dominating', domination_count, 'and they are', domination_list, file=fname)
+            index += 1
 
         # print(fits, vectors, ndf)
         print(pop, file=fname)
 
 
-def learn_about_the_archive(prob, swarm_data, popsize):
+def learn_about_the_archive(prob, swarm_data, popsize, len_s01=None, len_s02=None):
     number_of_chromosome = len(swarm_data)
     print('Archive size:', number_of_chromosome)
     # for el in swarm_data:
@@ -593,7 +641,7 @@ def learn_about_the_archive(prob, swarm_data, popsize):
 
             # Rank 1 Pareto Front
             if ind1 == 0:
-                paretoPoints = fits_at_this_front
+                rank1_ParetoPoints = fits_at_this_front
                 if len(front) < popsize:
                     print('There are not enough chromosomes (%d) belonging to domination rank 1 (the best Pareto front).\nWill use rank 2 or lower to reach popsize of %d.'%(len(front), popsize))
 
@@ -616,30 +664,77 @@ def learn_about_the_archive(prob, swarm_data, popsize):
     sorted_vectors = [vectors[index].tolist() for index in sorted_index]
     sorted_fits    = [fits[index].tolist() for index in sorted_index]
 
-    swarm_data_on_pareto_front = [design_parameters_denorm + fits for design_parameters_denorm, fits in zip(sorted_vectors, sorted_fits)]
-
-
-    my_plot(fits, vectors, ndf)
-    my_3d_plot_non_dominated_fronts(pop_archive, paretoPoints, plot_option=1)
+    my_plot(pop_archive.get_f(), pop_archive.get_x(), ndf)
+    my_3d_plot_non_dominated_fronts(pop_archive, rank1_ParetoPoints, plot_option=1)
     plt.show()
+
+    swarm_data_on_pareto_front = [design_parameters_denorm + fits for design_parameters_denorm, fits in zip(sorted_vectors, sorted_fits)]
     return swarm_data_on_pareto_front
 
 if bool_post_processing == True:
     # Combine all data 
     # plot pareto plot for three objectives...
 
-    if fea_config_dict['run_folder'] == r'run#540/':
+    # Select optimal design by user-defined criteria
+    if r'run#540' in fea_config_dict['run_folder']:
         ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#540011/' # severson01
         number_of_chromosome = ad.solver.read_swarm_data()
         swarm_data_severson01 = ad.solver.swarm_data
+
+        def selection_criteria(swarm_data_):
+            global best_idx, best_chromosome
+            # HIGH TORQUE DENSITY
+            # Severson01
+            #       L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.
+            # 1624 [1.15021, 8.97302, 8.33786, 3.22996, 0.759612, 2.81857, 1.11651, -22668.7, -0.953807, 4.79617]
+            # Y730
+            #       L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.
+            # 794 [1.16163, 9.00566, 8.34039, 2.91474, 0.786231, 2.76114, 1.2485, -22666.7, -0.953681, 4.89779]
+            # ----------------------------------------
+            # HIGH EFFICIENCY
+            # Y730
+            #       L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.
+            # 186 [1.25979, 6.80075, 5.64435, 5.8548, 1.59461, 2.11656, 2.58401, -17633.3, -0.958828, 5.53104]
+            # 615 [1.2725, 5.6206, 4.60947, 3.56502, 2.27635, 0.506179, 2.78758, -17888.9, -0.958846, 8.56211]
+            # ----------------------------------------
+            # LOW RIPPLE PERFORMANCE
+            # Severson02
+            #       L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.
+            # 1043 [1.38278, 8.91078, 7.43896, 2.66259, 0.611812, 1.50521, 1.51402, -19125.4, -0.953987, 2.91096]
+            # 1129 [1.38878, 8.68378, 7.97301, 2.82904, 0.586374, 1.97867, 1.45825, -19169.0, -0.954226, 2.99944]
+            # 1178 [1.36258, 8.9625, 7.49621, 2.5878, 0.503512, 0.678909, 1.74283, -19134.3, -0.952751, 2.90795]
+
+            for idx, chromosome in enumerate(swarm_data_):
+                if chromosome[-1] < 5 and chromosome[-2] < -0.95 and chromosome[-3] < -22500: # best Y730     #1625, 0.000702091 * 8050 * 9.8 = 55.38795899 N.  FRW = 223.257 / 55.38795899 = 4.0
+                # if chromosome[-1] < 10 and chromosome[-2] < -0.9585 and chromosome[-3] < -17500: # best Y730  #187, 0.000902584 * 8050 * 9.8 = 71.204851760 N. FRW = 151.246 / 71.204851760 = 2.124
+                # if chromosome[-1] < 3 and chromosome[-2] < -0.95 and chromosome[-3] < -19000: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
+                    print(idx, chromosome)
+                    if idx == 1625 - 1:
+                        best_idx = idx
+                        best_chromosome = chromosome
+
+        print('-'*40+'\nSeverson01' + '\n      L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.')
+        selection_criteria(swarm_data_severson01)
 
         ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#540021/' # severson02
         number_of_chromosome = ad.solver.read_swarm_data()
         swarm_data_severson02 = ad.solver.swarm_data
 
+        print('-'*40+'\nSeverson02' + '\n      L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.')
+        selection_criteria(swarm_data_severson02)
+
+        # swarm_data_severson01 = []
+        # swarm_data_severson02 = []
         ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#540/' # ad.solver.fea_config_dict['run_folder'] 
         number_of_chromosome = ad.solver.read_swarm_data()
         swarm_data_Y730 = ad.solver.swarm_data
+
+        print('-'*40+'\nY730' + '\n      L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.')
+        selection_criteria(swarm_data_Y730)
+
+        # Set the output_dir back!
+        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + ad.solver.fea_config_dict['run_folder']
+        # quit()
 
     elif fea_config_dict['run_folder'] == r'run#538/':
         ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#538011/' # severson01
@@ -654,7 +749,7 @@ if bool_post_processing == True:
         number_of_chromosome = ad.solver.read_swarm_data()
         swarm_data_Y730 = ad.solver.swarm_data
 
-    print(len(swarm_data_severson01), len(swarm_data_severson02), len(swarm_data_Y730))
+    print('Size of the 3 pop (in order):', len(swarm_data_severson01), len(swarm_data_severson02), len(swarm_data_Y730))
     ad.solver.swarm_data = swarm_data_severson01 + swarm_data_severson02 + swarm_data_Y730 # list add
 
     udp = Problem_BearinglessInductionDesign()
@@ -662,12 +757,69 @@ if bool_post_processing == True:
     counter_fitness_called, counter_fitness_return = 0, 0
     prob = pg.problem(udp)
 
-    swarm_data_on_pareto_front = learn_about_the_archive(prob, ad.solver.swarm_data, len(ad.solver.swarm_data))
+    if fea_config_dict['local_sensitivity_analysis'] == True:
 
-    plt.show()
-    quit()
+        number_of_chromosome = ad.solver.read_swarm_data()
 
-    run_static_structural_fea(swda.best_design_denorm)
+        if number_of_chromosome is not None:
+            ad.solver.swarm_data
+            ad.solver.swarm_data_container.sensitivity_bar_charts()
+
+        else:
+            def local_sensitivity_analysis(reference_design_denorm, percent=0.2):
+                # 敏感性检查：以基本设计为准，检查不同的参数取极值时的电机性能变化！这是最简单有效的办法。七个设计参数，那么就有14种极值设计。
+
+                if False:
+                    # Within the original bounds
+                    min_b, max_b = udp.get_bounds()
+                    min_b, max_b = np.array(min_b), np.array(max_b)
+                    diff = np.fabs(min_b - max_b)
+                else:
+                    # near the reference design
+                    min_b = [el*(1.0-percent) for el in reference_design_denorm]
+                    max_b = [el*(1.0+percent) for el in reference_design_denorm]
+                    min_b, max_b = np.array(min_b), np.array(max_b)
+                    diff = np.fabs(min_b - max_b)
+
+                reference_design = (np.array(reference_design_denorm) - min_b) / diff
+                print('reference_design_denorm:', reference_design_denorm)
+                print('reference_design:\t\t', reference_design.tolist())
+                base_design = reference_design.tolist()
+                # quit()
+                number_of_variants = fea_config_dict['local_sensitivity_analysis_number_of_variants']
+                lsa_swarm = [base_design] # include reference design!
+                for i in range(len(base_design)): # 7 design parameters
+                    for j in range(number_of_variants+1): # 21 variants interval
+                        # copy list
+                        design_variant = base_design[::]
+                        design_variant[i] = j * 1./number_of_variants
+                        lsa_swarm.append(design_variant)
+
+                lsa_swarm_denorm = min_b + lsa_swarm * diff 
+                print(lsa_swarm)
+                print(lsa_swarm_denorm)
+                return lsa_swarm, lsa_swarm_denorm
+
+            print('Best index', best_idx, '#%d'%(best_idx+1), 'Best chromosome', best_chromosome)
+            _, lsa_swarm_denorm = local_sensitivity_analysis( reference_design_denorm=best_chromosome[:7],
+                                                              percent=fea_config_dict['local_sensitivity_analysis_percent'] )
+            lsa_popsize = len(lsa_swarm_denorm)
+
+            # quit()
+            lsa_pop = pg.population(prob, size=lsa_popsize)
+            print('Set ad.flag_do_not_evaluate_when_init_pop to False...')
+            ad.flag_do_not_evaluate_when_init_pop = False
+            for i, design_denorm in enumerate(lsa_swarm_denorm):
+                print('Evaluate', i)
+                lsa_pop.set_x(i, design_denorm)
+            print('LSA is done for a pop size of %d'%(lsa_popsize))
+        quit()
+
+    else:
+        swarm_data_on_pareto_front = learn_about_the_archive(prob, ad.solver.swarm_data, len(ad.solver.swarm_data), len_s01=len(swarm_data_severson01), len_s02=len(swarm_data_severson02))
+        plt.show()    
+        quit()
+        run_static_structural_fea(swda.best_design_denorm)
 
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -753,8 +905,10 @@ if True:
                 if i < number_of_chromosome: #number_of_finished_chromosome_in_current_generation:
                     pop.set_xf(i, ad.solver.swarm_data[i][:7], ad.solver.swarm_data[i][-3:])
                 else:
+                    print('Set ad.flag_do_not_evaluate_when_init_pop to False...')
+                    ad.flag_do_not_evaluate_when_init_pop = False
                     print('Calling pop.set_x()---this is a restart for individual#%d during pop initialization.'%(i))
-                    print(i, prob.get_fevals())
+                    print(i, 'get_fevals:', prob.get_fevals())
                     pop.set_x(i, pop_array[i]) # evaluate this guy
         else:
             # 新办法，直接从swarm_data.txt（相当于archive）中判断出当前最棒的群体
@@ -882,7 +1036,7 @@ else:
     elif fea_config_dict['bool_refined_bounds'] == False:
         ad.de_config_dict['bounds'] = ad.de_config_dict['original_bounds']
     else:
-        raise
+        raise Exception('bool_refined_bounds')
     print('The final bounds are:')
     for el in ad.de_config_dict['bounds']:
         print('\t', el)

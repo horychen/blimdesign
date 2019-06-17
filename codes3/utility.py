@@ -1985,7 +1985,7 @@ class SwarmDataAnalyzer(object):
             quit()   
 
     def sensitivity_bar_charts(self):
-        INDEX_TOTAL_LOSS = 15 + 4
+        INDEX_TOTAL_LOSS = 15 + 4 # index of total loss in the machine_data list
 
         # ------------------------------------ Sensitivity Analysis Bar Chart Scripts
         number_of_variant = self.sw.fea_config_dict['local_sensitivity_analysis_number_of_variants'] + 1
