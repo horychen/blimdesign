@@ -59,7 +59,7 @@ class swarm_data_container(object):
         self.l_rated_iron_loss                      = [el[7] for el in self.rated_data]
         self.l_rated_windage_loss                   = [el[8] for el in self.rated_data]
         self.l_rated_rotor_volume                   = [el[9] for el in self.rated_data]
-        
+        self.l_rated_rotor_weight                   = [(V*8050*9.8) for V in self.l_rated_rotor_volume] # density of rotor is estimated to be that of steel of 8050 g/cm^3
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Utility
@@ -108,24 +108,27 @@ class swarm_data_container(object):
                         r'Windage loss', r'Total loss']
 
         list_y_label = [r'$O_A$ [$\rm Nm/m^3$]', 
-                         '$O_B$ [1]', 
                          '$O_C$ [1]', 
-                         'FRW [1]', 
+                         'FRW [1]',
                          '$E_a$ [deg]', 
-                         r'$T_{\rm rip}$ [1]',
-                         'Power Factor [1]',
-                         r'$P_{\rm loss}$ [W]']
+                         '$O_B$ [%]', 
+                         '$E_m$ [%]', 
+                         r'$P_{\rm loss}$ [W]',
+                         r'$T_{\rm rip}$ [%]',
+                         # 'Rotor Weight [N]', #'Power Factor [1]',
+                         ]
         list_y_data_max = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
         list_y_data_min = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
 
         list_y_data = [ self.l_OA, 
-                        self.l_OB, 
                         self.l_OC,
-                        [F/(V*8050*9.8) for V, F in zip(self.l_rated_rotor_volume, self.l_ss_avg_force_magnitude)], # FRW
+                        [F/W for W, F in zip(self.l_rated_rotor_weight, self.l_ss_avg_force_magnitude)], # FRW
                         self.l_force_error_angle,
-                        self.l_normalized_torque_ripple,
-                        self.l_power_factor,
-                        self.l_rated_total_loss
+                        [100*el for el in self.l_OB], 
+                        [100*el for el in self.l_normalized_force_error_magnitude],
+                        self.l_rated_total_loss,
+                        [100*el for el in self.l_normalized_torque_ripple],
+                        # self.l_rated_rotor_weight,
                         ]
         for i in range(len(list_y_label)):
             ax = ax_list[i]
@@ -149,6 +152,7 @@ class swarm_data_container(object):
             # ax.legend()
             ax.grid()
             ax.set_ylabel(list_y_label[i], **font)
+            ax.set_xlim([0,140])
             # ax.set_xlabel('Count of design variants', **font)
             for j in range(number_of_free_variables):
                 if j%2==0:
@@ -156,10 +160,10 @@ class swarm_data_container(object):
                 else:
                     alpha = 0.15
                 ax.axvspan(j*number_of_variant-0.5, (j+1)*number_of_variant-0.5, facecolor='k', alpha=alpha)
-                ax.text(0.2*number_of_free_variables+j*number_of_variant, low+(high-low)*0.05, free_param_list[j])
+                ax.text(0.33*number_of_free_variables+j*number_of_variant, high-(high-low)*0.125, free_param_list[j])
 
             list_y_data_max[i].append(max(y_data))
-            list_y_data_min[i].append(min(y_data))            
+            list_y_data_min[i].append(min(y_data))
 
         fig.savefig(r'C:\Users\horyc\Desktop/'+ 'LSA_curves.png', dpi=300)
         plt.show()

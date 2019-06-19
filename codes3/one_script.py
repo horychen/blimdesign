@@ -42,16 +42,17 @@ if True:
     run_folder = r'run#540/' # New copper loss formula from Bolognani 2006 # Fix small bugs
 
 
-    fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 3 # =2 would waste 1/3 of pop to evaluate the same reference design
-    fea_config_dict['local_sensitivity_analysis_percent'] = 0.05
     fea_config_dict['local_sensitivity_analysis'] = True
-    run_folder = r'run#5409/' # LSA of high torque density design
+
+    # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 3 # =2 would waste 1/3 of pop to evaluate the same reference design
+    # fea_config_dict['local_sensitivity_analysis_percent'] = 0.05
+    # run_folder = r'run#5409/' # LSA of high torque density design
 
     fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 19 # =20 is also bad idea!
     fea_config_dict['local_sensitivity_analysis_percent'] = 0.2
     run_folder = r'run#54099/' # LSA of high torque density design
-    # run_folder = r'run#5408/' # LSA of high efficiency design
-    # run_folder = r'run#5407/' # LSA of low ripple performance design
+    # run_folder = r'run#54088/' # LSA of high efficiency design
+    run_folder = r'run#54077/' # LSA of low ripple performance design
 else:
     # Prototype
     pass
@@ -518,7 +519,7 @@ def my_3d_plot_non_dominated_fronts(pop, paretoPoints, az=180, comp=[0, 1, 2], p
         surf = ax.plot_trisurf(df.x, df.y, df.z, cmap=cm.Spectral, linewidth=0.1)        
         fig.colorbar(surf, shrink=0.5, aspect=5)
     
-        ax.set_xlabel(r'$\rm -TRV~Nm/m^3$')
+        ax.set_xlabel(r'$\rm -TRV$ [$\rm Nm/m^3$]')
         ax.set_ylabel(r'$-\eta$ [1]')
         ax.set_zlabel(r'$O_C$ [1]')
 
@@ -706,13 +707,20 @@ if bool_post_processing == True:
             # 1178 [1.36258, 8.9625, 7.49621, 2.5878, 0.503512, 0.678909, 1.74283, -19134.3, -0.952751, 2.90795]
 
             for idx, chromosome in enumerate(swarm_data_):
-                if chromosome[-1] < 5 and chromosome[-2] < -0.95 and chromosome[-3] < -22500: # best Y730     #1625, 0.000702091 * 8050 * 9.8 = 55.38795899 N.  FRW = 223.257 / 55.38795899 = 4.0
+                # if chromosome[-1] < 5 and chromosome[-2] < -0.95 and chromosome[-3] < -22500: # best Y730     #1625, 0.000702091 * 8050 * 9.8 = 55.38795899 N.  FRW = 223.257 / 55.38795899 = 4.0
                 # if chromosome[-1] < 10 and chromosome[-2] < -0.9585 and chromosome[-3] < -17500: # best Y730  #187, 0.000902584 * 8050 * 9.8 = 71.204851760 N. FRW = 151.246 / 71.204851760 = 2.124
-                # if chromosome[-1] < 3 and chromosome[-2] < -0.95 and chromosome[-3] < -19000: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
+                if chromosome[-1] < 3 and chromosome[-2] < -0.95 and chromosome[-3] < -19000: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
                     print(idx, chromosome)
-                    if idx == 1625 - 1:
+                    # Take high torque density design for LSA
+                    # if idx == 1625 - 1:
+                    #     best_idx = idx
+                    #     best_chromosome = chromosome
+
+                    # Take low ripple performance design for LSA
+                    if idx == 1130 - 1:
                         best_idx = idx
                         best_chromosome = chromosome
+
 
         print('-'*40+'\nSeverson01' + '\n      L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.')
         selection_criteria(swarm_data_severson01)
