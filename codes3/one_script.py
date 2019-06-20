@@ -100,7 +100,8 @@ for A, B in zip(ad.bounds_denorm, ad.original_bounds):
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Optimization
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-
+def get_bad_fintess_values():
+    return 0, 0, 99
 import pygmo as pg
 global counter_fitness_called, counter_fitness_return
 class Problem_BearinglessInductionDesign(object):
@@ -148,7 +149,14 @@ class Problem_BearinglessInductionDesign(object):
                 # update to be deleted when JMAG releases the use
                 ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
 
-            except Exception as e:
+            except ExceptionBadNumberOfParts as error:
+                print(str(error)) 
+                print("Detail: {}".format(error.payload))
+                f1, f2, f3 = get_bad_fintess_values()
+                utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3 + "Detail: {}".format(error.payload))
+                break
+
+            except Exception as e: # retry
 
                 # raise e
                 print(e)
@@ -186,12 +194,16 @@ class Problem_BearinglessInductionDesign(object):
                 except Exception as e2:
                     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e) + '\n'*3 + 'Exception 2:' + str(e2))
                     raise e2
+
                 else:
                     if 'Number of Parts is unexpected' in str(e):
                         print('Shitty design is found as:\n'+str(e))
                         print('\nEmail has been sent.\nThis design is punished by specifying f1=0, f2=0, f3=99.')
-                        f1, f2, f3 = 0, 0, 99
+                        f1, f2, f3 = get_bad_fintess_values()
+
                     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e))
+                    print('This is Obselete can will not be reached anymore. An exclusive exception is built for number of parts unexpected exception.')
+                    break
             else:
                 break
 
@@ -558,6 +570,11 @@ def my_plot(fits, vectors, ndf):
         pass
 
         ax = my_2p5d_plot_non_dominated_fronts(fits, comp=[0,1], marker='o', up_to_rank_no=1)
+        x = fits[0][0]
+        y = fits[0][1]
+        z = fits[0][2]
+        ax.plot(x, y, color='k', marker='s')
+        ax.annotate(r'$x_{\rm optm}$', xy=(x, y), xytext=(x+1000, y+0.0005), arrowprops=dict(facecolor='black', shrink=0.05),)
         ax = my_2p5d_plot_non_dominated_fronts(fits, comp=[0,2], marker='o', up_to_rank_no=1)
         ax = my_2p5d_plot_non_dominated_fronts(fits, comp=[1,2], marker='o', up_to_rank_no=1)
 
@@ -673,9 +690,77 @@ def learn_about_the_archive(prob, swarm_data, popsize, len_s01=None, len_s02=Non
     swarm_data_on_pareto_front = [design_parameters_denorm + fits for design_parameters_denorm, fits in zip(sorted_vectors, sorted_fits)]
     return swarm_data_on_pareto_front
 
+def pyx_draw_model(im):
+    import matplotlib.patches as mpatches
+    import matplotlib.pyplot as plt
+    plt.rcParams["font.family"] = "Times New Roman"
+
+    myfontsize = 13.5
+    plt.rcParams.update({'font.size': myfontsize})
+
+    # # 示意图而已，改改尺寸吧
+    # im.Radius_OuterStatorYoke -= 37
+    # im.Radius_InnerStatorYoke -= 20
+    # im.Radius_Shaft += 20
+    # # im.Location_RotorBarCenter2 += 5 # this will change the shape of rotor slot
+
+    import VanGogh
+    vg = VanGogh.VanGogh_pyPlotter(im, VanGogh.CUSTOM)
+    vg.draw_model()
+
+    # PyX
+    import pyx
+    vg.tikz.c = pyx.canvas.canvas() # clear the canvas because we want to redraw 90 deg with the data vg.tikz.track_path
+    from copy import deepcopy
+    def pyx_draw_path(vg, path, sign=1):
+        if len(path) == 4:
+            vg.tikz.draw_line(path[:2], path[2:4], untrack=True)
+        else:
+            vg.tikz.draw_arc(path[:2], path[2:4], path[4:6], relangle=sign*path[6], untrack=True)
+    def rotate(_, x, y):
+        return np.cos(_)*x + np.sin(_)*y, -np.sin(_)*x + np.cos(_)*y
+    def is_at_stator(im, path):
+        return np.sqrt(path[0]**2 + path[1]**2) > im.Radius_OuterRotor + 0.5*im.Length_AirGap
+    # 整体转动90度。
+    for path in vg.tikz.track_path:
+        path[0], path[1] = rotate(0.5*np.pi, path[0], path[1])
+        path[2], path[3] = rotate(0.5*np.pi, path[2], path[3])
+        pyx_draw_path(vg, path)
+    track_path_backup = deepcopy(vg.tikz.track_path)
+
+    # Rotate
+    for path in deepcopy(vg.tikz.track_path):
+        if is_at_stator(im, path):
+            Q = im.Qs
+        else:
+            Q = im.Qr
+        _ = 2*np.pi/Q
+        path[0], path[1] = rotate(_, path[0], path[1])
+        path[2], path[3] = rotate(_, path[2], path[3])
+        pyx_draw_path(vg, path)
+
+    # Mirror
+    for path in (vg.tikz.track_path): # track_path is passed by reference and is changed by mirror
+        path[0] *= -1
+        path[2] *= -1
+        pyx_draw_path(vg, path, sign=-1)
+    for path in (vg.tikz.track_path):
+        if np.sqrt(path[0]**2 + path[1]**2) > im.Radius_OuterRotor + 0.5*im.Length_AirGap:
+            Q = im.Qs
+        else:
+            Q = im.Qr
+        _ = 2*np.pi/Q
+        path[0], path[1] = rotate(_, path[0], path[1])
+        path[2], path[3] = rotate(_, path[2], path[3])
+        pyx_draw_path(vg, path, sign=-1)
+
+    vg.tikz.c.writePDFfile("selected_otimal_design%s"%(im.ID))
+    # vg.tikz.c.writeEPSfile("pyx_output")
+    print('Write to pdf file: selected_otimal_design%s.pdf.'%(im.ID))
+    quit()
+
 if bool_post_processing == True:
     # Combine all data 
-    # plot pareto plot for three objectives...
 
     # Select optimal design by user-defined criteria
     if r'run#540' in fea_config_dict['run_folder']:
@@ -708,18 +793,31 @@ if bool_post_processing == True:
 
             for idx, chromosome in enumerate(swarm_data_):
                 # if chromosome[-1] < 5 and chromosome[-2] < -0.95 and chromosome[-3] < -22500: # best Y730     #1625, 0.000702091 * 8050 * 9.8 = 55.38795899 N.  FRW = 223.257 / 55.38795899 = 4.0
-                # if chromosome[-1] < 10 and chromosome[-2] < -0.9585 and chromosome[-3] < -17500: # best Y730  #187, 0.000902584 * 8050 * 9.8 = 71.204851760 N. FRW = 151.246 / 71.204851760 = 2.124
-                if chromosome[-1] < 3 and chromosome[-2] < -0.95 and chromosome[-3] < -19000: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
+                if chromosome[-1] < 10 and chromosome[-2] < -0.9585 and chromosome[-3] < -17500: # best Y730  #187, 0.000902584 * 8050 * 9.8 = 71.204851760 N. FRW = 151.246 / 71.204851760 = 2.124
+                # if chromosome[-1] < 3 and chromosome[-2] < -0.95 and chromosome[-3] < -19000: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
                     print(idx, chromosome)
-                    # Take high torque density design for LSA
+                    # # Take high torque density design for LSA
                     # if idx == 1625 - 1:
                     #     best_idx = idx
                     #     best_chromosome = chromosome
 
-                    # Take low ripple performance design for LSA
-                    if idx == 1130 - 1:
+                    # Take high efficiency design for LSA
+                    if idx == 187 - 1:
                         best_idx = idx
                         best_chromosome = chromosome
+
+                        # Plot cross section view
+                        # import population
+                        # im_best = population.bearingless_induction_motor_design.local_design_variant(ad.spec.im_template, 99, 999, best_chromosome[:7])
+                        # im_best.ID = str(best_idx)
+                        # pyx_draw_model(im_best)
+                        # quit()
+
+
+                    # # Take low ripple performance design for LSA
+                    # if idx == 1130 - 1:
+                    #     best_idx = idx
+                    #     best_chromosome = chromosome
 
 
         print('-'*40+'\nSeverson01' + '\n      L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.')
@@ -758,7 +856,7 @@ if bool_post_processing == True:
         number_of_chromosome = ad.solver.read_swarm_data()
         swarm_data_Y730 = ad.solver.swarm_data
 
-    print('Size of the 3 pop (in order):', len(swarm_data_severson01), len(swarm_data_severson02), len(swarm_data_Y730))
+    print('Sizes of the 3 populations (in order):', len(swarm_data_severson01), len(swarm_data_severson02), len(swarm_data_Y730))
     ad.solver.swarm_data = swarm_data_severson01 + swarm_data_severson02 + swarm_data_Y730 # list add
 
     udp = Problem_BearinglessInductionDesign()
@@ -766,13 +864,26 @@ if bool_post_processing == True:
     counter_fitness_called, counter_fitness_return = 0, 0
     prob = pg.problem(udp)
 
+    # LSA
     if fea_config_dict['local_sensitivity_analysis'] == True:
 
         number_of_chromosome = ad.solver.read_swarm_data()
 
         if number_of_chromosome is not None:
             ad.solver.swarm_data
+
+            # Learn Pareto front rank and plot
+            for el in ad.solver.swarm_data:
+                print('\t', el)
+            print('count:', len(ad.solver.swarm_data))
+            swarm_data_on_pareto_front = learn_about_the_archive(prob, ad.solver.swarm_data, len(ad.solver.swarm_data))
+
+            # plot LSA
             ad.solver.swarm_data_container.sensitivity_bar_charts()
+
+            plt.show()
+            quit()
+
 
         else:
             def local_sensitivity_analysis(reference_design_denorm, percent=0.2):
@@ -824,6 +935,7 @@ if bool_post_processing == True:
             print('LSA is done for a pop size of %d'%(lsa_popsize))
         quit()
 
+    # plot pareto plot for three objectives...
     else:
         swarm_data_on_pareto_front = learn_about_the_archive(prob, ad.solver.swarm_data, len(ad.solver.swarm_data), len_s01=len(swarm_data_severson01), len_s02=len(swarm_data_severson02))
         plt.show()    

@@ -3,7 +3,7 @@
 # from shapely.geometry import LineString, Point
 from math import tan, pi, atan, sqrt, sin, cos, copysign, atan2, asin, acos
 import utility
-import numpy as np
+from pylab import plt, np
 
 CUSTOM = 2
 JMAG = 1
@@ -541,7 +541,7 @@ class VanGogh_pyPlotter(VanGogh):
         self.add_line = self.draw_line
         self.add_arc  = self.draw_arc
 
-        self.fig = figure(figsize=(8, 8), facecolor='w', edgecolor='k')
+        self.fig = plt.figure(figsize=(8, 8), facecolor='w', edgecolor='k')
         self.ax = self.fig.add_subplot(111, aspect='equal')
         # self.ax = self.fig.gca()
         # self.ax.set_xlim([-74,-40])

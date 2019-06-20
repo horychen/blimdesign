@@ -166,7 +166,7 @@ class swarm_data_container(object):
             list_y_data_min[i].append(min(y_data))
 
         fig.savefig(r'C:\Users\horyc\Desktop/'+ 'LSA_curves.png', dpi=300)
-        plt.show()
+        # plt.show()
         return
 
 
@@ -504,7 +504,6 @@ class swarm_data_container(object):
         return results_for_refining_bounds
 
 
-
 class FEA_Solver:
     def __init__(self, fea_config_dict):
         self.fea_config_dict = fea_config_dict
@@ -552,6 +551,7 @@ class FEA_Solver:
         if not os.path.exists(self.output_dir + 'swarm_data.txt'):
             return None
 
+        print('Read in', self.output_dir + 'swarm_data.txt')
         with open(self.output_dir + 'swarm_data.txt', 'r') as f:
             buf = f.readlines()
             buf = buf[1:]
