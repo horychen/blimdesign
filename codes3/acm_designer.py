@@ -59,6 +59,7 @@ class swarm_data_container(object):
         self.l_rated_iron_loss                      = [el[7] for el in self.rated_data]
         self.l_rated_windage_loss                   = [el[8] for el in self.rated_data]
         self.l_rated_rotor_volume                   = [el[9] for el in self.rated_data]
+        # self.l_rated_stack_length                   = [el[10] for el in self.rated_data] # new!
         self.l_rated_rotor_weight                   = [(V*8050*9.8) for V in self.l_rated_rotor_volume] # density of rotor is estimated to be that of steel of 8050 g/cm^3
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -73,6 +74,7 @@ class swarm_data_container(object):
         mpl.rcParams['legend.fontsize'] = 12
         # mpl.rcParams['legend.family'] = 'Times New Roman'
         mpl.rcParams['font.family'] = ['Times New Roman']
+        # mpl.rcParams['font.size'] = 15.0
         font = {'family' : 'Times New Roman', #'serif',
                 'color' : 'darkblue',
                 'weight' : 'normal',
@@ -82,7 +84,7 @@ class swarm_data_container(object):
                     'weight' : 'normal',
                     'size' : 11.5,}
 
-        fig, axeses = subplots(4, 2, sharex=True, dpi=150, figsize=(16*0.75, 8*0.75), facecolor='w', edgecolor='k')
+        fig, axeses = subplots(4, 2, sharex=True, dpi=150, figsize=(16*0.75, 8*0.75), facecolor='w', edgecolor='k', constrained_layout=True)
         ax_list = []
         for i in range(4):
             ax_list.extend(axeses[i].tolist())
@@ -153,7 +155,6 @@ class swarm_data_container(object):
             ax.grid()
             ax.set_ylabel(list_y_label[i], **font)
             ax.set_xlim([0,140])
-            # ax.set_xlabel('Count of design variants', **font)
             for j in range(number_of_free_variables):
                 if j%2==0:
                     alpha = 0.05
@@ -165,6 +166,8 @@ class swarm_data_container(object):
             list_y_data_max[i].append(max(y_data))
             list_y_data_min[i].append(min(y_data))
 
+        ax_list[-2].set_xlabel('Count of design variant', **font)
+        ax_list[-1].set_xlabel('Count of design variant', **font)
         fig.savefig(r'C:\Users\horyc\Desktop/'+ 'LSA_curves.png', dpi=300)
         # plt.show()
         return

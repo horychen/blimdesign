@@ -481,15 +481,16 @@ def add_plots(axeses, dm, title=None, label=None, zorder=None, time_list=None, s
                                                                  sfv.ss_max_force_err_ang[0],
                                                                  sfv.ss_max_force_err_ang[1])
     info += '\nExtra Info:'
-    info += '\n\tAverage Force Vecotr: (%g, %g) N' % (sfv.ss_avg_force_vector[0], sfv.ss_avg_force_vector[1])
+    info += '\n\tAverage Force Vector: (%g, %g) N' % (sfv.ss_avg_force_vector[0], sfv.ss_avg_force_vector[1])
     info += '\n\tTorque Ripple (Peak-to-Peak): %g Nm'% ( max(torque[-range_ss:]) - min(torque[-range_ss:]))
     info += '\n\tForce Mag Ripple (Peak-to-Peak): %g N'% (sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1])
 
-    # plot for torque and force
-    ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
-    ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs, alpha=alpha, label=label, zorder=zorder)
-    ax = axeses[1][0]; ax.plot(time_list, 100*sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
-    ax = axeses[1][1]; ax.plot(time_list, np.arctan2(sfv.force_y, sfv.force_x)/np.pi*180. - sfv.ss_avg_force_angle, label=label, alpha=alpha, zorder=zorder)
+    if axeses is not None:
+        # plot for torque and force
+        ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
+        ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs, alpha=alpha, label=label, zorder=zorder)
+        ax = axeses[1][0]; ax.plot(time_list, 100*sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
+        ax = axeses[1][1]; ax.plot(time_list, np.arctan2(sfv.force_y, sfv.force_x)/np.pi*180. - sfv.ss_avg_force_angle, label=label, alpha=alpha, zorder=zorder)
 
     # plot for visialization of power factor 
     # dm.get_voltage_and_current(range_ss)
@@ -639,7 +640,8 @@ def build_str_results(axeses, im_variant, project_name, tran_study_name, dir_csv
                                         rotor_copper_loss_in_end_turn, 
                                         rated_iron_loss, 
                                         rated_windage_loss,
-                                        rated_rotor_volume]
+                                        rated_rotor_volume,
+                                        rated_stack_length_mm] # new!
 
     str_results = '\n-------\n%s-%s\n%d,%d,O1=%g,O2=%g,f1=%g,f2=%g,f3=%g\n%s\n%s\n%s\n' % (
                     project_name, im_variant.get_individual_name(), 

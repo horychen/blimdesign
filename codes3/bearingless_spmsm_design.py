@@ -306,6 +306,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         else:
             return '\n- Bearingless PMSM Individual #%s\n\t' % (self.ID) + ', \n\t'.join("%s = %s" % item for item in tuple_list)
 
+# circumferential segmented rotor 
 if __name__ == '!__main__':
     import JMAG
     import Location2D
@@ -391,7 +392,7 @@ if __name__ == '!__main__':
     model.SetDescription('BPMSM Test')
 
 
-
+# notched rotor 
 if __name__ == '__main__':
     import JMAG
     import Location2D
@@ -502,8 +503,6 @@ if __name__ == '__main__':
     model.SetDescription('BPMSM Test')
 
 
-
-
 def add_bpmsm_material():
 
     # -*- coding: utf-8 -*-
@@ -589,3 +588,6 @@ def add_bpmsm_material():
     app.GetMaterialLibrary().GetUserMaterial(u"MyN40H(reversible)").SetValue(u"G55", 0)
     app.GetMaterialLibrary().GetUserMaterial(u"MyN40H(reversible)").SetValue(u"G56", 0)
     app.GetMaterialLibrary().GetUserMaterial(u"MyN40H(reversible)").SetValue(u"G66", 0)
+
+
+

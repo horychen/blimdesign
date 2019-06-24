@@ -42,17 +42,17 @@ if True:
     run_folder = r'run#540/' # New copper loss formula from Bolognani 2006 # Fix small bugs
 
 
-    fea_config_dict['local_sensitivity_analysis'] = True
+    # fea_config_dict['local_sensitivity_analysis'] = True
 
-    # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 3 # =2 would waste 1/3 of pop to evaluate the same reference design
-    # fea_config_dict['local_sensitivity_analysis_percent'] = 0.05
-    # run_folder = r'run#5409/' # LSA of high torque density design
+    # # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 3 # =2 would waste 1/3 of pop to evaluate the same reference design
+    # # fea_config_dict['local_sensitivity_analysis_percent'] = 0.05
+    # # run_folder = r'run#5409/' # LSA of high torque density design
 
-    fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 19 # =20 is also bad idea!
-    fea_config_dict['local_sensitivity_analysis_percent'] = 0.2
-    run_folder = r'run#54099/' # LSA of high torque density design
-    # run_folder = r'run#54088/' # LSA of high efficiency design
-    run_folder = r'run#54077/' # LSA of low ripple performance design
+    # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 19 # =20 is also bad idea!
+    # fea_config_dict['local_sensitivity_analysis_percent'] = 0.2
+    # run_folder = r'run#54099/' # LSA of high torque density design
+    # # run_folder = r'run#54088/' # LSA of high efficiency design
+    # run_folder = r'run#54077/' # LSA of low ripple performance design
 else:
     # Prototype
     pass
@@ -88,7 +88,8 @@ global ad
 ad = acm_designer.acm_designer(fea_config_dict, spec)
 # if 'Y730' in fea_config_dict['pc_name']:
 #     ad.build_oneReport() # require LaTeX
-    # ad.talk_to_mysql_database() # require MySQL
+#     ad.talk_to_mysql_database() # require MySQL
+#     quit()
 ad.init_logger()
 
 ad.bounds_denorm = ad.get_classic_bounds()
@@ -285,27 +286,11 @@ def my_plot_non_dominated_fronts(points, marker='o', comp=[0, 1], up_to_rank_no=
                 break
 
     return ax
-def my_2p5d_plot_non_dominated_fronts(points, marker='o', comp=[0, 1], up_to_rank_no=1):
+def my_2p5d_plot_non_dominated_fronts(points, marker='o', comp=[0, 1], up_to_rank_no=1, no_text=True):
     full_comp = [0, 1, 2]
     full_comp.remove(comp[0])
     full_comp.remove(comp[1])
     z_comp = full_comp[0]
-
-    # fits, vectors = pop.get_f(), pop.get_x()
-    # ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
-
-    # with open(ad.solver.output_dir+'MOO_log.txt', 'a', encoding='utf-8') as fname:
-    #     print('-'*40, 'Generation:', _, file=fname)
-    #     for rank_minus_1, front in enumerate(ndf):
-    #         print('Rank/Tier', rank_minus_1+1, front, file=fname)
-    #     count = 0
-    #     for domination_list, domination_count, non_domination_rank in zip(dl, dc, ndr):
-    #         print('Individual #%d\t'%(count), 'Belong to Rank #%d\t'%(non_domination_rank), 'Dominating', domination_count, 'and they are', domination_list, file=fname)
-    #         count += 1
-
-    #     # print(fits, vectors, ndf)
-    #     print(pop, file=fname)
-
 
     # We plot
     # fronts, dl, dc, ndr = pg.fast_non_dominated_sorting(points)
@@ -316,20 +301,31 @@ def my_2p5d_plot_non_dominated_fronts(points, marker='o', comp=[0, 1], up_to_ran
                   np.linspace(0.9, 0.1, len(fronts)),
                   np.linspace(0.9, 0.1, len(fronts))))
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(constrained_layout=False)
+    plt.subplots_adjust(left=None, bottom=None, right=0.85, top=None, wspace=None, hspace=None)
 
     count = 0
     for ndr, front in enumerate(fronts):
         count += 1
-        # We plot the points
-        for idx in front:
-            ax.plot(points[idx][comp[0]], points[idx][
-                comp[1]], marker=marker, color=cl[ndr])
-        # We plot the fronts
+
         # Frist compute the points coordinates
-        x = [points[idx][comp[0]] for idx in front]
-        y = [points[idx][comp[1]] for idx in front]
-        z = [points[idx][z_comp] for idx in front]
+        x_scale = 1
+        y_scale = 1
+        z_scale = 1
+        if comp[0] == 1: # efficency
+            x_scale = 100
+        if comp[1] == 1: # efficency
+            y_scale = 100
+        if z_comp == 1: # efficency
+            z_scale = 100
+        x = [points[idx][comp[0]]*x_scale for idx in front]
+        y = [points[idx][comp[1]]*y_scale for idx in front]
+        z = [points[idx][z_comp] *z_scale for idx in front]
+
+        # # We plot the points
+        # for idx in front:
+        #     ax.plot(points[idx][comp[0]], points[idx][comp[1]], marker=marker, color=cl[ndr])
+
         # Then sort them by the first objective
         tmp = [(a, b, c) for a, b, c in zip(x, y, z)]
         tmp = sorted(tmp, key=lambda k: k[0])
@@ -340,15 +336,15 @@ def my_2p5d_plot_non_dominated_fronts(points, marker='o', comp=[0, 1], up_to_ran
         # Now add color according to the value of the z-axis variable usign scatter
         scatter_handle = ax.scatter(x, y, c=z, alpha=0.5, cmap='Spectral', marker=marker, zorder=99) #'viridis'
         # color bar
-        cbar_ax = fig.add_axes([0.925, 0.15, 0.02, 0.7])
+        cbar_ax = fig.add_axes([0.875, 0.15, 0.02, 0.7])
         cbar_ax.get_yaxis().labelpad = 10
         clb = fig.colorbar(scatter_handle, cax=cbar_ax)
         if z_comp == 0:
             z_label = r'$-\rm {TRV}$ [Nm/m^3]'
             z_text  = '%.0f'
         elif z_comp == 1:
-            z_label = r'$-\eta$ [1]'
-            z_text  = '%.3f'
+            z_label = r'$-\eta$ [%]'
+            z_text  = '%.1f'
         elif z_comp == 2:
             z_label = r'$O_C$ [1]'
             z_text  = '%.1f'
@@ -361,25 +357,30 @@ def my_2p5d_plot_non_dominated_fronts(points, marker='o', comp=[0, 1], up_to_ran
             print('-----------------------------------------------------')
             # Add index next to the points
             for x_coord, y_coord, z_coord, idx in zip(x, y, z, front):
-                # ax.annotate( z_text%(z_coord) + ' #%d'%(idx), (x_coord, y_coord) )
-                pass
+                if no_text:
+                    pass
+                else:
+                    ax.annotate( z_text%(z_coord) + ' #%d'%(idx), (x_coord, y_coord) )
         else:
             # text next scatter showing the value of the 3rd objective
             for i, val in enumerate(z):
-                # ax.annotate( z_text%(val), (x[i], y[i]) )
-                pass
+                if no_text:
+                    pass
+                else:
+                    ax.annotate( z_text%(val), (x[i], y[i]) )
 
         # refine the plotting
         if comp[0] == 0:
             ax.set_xlabel(r'$-\rm {TRV}$ [Nm/m^3]')
         elif comp[0] == 1:
-            ax.set_xlabel(r'$-\eta$ [1]')
+            ax.set_xlabel(r'$-\eta$ [%]')
         elif comp[0] == 2:
             ax.set_xlabel(r'$O_C$ [1]')
+
         if comp[1] == 0:
             ax.set_ylabel(r'$-\rm {TRV}$ [Nm/m^3]')
         elif comp[1] == 1:
-            ax.set_ylabel(r'$-\eta$ [1]')
+            ax.set_ylabel(r'$-\eta$ [%]')
         elif comp[1] == 2:
             ax.set_ylabel(r'$O_C$ [1]')
         ax.grid()
@@ -528,11 +529,11 @@ def my_3d_plot_non_dominated_fronts(pop, paretoPoints, az=180, comp=[0, 1, 2], p
             # surf = ax.plot_trisurf(df.x, df.y, df.z, cmap=cm.magma, linewidth=0.1, edgecolor='none')
             # surf = ax.plot_trisurf(x, y, z, cmap='viridis', edgecolor='none')
         # surf = ax.plot_trisurf(df.x, df.y, df.z, cmap=cm.magma, linewidth=0.1)
-        surf = ax.plot_trisurf(df.x, df.y, df.z, cmap=cm.Spectral, linewidth=0.1)        
+        surf = ax.plot_trisurf(df.x, df.y*100, df.z, cmap=cm.Spectral, linewidth=0.1)        
         fig.colorbar(surf, shrink=0.5, aspect=5)
     
         ax.set_xlabel(r'$\rm -TRV$ [$\rm Nm/m^3$]')
-        ax.set_ylabel(r'$-\eta$ [1]')
+        ax.set_ylabel(r'$-\eta$ [%]')
         ax.set_zlabel(r'$O_C$ [1]')
 
         # Try to export data from plot_trisurf # https://github.com/WoLpH/numpy-stl/issues/19
@@ -570,11 +571,12 @@ def my_plot(fits, vectors, ndf):
         pass
 
         ax = my_2p5d_plot_non_dominated_fronts(fits, comp=[0,1], marker='o', up_to_rank_no=1)
-        x = fits[0][0]
-        y = fits[0][1]
-        z = fits[0][2]
-        ax.plot(x, y, color='k', marker='s')
-        ax.annotate(r'$x_{\rm optm}$', xy=(x, y), xytext=(x+1000, y+0.0005), arrowprops=dict(facecolor='black', shrink=0.05),)
+        # for studying LSA population (whether or not the optimal is on Rank 1 Pareto Front)
+        # x = fits[0][0]
+        # y = fits[0][1]
+        # z = fits[0][2]
+        # ax.plot(x, y, color='k', marker='s')
+        # ax.annotate(r'$x_{\rm optm}$', xy=(x, y), xytext=(x+1000, y+0.0005), arrowprops=dict(facecolor='black', shrink=0.05),)
         ax = my_2p5d_plot_non_dominated_fronts(fits, comp=[0,2], marker='o', up_to_rank_no=1)
         ax = my_2p5d_plot_non_dominated_fronts(fits, comp=[1,2], marker='o', up_to_rank_no=1)
 

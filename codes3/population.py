@@ -1828,7 +1828,7 @@ class swarm(object):
         # Avg_ForCon_Vector, _, Max_ForCon_Err_Angle = self.get_force_error_angle(ForConX_list[-400:], ForConY_list[-400:])
         # sfv = utilily.suspension_force_vector(ForConX_list, ForConY_list, range_ss=400)
 
-        # print '---------------\nTranRef-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]'
+        # print '---------------\nTranRef-FEA \nForce Average Vector:', Avg_ForCon_Vector, '[N]'
         # # print ForCon_Angle_List, 'deg'
         # print 'Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]'
         # print '\tbasic info:', basic_info
@@ -1848,7 +1848,7 @@ class swarm(object):
 
         # Avg_ForCon_Vector, _, Max_ForCon_Err_Angle = self.get_force_error_angle(ForConX_list[-48:], ForConY_list[-48:])
         # sfv = utilily.suspension_force_vector(ForConX_list, ForConY_list, range_ss=400)
-        # print '---------------\nTran2TSS-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]'
+        # print '---------------\nTran2TSS-FEA \nForce Average Vector:', Avg_ForCon_Vector, '[N]'
         # # print ForCon_Angle_List, 'deg'
         # print 'Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]'
         # print '\tbasic info:', basic_info
@@ -1875,7 +1875,7 @@ class swarm(object):
 
         # # # Force Error Angle
         # # Avg_ForCon_Vector, _, Max_ForCon_Err_Angle = self.get_force_error_angle(femm_force_x, femm_force_y)
-        # # print '---------------\nFEMM-Static-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]'
+        # # print '---------------\nFEMM-Static-FEA \nForce Average Vector:', Avg_ForCon_Vector, '[N]'
         # # # print ForCon_Angle_List, 'deg'
         # # print 'Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]'
 
@@ -1975,7 +1975,7 @@ class swarm(object):
             #                                                              sfv.ss_max_force_err_ang[0],
             #                                                              sfv.ss_max_force_err_ang[1])
             # print 'Extra Information:'
-            # print '\tAverage Force Vecotr:', sfv.ss_avg_force_vector, '[N]'
+            # print '\tAverage Force Vector:', sfv.ss_avg_force_vector, '[N]'
             # print '\tTorque Ripple (Peak-to-Peak)', max(torque[-range_ss:]) - min(torque[-range_ss:]), 'Nm'
             # print '\tForce Mag Ripple (Peak-to-Peak)', sfv.ss_max_force_err_abs[0] - sfv.ss_max_force_err_abs[1], 'N'
 
@@ -2331,7 +2331,7 @@ class swarm(object):
 
 
         Avg_ForCon_Vector, _, Max_ForCon_Err_Angle = self.get_force_error_angle(ForConX_list[-48:], ForConY_list[-48:])
-        print('---------------\nTranRef-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]')
+        print('---------------\nTranRef-FEA \nForce Average Vector:', Avg_ForCon_Vector, '[N]')
         # print ForCon_Angle_List, 'deg'
         print('Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]')
         print('basic info:', basic_info)
@@ -2349,7 +2349,7 @@ class swarm(object):
 
 
         Avg_ForCon_Vector, _, Max_ForCon_Err_Angle = self.get_force_error_angle(ForConX_list[-48:], ForConY_list[-48:])
-        print('---------------\nTranRef-FEA \nForce Average Vecotr:', Avg_ForCon_Vector, '[N]')
+        print('---------------\nTranRef-FEA \nForce Average Vector:', Avg_ForCon_Vector, '[N]')
         # print ForCon_Angle_List, 'deg'
         print('Maximum Force Angle Error', Max_ForCon_Err_Angle, '[deg]')
         print('basic info:', basic_info)
