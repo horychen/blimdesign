@@ -1087,21 +1087,27 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
         for row in csv_row_reader(f):
             count +=1
             if count>8:
+                rotor_iron_loss = float(row[2]) # Rotor Core
                 stator_iron_loss = float(row[3]) # Stator Core
+                print('Iron loss:', stator_iron_loss, rotor_iron_loss)
                 break
     with open(path_prefix + study_name + '_joule_loss_loss.csv', 'r') as f:
         count = 0
         for row in csv_row_reader(f):
             count +=1
             if count>8:
+                rotor_eddycurrent_loss = float(row[2]) # Rotor Core
                 stator_eddycurrent_loss = float(row[3]) # Stator Core
+                print('Eddy current loss:', stator_eddycurrent_loss, rotor_eddycurrent_loss)
                 break
     with open(path_prefix + study_name + '_hysteresis_loss_loss.csv', 'r') as f:
         count = 0
         for row in csv_row_reader(f):
             count +=1
             if count>8:
+                rotor_hysteresis_loss = float(row[2]) # Rotor Core
                 stator_hysteresis_loss = float(row[3]) # Stator Core
+                print('Hysteresis loss:', stator_eddycurrent_loss, rotor_eddycurrent_loss)
                 break
     # Copper Loss
     rotor_copper_loss_list = []
@@ -1148,7 +1154,11 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
     dm.ForConAbs_list = ForConAbs_list
     dm.Current_dict   = Current_dict
     dm.key_list       = key_list
-    dm.jmag_loss_list = [stator_copper_loss, rotor_copper_loss, stator_iron_loss, stator_eddycurrent_loss, stator_hysteresis_loss]
+    dm.jmag_loss_list = [   stator_copper_loss, 
+                            rotor_copper_loss, 
+                            stator_iron_loss+rotor_iron_loss, 
+                            stator_eddycurrent_loss+rotor_eddycurrent_loss, 
+                            stator_hysteresis_loss+rotor_hysteresis_loss ]
     dm.femm_loss_list = [s, r, sAlongStack, rAlongStack, Js, Jr ]
     return dm
 

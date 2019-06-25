@@ -516,6 +516,10 @@ def my_3d_plot_non_dominated_fronts(pop, paretoPoints, az=180, comp=[0, 1, 2], p
     y = [coords[1] for coords in paretoPoints]
     z = [coords[2] for coords in paretoPoints]
 
+    # from surface_fitting import surface_fitting
+    # surface_fitting(x,y,z)
+    # quit()
+
     if False:
         pass
     else:
@@ -723,6 +727,7 @@ def pyx_draw_model(im):
         return np.cos(_)*x + np.sin(_)*y, -np.sin(_)*x + np.cos(_)*y
     def is_at_stator(im, path):
         return np.sqrt(path[0]**2 + path[1]**2) > im.Radius_OuterRotor + 0.5*im.Length_AirGap
+    
     # 整体转动90度。
     for path in vg.tikz.track_path:
         path[0], path[1] = rotate(0.5*np.pi, path[0], path[1])
@@ -730,7 +735,7 @@ def pyx_draw_model(im):
         pyx_draw_path(vg, path)
     track_path_backup = deepcopy(vg.tikz.track_path)
 
-    # Rotate
+    # Rotate Copy
     for path in deepcopy(vg.tikz.track_path):
         if is_at_stator(im, path):
             Q = im.Qs
@@ -741,7 +746,7 @@ def pyx_draw_model(im):
         path[2], path[3] = rotate(_, path[2], path[3])
         pyx_draw_path(vg, path)
 
-    # Mirror
+    # Mirror Copy
     for path in (vg.tikz.track_path): # track_path is passed by reference and is changed by mirror
         path[0] *= -1
         path[2] *= -1
@@ -755,6 +760,17 @@ def pyx_draw_model(im):
         path[0], path[1] = rotate(_, path[0], path[1])
         path[2], path[3] = rotate(_, path[2], path[3])
         pyx_draw_path(vg, path, sign=-1)
+
+    # # 最后再转回来！只是为了Mirror方便才转到纵轴上的。
+    # for path in vg.tikz.track_path:
+    #     if is_at_stator(im, path):
+    #         Q = im.Qs
+    #     else:
+    #         Q = im.Qr
+    #     _ = 2*np.pi/Q
+    #     path[0], path[1] = rotate(- 0*_, path[0], path[1])
+    #     path[2], path[3] = rotate(- 0*_, path[2], path[3])
+    #     pyx_draw_path(vg, path)
 
     vg.tikz.c.writePDFfile("selected_otimal_design%s"%(im.ID))
     # vg.tikz.c.writeEPSfile("pyx_output")
@@ -809,11 +825,11 @@ if bool_post_processing == True:
                         best_chromosome = chromosome
 
                         # Plot cross section view
-                        # import population
-                        # im_best = population.bearingless_induction_motor_design.local_design_variant(ad.spec.im_template, 99, 999, best_chromosome[:7])
-                        # im_best.ID = str(best_idx)
-                        # pyx_draw_model(im_best)
-                        # quit()
+                        import population
+                        im_best = population.bearingless_induction_motor_design.local_design_variant(ad.spec.im_template, 99, 999, best_chromosome[:7])
+                        im_best.ID = str(best_idx)
+                        pyx_draw_model(im_best)
+                        quit()
 
 
                     # # Take low ripple performance design for LSA
@@ -941,6 +957,14 @@ if bool_post_processing == True:
     else:
         swarm_data_on_pareto_front = learn_about_the_archive(prob, ad.solver.swarm_data, len(ad.solver.swarm_data), len_s01=len(swarm_data_severson01), len_s02=len(swarm_data_severson02))
         plt.show()    
+        quit()
+
+        # # Reproduce a design 
+        # cost_function, f1, f2, f3, \
+        # normalized_torque_ripple, \
+        # normalized_force_error_magnitude, \
+        # force_error_angle = \
+        #     ad.evaluate_design(ad.spec.im_template, best_chromosome[:7], 1130)
         quit()
         run_static_structural_fea(swda.best_design_denorm)
 

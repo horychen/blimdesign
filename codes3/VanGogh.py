@@ -577,7 +577,7 @@ class VanGogh_pyPlotter(VanGogh):
         obj = self.pyplot_arc(radius, angle_span=angle, rotation=atan2(p1[1]-center[1],p1[0]-center[0]), center=center, **kwarg)
         self.plot_object_list.append(obj[0])
         return obj
-        
+
     def pyplot_arc(self, radius, angle_span=3.14, center=(0,0), rotation=0, maxseg=0.1, ax=None, **kwarg):
         # Plot an arc starting from x-axis to axis aligned to angle_span. Use rotation to change the beginning axis.
 
@@ -710,6 +710,7 @@ class VanGogh_TikZPlotter():
         # print msg
         self.file.write(msg)
 
+        # Below is PyX | Above is TikZ
         # PyX
         textattrs = [pyx.text.halign.center, pyx.text.vshift.middlezero]
         X = pyx.text.text(startxy[0], startxy[1], r"", textattrs) # must have textattrs or normsubpath cannot close erro
@@ -736,7 +737,7 @@ def get_tangent_points_of_two_circles(center1, radius1, center2, radius2):
     return (x3, y3), (x4, y4)
 
 # Eric required plot geometry with LaTeX labels
-if __name__ == '__main__':
+if __name__ == '!__main__':
     import matplotlib.patches as mpatches
     import matplotlib.pyplot as plt
     plt.rcParams["font.family"] = "Times New Roman"
@@ -1541,7 +1542,7 @@ if __name__ == '!__main__':
 # winding diagram for four pole dpnv motor
 if __name__ == '__main__':
 
-    bool_4pole_2pole = True
+    bool_4pole_2pole = False
 
     # generate the dict of list: dl
     if bool_4pole_2pole: # 4 pole motor

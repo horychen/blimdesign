@@ -175,8 +175,8 @@ def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, la
     ax_list[0][0].legend(loc=(0.45,0.7))
     ax_list[0][0].set_xlabel('(a)')
     ax_list[0][1].set_xlabel('(b)')
-    ax_list[1][0].set_xlabel('Suspension Current Ratio [ p.u.]\n(c)')
-    ax_list[1][1].set_xlabel('Suspension Current Ratio [ p.u.]\n(d)')
+    ax_list[1][0].set_xlabel('Suspension Current [p.u.]\n(c)')
+    ax_list[1][1].set_xlabel('Suspension Current [p.u.]\n(d)')
     for i in range(2):
         for j in range(2):
             ax_list[i][j].grid(True)
