@@ -1,7 +1,12 @@
+import CrossSectInnerNotchedRotor
+import CrossSectStator
+import Location2D
 
 class bearingless_spmsm_template(object):
-    def __init__(self, model_name_prefix='SPMSM'):
+    def __init__(self, model_name_prefix='SPMSM', fea_config_dict=None):
         self.model_name_prefix = model_name_prefix
+        self.name = model_name_prefix
+        self.fea_config_dict = fea_config_dict
 
     def build_design_parameters_list(self):
         self.design_parameters = [
@@ -36,7 +41,137 @@ class bearingless_spmsm_template(object):
         # <360/Q
         # >= 0
         # r_ri + L_g
+
+class bpmsm_specification(object):
+    def __init__(self,
+                    PS_or_SC = None,
+                    DPNV_or_SEPA = None,
+                    p  = None,
+                    ps = None,
+                    mec_power = None,
+                    ExcitationFreq = None,
+                    ExcitationFreqSimulated = None,
+                    VoltageRating = None,
+                    TangentialStress = None,
+                    Qs = None,
+                    segment = None,
+                    Js = None,
+                    Jr = None,
+                    Coil = None,
+                    space_factor_kCu = None,
+                    Conductor = None,
+                    space_factor_kAl = None,
+                    Temperature = None,
+                    Steel = None,
+                    lamination_stacking_factor_kFe = None,
+                    stator_tooth_flux_density_B_ds = None,
+                    rotor_tooth_flux_density_B_dr = None,
+                    stator_yoke_flux_density_Bys = None,
+                    rotor_yoke_flux_density_Byr = None,
+                    guess_air_gap_flux_density = None,
+                    guess_efficiency = None,
+                    guess_power_factor = None,
+                    safety_factor_to_yield = None,
+                    safety_factor_to_critical_speed = None,
+                    use_drop_shape_rotor_bar = None,
+                    tip_speed = None,
+                    debug_or_release= None,
+                    bool_skew_stator = None,
+                    bool_skew_rotor = None,
+                ):
+        self.DPNV_or_SEPA = DPNV_or_SEPA
+        self.p = p
+        self.ps = ps
+        self.mec_power = mec_power
+        self.ExcitationFreq = ExcitationFreq
+        self.ExcitationFreqSimulated = ExcitationFreqSimulated
+        self.VoltageRating = VoltageRating
+        self.TangentialStress = TangentialStress
+        self.Qs = Qs
+        self.segment = segment
+        self.Js = Js
+        self.Jr = Jr
+        self.Jr_backup = self.Jr
+        self.Coil = Coil
+        self.space_factor_kCu = space_factor_kCu
+        self.Conductor = Conductor
+        self.space_factor_kAl = space_factor_kAl
+        self.Temperature = Temperature
+        self.Steel = Steel
+        self.lamination_stacking_factor_kFe = lamination_stacking_factor_kFe
+        self.stator_tooth_flux_density_B_ds = stator_tooth_flux_density_B_ds
+        self.rotor_tooth_flux_density_B_dr = rotor_tooth_flux_density_B_dr
+        self.stator_yoke_flux_density_Bys = stator_yoke_flux_density_Bys
+        self.rotor_yoke_flux_density_Byr = rotor_yoke_flux_density_Byr
+        self.guess_air_gap_flux_density = guess_air_gap_flux_density
+        self.guess_efficiency = guess_efficiency
+        self.guess_power_factor = guess_power_factor
+        self.safety_factor_to_yield = safety_factor_to_yield
+        self.safety_factor_to_critical_speed = safety_factor_to_critical_speed
+        self.use_drop_shape_rotor_bar = use_drop_shape_rotor_bar
+        self.tip_speed = tip_speed
+        self.debug_or_release = debug_or_release
+        self.bool_skew_stator = bool_skew_stator
+        self.bool_skew_rotor  = bool_skew_rotor 
+
+        # self.winding_layout = winding_layout(self.DPNV_or_SEPA, self.Qs, self.p)
+
+        self.bool_high_speed_design = self.tip_speed is not None
+
+        # if not os.path.isdir('../' + 'pop/'):
+        #     os.mkdir('../' + 'pop/')
+        # self.loc_txt_file = '../' + 'pop/' + r'initial_design.txt'
+        # open(self.loc_txt_file, 'w').close() # clean slate to begin with
+
+    def build_acm_template(self, fea_config_dict):
         
+        acm_template = bearingless_spmsm_template(fea_config_dict=fea_config_dict)
+        Q = 6
+
+        acm_template.deg_alpha_st = 360/Q*0.8   # deg_alpha_st # span angle of tooth: class type DimAngular
+        acm_template.deg_alpha_so = 0                          # deg_alpha_so # angle of tooth edge: class type DimAngular
+        acm_template.mm_r_si      = 50   # mm_r_si           # inner radius of stator teeth: class type DimLinear
+        acm_template.mm_d_so      = 5      # mm_d_so           # tooth edge length: class type DimLinear
+        acm_template.mm_d_sp      = 1.5*acm_template.mm_d_so # mm_d_sp      # tooth tip length: class type DimLinear
+        acm_template.mm_d_st      = 15     # mm_d_st      # tooth base length: class type DimLinear
+        acm_template.mm_d_sy      = 15     # mm_d_sy      # back iron thickness: class type DimLinear
+        acm_template.mm_w_st      = 13     # mm_w_st      # tooth base width: class type DimLinear
+        acm_template.mm_r_st      = 0         # mm_r_st      # fillet on outter tooth: class type DimLinear
+        acm_template.mm_r_sf      = 0         # mm_r_sf      # fillet between tooth tip and base: class type DimLinear
+        acm_template.mm_r_sb      = 0         # mm_r_sb      # fillet at tooth base: class type DimLinear
+        acm_template.Q            = 6      # number of stator slots (integer)
+        acm_template.sleeve_length        = 2 # mm
+        acm_template.fixed_air_gap_length = 0.75 # mm
+        acm_template.mm_d_pm      = 6      # mm_d_pm          # manget depth
+        acm_template.deg_alpha_rm = 60     # deg_alpha_rm     # angular span of the pole: class type DimAngular
+        acm_template.deg_alpha_rs = 60     # deg_alpha_rs     # segment span: class type DimAngular
+        acm_template.mm_d_ri      = 8      # mm_d_ri          # inner radius of rotor: class type DimLinear
+        acm_template.mm_r_ri      = 40     # mm_r_ri          # rotor iron thickness: class type DimLinear
+        acm_template.mm_d_rp      = 5      # mm_d_rp          # interpolar iron thickness: class type DimLinear
+        acm_template.mm_d_rs      = 0*3      # mm_d_rs          # inter segment iron thickness: class type DimLinear
+        acm_template.p = 2     # p     # number of pole pairs
+        acm_template.s = 1     # s     # number of segments  
+
+        acm_template.build_design_parameters_list()
+
+        acm_template.driveWinding_Freq       = 1000
+        acm_template.driveWinding_Rs         = 0.1 # TODO
+        acm_template.driveWinding_zQ         = 1
+        acm_template.driveWinding_CurrentAmp = None # this means it depends on the slot area
+        acm_template.driveWinding_poles = 2*acm_template.p
+
+        acm_template.Js = 4e6 # Arms/m^2
+        acm_template.fill_factor = 0.45
+
+        acm_template.stack_length = 100 # mm
+
+        # logger = logging.getLogger(__name__) 
+        # logger.info('spmsm_variant ID %s is initialized.', self.ID)
+
+
+        # 让儿子能访问爸爸
+        self.acm_template = acm_template
+        self.acm_template.spec = self
 
 class bearingless_spmsm_design(bearingless_spmsm_template):
 
@@ -56,6 +191,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
                 self.name = 'ind%d-redo%d'%(counter, counter_loop)
         else:
             self.name = 'SPMSM Template'
+
         # self.spec = spmsm_template.spec
 
         #02 Geometry Data
@@ -89,7 +225,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             free_variables[0]  = spmsm_template.deg_alpha_st    
             free_variables[1]  = spmsm_template.mm_d_so         
             free_variables[2]  = spmsm_template.mm_d_st
-            free_variables[3]  = spmsm_template.mm_r_si + spmsm_template.mm_d_sp + spmsm_template.mm_d_st
+            free_variables[3]  = spmsm_template.mm_r_si + spmsm_template.mm_d_sp + spmsm_template.mm_d_st + spmsm_template.mm_d_sy
             free_variables[4]  = spmsm_template.mm_w_st         
             free_variables[5]  = spmsm_template.sleeve_length   
             free_variables[6]  = spmsm_template.mm_d_pm         
@@ -100,23 +236,23 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             free_variables[11] = spmsm_template.mm_d_rp         
             free_variables[12] = spmsm_template.mm_d_rs         
 
-        deg_alpha_st    = free_variables[0]
-        mm_d_so         = free_variables[1]
-        mm_d_st         = free_variables[2]
+        deg_alpha_st        = free_variables[0]
+        mm_d_so             = free_variables[1]
+        mm_d_st             = free_variables[2]
         stator_outer_radius = free_variables[3]
-        mm_w_st         = free_variables[4]
-        sleeve_length   = free_variables[5]
-        mm_d_pm         = free_variables[6]
-        deg_alpha_rm    = free_variables[7]
-        deg_alpha_rs    = free_variables[8]
-        mm_d_ri         = free_variables[9]
-        rotor_outer_radius = free_variables[10] 
-        mm_d_rp         = free_variables[11]
-        mm_d_rs         = free_variables[12]
+        mm_w_st             = free_variables[4]
+        sleeve_length       = free_variables[5]
+        mm_d_pm             = free_variables[6]
+        deg_alpha_rm        = free_variables[7]
+        deg_alpha_rs        = free_variables[8]
+        mm_d_ri             = free_variables[9]
+        rotor_outer_radius  = free_variables[10] 
+        mm_d_rp             = free_variables[11]
+        mm_d_rs             = free_variables[12]
 
         self.deg_alpha_st = free_variables[0]
         self.deg_alpha_so = spmsm_template.deg_alpha_so
-        self.mm_r_si      = rotor_outer_radius + sleeve_length + spmsm_template.fixed_air_gap_length
+        self.mm_r_si      = rotor_outer_radius + (mm_d_pm - mm_d_rp) + sleeve_length + spmsm_template.fixed_air_gap_length
         self.mm_d_so      = free_variables[1]
         self.mm_d_sp      = spmsm_template.mm_d_sp # 0.5*mm_d_so
         self.mm_d_st      = free_variables[2]; stator_outer_radius = free_variables[3]
@@ -222,68 +358,51 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         #             self.RSH.append( (pm * self.Qr*(1-self.the_slip)/(0.5*self.DriveW_poles) + v)*self.DriveW_Freq )
         # print self.Qr, ', '.join("%g" % (rsh/self.DriveW_Freq) for rsh in self.RSH), '\n'
 
-    def update_mechanical_parameters(self, slip_freq=None, syn_freq=None):
-        # This function is first introduced to derive the new slip for different fundamental frequencies.
+    def update_mechanical_parameters(self, syn_freq=None):
         if syn_freq is None:
-            syn_freq = self.DriveW_Freq
+            self.the_speed = self.DriveW_Freq*60. / (0.5*self.DriveW_poles) # rpm
+            self.Omega = + self.the_speed / 60. * 2*pi
+            self.omega = None # This variable name is devil! you can't tell its electrical or mechanical! #+ self.DriveW_Freq * (1-self.the_slip) * 2*pi
         else:
-            if syn_freq != self.DriveW_Freq:
-                raise Exception('I do not recommend to modify synchronous speed at instance level. Go update the initial design.')
-
-        if syn_freq == 0.0: # lock rotor
-            self.the_slip = 0. # this does not actually make sense
-            if slip_freq == None:
-                self.DriveW_Freq = self.slip_freq_breakdown_torque
-                self.BeariW_Freq = self.slip_freq_breakdown_torque
-            else:
-                self.DriveW_Freq = slip_freq
-                self.BeariW_Freq = slip_freq
-        else:
-            if slip_freq != None:
-                # change slip
-                self.the_slip = slip_freq / syn_freq
-                self.slip_freq_breakdown_torque = slip_freq
-            else:
-                # change syn_freq so update the slip
-                self.the_slip = self.slip_freq_breakdown_torque / syn_freq
-
-            self.DriveW_Freq = syn_freq
-            self.BeariW_Freq = syn_freq
-
-        self.the_speed = self.DriveW_Freq*60. / (0.5*self.DriveW_poles) * (1 - self.the_slip) # rpm
-
-        self.Omega = + self.the_speed / 60. * 2*pi
-        self.omega = None # This variable name is devil! you can't tell its electrical or mechanical! #+ self.DriveW_Freq * (1-self.the_slip) * 2*pi
-        # self.the_speed = + self.the_speed
-
-        if self.fea_config_dict is not None:
-            if self.fea_config_dict['flag_optimization'] == False: # or else it becomes annoying
-                print('[Update ID:%s]'%(self.ID), self.slip_freq_breakdown_torque, self.the_slip, self.the_speed, self.Omega, self.DriveW_Freq, self.BeariW_Freq)
+            raise Exception('Not implemented.')
 
     def draw_spmsm(self, toolJd):
 
         # Rotor Core
-        list_segments = spmsm.rotorCore.draw(toolJd)
+        list_segments = self.rotorCore.draw(toolJd)
         toolJd.bMirror = False
-        toolJd.iRotateCopy = spmsm.rotorCore.p*2
+        toolJd.iRotateCopy = self.rotorCore.p*2
         region1 = toolJd.prepareSection(list_segments)
 
         # Rotor Magnet    
-        list_regions = spmsm.rotorMagnet.draw(toolJd)
+        list_regions = self.rotorMagnet.draw(toolJd)
         toolJd.bMirror = False
-        toolJd.iRotateCopy = spmsm.rotorMagnet.notched_rotor.p*2
+        toolJd.iRotateCopy = self.rotorMagnet.notched_rotor.p*2
         region2 = toolJd.prepareSection(list_regions)
 
+
+        # Rotor Magnet
+        sleeve = CrossSectInnerNotchedRotor.CrossSectSleeve(
+                        name = 'Sleeve',
+                        notched_magnet = self.rotorMagnet,
+                        d_sleeve = self.sleeve_length
+                        )
+
+        list_regions = sleeve.draw(toolJd)
+        toolJd.bMirror = False
+        toolJd.iRotateCopy = self.rotorMagnet.notched_rotor.p*2
+        regionS = toolJd.prepareSection(list_regions)
+
         # Stator Core
-        list_regions = spmsm.stator_core.draw(toolJd)
+        list_regions = self.stator_core.draw(toolJd)
         toolJd.bMirror = True
-        toolJd.iRotateCopy = spmsm.stator_core.Q
+        toolJd.iRotateCopy = self.stator_core.Q
         region3 = toolJd.prepareSection(list_regions)
 
         # Stator Winding
-        list_regions = spmsm.coils.draw(toolJd)
+        list_regions = self.coils.draw(toolJd)
         toolJd.bMirror = False
-        toolJd.iRotateCopy = spmsm.coils.stator_core.Q
+        toolJd.iRotateCopy = self.coils.stator_core.Q
         region4 = toolJd.prepareSection(list_regions)
 
         # Import Model into Designer
@@ -291,6 +410,235 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         model = toolJd.app.GetCurrentModel()
         model.SetName(self.name)
         model.SetDescription(self.show(toString=True))
+
+        return True
+
+    def add_magnetic_transient_study(self, app, model, dir_csv_output_folder, study_name):
+        里这啊！！！
+        logger = logging.getLogger(__name__)
+        spmsm_variant = self
+        # logger.debug('Slip frequency: %g = ' % (self.the_slip))
+        self.the_slip = slip_freq_breakdown_torque / self.DriveW_Freq
+        # logger.debug('Slip frequency:    = %g???' % (self.the_slip))
+        study_name = tran2tss_study_name
+
+        model.CreateStudy("Transient2D", study_name)
+        app.SetCurrentStudy(study_name)
+        study = model.GetStudy(study_name)
+
+        # SS-ATA
+        study.GetStudyProperties().SetValue("ApproximateTransientAnalysis", 1) # psuedo steady state freq is for PWM drive to use
+        study.GetStudyProperties().SetValue("SpecifySlip", 1)
+        study.GetStudyProperties().SetValue("Slip", self.the_slip) # this will be overwritted later with "slip"
+        study.GetStudyProperties().SetValue("OutputSteadyResultAs1stStep", 0)
+        # study.GetStudyProperties().SetValue(u"TimePeriodicType", 2) # This is for TP-EEC but is not effective
+
+        # misc
+        study.GetStudyProperties().SetValue("ConversionType", 0)
+        study.GetStudyProperties().SetValue("NonlinearMaxIteration", self.max_nonlinear_iteration)
+        study.GetStudyProperties().SetValue("ModelThickness", self.stack_length) # Stack Length
+
+        # Material
+        self.add_material(study)
+
+        # Conditions - Motion
+        study.CreateCondition("RotationMotion", "RotCon") # study.GetCondition(u"RotCon").SetXYZPoint(u"", 0, 0, 1) # megbox warning
+        study.GetCondition("RotCon").SetValue("AngularVelocity", int(self.the_speed))
+        study.GetCondition("RotCon").ClearParts()
+        study.GetCondition("RotCon").AddSet(model.GetSetList().GetSet("Motion_Region"), 0)
+
+        study.CreateCondition("Torque", "TorCon") # study.GetCondition(u"TorCon").SetXYZPoint(u"", 0, 0, 0) # megbox warning
+        study.GetCondition("TorCon").SetValue("TargetType", 1)
+        study.GetCondition("TorCon").SetLinkWithType("LinkedMotion", "RotCon")
+        study.GetCondition("TorCon").ClearParts()
+
+        study.CreateCondition("Force", "ForCon")
+        study.GetCondition("ForCon").SetValue("TargetType", 1)
+        study.GetCondition("ForCon").SetLinkWithType("LinkedMotion", "RotCon")
+        study.GetCondition("ForCon").ClearParts()
+
+
+        # Conditions - FEM Coils & Conductors (i.e. stator/rotor winding)
+        self.add_circuit(app, model, study, bool_3PhaseCurrentSource=self.wily.bool_3PhaseCurrentSource)
+
+
+        # True: no mesh or field results are needed
+        study.GetStudyProperties().SetValue("OnlyTableResults", self.fea_config_dict['OnlyTableResults'])
+
+        # Linear Solver
+        if False:
+            # sometime nonlinear iteration is reported to fail and recommend to increase the accerlation rate of ICCG solver
+            study.GetStudyProperties().SetValue("IccgAccel", 1.2) 
+            study.GetStudyProperties().SetValue("AutoAccel", 0)
+        else:
+            # this can be said to be super fast over ICCG solver.
+            # https://www2.jmag-international.com/support/en/pdf/JMAG-Designer_Ver.17.1_ENv3.pdf
+            study.GetStudyProperties().SetValue("DirectSolverType", 1)
+
+        if self.fea_config_dict['MultipleCPUs'] == True:
+            # This SMP(shared memory process) is effective only if there are tons of elements. e.g., over 100,000.
+            # too many threads will in turn make them compete with each other and slow down the solve. 2 is good enough for eddy current solve. 6~8 is enough for transient solve.
+            study.GetStudyProperties().SetValue("UseMultiCPU", True)
+            study.GetStudyProperties().SetValue("MultiCPU", 2) 
+
+        # # this is for the CAD parameters to rotate the rotor. the order matters for param_no to begin at 0.
+        # if self.MODEL_ROTATE:
+        #     self.add_cad_parameters(study)
+
+
+        # 上一步的铁磁材料的状态作为下一步的初值，挺好，但是如果每一个转子的位置转过很大的话，反而会减慢非线性迭代。
+        # 我们的情况是：0.33 sec 分成了32步，每步的时间大概在0.01秒，0.01秒乘以0.5*497 Hz = 2.485 revolution...
+        # study.GetStudyProperties().SetValue(u"NonlinearSpeedup", 0) # JMAG17.1以后默认使用。现在后面密集的步长还多一点（32步），前面16步慢一点就慢一点呗！
+
+
+        # two sections of different time step
+        if True: # ECCE19
+            number_of_steps_2ndTTS = self.fea_config_dict['number_of_steps_2ndTTS'] 
+            DM = app.GetDataManager()
+            DM.CreatePointArray("point_array/timevsdivision", "SectionStepTable")
+            refarray = [[0 for i in range(3)] for j in range(3)]
+            refarray[0][0] = 0
+            refarray[0][1] =    1
+            refarray[0][2] =        50
+            refarray[1][0] = 0.5/slip_freq_breakdown_torque #0.5 for 17.1.03l # 1 for 17.1.02y
+            refarray[1][1] =    number_of_steps_2ndTTS                          # 16 for 17.1.03l #32 for 17.1.02y
+            refarray[1][2] =        50
+            refarray[2][0] = refarray[1][0] + 0.5/spmsm_variant.DriveW_Freq #0.5 for 17.1.03l 
+            refarray[2][1] =    number_of_steps_2ndTTS  # also modify range_ss! # don't forget to modify below!
+            refarray[2][2] =        50
+            DM.GetDataSet("SectionStepTable").SetTable(refarray)
+            number_of_total_steps = 1 + 2 * number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
+            study.GetStep().SetValue("Step", number_of_total_steps)
+            study.GetStep().SetValue("StepType", 3)
+            study.GetStep().SetTableProperty("Division", DM.GetDataSet("SectionStepTable"))
+
+        else: # IEMDC19
+            number_cycles_prolonged = 1 # 50
+            DM = app.GetDataManager()
+            DM.CreatePointArray("point_array/timevsdivision", "SectionStepTable")
+            refarray = [[0 for i in range(3)] for j in range(4)]
+            refarray[0][0] = 0
+            refarray[0][1] =    1
+            refarray[0][2] =        50
+            refarray[1][0] = 1.0/slip_freq_breakdown_torque
+            refarray[1][1] =    32 
+            refarray[1][2] =        50
+            refarray[2][0] = refarray[1][0] + 1.0/spmsm_variant.DriveW_Freq
+            refarray[2][1] =    48 # don't forget to modify below!
+            refarray[2][2] =        50
+            refarray[3][0] = refarray[2][0] + number_cycles_prolonged/spmsm_variant.DriveW_Freq # =50*0.002 sec = 0.1 sec is needed to converge to TranRef
+            refarray[3][1] =    number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle'] # =50*40, every 0.002 sec takes 40 steps 
+            refarray[3][2] =        50
+            DM.GetDataSet("SectionStepTable").SetTable(refarray)
+            study.GetStep().SetValue("Step", 1 + 32 + 48 + number_cycles_prolonged*self.fea_config_dict['TranRef-StepPerCycle']) # [Double Check] don't forget to modify here!
+            study.GetStep().SetValue("StepType", 3)
+            study.GetStep().SetTableProperty("Division", DM.GetDataSet("SectionStepTable"))
+
+        # add equations
+        study.GetDesignTable().AddEquation("freq")
+        study.GetDesignTable().AddEquation("slip")
+        study.GetDesignTable().AddEquation("speed")
+        study.GetDesignTable().GetEquation("freq").SetType(0)
+        study.GetDesignTable().GetEquation("freq").SetExpression("%g"%((spmsm_variant.DriveW_Freq)))
+        study.GetDesignTable().GetEquation("freq").SetDescription("Excitation Frequency")
+        study.GetDesignTable().GetEquation("slip").SetType(0)
+        study.GetDesignTable().GetEquation("slip").SetExpression("%g"%(spmsm_variant.the_slip))
+        study.GetDesignTable().GetEquation("slip").SetDescription("Slip [1]")
+        study.GetDesignTable().GetEquation("speed").SetType(1)
+        study.GetDesignTable().GetEquation("speed").SetExpression("freq * (1 - slip) * %d"%(60/(spmsm_variant.DriveW_poles/2)))
+        study.GetDesignTable().GetEquation("speed").SetDescription("mechanical speed of four pole")
+
+        # speed, freq, slip
+        study.GetCondition("RotCon").SetValue("AngularVelocity", 'speed')
+        if self.fea_config_dict['DPNV']==False:
+            app.ShowCircuitGrid(True)
+            study.GetCircuit().GetComponent("CS4").SetValue("Frequency", "freq")
+            study.GetCircuit().GetComponent("CS2").SetValue("Frequency", "freq")
+
+        # max_nonlinear_iteration = 50
+        # study.GetStudyProperties().SetValue(u"NonlinearMaxIteration", max_nonlinear_iteration)
+        study.GetStudyProperties().SetValue("ApproximateTransientAnalysis", 1) # psuedo steady state freq is for PWM drive to use
+        study.GetStudyProperties().SetValue("SpecifySlip", 1)
+        study.GetStudyProperties().SetValue("OutputSteadyResultAs1stStep", 0)
+        study.GetStudyProperties().SetValue("Slip", "slip") # overwrite with variables
+
+        # # add other excitation frequencies other than 500 Hz as cases
+        # for case_no, DriveW_Freq in enumerate([50.0, slip_freq_breakdown_torque]):
+        #     slip = slip_freq_breakdown_torque / DriveW_Freq
+        #     study.GetDesignTable().AddCase()
+        #     study.GetDesignTable().SetValue(case_no+1, 0, DriveW_Freq)
+        #     study.GetDesignTable().SetValue(case_no+1, 1, slip)
+
+        # 你把Tran2TSS计算周期减半！
+        # 也要在计算铁耗的时候选择1/4或1/2的数据！（建议1/4）
+        # 然后，手动添加end step 和 start step，这样靠谱！2019-01-09：注意设置铁耗条件（iron loss condition）的Reference Start Step和End Step。
+
+        # Iron Loss Calculation Condition
+        # Stator 
+        if True:
+            cond = study.CreateCondition("Ironloss", "IronLossConStator")
+            cond.SetValue("RevolutionSpeed", "freq*60/%d"%(0.5*(spmsm_variant.DriveW_poles)))
+            cond.ClearParts()
+            sel = cond.GetSelection()
+            sel.SelectPartByPosition(-spmsm_variant.Radius_OuterStatorYoke+EPS, 0 ,0)
+            cond.AddSelected(sel)
+            # Use FFT for hysteresis to be consistent with FEMM's results and to have a FFT plot
+            cond.SetValue("HysteresisLossCalcType", 1)
+            cond.SetValue("PresetType", 3) # 3:Custom
+            # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
+            cond.SetValue("StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
+            cond.SetValue("EndReferenceStep", number_of_total_steps)
+            cond.SetValue("UseStartReferenceStep", 1)
+            cond.SetValue("UseEndReferenceStep", 1)
+            cond.SetValue("Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
+            cond.SetValue("UseFrequencyOrder", 1)
+            cond.SetValue("FrequencyOrder", "1-50") # Harmonics up to 50th orders 
+        # Check CSV reults for iron loss (You cannot check this for Freq study) # CSV and save space
+        study.GetStudyProperties().SetValue("CsvOutputPath", dir_csv_output_folder) # it's folder rather than file!
+        study.GetStudyProperties().SetValue("CsvResultTypes", "Torque;Force;LineCurrent;TerminalVoltage;JouleLoss;TotalDisplacementAngle;JouleLoss_IronLoss;IronLoss_IronLoss;HysteresisLoss_IronLoss")
+        study.GetStudyProperties().SetValue("DeleteResultFiles", self.fea_config_dict['delete_results_after_calculation'])
+        # Terminal Voltage/Circuit Voltage: Check for outputing CSV results 
+        study.GetCircuit().CreateTerminalLabel("Terminal4U", 8, -13)
+        study.GetCircuit().CreateTerminalLabel("Terminal4V", 8, -11)
+        study.GetCircuit().CreateTerminalLabel("Terminal4W", 8, -9)
+        study.GetCircuit().CreateTerminalLabel("Terminal2U", 23, -13)
+        study.GetCircuit().CreateTerminalLabel("Terminal2V", 23, -11)
+        study.GetCircuit().CreateTerminalLabel("Terminal2W", 23, -9)
+        # Export Stator Core's field results only for iron loss calculation (the csv file of iron loss will be clean with this setting)
+            # study.GetMaterial(u"Rotor Core").SetValue(u"OutputResult", 0) # at least one part on the rotor should be output or else a warning "the jplot file does not contains displacement results when you try to calc. iron loss on the moving part." will pop up, even though I don't add iron loss condition on the rotor.
+        # study.GetMeshControl().SetValue(u"AirRegionOutputResult", 0)
+        study.GetMaterial("Shaft").SetValue("OutputResult", 0)
+        study.GetMaterial("Cage").SetValue("OutputResult", 0)
+        study.GetMaterial("Coil").SetValue("OutputResult", 0)
+        # Rotor
+        if True:
+            cond = study.CreateCondition("Ironloss", "IronLossConRotor")
+            cond.SetValue("BasicFrequencyType", 2)
+            cond.SetValue("BasicFrequency", "freq")
+                # cond.SetValue(u"BasicFrequency", u"slip*freq") # this require the signal length to be at least 1/4 of slip period, that's too long!
+            cond.ClearParts()
+            sel = cond.GetSelection()
+            sel.SelectPartByPosition(-spmsm_variant.Radius_Shaft-EPS, 0 ,0)
+            cond.AddSelected(sel)
+            # Use FFT for hysteresis to be consistent with FEMM's results
+            cond.SetValue("HysteresisLossCalcType", 1)
+            cond.SetValue("PresetType", 3)
+            # Specify the reference steps yourself because you don't really know what JMAG is doing behind you
+            cond.SetValue("StartReferenceStep", number_of_total_steps+1-number_of_steps_2ndTTS*0.5) # 1/4 period <=> number_of_steps_2ndTTS*0.5
+            cond.SetValue("EndReferenceStep", number_of_total_steps)
+            cond.SetValue("UseStartReferenceStep", 1)
+            cond.SetValue("UseEndReferenceStep", 1)
+            cond.SetValue("Cyclicity", 4) # specify reference steps for 1/4 period and extend it to whole period
+            cond.SetValue("UseFrequencyOrder", 1)
+            cond.SetValue("FrequencyOrder", "1-50") # Harmonics up to 50th orders 
+        self.study_name = study_name
+        return study
+
+    def add_structural_static_study(self):        
+        pass
+
+    def add_mesh(self, study, model):
+        pass
 
     def show(self, toString=False):
         attrs = list(vars(self).items())
@@ -300,14 +648,14 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         sorted_key = sorted(key_list, key=lambda item: (int(item.partition(' ')[0]) if item[0].isdigit() else float('inf'), item)) # this is also useful for string beginning with digiterations '15 Steel'.
         tuple_list = [(key, the_dict[key]) for key in sorted_key]
         if toString==False:
-            print('- Bearingless PMSM Individual #%s\n\t' % (self.ID), end=' ')
+            print('- Bearingless PMSM Individual #%s\n\t' % (self.name), end=' ')
             print(', \n\t'.join("%s = %s" % item for item in tuple_list))
             return ''
         else:
-            return '\n- Bearingless PMSM Individual #%s\n\t' % (self.ID) + ', \n\t'.join("%s = %s" % item for item in tuple_list)
+            return '\n- Bearingless PMSM Individual #%s\n\t' % (self.name) + ', \n\t'.join("%s = %s" % item for item in tuple_list)
 
 # circumferential segmented rotor 
-if __name__ == '!__main__':
+if __name__ == '__main__':
     import JMAG
     import Location2D
     import CrossSectInnerNotchedRotor
@@ -366,7 +714,7 @@ if __name__ == '!__main__':
     spmsm_template.stack_length = 100 # mm
 
     # logger = logging.getLogger(__name__) 
-    # logger.info('spmsm_variant ID %s is initialized.', self.ID)
+    # logger.info('spmsm_variant ID %s is initialized.', self.name)
 
     spmsm = bearingless_spmsm_design(   spmsm_template=spmsm_template,
                                         free_variables=None,
@@ -452,7 +800,7 @@ if __name__ == '__main__':
     spmsm_template.stack_length = 100 # mm
 
     # logger = logging.getLogger(__name__) 
-    # logger.info('spmsm_variant ID %s is initialized.', self.ID)
+    # logger.info('spmsm_variant ID %s is initialized.', self.name)
 
     spmsm = bearingless_spmsm_design(   spmsm_template=spmsm_template,
                                         free_variables=None,

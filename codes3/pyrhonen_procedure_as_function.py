@@ -1373,7 +1373,7 @@ class desgin_specification(object):
 
         return True if self.Jr_backup < self.Jr else False # bool_bad_specifications
 
-    def build_im_template(self, fea_config_dict):
+    def build_acm_template(self, fea_config_dict):
         import utility
         import population
         # get rid of Swarm class
@@ -1388,11 +1388,11 @@ class desgin_specification(object):
                 self.im_list.append(im)
         for im in self.im_list:
             if im.Qr == fea_config_dict['Active_Qr']:
-                self.im_template = im
+                self.acm_template = im
                 print('Take the first Active_Qr match as initial design')
                 break
         try: 
-            self.im_template
+            self.acm_template
         except:
             print('There is no design matching Active_Qr.')
             msg = 'Please activate one initial design. Refer %s.' % (self.initial_design_file)
@@ -1401,7 +1401,7 @@ class desgin_specification(object):
             raise Exception('no match for Active_Qr: %d'%(fea_config_dict['Active_Qr']))
 
         # 让儿子能访问爸爸
-        self.im_template.spec = self
+        self.acm_template.spec = self
 
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~

@@ -1542,13 +1542,26 @@ if __name__ == '!__main__':
 # winding diagram for four pole dpnv motor
 if __name__ == '__main__':
 
-    bool_4pole_2pole = False
+    bool_4pole_2pole = True
 
     # generate the dict of list: dl
     if bool_4pole_2pole: # 4 pole motor
         # ExampleQ24p2m3ps1y6
         l41 = ['C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B']
         l42 = ['+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
+        # Eric Severson [2:12 PM]
+        # How the coils are assigned to groups A-D for Q=24 example winding
+        #     ```if (~bParallel)
+        #         MachineParams.Group_UA = [-19 -20];
+        #         MachineParams.Group_UB = [1 2];
+        #         MachineParams.Group_UC = [13 14];
+        #         MachineParams.Group_UD = [-7 -8];
+        #     else
+        #         MachineParams.Group_UA = [-19 -20 13 14];
+        #         MachineParams.Group_UB = [1 2 -7 -8];
+        #     end```
+        # Eric Severson [2:14 PM]
+        # These numbers are the coil numbers. Negative indicates a coil connected in reverse.
         l_rightlayer1 = l41[::]
         l_rightlayer2 = l42[::]
         l_leftlayer1  = l41[::]
@@ -1594,6 +1607,10 @@ if __name__ == '__main__':
     #     print k,v
     # quit()
 
+    FOUR = 1
+    SIX = 3
+    NINE = 4
+
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Motor Spec
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -1617,30 +1634,31 @@ if __name__ == '__main__':
 
     # x means coil location (meaning is equivalent to loc)
     def draw_vertical_line_and_arrow_head(x, x2):
+
         coil_spacing = 1
         x *= coil_spacing
         ax.plot([abs(x), abs(x)], 
-                [-4, 4], '-'+color, lw=1,alpha=0.7)
+                [-FOUR, FOUR], '-', color=color, lw=1,alpha=1.0)
         ax.plot([abs(x2)+coil_bias, abs(x2)+coil_bias], 
-                [-4, 4], '--'+color, lw=1,alpha=0.7)
+                [-FOUR, FOUR], '--', color=color, lw=1,alpha=1.0)
 
         annotate_bias = 0.1
         if x>0:
-            xytext = [abs(x), (-4+4)/2 + annotate_bias + 0.0]
-            xy     = [abs(x), (-4+4)/2 - annotate_bias + 0.0]
+            xytext = [abs(x), (-FOUR+FOUR)/2 + annotate_bias + 0.0]
+            xy     = [abs(x), (-FOUR+FOUR)/2 - annotate_bias + 0.0]
         else:
-            xy     = [abs(x), (-4+4)/2 + annotate_bias + 0.9]
-            xytext = [abs(x), (-4+4)/2 - annotate_bias + 0.9]
-        ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=0.7))
-        ax.text(xy[0]+1.25*coil_bias, annotate_bias + 0.9, '%d'%(abs(x)), fontsize=6)
+            xy     = [abs(x), (-FOUR+FOUR)/2 + annotate_bias + 0.25]
+            xytext = [abs(x), (-FOUR+FOUR)/2 - annotate_bias + 0.25]
+        ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=1.0))
+        ax.text(xy[0]+1.25*coil_bias, annotate_bias + 0.25, '%d'%(abs(x)), fontsize=6)
 
         if x2>0:
-            xytext = [abs(x2), (-4+4)/2 + annotate_bias + 0.0]
-            xy     = [abs(x2), (-4+4)/2 - annotate_bias + 0.0]
+            xytext = [abs(x2), (-FOUR+FOUR)/2 + annotate_bias + 0.0]
+            xy     = [abs(x2), (-FOUR+FOUR)/2 - annotate_bias + 0.0]
         else:
-            xy     = [abs(x2), (-4+4)/2 + annotate_bias + 0.9]
-            xytext = [abs(x2), (-4+4)/2 - annotate_bias + 0.9]
-        ax.annotate('', xytext=(xytext[0]+coil_bias, xytext[1]), xy=(xy[0]+coil_bias, xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=0.7))
+            xy     = [abs(x2), (-FOUR+FOUR)/2 + annotate_bias + 0.9]
+            xytext = [abs(x2), (-FOUR+FOUR)/2 - annotate_bias + 0.9]
+        ax.annotate('', xytext=(xytext[0]+coil_bias, xytext[1]), xy=(xy[0]+coil_bias, xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=1.0))
 
     def draw_end_turns(x, coil_pitch):
 
@@ -1648,7 +1666,7 @@ if __name__ == '__main__':
             ax.plot(X, Y, *arg, **kwarg)
             ax.plot(X, [-el for el in Y], *arg, **kwarg)
 
-        slope = (6-4) / (coil_pitch/2. + coil_bias/2.)
+        slope = (SIX-FOUR) / (coil_pitch/2. + coil_bias/2.)
 
         # going up
         loc1 = abs(x) + coil_pitch/2. + coil_bias/2. # half pitch
@@ -1659,95 +1677,95 @@ if __name__ == '__main__':
             # going up
             mirror_plot(ax,  [ abs(x),
                                loc1   ],
-                             [ 4,6 ], '-'+color, lw=0.5,alpha=0.7)
+                             [ FOUR,SIX ], '-', color=color, lw=0.5,alpha=1.0)
             if loc2 < END:
                 # going down 
                 mirror_plot(ax,  [ loc1,
                                    loc2 ],
-                                 [ 6,4 ], '--'+color, lw=0.5,alpha=0.7)
+                                 [ SIX,FOUR ], '--', color=color, lw=0.5,alpha=1.0)
             else:
                 # going down (to be continued)
                 mirror_plot(ax,  [ loc1,
                                    END],
-                                 [ 6,6-slope*(END-loc1) ], '--'+color, lw=0.5,alpha=0.7)
+                                 [ SIX,SIX-slope*(END-loc1) ], '--', color=color, lw=0.5,alpha=1.0)
                 # going down (continued)
                 mirror_plot(ax,  [ END-SHIFT,
                                    loc2-SHIFT],
-                                 [ 6-slope*(END-loc1),4 ], '--'+color, lw=0.5,alpha=0.7)
+                                 [ SIX-slope*(END-loc1),FOUR ], '--', color=color, lw=0.5,alpha=1.0)
         else:
             # going up (to be continued)
             mirror_plot(ax,  [ abs(x),
                                END],
-                             [ 4,4+slope*(END-abs(x)) ], '-'+color, lw=0.5,alpha=0.7)
+                             [ FOUR,FOUR+slope*(END-abs(x)) ], '-', color=color, lw=0.5,alpha=1.0)
             # going up (continued)
             mirror_plot(ax,  [ END-SHIFT,
                                loc1-SHIFT],
-                             [ 4+slope*(END-abs(x)),6 ], '-'+color, lw=0.5,alpha=0.7)
+                             [ FOUR+slope*(END-abs(x)),SIX ], '-', color=color, lw=0.5,alpha=1.0)
             # going down 
             mirror_plot(ax,  [ loc1-SHIFT,
                                loc2-SHIFT ],
-                             [ 6,4 ], '--'+color, lw=0.5,alpha=0.7)
+                             [ SIX,FOUR ], '--', color=color, lw=0.5,alpha=1.0)
 
         # if loc2 <= END:
         # else: # loc2 超了
         #     if loc1 <= END: # loc1 没超
         #         mirror_plot(ax,  [ loc1,
         #                            END],
-        #                          [ 6,6-slope*(END-loc1) ], '--'+color, lw=0.5,alpha=0.7)
+        #                          [ 6,6-slope*(END-loc1) ], '--'+color, lw=0.5,alpha=1.0)
         #     else: # loc1 也超了
         #         print '-------------------------AAAAAA'
         #         # partial plot on the left 
         #         mirror_plot(ax,  [ loc1-SHIFT,
         #                            loc2-SHIFT],
-        #                          [ 6,4 ], '--'+color, lw=0.5,alpha=0.7)
+        #                          [ 6,4 ], '--'+color, lw=0.5,alpha=1.0)
 
         return slope
 
     def draw_terminals(list_terminals, slope, phase='u'):
         # xx means (x,x) <=> (loc, loc)
-        for xx, letter in zip(list_terminals, ['a', 'b', 'c', 'd']):
+        for xx, letter in zip(list_terminals, ['b', 'a', 'd', 'c']): # ['a', 'b', 'c', 'd'] changed. 6/26/2019
             print(xx, letter)
             # ua+
             loc_plus = abs(xx[0])+coil_pitch/2+coil_bias/2 # top of the triangle
             if xx[0]>0: # solid line
                 if loc_plus + 0.3 > END:
                     loc_plus -= SHIFT
-                c1 = (loc_plus - 0.3, 9)
-                y_span = [c1[1]]+[6-0.3*slope]
+                c1 = (loc_plus - 0.3, NINE)
+                y_span = [c1[1]]+[SIX-0.3*slope]
                 xy     = [c1[0], sum(y_span)/2]
-                xytext = [c1[0], sum(y_span)/2 + 0.9]
-                line_style = '-'+color
+                xytext = [c1[0], sum(y_span)/2 + 0.25]
+                line_style = '-'
             else: # dashed line
                 if loc_plus + 0.3 > END:
                     loc_plus -= SHIFT
-                c1 = (loc_plus + 0.3, 9)
-                y_span = [c1[1]]+[6-0.3*slope]
+                c1 = (loc_plus + 0.3, NINE)
+                y_span = [c1[1]]+[SIX-0.3*slope]
                 xy     = [c1[0], sum(y_span)/2]
-                xytext = [c1[0], sum(y_span)/2 + 0.9]
-                line_style = '--'+color
-            ax.plot([c1[0]]*2, y_span, line_style, lw=0.5, alpha=0.7)
-            ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=0.7))
+                xytext = [c1[0], sum(y_span)/2 + 0.25]
+                line_style = '--'
+            ax.plot([c1[0]]*2, y_span, line_style, lw=0.5, alpha=1.0, color=color)
+            ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color=color, lw=0.5, alpha=1.0))
 
             # ua-
             loc_minus = abs(xx[1])+coil_pitch/2+coil_bias/2 # top of the triangle
             if xx[1]>0: # solid line
                 if loc_minus + 0.3 > END:
                     loc_minus -= SHIFT
-                c2 = (loc_minus - 0.3, 9)
-                y_span = [c2[1]]+[6-0.3*slope]
+                c2 = (loc_minus - 0.3, NINE)
+                y_span = [c2[1]]+[SIX-0.3*slope]
                 xytext = [c2[0], sum(y_span)/2]
-                xy     = [c2[0], sum(y_span)/2 + 0.9]
-                line_style = '-'+color
+                xy     = [c2[0], sum(y_span)/2 + 0.25]
+                line_style = '-'
             else: # dashed line
                 if loc_minus + 0.3 > END:
                     loc_minus -= SHIFT
-                c2 = (loc_minus + 0.3, 9)
-                y_span = [c2[1]]+[6-0.3*slope]
+                c2 = (loc_minus + 0.3, NINE)
+                y_span = [c2[1]]+[SIX-0.3*slope]
                 xytext = [c2[0], sum(y_span)/2]
-                xy     = [c2[0], sum(y_span)/2 + 0.9]
-                line_style = '--'+color
-            ax.plot([c2[0]]*2, y_span, line_style, lw=0.5, alpha=0.7)
-            ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=0.7))
+                xy     = [c2[0], sum(y_span)/2 + 0.25]
+                line_style = '--'
+            ax.plot([c2[0]]*2, y_span, line_style, lw=0.5, alpha=1.0, color=color)
+            ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color=color, lw=0.5, alpha=1.0))
 
             # circle and ua+/- labels
             terminal_symbols = (r'$%s_{%s}^+$'%(phase, letter), r'$%s_{%s}^-$'%(phase, letter))
@@ -1783,30 +1801,31 @@ if __name__ == '__main__':
             if flag_shift:
                 bias *= -1
                 # find the shortest connection (if shifted)
-                ax.plot([loc2-bias, END], [6.25, 6.25], '-'+color, lw=0.5, alpha=0.7)
-                ax.plot([END-SHIFT, loc1+bias], [6.25, 6.25], '-'+color, lw=0.5, alpha=0.7)
+                ax.plot([loc2-bias, END], [SIX+.25, SIX+.25], '-', color=color, lw=0.5, alpha=1.0)
+                ax.plot([END-SHIFT, loc1+bias], [SIX+.25, SIX+.25], '-', color=color, lw=0.5, alpha=1.0)
             else:
                 # regular 
-                ax.plot([loc1+bias, loc2-bias], [6.25, 6.25], '-'+color, lw=0.5, alpha=0.7)
+                ax.plot([loc1+bias, loc2-bias], [SIX+.25, SIX+.25], '-', color=color, lw=0.5, alpha=1.0)
 
             # vertical 1
-            line_style = '-'+color
+            line_style = '-'
             if flag_swapped != (xx[0]<0): # XOR
                 line_style = '-' + line_style
-            ax.plot([loc1+bias]*2, [6.25, 6-abs(bias)*slope], line_style, lw=0.5, alpha=0.7)
+            ax.plot([loc1+bias]*2, [SIX+.25, SIX-abs(bias)*slope], line_style, color=color, lw=0.5, alpha=1.0)
 
             # vertical 2
-            line_style = '-'+color
+            line_style = '-'
             if flag_swapped != (xx[1]<0): # XOR
                 line_style = '-' + line_style
-            ax.plot([loc2-bias]*2, [6.25, 6-abs(bias)*slope], line_style, lw=0.5, alpha=0.7)
+            ax.plot([loc2-bias]*2, [SIX+.25, SIX-abs(bias)*slope], line_style, color=color, lw=0.5, alpha=1.0)
 
     for phase in ['u', 'v', 'w']:
         fig = figure(dpi=300)
         ax = fig.add_subplot(111, aspect='equal') # fixed aspect ratio such that a circle is still a circle when you drag the tk plot window
+        ax.axis('off')
 
         # draw coils in the slots as vertical lines
-        for color, winding_layout_right, winding_layout_left, _ in zip( ['b', 'r', 'g'] , 
+        for color, winding_layout_right, winding_layout_left, _ in zip( ['#5C9C31', '#E97675', '#6C8FAB'] , 
                                                                         [dl_rightlayer['A'], dl_rightlayer['B'], dl_rightlayer['C']],
                                                                         [dl_leftlayer['A'], dl_leftlayer['B'], dl_leftlayer['C']],
                                                                         list(range(3))):
@@ -1821,31 +1840,31 @@ if __name__ == '__main__':
                 # show()
 
         if bool_4pole_2pole: # 4 pole motor
-            if phase == 'u': 
+            if phase == 'w': # Swap u and w. --6/26/2019
                 # The key to determine this terminal location is to stick to the dual purpose feature 
                 # meanwhile considering the fact that ub and ud will not change current direction, while ua and uc will change when under suspension excitation.
                 # Minus sign means dashed line (the second/lower layer of the double layer winding),
                 # while the first number of the tuple means the current is entering, and the second number of the tuple means the current is leaving.
                 # E.g., for ub, current enters 4 and leaves 3. Particularly, the current first enters the lower layer of slot 4, hence -4.
                 # Coil Group:     ua                       ub                           uc                         ud                         (see Severson15Dual@Fig.4b)
-                color = 'b'
+                color = '#5C9C31'
                 list_terminals = [(9, -10),                (-4,  3),                    (-16, 15),                 (21, -22)] 
             if phase == 'v': 
-                color = 'r'
+                color = '#E97675'
                 list_terminals = [(9+Qs/3, -(10+Qs/3)),    (-(4+Qs/3),     3+Qs/3),     (-(16+Qs/3), 15+Qs/3),     (21+Qs/3-Qs, -(22+Qs/3-Qs))]
-            if phase == 'w': 
-                color = 'g'
+            if phase == 'u': 
+                color = '#6C8FAB'
                 list_terminals = [(9-Qs/3, -(10-Qs/3)),    (-(4-Qs/3+Qs),  3-Qs/3+Qs),  (-(16-Qs/3), 15-Qs/3),     (21-Qs/3, -(22-Qs/3))]
 
         else: # 2 pole motor
             if phase == 'u': 
-                color = 'b'
+                color = '#5C9C31'
                 list_terminals = [(19, -20),                (-10, 9),                    (21,  -22),                 (-8, 7)] # we have swapped the order of ub and ud
             if phase == 'v': 
-                color = 'r'
+                color = '#E97675'
                 list_terminals = [(19+Qs/3, -(20+Qs/3)),    (-(10+Qs/3), 9+Qs/3),        (21+Qs/3,  -(22+Qs/3)),     (-(8+Qs/3), 7+Qs/3)] # we have swapped the order of ub and ud
             if phase == 'w': 
-                color = 'g'
+                color = '#6C8FAB'
                 list_terminals = [(19-Qs/3, -(20-Qs/3)),    (-(10-Qs/3), 9-Qs/3),        (21-Qs/3,  -(22-Qs/3)),     (-(8-Qs/3+Qs), 7-Qs/3+Qs)] # we have swapped the order of ub and ud
 
         # draw terminals
@@ -1864,6 +1883,115 @@ if __name__ == '__main__':
         ax.get_yaxis().set_visible(False)
         fig.tight_layout()
         fig.savefig(r'D:\OneDrive - UW-Madison\c\release\winding_diagram_phase_%s.png'%(phase), dpi=300)
+
+
+    # ROTOR WINDING (four pole 8 phase single layer wave winding)
+    # ROTOR WINDING (four pole 8 phase single layer wave winding)
+    # ROTOR WINDING (four pole 8 phase single layer wave winding)
+    class one_phase_winding(object):
+        def __init__(self, ax, list_slot_location, coil_pitch, list_labels=None, color='k'):
+            self.ax = ax
+            self.list_slot_location = list_slot_location
+            self.coil_pitch = coil_pitch
+            self.color=color
+            if list_labels is None:
+                self.list_labels = [abs(x) for x in list_slot_location]
+            else:
+                self.list_labels = list_labels
+
+            self.draw_vertical_line()
+            self.draw_arrow()
+            self.draw_end_turns()
+
+        def draw_vertical_line(self):
+            for x in self.list_slot_location:
+                self.ax.plot(   [abs(x), abs(x)], 
+                                [-FOUR, FOUR], '-', color=self.color, lw=1,alpha=1.0)
+                # ax.plot([abs(x2)+coil_bias, abs(x2)+coil_bias], 
+                #         [-FOUR, FOUR], '--'+color, lw=1,alpha=1.0)
+
+        def draw_arrow(self):
+            annotate_bias = 0.1
+            text_bias = 0.05
+            for x, label in zip(self.list_slot_location, self.list_labels):
+                if x>0:
+                    xytext = [abs(x), (-FOUR+FOUR)/2 + annotate_bias + 0.0]
+                    xy     = [abs(x), (-FOUR+FOUR)/2 - annotate_bias + 0.0]
+                else:
+                    xy     = [abs(x), (-FOUR+FOUR)/2 + annotate_bias + text_bias]
+                    xytext = [abs(x), (-FOUR+FOUR)/2 - annotate_bias + text_bias]
+                ax.annotate('', xytext=xytext, xy=xy, xycoords='data', arrowprops=dict(arrowstyle="->", color=self.color, alpha=1.0))
+                ax.text(xy[0]+text_bias, annotate_bias, '%d'%(label), fontsize=24)
+
+                # if x2>0:
+                #     xytext = [abs(x2), (-FOUR+FOUR)/2 + annotate_bias + 0.0]
+                #     xy     = [abs(x2), (-FOUR+FOUR)/2 - annotate_bias + 0.0]
+                # else:
+                #     xy     = [abs(x2), (-FOUR+FOUR)/2 + annotate_bias + 0.9]
+                #     xytext = [abs(x2), (-FOUR+FOUR)/2 - annotate_bias + 0.9]
+                # ax.annotate('', xytext=(xytext[0]+coil_bias, xytext[1]), xy=(xy[0]+coil_bias, xy[1]), xycoords='data', arrowprops=dict(arrowstyle="->", color=color, alpha=1.0))
+
+        def draw_end_turns(self):
+
+            count = 0
+            for x, next_x in zip(self.list_slot_location, self.list_slot_location[1:]):
+                count += 1
+                loc1 = abs(x) + self.coil_pitch/2
+
+                if count%2==1:
+                    self.ax.plot(   [abs(x), loc1], 
+                                    [FOUR, SIX], '-', color=self.color, lw=0.5, alpha=1.0)
+                    self.ax.plot(   [loc1, abs(next_x)], 
+                                    [SIX, FOUR], '-', color=self.color, lw=0.5, alpha=1.0)
+                else:
+                    self.ax.plot(   [abs(x), loc1], 
+                                    [-FOUR, -SIX], '-', color=self.color, lw=0.5, alpha=1.0)
+                    self.ax.plot(   [loc1, abs(next_x)], 
+                                    [-SIX, -FOUR], '-', color=self.color, lw=0.5, alpha=1.0)
+
+    FOUR = 0.5
+    SIX = 0.75
+
+    fig = figure(dpi=300)
+    ax = fig.add_subplot(111, aspect='equal') # fixed aspect ratio such that a circle is still a circle when you drag the tk plot window
+    ax.axis('off')
+
+    if False:
+        list_all_phase = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']*4
+        list_all_direction = ['+', '+', '+', '+', '+', '+', '+', '+', '-', '-', '-', '-', '-', '-', '-', '-']*2
+
+        list_phase_name = []
+        count = 0
+        for phase, direction in zip(list_all_phase, list_all_direction):
+            count += 1
+            if phase not in list_phase_name:
+                list_phase_name.append(phase)
+                exec(phase + ' = []')
+                exec(phase + '_direction = []')
+            exec(phase + '.append(count)')
+            temp = 1 if list_all_direction[count-1] == '+' else -1
+            exec(phase + '_direction.append(temp)')
+
+        for phase in list_phase_name:
+            print(eval(f'{phase}'))
+            print(eval(f'{phase}_direction'))
+            
+            one_phase_winding(ax, [number*direction for number, direction in zip(eval(f'{phase}'), eval(f'{phase}_direction'))])
+    else:
+        list_labels = [1, 9, 17, 26]
+        one_phase_winding(ax, [1, -2, 3, -4], 1, list_labels)
+
+    ax.plot( [ 1, 1], 
+             [-FOUR, -SIX*1.25], '-', color='k', lw=0.5, alpha=1.0)
+    ax.plot( [ 1, 4], 
+             [-SIX*1.25, -SIX*1.25], '-', color='k', lw=0.5, alpha=1.0)
+    ax.plot( [ 4, 4], 
+             [-SIX*1.25, -FOUR], '-', color='k', lw=0.5, alpha=1.0)
+
+    ax.get_xaxis().set_visible(False)
+    ax.get_yaxis().set_visible(False)
+    fig.tight_layout()
+    fig.savefig(r'D:\OneDrive - UW-Madison\c\release\rotor_winding.png', dpi=300)
 
     show()
     quit()

@@ -33,7 +33,8 @@ for t in range(500):
     # Now loss is a Variable of shape (1,) and loss.data is a Tensor of shape
     # (1,); loss.data[0] is a scalar value holding the loss.
     loss = (y_pred - y).pow(2).sum()
-    print(t, loss)
+    print(t, loss.data, loss)
+    # print(t, loss.data)
     # print(t, loss.data[0])
 
     # Use autograd to compute the backward pass. This call will compute the

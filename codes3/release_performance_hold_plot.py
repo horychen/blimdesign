@@ -5,18 +5,18 @@ from pylab import subplots, mpl, plt, np
 # plt.style.use('fivethirtyeight')
 mpl.style.use('classic')
 
-mpl.rcParams['legend.fontsize'] = 12
+mpl.rcParams['legend.fontsize'] = 15
 # mpl.rcParams['legend.family'] = 'Times New Roman'
 mpl.rcParams['font.family'] = ['Times New Roman']
-mpl.rcParams['font.size'] = 14.0
+mpl.rcParams['font.size'] = 11+15 # 26.0
 font = {'family' : 'Times New Roman', #'serif',
         'color' : 'darkblue',
         'weight' : 'normal',
-        'size' : 14,}
-textfont = {'family' : 'Times New Roman', #'serif',
-            'color' : 'darkblue',
-            'weight' : 'normal',
-            'size' : 11.5,}
+        'size' : 11+15,} #26
+# textfont = {'family' : 'Times New Roman', #'serif',
+#             'color' : 'darkblue',
+#             'weight' : 'normal',
+#             'size' : 15,}
 
 # fig, ax_list = subplots(3, 1, sharex=True, dpi=150, figsize=(16*0.75, 8*0.75), facecolor='w', edgecolor='k')
 
@@ -84,13 +84,14 @@ def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, la
             l_y_force.append(y_force)
         if count % 2 == 0:
             if count <= 7*2:
-                # ax_list[2].plot(time[index_begin:], np.sqrt(x_force**2+y_force**2), label=str(int(count/2)))
-                amp_force = np.sqrt(x_force**2+y_force**2)
-                ax.plot(time[index_begin:], amp_force, label=str(count//2))
-                t=ax.text(  time[index_begin:][number_of_steps_2ndTSS//2], 
-                            amp_force[number_of_steps_2ndTSS//2],
-                            '%g'%(excitation_ratio[count//2-1])+' p.u.' )
-                t.set_bbox(dict(facecolor='white', alpha=0.5, edgecolor=None))
+                if count in [0*2, 1*2, 2*2, 3*2, 4*2, 5*2, 7*2]: # 
+                    # ax_list[2].plot(time[index_begin:], np.sqrt(x_force**2+y_force**2), label=str(int(count/2)))
+                    amp_force = np.sqrt(x_force**2+y_force**2)
+                    ax.plot(time[index_begin:], amp_force, label=str(count//2))
+                    t=ax.text(  time[index_begin:][number_of_steps_2ndTSS//2], 
+                                amp_force[number_of_steps_2ndTSS//2] + 0, # BIAS
+                                '%g'%(excitation_ratio[count//2-1])+' p.u.', fontdict=font)
+                    t.set_bbox(dict(facecolor='white', alpha=0.75, edgecolor=None))
 
     # ax_list[-1].set_xlabel('Time [s]')
     # ax_list[0].set_ylabel('x-axis Force [N]')
@@ -99,6 +100,7 @@ def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, la
 
     ax.set_xlabel('Time [ms]\n%s'%(fig2_title[0]))
     ax.set_ylabel('Force Amplitude [N]')
+    ax.set_xticks([0, 0.5, 1.0])
     ax.grid(True)
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -121,16 +123,19 @@ def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, la
         torque = rated_scale*val[index_begin:]
 
         if count <=7:
-            ax.plot(time[index_begin:], torque, label=str(int(count)))
-            t=ax.text(  time[index_begin:][number_of_steps_2ndTSS//2], 
-                        torque[number_of_steps_2ndTSS//2],
-                        '%g'%(excitation_ratio[count-1])+' p.u.' )
-            t.set_bbox(dict(facecolor='white', alpha=0.9, edgecolor=None))
+            if count in [1, 4, 5, 7]: # 
+
+                ax.plot(time[index_begin:], torque, label=str(int(count)))
+                t=ax.text(  time[index_begin:][number_of_steps_2ndTSS//2], 
+                            torque[number_of_steps_2ndTSS//2], # BIAS
+                            '%g'%(excitation_ratio[count-1])+' p.u.', fontdict=font)
+                t.set_bbox(dict(facecolor='white', alpha=0.75, edgecolor=None))
 
         l_torque.append(torque)
 
     ax.set_xlabel('Time [ms]\n%s'%(fig2_title[1]))
     ax.set_ylabel('Torque [Nm]')
+    ax.set_xticks([0, 0.5, 1.0])
     ax.grid(True)
 
     fig2.tight_layout()
@@ -164,8 +169,8 @@ def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, la
     #     print(x,y )
     ax_list[0][0].plot(excitation_ratio, l_torque_average, marker, alpha=0.75, label=label)
     ax_list[0][0].set_ylabel('Torque [Nm]')
-    ax_list[0][1].plot(excitation_ratio, l_ss_avg_force_magnitude, marker, alpha=0.75)
-    ax_list[0][1].set_ylabel('Force Amplitude [N]')
+    ax_list[0][1].plot(excitation_ratio, [el/65.5 for el in l_ss_avg_force_magnitude], marker, alpha=0.75)
+    ax_list[0][1].set_ylabel('FRW [p.u.]')
     ax_list[1][0].plot(excitation_ratio, l_force_error_angle, marker, alpha=0.75)
     ax_list[1][0].set_ylabel('Force Error Angle $E_a$ [deg]')
     ax_list[1][1].plot(excitation_ratio, [100*el for el in l_normalized_force_error_magnitude], marker, alpha=0.75)

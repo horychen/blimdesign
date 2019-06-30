@@ -17,13 +17,6 @@ from pyrhonen_procedure_as_function import get_material_data, winding_layout
 
 EPS = 1e-2 # unit: mm
 
-class ExceptionBadNumberOfParts(Exception):
-    """Exception for unexpected number of parts in JMAG Designer."""
-    def __init__(self, message, payload=None):
-        self.message = message
-        self.payload = payload # you could add more args
-    def __str__(self):
-        return str(self.message)
 
 class swarm(object):
 

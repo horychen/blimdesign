@@ -8,6 +8,9 @@ import pyrhonen_procedure_as_function
 import population
 import FEMM_Solver
 
+# BPMSM codes
+import bearingless_spmsm_design
+import JMAG
 
 class swarm_data_container(object):
     def __init__(self, swarm_data_raw, fea_config_dict):
@@ -109,9 +112,9 @@ class swarm_data_container(object):
                         r'$P_{Cu,s,JMAG}$', r'$P_{Cu,r,JMAG}$', r'$P_{Fe}$ [W]', r'$P_{eddy}$', r'$P_{hyst}$', r'$P_{Cu,s,FEMM}$', r'$P_{Cu,r,FEMM}$', 
                         r'Windage loss', r'Total loss']
 
-        list_y_label = [r'$O_A$ [$\rm Nm/m^3$]', 
+        list_y_label = [r'$O_A$ [$\rm kNm/m^3$]', 
                          '$O_C$ [1]', 
-                         'FRW [1]',
+                         'FRW [p.u.]',
                          '$E_a$ [deg]', 
                          '$O_B$ [%]', 
                          '$E_m$ [%]', 
@@ -122,7 +125,7 @@ class swarm_data_container(object):
         list_y_data_max = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
         list_y_data_min = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
 
-        list_y_data = [ self.l_OA, 
+        list_y_data = [ [el/1e3 for el in self.l_OA], 
                         self.l_OC,
                         [F/W for W, F in zip(self.l_rated_rotor_weight, self.l_ss_avg_force_magnitude)], # FRW
                         self.l_force_error_angle,
@@ -163,6 +166,8 @@ class swarm_data_container(object):
                 ax.axvspan(j*number_of_variant-0.5, (j+1)*number_of_variant-0.5, facecolor='k', alpha=alpha)
                 ax.text(0.33*number_of_free_variables+j*number_of_variant, high-(high-low)*0.125, free_param_list[j])
 
+            if i == 0:
+                ax.set_yticks([-24, -22, -20, -18, -16])
             list_y_data_max[i].append(max(y_data))
             list_y_data_min[i].append(min(y_data))
 
@@ -506,7 +511,6 @@ class swarm_data_container(object):
         # plt.show()
         return results_for_refining_bounds
 
-
 class FEA_Solver:
     def __init__(self, fea_config_dict):
         self.fea_config_dict = fea_config_dict
@@ -603,11 +607,6 @@ class FEA_Solver:
                                             )
         self.spmsm_variant = spmsm_variant
 
-        # femm solver
-        # self.femm_solver = FEMM_Solver.FEMM_Solver(self.spmsm_variant, flag_read_from_jmag=False, freq=50) # eddy+static
-        # self.dir_femm_temp         = self.output_dir + 'femm_temp/'
-        # self.femm_output_file_path = self.dir_femm_temp + original_study_name + '.csv'
-
         # project name
         if counter_loop == 1:
             self.project_name          = 'proj%d'%(counter)
@@ -620,16 +619,19 @@ class FEA_Solver:
 
         # Leave the solving task to JMAG
         if True:
+
+            # def draw_jmag_bpmsm():
+            import JMAG
             toolJd = JMAG.JMAG(self.fea_config_dict)
+            project_name          = 'proj%d'%(0)
+            expected_project_file_path = './' + "%s.jproj"%(project_name)
+
             toolJd.open(expected_project_file_path)
-
-            DRAW_SUCCESS = draw_spmsm.draw(toolJd)
-
+            DRAW_SUCCESS = spmsm_variant.draw_spmsm(toolJd)
             if DRAW_SUCCESS != 1:
-                # TODO: skip this model and its evaluation
-                cost_function = 99999 # penalty
-                logging.getLogger(__name__).warn('Draw Failed for %s-%s\nCost function penalty = %g.%s', self.project_name, spmsm_variant.name, cost_function, spmsm_variant.show(toString=True))
-                raise Exception('Draw Failed: Are you working on the PC? Sometime you by mistake operate in the JMAG Geometry Editor, then it fails to draw.')
+                raise Exception('Drawer failed.')
+
+            app = toolJd.app
 
             # JMAG
             if app.NumModels()>=1:
@@ -638,67 +640,39 @@ class FEA_Solver:
                 logger.error('there is no model yet!')
                 raise Exception('why is there no model yet?')
 
-
-
-
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # TranFEAwi2TSS for ripples and iron loss
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # add or duplicate study for transient FEA denpending on jmag_run_list
-        if self.fea_config_dict['jmag_run_list'][0] == 0:
-            # FEMM+JMAG
-            study = im_variant.add_TranFEAwi2TSS_study( 50.0, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
-            self.mesh_study(im_variant, app, model, study)
-
-            # wait for femm to finish, and get your slip of breakdown
-            slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
-
-            # Now we have the slip, set it up!
-            im_variant.update_mechanical_parameters(slip_freq_breakdown_torque) # do this for records only
-            if im_variant.the_slip != slip_freq_breakdown_torque / im_variant.DriveW_Freq:
-                raise Exception('Check update_mechanical_parameters().')
-            study.GetDesignTable().GetEquation("slip").SetExpression("%g"%(im_variant.the_slip))
-
-            self.run_study(im_variant, app, study, clock_time())
-        else:
-            raise Exception('jmag_run_list[0]')
+            study = spmsm_variant.add_magnetic_transient_study(app, model, dir_csv_output_folder, 'TranPMSM')
+            self.mesh_study(spmsm_variant, app, model, study)
 
         # export Voltage if field data exists.
         if self.fea_config_dict['delete_results_after_calculation'] == False:
             # Export Circuit Voltage
             ref1 = app.GetDataManager().GetDataSet("Circuit Voltage")
             app.GetDataManager().CreateGraphModel(ref1)
-            app.GetDataManager().GetGraphModel("Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+            app.GetDataManager().GetGraphModel("Circuit Voltage").WriteTable(self.dir_csv_output_folder + spmsm_variant.name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
 
         ################################################################
         # Load data for cost function evaluation
         ################################################################
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # Load Results for Tran2TSS
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        results_to_be_unpacked = utility.build_str_results(self.axeses, im_variant, self.project_name, tran2tss_study_name, self.dir_csv_output_folder, self.fea_config_dict, self.femm_solver)
+        results_to_be_unpacked = utility.build_str_results(self.axeses, spmsm_variant, self.project_name, tran2tss_study_name, self.dir_csv_output_folder, self.fea_config_dict, self.femm_solver)
         if results_to_be_unpacked is not None:
-            self.fig_main.savefig(self.output_dir + im_variant.name + 'results.png', dpi=150)
+            self.fig_main.savefig(self.output_dir + spmsm_variant.name + 'results.png', dpi=150)
             utility.pyplot_clear(self.axeses)
             # show()
-            return results_to_be_unpacked # im_variant.stack_length, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss
+            return results_to_be_unpacked # spmsm_variant.stack_length, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle, jmag_loss_list, femm_loss_list, power_factor, total_loss
         else:
             raise Exception('results_to_be_unpacked is None.')
-        # winding analysis? 之前的python代码利用起来啊
-        # 希望的效果是：设定好一个设计，马上进行运行求解，把我要看的数据都以latex报告的形式呈现出来。
-        # OP_PS_Qr36_M19Gauge29_DPNV_NoEndRing.jproj
 
-    def fea_bearingless_induction(self, im_template, x_denorm, counter, counter_loop):
+    def fea_bearingless_induction(self, acm_template, x_denorm, counter, counter_loop):
         logger = logging.getLogger(__name__)
         print('Run FEA for individual #%d'%(counter))
 
         # get local design variant
-        im_variant = population.bearingless_induction_motor_design.local_design_variant(im_template, 0, counter, x_denorm)
+        im_variant = population.bearingless_induction_motor_design.local_design_variant(acm_template, 0, counter, x_denorm)
         if counter_loop == 1:
             im_variant.name = 'ind%d'%(counter)
         else:
             im_variant.name = 'ind%d-redo%d'%(counter, counter_loop)
-        im_variant.spec = im_template.spec
+        im_variant.spec = acm_template.spec
         self.im_variant = im_variant
         self.femm_solver = FEMM_Solver.FEMM_Solver(self.im_variant, flag_read_from_jmag=False, freq=50) # eddy+static
         im = None
@@ -994,9 +968,9 @@ class FEA_Solver:
 class acm_designer(object):
     def __init__(self, fea_config_dict, spec):
 
-        spec.build_im_template(fea_config_dict)
+        spec.build_acm_template(fea_config_dict)
 
-        # spec.im_template.show()
+        # spec.acm_template.show()
         # quit()
 
         self.spec = spec
@@ -1029,10 +1003,14 @@ class acm_designer(object):
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Automatic Performance Evaluation (This is just a wraper)
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    def evaluate_design(self, im_template, x_denorm, counter, counter_loop=1):
-        return self.solver.fea_bearingless_induction(im_template, x_denorm, counter, counter_loop)
+    def evaluate_design(self, acm_template, x_denorm, counter, counter_loop=1):
+        # print(dir(acm_template))
+        if 'SM' in acm_template.name:
+            function = self.solver.fea_bearingless_spmsm
+        else:
+            function = self.solver.fea_bearingless_induction
 
-
+        return function(acm_template, x_denorm, counter, counter_loop)
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # 1. Bounds for DE optimiazation
@@ -1092,24 +1070,45 @@ class acm_designer(object):
         return self.original_bounds
 
     def get_classic_bounds(self):
-        self.get_original_bounds()
-        self.classic_bounds = [ [self.spec.delta*0.9, self.spec.delta*2  ],          # air_gap_length_delta
-                                [self.spec.w_st *0.5, self.spec.w_st *1.5],          #--# stator_tooth_width_b_ds
-                                [self.spec.w_rt *0.5, self.spec.w_rt *1.5],          #--# rotor_tooth_width_b_dr
-                                [                1.5,                  12],           # Angle_StatorSlotOpen
-                                [               5e-1,                   3],           # Width_RotorSlotOpen 
-                                [               5e-1,                   3],           # Width_StatorTeethHeadThickness
-                                [               5e-1,                   3] ]          # Length_HeadNeckRotorSlot
-        # classic_bounds cannot be beyond original_bounds
-        index = 0
-        for A, B in zip(self.classic_bounds, self.original_bounds):
-            if A[0] < B[0]:
-                self.classic_bounds[index] = B[0]
-            if A[1] > B[1]:
-                self.classic_bounds[index] = B[1]
-            index += 1
-            
-        return self.classic_bounds
+        if 'SM' in self.spec.acm_template.name:
+            Q = self.spec.acm_template.Q
+            s = self.spec.acm_template.s
+            p = self.spec.acm_template.p
+            self.classic_bounds =  [ 
+                                [  0.5*360/Q, 0.9*360/Q],    # deg_alpha_st        = free_variables[0]
+                                [  1,   5],                  # mm_d_so             = free_variables[1]
+                                [ 15,  35],                  # mm_d_st             = free_variables[2]
+                                [200, 250],                  # stator_outer_radius = free_variables[3]
+                                [ 20,  40],                  # mm_w_st             = free_variables[4]
+                                [  1,   3],                  # sleeve_length       = free_variables[5]
+                                [2.5,   6],                  # mm_d_pm             = free_variables[6]
+                                [0.6*360/p, 0.9*360/p],      # deg_alpha_rm        = free_variables[7]
+                                [0.8*360/p/s, 0.95*360/p/s], # deg_alpha_rs        = free_variables[8]
+                                [  8,  16],                  # mm_d_ri             = free_variables[9]
+                                [ 75, 100],                  # rotor_outer_radius  = free_variables[10] 
+                                [2.5,   6],                  # mm_d_rp             = free_variables[11]
+                                [2.5,   6] ]                 # mm_d_rs             = free_variables[12]
+            self.original_bounds = self.classic_bounds
+            return self.classic_bounds
+        else:
+            self.get_original_bounds()
+            self.classic_bounds = [ [self.spec.delta*0.9, self.spec.delta*2  ],          # air_gap_length_delta
+                                    [self.spec.w_st *0.5, self.spec.w_st *1.5],          #--# stator_tooth_width_b_ds
+                                    [self.spec.w_rt *0.5, self.spec.w_rt *1.5],          #--# rotor_tooth_width_b_dr
+                                    [                1.5,                  12],           # Angle_StatorSlotOpen
+                                    [               5e-1,                   3],           # Width_RotorSlotOpen 
+                                    [               5e-1,                   3],           # Width_StatorTeethHeadThickness
+                                    [               5e-1,                   3] ]          # Length_HeadNeckRotorSlot
+            # classic_bounds cannot be beyond original_bounds
+            index = 0
+            for A, B in zip(self.classic_bounds, self.original_bounds):
+                if A[0] < B[0]:
+                    self.classic_bounds[index] = B[0]
+                if A[1] > B[1]:
+                    self.classic_bounds[index] = B[1]
+                index += 1
+                
+            return self.classic_bounds
 
     def get_de_config(self):
 
