@@ -606,7 +606,7 @@ class desgin_specification(object):
                 \[{\alpha _i} > \pi /2\]
 
                 Turns per slot.
-                \[{z_Q} = \frac{{{N_s}}}{{pq}} = \frac{{{N_s}}}{{p\frac{{{Q_s}}}{{2pm}}}} = \frac{{2{N_s}m}}{{{Q_s}}}\]
+                \[{z_Q} = \frac{{{aN_s}}}{{pq}} = \frac{{{aN_s}}}{{p\frac{{{Q_s}}}{{2pm}}}} = \frac{{2{aN_s}m}}{{{Q_s}}}\]
 
                 Total turns in series $N_s$ is derived from desired EMF.
                 \[N = \frac{{\sqrt 2 {E_m}}}{{\omega {k_{w1}}{{\hat \Phi }_m}}} = \frac{{\sqrt 2 {E_m}}}{{\omega {k_{w1}}{\alpha _i}{{\hat B}_\delta }{\tau _p}l'}} \Rightarrow {{\hat B}_\delta } = \frac{{\sqrt 2 {E_m}}}{{\omega {k_{w1}}{\alpha _i}N{\tau _p}l'}}\]
@@ -670,7 +670,7 @@ class desgin_specification(object):
 
         print('\nNumber of parallel branch: $a=%d$' % number_parallel_branch, file=fname)
         print('\nNumber of conductors per slot: $z_Q=%g$'%no_conductors_per_slot_zQ, file=fname)
-        print('\nThe actual number of series coil turns $N_a$ is %d' % (no_series_coil_turns_N/number_parallel_branch), file=fname)
+        # print('\nThe actual number of series coil turns $N_a$ is %d' % (no_series_coil_turns_N/number_parallel_branch), file=fname) # this is wrong concept.
         print('\nAir gap length: $\\delta=%g$ mm' % (air_gap_length_delta*1e3), file=fname)
         print('\n[Guess] Air gap flux density: $B_\\delta=%g$ T' % (self.guess_air_gap_flux_density), file=fname)
 
