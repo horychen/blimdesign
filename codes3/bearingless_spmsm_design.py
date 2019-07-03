@@ -413,14 +413,145 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
 
         return True
 
+    def pre_process(self, app, model):
+        # pre-process : you can select part by coordinate!
+        ''' Group '''
+        def group(name, id_list):
+            model.GetGroupList().CreateGroup(name)
+            for the_id in id_list:
+                model.GetGroupList().AddPartToGroup(name, the_id)
+
+        part_ID_list = model.GetPartIDs()
+        # view = app.View()
+        # view.ClearSelect()
+        # sel = view.GetCurrentSelection()
+        # sel.SelectPart(123)
+        # sel.SetBlockUpdateView(False)
+
+        if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2):
+            msg = 'Number of Parts is unexpected. Should be %d but only %d.\n'%(1 + 1 + 1 + self.Qr + self.Qs*2, len(part_ID_list)) + self.show(toString=True)
+            # utility.send_notification(text=msg)
+            # return msg
+            raise ExceptionBadNumberOfParts(msg)
+
+        id_shaft = part_ID_list[0]
+        id_rotorCore = part_ID_list[1]
+        partIDRange_Cage = part_ID_list[2 : 2+int(self.Qr)]
+        id_statorCore = part_ID_list[3+int(self.Qr)]
+        partIDRange_Coil = part_ID_list[3+int(self.Qr) : 3+int(self.Qr) + int(self.Qs*2)]
+        # partIDRange_AirWithinRotorSlots = part_ID_list[3+int(self.Qr) + int(self.Qs*2) : 3+int(self.Qr) + int(self.Qs*2) + int(self.Qr)]
+
+        # print part_ID_list
+        # print partIDRange_Cage
+        # print partIDRange_Coil
+        # print partIDRange_AirWithinRotorSlots
+        group("Cage", partIDRange_Cage) # 59-44 = 15 = self.Qr - 1
+        group("Coil", partIDRange_Coil) # 107-60 = 47 = 48-1 = self.Qs*2 - 1
+        # group(u"AirWithinRotorSlots", partIDRange_AirWithinRotorSlots) # 123-108 = 15 = self.Qr - 1
+
+
+        ''' Add Part to Set for later references '''
+        def part_set(name, x, y):
+            model.GetSetList().CreatePartSet(name)
+            model.GetSetList().GetSet(name).SetMatcherType("Selection")
+            model.GetSetList().GetSet(name).ClearParts()
+            sel = model.GetSetList().GetSet(name).GetSelection()
+            # print x,y
+            sel.SelectPartByPosition(x,y,0) # z=0 for 2D
+            model.GetSetList().GetSet(name).AddSelected(sel)
+
+        # def edge_set(name,x,y):
+        #     model.GetSetList().CreateEdgeSet(name)
+        #     model.GetSetList().GetSet(name).SetMatcherType(u"Selection")
+        #     model.GetSetList().GetSet(name).ClearParts()
+        #     sel = model.GetSetList().GetSet(name).GetSelection()
+        #     sel.SelectEdgeByPosition(x,y,0) # sel.SelectEdge(741)
+        #     model.GetSetList().GetSet(name).AddSelected(sel)
+        # edge_set(u"AirGapCoast", 0, self.Radius_OuterRotor+0.5*self.Length_AirGap)
+
+        # Create Set for Shaft
+        part_set("ShaftSet", 0.0, 0.0)
+
+        # Create Set for 4 poles Winding
+        R = 0.5*(self.Radius_InnerStatorYoke  +  (self.Radius_OuterRotor+self.Width_StatorTeethHeadThickness+self.Width_StatorTeethNeck)) 
+            # THETA = (0.5*(self.Angle_StatorSlotSpan) -  0.05*(self.Angle_StatorSlotSpan-self.Angle_StatorSlotOpen))/180.*pi
+        THETA = (0.5*(self.Angle_StatorSlotSpan) -  0.05*(self.Angle_StatorSlotSpan-self.Width_StatorTeethBody))/180.*pi
+        X = R*cos(THETA)
+        Y = R*sin(THETA)
+        # l41=[ 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', 'C', 'C', 'A', 'A', 'B', 'B', ]
+        # l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', ]
+        count = 0
+        for UVW, UpDown in zip(self.wily.l41,self.wily.l42):
+            count += 1 
+            part_set("Coil4%s%s %d"%(UVW,UpDown,count), X, Y)
+
+            THETA += self.Angle_StatorSlotSpan/180.*pi
+            X = R*cos(THETA)
+            Y = R*sin(THETA)
+
+        # Create Set for 2 poles Winding
+            # THETA = (0.5*(self.Angle_StatorSlotSpan) +  0.05*(self.Angle_StatorSlotSpan-self.Angle_StatorSlotOpen))/180.*pi
+        THETA = (0.5*(self.Angle_StatorSlotSpan) +  0.05*(self.Angle_StatorSlotSpan-self.Width_StatorTeethBody))/180.*pi
+        X = R*cos(THETA)
+        Y = R*sin(THETA)
+        # l21=[ 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', 'A', 'A', 'B', 'B', 'B', 'B', 'C', 'C', 'C', 'C', 'A', 'A', ]
+        # l22=[ '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', ]
+        count = 0
+        for UVW, UpDown in zip(self.wily.l21,self.wily.l22):
+            count += 1 
+            part_set("Coil2%s%s %d"%(UVW,UpDown,count), X, Y)
+
+            THETA += self.Angle_StatorSlotSpan/180.*pi
+            X = R*cos(THETA)
+            Y = R*sin(THETA)
+
+
+
+        # Create Set for Bars and Air within rotor slots
+        R = self.Location_RotorBarCenter
+                                                                                # Another BUG:对于这种槽型，part_set在将AirWithin添加为set的时候，会错误选择到转子导条上！实际上，AirWithinRotorSlots对于JMAG来说完全是没有必要的！
+        # R_airR = self.Radius_OuterRotor - 0.1*self.Length_HeadNeckRotorSlot # if the airWithin is too big, minus EPS is not enough anymore
+        THETA = pi # it is very important (when Qr is odd) to begin the part set assignment from the first bar you plot.
+        X = R*cos(THETA)
+        Y = R*sin(THETA)
+        list_xy_bars = []
+        # list_xy_airWithinRotorSlot = []
+        for ind in range(int(self.Qr)):
+            natural_ind = ind + 1
+            # print THETA / pi *180
+            part_set("Bar %d"%(natural_ind), X, Y)
+            list_xy_bars.append([X,Y])
+            # # # part_set(u"AirWithin %d"%(natural_ind), R_airR*cos(THETA),R_airR*sin(THETA))
+            # list_xy_airWithinRotorSlot.append([R_airR*cos(THETA),R_airR*sin(THETA)])
+
+            THETA += self.Angle_RotorSlotSpan/180.*pi
+            X = R*cos(THETA)
+            Y = R*sin(THETA)
+
+        # Create Set for Motion Region
+        def part_list_set(name, list_xy, prefix=None):
+            model.GetSetList().CreatePartSet(name)
+            model.GetSetList().GetSet(name).SetMatcherType("Selection")
+            model.GetSetList().GetSet(name).ClearParts()
+            sel = model.GetSetList().GetSet(name).GetSelection() 
+            for xy in list_xy:
+                sel.SelectPartByPosition(xy[0],xy[1],0) # z=0 for 2D
+                model.GetSetList().GetSet(name).AddSelected(sel)
+        # part_list_set(u'Motion_Region', [[0,0],[0,self.Radius_Shaft+EPS]] + list_xy_bars + list_xy_airWithinRotorSlot) 
+        part_list_set('Motion_Region', [[0,0],[0,self.Radius_Shaft+EPS]] + list_xy_bars) 
+
+        # Create Set for Cage
+        model.GetSetList().CreatePartSet("CageSet")
+        model.GetSetList().GetSet("CageSet").SetMatcherType("MatchNames")
+        model.GetSetList().GetSet("CageSet").SetParameter("style", "prefix")
+        model.GetSetList().GetSet("CageSet").SetParameter("text", "Cage")
+        model.GetSetList().GetSet("CageSet").Rebuild()
+
+        return True        
+
     def add_magnetic_transient_study(self, app, model, dir_csv_output_folder, study_name):
-        里这啊！！！
         logger = logging.getLogger(__name__)
         spmsm_variant = self
-        # logger.debug('Slip frequency: %g = ' % (self.the_slip))
-        self.the_slip = slip_freq_breakdown_torque / self.DriveW_Freq
-        # logger.debug('Slip frequency:    = %g???' % (self.the_slip))
-        study_name = tran2tss_study_name
 
         model.CreateStudy("Transient2D", study_name)
         app.SetCurrentStudy(study_name)
@@ -428,21 +559,21 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
 
         # SS-ATA
         study.GetStudyProperties().SetValue("ApproximateTransientAnalysis", 1) # psuedo steady state freq is for PWM drive to use
-        study.GetStudyProperties().SetValue("SpecifySlip", 1)
-        study.GetStudyProperties().SetValue("Slip", self.the_slip) # this will be overwritted later with "slip"
+        study.GetStudyProperties().SetValue("SpecifySlip", 0)
         study.GetStudyProperties().SetValue("OutputSteadyResultAs1stStep", 0)
         # study.GetStudyProperties().SetValue(u"TimePeriodicType", 2) # This is for TP-EEC but is not effective
 
         # misc
         study.GetStudyProperties().SetValue("ConversionType", 0)
         study.GetStudyProperties().SetValue("NonlinearMaxIteration", self.max_nonlinear_iteration)
-        study.GetStudyProperties().SetValue("ModelThickness", self.stack_length) # Stack Length
+        study.GetStudyProperties().SetValue("ModelThickness", 200) # [mm] Stack Length
 
         # Material
         self.add_material(study)
 
         # Conditions - Motion
         study.CreateCondition("RotationMotion", "RotCon") # study.GetCondition(u"RotCon").SetXYZPoint(u"", 0, 0, 1) # megbox warning
+        print('the_speed:', self.the_speed)
         study.GetCondition("RotCon").SetValue("AngularVelocity", int(self.the_speed))
         study.GetCondition("RotCon").ClearParts()
         study.GetCondition("RotCon").AddSet(model.GetSetList().GetSet("Motion_Region"), 0)
@@ -634,7 +765,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         self.study_name = study_name
         return study
 
-    def add_structural_static_study(self):        
+    def add_structural_static_study(self):
         pass
 
     def add_mesh(self, study, model):

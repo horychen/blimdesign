@@ -640,6 +640,7 @@ class FEA_Solver:
                 logger.error('there is no model yet!')
                 raise Exception('why is there no model yet?')
 
+            spmsm_variant.pre_process(app, model)
             study = spmsm_variant.add_magnetic_transient_study(app, model, dir_csv_output_folder, 'TranPMSM')
             self.mesh_study(spmsm_variant, app, model, study)
 

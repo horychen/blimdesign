@@ -333,7 +333,7 @@ class FEMM_Solver(object):
             block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit='r%s'%(self.rotor_phase_name_list[0]), turns=-1) # However, this turns=-1 is not effective for PARALLEL_CONNECTED circuit
 
         # Stator Winding
-        npb = im.wily.number_parallel_branch # DPNV inherent parallel branch number（如果是用双绕组等效DPNV，那么
+        nwl = im.wily.no_winding_layer # number of windign layers 
         if self.flag_static_solver == True: #self.freq == 0: 
             # static solver
             femm.mi_addcircprop('dU', self.dict_stator_current_function[3](0.0), SERIES_CONNECTED)
@@ -346,11 +346,11 @@ class FEMM_Solver(object):
             # if im.fea_config_dict['DPNV_separate_winding_implementation'] == True or im.fea_config_dict['DPNV'] == False:
             if im.fea_config_dict['DPNV'] == False:
                 # either a separate winding or a DPNV winding implemented as a separate winding
-                ampD = im.DriveW_CurrentAmp/npb
+                ampD = im.DriveW_CurrentAmp/nwl
                 ampB = im.BeariW_CurrentAmp
             else:
                 # case: DPNV as an actual two layer winding
-                ampD = im.DriveW_CurrentAmp/npb
+                ampD = im.DriveW_CurrentAmp/nwl
                 ampB = ampD
 
             if im.wily.CommutatingSequenceD == 1:
@@ -398,7 +398,7 @@ class FEMM_Solver(object):
             if fraction == 2:
                 if not (count > im.Qs*0.5+EPS): 
                     continue
-            block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.DriveW_turns/npb*dict_dir[up_or_down])
+            block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.DriveW_zQ/nwl*dict_dir[up_or_down])
 
         # bearing winding's blocks
         if fraction == 1:
@@ -412,7 +412,7 @@ class FEMM_Solver(object):
 
                 # if self.im.fea_config_dict['DPNV'] == True: 
                 # else： # separate winding (e.g., Chiba's)
-                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns/npb*dict_dir[up_or_down])
+                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns/nwl*dict_dir[up_or_down])
 
         elif fraction == 4 or fraction == 2:
             # 危险！FEMM默认把没有设置incircuit的导体都在无限远短接在一起——也就是说，你可能把定子悬浮绕组也短接到鼠笼上去了！
@@ -431,7 +431,7 @@ class FEMM_Solver(object):
                 elif fraction == 2:
                     if not (count > im.Qs*0.5+EPS): 
                         continue
-                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns/npb*dict_dir[up_or_down])
+                block_label(11, 'Copper', (X, Y), MESH_SIZE_COPPER, automesh=self.bool_automesh, incircuit=circuit_name, turns=im.BeariW_turns/nwl*dict_dir[up_or_down])
 
         # Boundary Conditions 
         # femm.mi_makeABC() # open boundary
@@ -1941,7 +1941,7 @@ class FEMM_Solver(object):
         Area_S_slot              = stator_slot_area
         area_copper_S_Cu         = STATOR_SLOT_FILL_FACTOR * Area_S_slot
         a                        = self.im.wily.number_parallel_branch
-        zQ                       = self.im.DriveW_turns
+        zQ                       = self.im.DriveW_zQ
         coil_pitch_yq            = self.im.wily.coil_pitch
         Q                        = self.im.Qs
         # the_radius_m             = 1e-3*(0.5*(self.im.Radius_OuterRotor + self.im.Length_AirGap + self.im.Radius_InnerStatorYoke))
@@ -2032,7 +2032,7 @@ class FEMM_Solver(object):
         # Stator Copper Loss 
         Area_slot                = stator_slot_area
         a                        = im.wily.number_parallel_branch
-        zQ                       = im.DriveW_turns
+        zQ                       = im.DriveW_zQ
         coil_pitch_by_slot_count = im.wily.coil_pitch
         Q                        = im.Qs
         the_radius_m             = 1e-3*(0.5*(im.Radius_OuterRotor + im.Length_AirGap + im.Radius_InnerStatorYoke))

@@ -643,7 +643,7 @@ class desgin_specification(object):
                     if you choose $N=20$, then the air gap B will reduce.
                     and if you choose $N$ value as 16, then the air gap B will increase.
                     %air_gap_flux_density_B=', air_gap_flux_density_B, 'T', '变得比0.8T大了，是因为你减少了匝数取整，反之亦然。'
-                     ''', file=fname)
+                     ''', file=fname) # 2nd ed.@(6.12)
         print('\nSince voltage is%s plenty, the suggested N is %g---modify this manually, if necessary.' \
             % (' NOT' if not bool_we_have_plenty_voltage else '', no_series_coil_turns_N), file=fname)
         # if bool_standard_voltage_rating == True:
@@ -1309,7 +1309,7 @@ class desgin_specification(object):
 
 
         DriveW_poles=self.p*2
-        DriveW_turns=no_conductors_per_slot_zQ
+        DriveW_zQ=no_conductors_per_slot_zQ
         DriveW_CurrentAmp = stator_phase_current_rms * sqrt(2); 
         DriveW_Freq = self.ExcitationFreqSimulated
         if 'Cu' not in self.Coil:
@@ -1323,10 +1323,10 @@ class desgin_specification(object):
             coil_pitch_slot_count = self.winding_layout.coil_pitch # 短距 # self.Qs / DriveW_poles # 整距！
             length_endArcConductor = coil_pitch_slot_count/self.Qs * (0.5*(Radius_OuterRotor + Length_AirGap + Radius_InnerStatorYoke)) * 2*pi # [mm] arc length = pi * diameter  
             length_conductor = (stack_length*1e3 + length_endArcConductor) * 1e-3 # mm to m  ## imagine: two conductors + two end conducotors = one loop (in and out)
-            area_conductor   = (stator_slot_area) * SLOT_FILL_FACTOR / DriveW_turns # TODO: 这里绝缘用槽满率算进去了，但是没有考虑圆形导体之间的空隙？槽满率就是空隙，这里没有考虑绝缘的面积占用。
+            area_conductor   = (stator_slot_area) * SLOT_FILL_FACTOR / DriveW_zQ # TODO: 这里绝缘用槽满率算进去了，但是没有考虑圆形导体之间的空隙？槽满率就是空隙，这里没有考虑绝缘的面积占用。
             # number_parallel_branch = 1
             resistance_per_conductor = rho_Copper * length_conductor / (area_conductor * number_parallel_branch)
-        DriveW_Rs = resistance_per_conductor * DriveW_turns * self.Qs / no_phase_m # resistance per phase
+        DriveW_Rs = resistance_per_conductor * DriveW_zQ * self.Qs / no_phase_m # resistance per phase
         print('DriveW_Rs=', DriveW_Rs, 'Ohm', file=fname)
 
         if True:
@@ -1336,7 +1336,7 @@ class desgin_specification(object):
                 f.write('%f, %f, %f, %f, %f, '      % (Radius_OuterStatorYoke, Radius_InnerStatorYoke, Length_AirGap, Radius_OuterRotor, Radius_Shaft))
                 f.write('%f, %f, %f, %f, %f, %f, '  % (Length_HeadNeckRotorSlot, Radius_of_RotorSlot, Location_RotorBarCenter, Width_RotorSlotOpen, Radius_of_RotorSlot2, Location_RotorBarCenter2))
                 f.write('%f, %f, %f, %f, '          % (Angle_StatorSlotOpen, Width_StatorTeethBody, Width_StatorTeethHeadThickness, Width_StatorTeethNeck))
-                f.write('%f, %f, %f, %f, %f, %f, '  % (DriveW_poles, DriveW_turns, DriveW_Rs, DriveW_CurrentAmp, DriveW_Freq, stack_length*1000))
+                f.write('%f, %f, %f, %f, %f, %f, '  % (DriveW_poles, DriveW_zQ, DriveW_Rs, DriveW_CurrentAmp, DriveW_Freq, stack_length*1000))
                 f.write('%.14f, %.14f, %.14f, '     % (area_stator_slot_Sus, area_rotor_slot_Sur, minimum__area_rotor_slot_Sur)) # this line exports values need to impose constraints among design parameters for the de optimization
                 f.write('%g, %g, %g, %g\n'          % (self.rotor_tooth_flux_density_B_dr, self.stator_tooth_flux_density_B_ds, self.Jr, rotor_tooth_width_b_dr))
 

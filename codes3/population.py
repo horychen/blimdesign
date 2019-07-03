@@ -2762,7 +2762,7 @@ class bearingless_induction_motor_design(object):
             self.Width_StatorTeethNeck           = row[17]
 
             self.DriveW_poles       = row[18]
-            self.DriveW_turns       = row[19] # per slot
+            self.DriveW_zQ       = row[19] # per slot
             self.DriveW_Rs          = row[20]
             self.DriveW_CurrentAmp  = row[21]
             self.DriveW_Freq        = row[22]
@@ -2874,15 +2874,15 @@ class bearingless_induction_motor_design(object):
 
         if self.DriveW_poles == 2:
             self.BeariW_poles = 4
-            if self.DriveW_turns % 2 != 0:
-                print('zQ=', self.DriveW_turns)
+            if self.DriveW_zQ % 2 != 0:
+                print('zQ=', self.DriveW_zQ)
                 raise Exception('This zQ does not suit for two layer winding.')
         elif self.DriveW_poles == 4:
             self.BeariW_poles = 2;
         else:
             raise Exception('Not implemented error.')
-        self.BeariW_turns      = self.DriveW_turns
-        self.BeariW_Rs         = self.DriveW_Rs * self.BeariW_turns / self.DriveW_turns
+        self.BeariW_turns      = self.DriveW_zQ
+        self.BeariW_Rs         = self.DriveW_Rs * self.BeariW_turns / self.DriveW_zQ
         self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975 # extra 2.5% as bearing current
         self.BeariW_Freq       = self.DriveW_Freq
 
@@ -3106,7 +3106,7 @@ class bearingless_induction_motor_design(object):
                 Width_StatorTeethHeadThickness,      # [5]
                 Width_StatorTeethNeck,
                 im.DriveW_poles, 
-                im.DriveW_turns, # turns per slot
+                im.DriveW_zQ, # turns per slot
                 im.DriveW_Rs,    
                 im.DriveW_CurrentAmp * (1.0 - 0.4*im.fea_config_dict['mimic_separate_winding_with_DPNV_winding']),
                 im.DriveW_Freq,
@@ -3882,27 +3882,27 @@ class bearingless_induction_motor_design(object):
         # 这里电流幅值中的0.5因子源自DPNV导致的等于2的平行支路数。没有考虑到这一点，是否会对initial design的有效性产生影响？
         # 仔细看DPNV的接线，对于转矩逆变器，绕组的并联支路数为2，而对于悬浮逆变器，绕组的并联支路数为1。
 
-        npb = self.wily.number_parallel_branch
+        nwl = self.wily.no_winding_layer # number of windign layers 
         # if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False:
         if self.fea_config_dict['DPNV'] == False:
             # either a separate winding or a DPNV winding implemented as a separate winding
-            ampD =  0.5 * (self.DriveW_CurrentAmp/npb + self.BeariW_CurrentAmp) # 为了代码能被四极电机和二极电机通用，代入看看就知道啦。
-            ampB = -0.5 * (self.DriveW_CurrentAmp/npb - self.BeariW_CurrentAmp) # 关于符号，注意下面的DriveW对应的circuit调用时的ampB前还有个负号！
+            ampD =  0.5 * (self.DriveW_CurrentAmp/nwl + self.BeariW_CurrentAmp) # 为了代码能被四极电机和二极电机通用，代入看看就知道啦。
+            ampB = -0.5 * (self.DriveW_CurrentAmp/nwl - self.BeariW_CurrentAmp) # 关于符号，注意下面的DriveW对应的circuit调用时的ampB前还有个负号！
             if bool_3PhaseCurrentSource != True:
                 raise Exception('Logic Error Detected.')
         else:
             # case: DPNV as an actual two layer winding
-            ampD = self.DriveW_CurrentAmp/npb
+            ampD = self.DriveW_CurrentAmp/nwl
             ampB = self.BeariW_CurrentAmp
             if bool_3PhaseCurrentSource != False:
                 raise Exception('Logic Error Detected.')
 
-        circuit(self.DriveW_poles,  self.DriveW_turns/npb, bool_3PhaseCurrentSource=bool_3PhaseCurrentSource,
+        circuit(self.DriveW_poles,  self.DriveW_zQ/nwl, bool_3PhaseCurrentSource=bool_3PhaseCurrentSource,
             Rs=self.DriveW_Rs,ampD= ampD,
                               ampB=-ampB, freq=self.DriveW_Freq, phase=0,
                               CommutatingSequenceD=self.wily.CommutatingSequenceD,
                               CommutatingSequenceB=self.wily.CommutatingSequenceB)
-        circuit(self.BeariW_poles,  self.BeariW_turns/npb, bool_3PhaseCurrentSource=bool_3PhaseCurrentSource,
+        circuit(self.BeariW_poles,  self.BeariW_turns/nwl, bool_3PhaseCurrentSource=bool_3PhaseCurrentSource,
             Rs=self.BeariW_Rs,ampD= ampD,
                               ampB=+ampB, freq=self.BeariW_Freq, phase=0,
                               CommutatingSequenceD=self.wily.CommutatingSequenceD,
@@ -4616,8 +4616,8 @@ class bearingless_induction_motor_design(object):
                 print(set_name_list)
                 for set_name in set_name_list:
                     condition.AddSet(model.GetSetList().GetSet(set_name), 0) # 0: group
-        create_stator_current_conditions(self.DriveW_turns, ["Coil4A-","Coil4B-","Coil4C-","Coil4A+","Coil4B+","Coil4C+"])
-        create_stator_current_conditions(self.DriveW_turns, ["Coil2A-","Coil2B-","Coil2C-","Coil2A+","Coil2B+","Coil2C+"])
+        create_stator_current_conditions(self.DriveW_zQ, ["Coil4A-","Coil4B-","Coil4C-","Coil4A+","Coil4B+","Coil4C+"])
+        create_stator_current_conditions(self.DriveW_zQ, ["Coil2A-","Coil2B-","Coil2C-","Coil2A+","Coil2B+","Coil2C+"])
 
     def add_rotor_current_condition_obsolete_slow_version(self, app, model, study, total_number_of_cases, eddy_current_circuit_current_csv_file): # r'D:\Users\horyc\OneDrive - UW-Madison\csv\Freq_#4_circuit_current.csv'
 

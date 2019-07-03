@@ -1542,7 +1542,7 @@ if __name__ == '!__main__':
 # winding diagram for four pole dpnv motor
 if __name__ == '__main__':
 
-    bool_4pole_2pole = True
+    bool_4pole_2pole = False
 
     # generate the dict of list: dl
     if bool_4pole_2pole: # 4 pole motor
