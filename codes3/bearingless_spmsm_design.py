@@ -428,6 +428,9 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         # sel.SelectPart(123)
         # sel.SetBlockUpdateView(False)
 
+        print(part_ID_list)
+        raise KeyboardInterrupt
+
         if len(part_ID_list) != int(1 + 1 + 1 + self.Qr + self.Qs*2):
             msg = 'Number of Parts is unexpected. Should be %d but only %d.\n'%(1 + 1 + 1 + self.Qr + self.Qs*2, len(part_ID_list)) + self.show(toString=True)
             # utility.send_notification(text=msg)
