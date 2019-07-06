@@ -333,6 +333,7 @@ class FEMM_Solver(object):
             block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit='r%s'%(self.rotor_phase_name_list[0]), turns=-1) # However, this turns=-1 is not effective for PARALLEL_CONNECTED circuit
 
         # Stator Winding
+        npb = self.number_parallel_branch
         nwl = im.wily.no_winding_layer # number of windign layers 
         if self.flag_static_solver == True: #self.freq == 0: 
             # static solver
@@ -346,11 +347,11 @@ class FEMM_Solver(object):
             # if im.fea_config_dict['DPNV_separate_winding_implementation'] == True or im.fea_config_dict['DPNV'] == False:
             if im.fea_config_dict['DPNV'] == False:
                 # either a separate winding or a DPNV winding implemented as a separate winding
-                ampD = im.DriveW_CurrentAmp/nwl
+                ampD = im.DriveW_CurrentAmp/npb
                 ampB = im.BeariW_CurrentAmp
             else:
                 # case: DPNV as an actual two layer winding
-                ampD = im.DriveW_CurrentAmp/nwl
+                ampD = im.DriveW_CurrentAmp/npb
                 ampB = ampD
 
             if im.wily.CommutatingSequenceD == 1:

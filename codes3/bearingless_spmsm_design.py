@@ -243,6 +243,9 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         mm_d_rp                  = free_variables[11]
         mm_d_rs                  = free_variables[12]
 
+        print('TIA ITEC: Sleeve length is fixed to 3 mm')
+        sleeve_length = free_variables[5] = 3
+
         if mm_d_rp > mm_d_pm:
             mm_d_rp = mm_d_pm
             free_variables[11] = free_variables[6]
@@ -464,7 +467,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         toolJd.iRotateCopy = self.coils.stator_core.Q
         region4 = toolJd.prepareSection(list_regions)
 
-        variant_DriveW_CurrentAmp = self.coils.slot_area * self.Js*1e-6 * self.fill_factor        
+        variant_DriveW_CurrentAmp = self.coils.slot_area * self.Js*1e-6 * self.fill_factor
         self.DriveW_CurrentAmp = variant_DriveW_CurrentAmp ########### will be assisned when drawing the coils
         self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975 # extra 2.5% as bearing current
         print('---Variant CurrentAmp:', variant_DriveW_CurrentAmp)
@@ -545,12 +548,12 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
 
         # Create Set for 4 poles Winding
         Angle_StatorSlotSpan = 360/self.Q
-        R = self.mm_r_si + self.mm_d_sp + self.mm_d_st *0.5
-        THETA = 0.25*(Angle_StatorSlotSpan)/180.*np.pi
+        # R = self.mm_r_si + self.mm_d_sp + self.mm_d_st *0.5 # this is not generally working (JMAG selects stator core instead.)
+        # THETA = 0.25*(Angle_StatorSlotSpan)/180.*np.pi
+        R = np.sqrt(self.coils.PCoil[0]**2 + self.coils.PCoil[1]**2)
+        THETA = np.arctan(self.coils.PCoil[1]/self.coils.PCoil[0])
         X = R*np.cos(THETA)
         Y = R*np.sin(THETA)
-        # print(self.shaft.PCoil)
-        # raise KeyboardInterrupt
         count = 0
         for UVW, UpDown in zip(self.wily.l41,self.wily.l42):
             count += 1 
@@ -562,7 +565,8 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             Y = R*np.sin(THETA)
 
         # Create Set for 2 poles Winding
-        THETA = 0.75*(Angle_StatorSlotSpan)/180.*np.pi
+        # THETA = 0.75*(Angle_StatorSlotSpan)/180.*np.pi # 这里这个角度的选择，决定了悬浮绕组产生悬浮力的方向！！！！！
+        THETA = -np.arctan(self.coils.PCoil[1]/self.coils.PCoil[0]) + 360/self.Q
         X = R*np.cos(THETA)
         Y = R*np.sin(THETA)
         count = 0
@@ -968,17 +972,18 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         # 这里电流幅值中的0.5因子源自DPNV导致的等于2的平行支路数。没有考虑到这一点，是否会对initial design的有效性产生影响？
         # 仔细看DPNV的接线，对于转矩逆变器，绕组的并联支路数为2，而对于悬浮逆变器，绕组的并联支路数为1。
 
+        npb = self.number_parallel_branch
         nwl = self.wily.no_winding_layer # number of windign layers 
         # if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False:
         if self.fea_config_dict['DPNV'] == False:
             # either a separate winding or a DPNV winding implemented as a separate winding
-            ampD =  0.5 * (self.DriveW_CurrentAmp/nwl + self.BeariW_CurrentAmp) # 为了代码能被四极电机和二极电机通用，代入看看就知道啦。
-            ampB = -0.5 * (self.DriveW_CurrentAmp/nwl - self.BeariW_CurrentAmp) # 关于符号，注意下面的DriveW对应的circuit调用时的ampB前还有个负号！
+            ampD =  0.5 * (self.DriveW_CurrentAmp/npb + self.BeariW_CurrentAmp) # 为了代码能被四极电机和二极电机通用，代入看看就知道啦。
+            ampB = -0.5 * (self.DriveW_CurrentAmp/npb - self.BeariW_CurrentAmp) # 关于符号，注意下面的DriveW对应的circuit调用时的ampB前还有个负号！
             if bool_3PhaseCurrentSource != True:
                 raise Exception('Logic Error Detected.')
         else:
             # case: DPNV as an actual two layer winding
-            ampD = self.DriveW_CurrentAmp/nwl
+            ampD = self.DriveW_CurrentAmp/npb
             ampB = self.BeariW_CurrentAmp
             if bool_3PhaseCurrentSource != False:
                 raise Exception('Logic Error Detected.')

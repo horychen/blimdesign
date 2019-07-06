@@ -3883,17 +3883,18 @@ class bearingless_induction_motor_design(object):
         # 这里电流幅值中的0.5因子源自DPNV导致的等于2的平行支路数。没有考虑到这一点，是否会对initial design的有效性产生影响？
         # 仔细看DPNV的接线，对于转矩逆变器，绕组的并联支路数为2，而对于悬浮逆变器，绕组的并联支路数为1。
 
+        npb = self.number_parallel_branch
         nwl = self.wily.no_winding_layer # number of windign layers 
         # if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False:
         if self.fea_config_dict['DPNV'] == False:
             # either a separate winding or a DPNV winding implemented as a separate winding
-            ampD =  0.5 * (self.DriveW_CurrentAmp/nwl + self.BeariW_CurrentAmp) # 为了代码能被四极电机和二极电机通用，代入看看就知道啦。
-            ampB = -0.5 * (self.DriveW_CurrentAmp/nwl - self.BeariW_CurrentAmp) # 关于符号，注意下面的DriveW对应的circuit调用时的ampB前还有个负号！
+            ampD =  0.5 * (self.DriveW_CurrentAmp/npb + self.BeariW_CurrentAmp) # 为了代码能被四极电机和二极电机通用，代入看看就知道啦。
+            ampB = -0.5 * (self.DriveW_CurrentAmp/npb - self.BeariW_CurrentAmp) # 关于符号，注意下面的DriveW对应的circuit调用时的ampB前还有个负号！
             if bool_3PhaseCurrentSource != True:
                 raise Exception('Logic Error Detected.')
         else:
             # case: DPNV as an actual two layer winding
-            ampD = self.DriveW_CurrentAmp/nwl
+            ampD = self.DriveW_CurrentAmp/npb
             ampB = self.BeariW_CurrentAmp
             if bool_3PhaseCurrentSource != False:
                 raise Exception('Logic Error Detected.')
