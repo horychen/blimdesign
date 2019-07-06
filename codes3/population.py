@@ -13,7 +13,8 @@ import FEMM_Solver
 
 from time import time as clock_time
 
-from pyrhonen_procedure_as_function import get_material_data, winding_layout
+from pyrhonen_procedure_as_function import get_material_data
+import winding_layout
 
 EPS = 1e-2 # unit: mm
 
@@ -2793,7 +2794,7 @@ class bearingless_induction_motor_design(object):
 
         #05 Windings & Excitation
         if self.fea_config_dict is not None:
-            self.wily = winding_layout(self.fea_config_dict['DPNV'], self.Qs, self.DriveW_poles/2)
+            self.wily = winding_layout.winding_layout(self.fea_config_dict['DPNV'], self.Qs, self.DriveW_poles/2)
 
         # if self.fea_config_dict is not None:
         #     if self.fea_config_dict['DPNV'] == False: 

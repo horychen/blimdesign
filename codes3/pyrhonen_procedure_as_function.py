@@ -1356,6 +1356,11 @@ class desgin_specification(object):
             self.pmsm_template.stack_length      = im_template.stack_length 
             self.pmsm_template.wily              = im_template.wily # winding_layout.winding_layout(fea_config_dict['DPNV'], self.Qs, self.p)
 
+            # Specification details:
+            #         # 让儿子能访问爸爸
+            self.pmsm_template.spec = self
+
+
             # free_variables = [None]*13
             # # inherit the stator of IM for the PMSM
             # deg_alpha_st             = free_variables[0]  = 

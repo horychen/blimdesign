@@ -606,6 +606,8 @@ class FEA_Solver:
                                             counter=counter,
                                             counter_loop=counter_loop
                                             )
+
+        spmsm_variant.spec = spmsm_template.spec
         self.spmsm_variant = spmsm_variant
 
         # print('------------------Js = %g'%(spmsm_variant.Js))
@@ -627,10 +629,8 @@ class FEA_Solver:
             # def draw_jmag_bpmsm():
             import JMAG
             toolJd = JMAG.JMAG(self.fea_config_dict)
-            project_name          = 'proj%d'%(0)
-            expected_project_file_path = './' + "%s.jproj"%(project_name)
 
-            toolJd.open(expected_project_file_path)
+            toolJd.open(self.expected_project_file)
             DRAW_SUCCESS = spmsm_variant.draw_spmsm(toolJd)
             if DRAW_SUCCESS != 1:
                 raise Exception('Drawer failed.')
@@ -670,17 +670,17 @@ class FEA_Solver:
         else:
             raise Exception('results_to_be_unpacked is None.')
 
-    def fea_bearingless_induction(self, acm_template, x_denorm, counter, counter_loop):
+    def fea_bearingless_induction(self, im_template, x_denorm, counter, counter_loop):
         logger = logging.getLogger(__name__)
         print('Run FEA for individual #%d'%(counter))
 
         # get local design variant
-        im_variant = population.bearingless_induction_motor_design.local_design_variant(acm_template, 0, counter, x_denorm)
+        im_variant = population.bearingless_induction_motor_design.local_design_variant(im_template, 0, counter, x_denorm)
         if counter_loop == 1:
             im_variant.name = 'ind%d'%(counter)
         else:
             im_variant.name = 'ind%d-redo%d'%(counter, counter_loop)
-        im_variant.spec = acm_template.spec
+        im_variant.spec = im_template.spec
         self.im_variant = im_variant
         self.femm_solver = FEMM_Solver.FEMM_Solver(self.im_variant, flag_read_from_jmag=False, freq=50) # eddy+static
         im = None
@@ -972,6 +972,100 @@ class FEA_Solver:
         app.View().Pan(-im_variant.Radius_OuterRotor, 0)
         app.ExportImageWithSize(self.output_dir + model.GetName() + '.png', 2000, 2000)
         app.View().ShowModel() # 1st btn. close mesh view, and note that mesh data will be deleted if only ouput table results are selected.
+
+    def get_copper_loss_Bolognani(self, stator_slot_area, rotor_slot_area=None, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, TORQUE_CURRENT_RATIO=0.975): 
+        # make sure these two values 
+        # space_factor_kCu = SLOT_FILL_FACTOR in Pyrhonen09 design
+        # space_factor_kAl = 1 in Pyrhonen09 design
+        # as well as temperature
+        #   TEMPERATURE_OF_COIL: temperature increase, degrees C
+        #   Here, by conductor it means the parallel branch (=1) is considered, and number_of_coil_per_slot = 8 (and will always be 8, see example below).
+        #   Just for example, if parallel branch is 2, number_of_coil_per_slot will still be 8, even though we cut the motor in half and count there will be 16 wire cross-sections,
+        #   because the reduction in resistance due to parallel branch will be considered into the variable resistance_per_coil.
+        #   Remember that the number_of_coil_per_slot (in series) is limited by the high back EMF rather than slot area.
+        rho_Copper = (3.76*TEMPERATURE_OF_COIL+873)*1e-9/55. # resistivity
+
+        air_gap_length_delta     = self.im.design_parameters[0]*1e-3 # m
+
+        # http://127.0.0.1:4000/tech/ECCE-2019-Documentation/
+
+        ################################################################
+        # Stator Copper Loss 
+        ################################################################
+        tooth_width_w_t          = self.im.design_parameters[1]*1e-3 # m
+        Area_S_slot              = stator_slot_area
+        area_copper_S_Cu         = STATOR_SLOT_FILL_FACTOR * Area_S_slot
+        a                        = self.im.wily.number_parallel_branch
+        zQ                       = self.im.DriveW_zQ
+        coil_pitch_yq            = self.im.wily.coil_pitch
+        Q                        = self.im.Qs
+        # the_radius_m             = 1e-3*(0.5*(self.im.Radius_OuterRotor + self.im.Length_AirGap + self.im.Radius_InnerStatorYoke))
+        stack_length_m           = 1e-3*self.im.stack_length
+        # number_of_phase          = 3
+        # Ns                       = zQ * self.im.Qs / (2 * number_of_phase * a) # 3 phase winding
+        # density_of_copper        = 8960 
+        # k_R                      = 1 # AC resistance factor
+        current_rms_value        = self.im.DriveW_CurrentAmp / 1.4142135623730951 * (1./TORQUE_CURRENT_RATIO) # for one phase
+        # Area_conductor_Sc        = Area_S_slot * STATOR_SLOT_FILL_FACTOR / zQ
+
+        Js = (current_rms_value/a) * zQ / area_copper_S_Cu # 逆变器电流current_rms_value在流入电机时，
+                                                           # 受到并联支路分流，(current_rms_value/a)才是实际导体中流动的电流值，
+                                                           # 这样的电流在一个槽内有zQ个，所以Islot=(current_rms_value/a) * zQ
+                                                           # 槽电流除以槽内铜的面积，就是电流密度
+
+        stator_inner_diameter_D = 2*(air_gap_length_delta + self.im.Radius_OuterRotor*1e-3)
+        slot_height_h_t = 0.5*(self.im.stator_yoke_diameter_Dsyi - stator_inner_diameter_D)
+        slot_pitch_pps = np.pi * (stator_inner_diameter_D + slot_height_h_t) / Q
+        kov = 1.8 # \in [1.6, 2.0]
+        end_winding_length_Lew = np.pi*0.5 * (slot_pitch_pps + tooth_width_w_t) + slot_pitch_pps*kov * (coil_pitch_yq - 1)
+
+        Vol_Cu = area_copper_S_Cu * (stack_length_m + end_winding_length_Lew) * Q
+        stator_copper_loss = rho_Copper * Vol_Cu * Js**2
+
+        Vol_Cu_along_stack = area_copper_S_Cu * (end_winding_length_Lew) * Q
+        stator_copper_loss_along_stack = rho_Copper * Vol_Cu_along_stack * Js**2
+
+        print('Stator current [Arms]:', current_rms_value, 'Js:', Js)
+
+        if rotor_slot_area is not None:
+            ################################################################
+            # Rotor Copper Loss
+            ################################################################
+            tooth_width_w_t          = self.im.design_parameters[2]*1e-3 # m
+            Area_S_slot              = rotor_slot_area
+            area_copper_S_Cu         = ROTOR_SLOT_FILL_FACTOR * Area_S_slot
+            a                        = 1
+            zQ                       = 1
+            coil_pitch_yq            = self.im.Qr/self.im.DriveW_poles
+            Q                        = self.im.Qr
+            # the_radius_m             = 1e-3*(self.im.Radius_OuterRotor - self.im.Radius_of_RotorSlot)
+            stack_length_m           = 1e-3*self.im.stack_length
+            # number_of_phase          = self.im.Qr/self.im.DriveW_poles
+            # Ns                       = zQ * self.im.Qr / (2 * number_of_phase * a) # turns in series = 2 for 4 pole winding; = 1 for 2 pole winding
+            # density_of_copper        = 8960 
+            # k_R                      = 1 # AC resistance factor
+            current_rms_value = sum(self.list_rotor_current_amp) / ( 1.4142135623730951 * len(self.list_rotor_current_amp) )
+            # Area_conductor_Sc        = Area_S_slot * ROTOR_SLOT_FILL_FACTOR / zQ        
+            Jr = (current_rms_value/a) * zQ / area_copper_S_Cu # 逆变器电流current_rms_value在流入电机时，
+
+
+            rotor_outer_diameter_Dor = 2*(self.im.Radius_OuterRotor*1e-3)
+            slot_height_h_t = self.im.rotor_slot_height_h_sr
+            slot_pitch_pps = np.pi * (rotor_outer_diameter_Dor - slot_height_h_t) / Q
+            kov = 1.6 
+            end_winding_length_Lew = np.pi*0.5 * (slot_pitch_pps + tooth_width_w_t) + slot_pitch_pps*kov * (coil_pitch_yq - 1)
+
+            Vol_Cu = area_copper_S_Cu * (stack_length_m + end_winding_length_Lew) * Q
+            rotor_copper_loss = rho_Copper * Vol_Cu * Jr**2
+
+            Vol_Cu_along_stack = area_copper_S_Cu * (end_winding_length_Lew) * Q
+            rotor_copper_loss_along_stack = rho_Copper * Vol_Cu_along_stack * Jr**2
+            print('Rotor current [Arms]:', current_rms_value, 'Jr:', Jr)
+        else:
+            rotor_copper_loss, rotor_copper_loss_along_stack, Jr = 0, 0, 0
+
+        return stator_copper_loss, rotor_copper_loss, stator_copper_loss_along_stack, rotor_copper_loss_along_stack, Js, Jr
+
 
 class acm_designer(object):
     def __init__(self, fea_config_dict, spec):

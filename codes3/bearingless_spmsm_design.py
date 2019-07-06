@@ -2,6 +2,7 @@ import CrossSectInnerNotchedRotor
 import CrossSectStator
 import Location2D
 import winding_layout
+from pyrhonen_procedure_as_function import get_material_data
 import numpy as np
 import logging
 import utility
@@ -180,6 +181,16 @@ class bearingless_spmsm_template(object):
         # >= 0
         # r_ri + L_g
 
+
+
+    def get_rotor_volume(self):
+        return np.pi*(self.Radius_OuterRotor*1e-3)**2 * (self.stack_length*1e-3)
+
+    def get_rotor_weight(self, gravity=9.8):
+        material_density_rho = get_material_data()[0]
+        return gravity * self.get_rotor_volume() * material_density_rho # steel 7860 or 8050 kg/m^3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
+
+
 class bearingless_spmsm_design(bearingless_spmsm_template):
 
     def __init__(self, spmsm_template=None, free_variables=None, counter=None, counter_loop=None):
@@ -285,6 +296,11 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
 
         # obsolete variable from IM
         self.Radius_OuterRotor = rotor_steel_outer_radius  + (mm_d_pm - mm_d_rp) # the outer radius of the rotor with magnet / the magnet
+        self.Length_AirGap = self.fixed_air_gap_length
+        self.ID = 'p%gs%g'%(self.p,self.s)
+        self.number_current_generation = 0
+        self.individual_index = counter
+
 
         self.rotorCore = CrossSectInnerNotchedRotor.CrossSectInnerNotchedRotor(
                             name = 'NotchedRotor',
@@ -613,7 +629,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         study.GetCondition("RotCon").AddSet(model.GetSetList().GetSet("Motion_Region"), 0)
         # d-axis initial position is self.deg_alpha_rm*0.5
         # The U-phase current is sin(omega_syn*t) = 0 at t=0.
-        study.GetCondition("RotCon").SetValue(u"InitialRotationAngle", -self.deg_alpha_rm*0.5 + 90 + self.wily.initial_excitation_bias_compensation_deg)
+        study.GetCondition("RotCon").SetValue(u"InitialRotationAngle", -self.deg_alpha_rm*0.5 + 90 + self.wily.initial_excitation_bias_compensation_deg + (180/self.p)) # add 360/(2p) deg to reverse the initial magnetizing direction to make torque positive.
 
 
         study.CreateCondition("Torque", "TorCon") # study.GetCondition(u"TorCon").SetXYZPoint(u"", 0, 0, 0) # megbox warning
@@ -663,11 +679,11 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             refarray[0][0] = 0
             refarray[0][1] =    1
             refarray[0][2] =        50
-            refarray[1][0] = 1.0/self.DriveW_Freq #0.5 for 17.1.03l # 1 for 17.1.02y
-            refarray[1][1] =    2 * number_of_steps_2ndTTS                          # 16 for 17.1.03l #32 for 17.1.02y
+            refarray[1][0] = 0.5/self.DriveW_Freq #0.5 for 17.1.03l # 1 for 17.1.02y
+            refarray[1][1] =    1 * number_of_steps_2ndTTS                          # 16 for 17.1.03l #32 for 17.1.02y
             refarray[1][2] =        50
             DM.GetDataSet("SectionStepTable").SetTable(refarray)
-            number_of_total_steps = 1 + 2 * number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
+            number_of_total_steps = 1 + number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
             study.GetStep().SetValue("Step", number_of_total_steps)
             study.GetStep().SetValue("StepType", 3)
             study.GetStep().SetTableProperty("Division", DM.GetDataSet("SectionStepTable"))
@@ -1105,6 +1121,13 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             return ''
         else:
             return '\n- Bearingless PMSM Individual #%s\n\t' % (self.name) + ', \n\t'.join("%s = %s" % item for item in tuple_list)
+
+    def get_individual_name(self):
+        if self.fea_config_dict['flag_optimization'] == True:
+            return "ID%s" % (self.ID)
+        else:
+            return "%s_ID%s" % (self.model_name_prefix, self.ID)
+
 
 # circumferential segmented rotor 
 if __name__ == '__main__':

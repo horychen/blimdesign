@@ -1154,7 +1154,10 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             raise e
         # enablePrint()
     else:
-        s, r = None, None
+        import acm_designer
+        # s, r, sAlongStack, rAlongStack, Js, Jr = acm_designer.FEA_Solver.get_copper_loss_Bolognani(femm_solver.stator_slot_area, femm_solver.rotor_slot_area)
+        # stator_slot_area
+        s, r, sAlongStack, rAlongStack, Js, Jr = 0, 0, 0, 0, 0, 0
 
     dm = data_manager()
     dm.basic_info     = basic_info
