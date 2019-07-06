@@ -1136,7 +1136,7 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
     effective_part = rotor_copper_loss_list[:int(0.5*fea_config_dict['number_of_steps_2ndTTS'])] # number_of_steps_2ndTTS = steps for half peirod
     rotor_copper_loss = sum(effective_part) / len(effective_part)
 
-    if fea_config_dict['jmag_run_list'][0] == 0:
+    if fea_config_dict['jmag_run_list'][0] == 0 and femm_solver is not None:
         # blockPrint()
         try:
             # convert rotor current results (complex number) into its amplitude

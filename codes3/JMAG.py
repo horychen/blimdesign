@@ -129,9 +129,6 @@ class JMAG(object): #< ToolBase & DrawerBase & MakerExtrudeBase & MakerRevolveBa
             return [line], [A,B]
 
     def drawArc(self, centerxy, startxy, endxy, returnVertexName=False):
-        # DRAWARC Draw an arc in the current XFEMM document.
-        #    drawarc(mn, [center_x,_y], [start_x, _y], [end_x, _y])
-        #        draws an arc
         
         if self.sketch is None:
             self.sketch = self.getSketch(0)
@@ -147,6 +144,20 @@ class JMAG(object): #< ToolBase & DrawerBase & MakerExtrudeBase & MakerRevolveBa
             return [arc]
         else:
             return [arc], [A,B,C]
+
+    def drawCircle(self, centerxy, radius, returnVertexName=False):
+        
+        if self.sketch is None:
+            self.sketch = self.getSketch(0)
+            self.sketch.OpenSketch()
+        
+        # A = self.sketch.CreateVertex(centerxy[0], centerxy[1])
+        arc = self.sketch.CreateCircle(centerxy[0], centerxy[1], radius)
+
+        if returnVertexName==False:
+            return [arc]
+        else:
+            return [arc], [A]
 
     def checkGeomApp(self):
         if self.geomApp is None:
@@ -181,7 +192,7 @@ class JMAG(object): #< ToolBase & DrawerBase & MakerExtrudeBase & MakerRevolveBa
         self.sketch.OpenSketch()
         return self.sketch
     
-    def prepareSection(self, list_regions): # csToken is a list of cross section's token
+    def prepareSection(self, list_regions, bMirrorMerge=True, bRotateMerge=True): # csToken is a list of cross section's token
 
         list_region_objects = []
         for idx, list_segments in enumerate(list_regions):
@@ -207,14 +218,14 @@ class JMAG(object): #< ToolBase & DrawerBase & MakerExtrudeBase & MakerRevolveBa
             # Mirror
             if self.bMirror == True:
                 if self.edge4Ref is None:
-                    self.regionMirrorCopy(region_object, edge4Ref=None, symmetryType=2, bMerge=True) # symmetryType=2 means x-axis as ref
+                    self.regionMirrorCopy(region_object, edge4Ref=None, symmetryType=2, bMerge=bMirrorMerge) # symmetryType=2 means x-axis as ref
                 else:
-                    self.regionMirrorCopy(region_object, edge4Ref=self.edge4ref, symmetryType=None, bMerge=True) # symmetryType=2 means x-axis as ref
+                    self.regionMirrorCopy(region_object, edge4Ref=self.edge4ref, symmetryType=None, bMerge=bMirrorMerge) # symmetryType=2 means x-axis as ref
 
             # RotateCopy
             if self.iRotateCopy != 0:
                 # print('Copy', self.iRotateCopy)
-                self.regionCircularPattern360Origin(region_object, self.iRotateCopy, bMerge=True)
+                self.regionCircularPattern360Origin(region_object, self.iRotateCopy, bMerge=bRotateMerge)
 
         self.sketch.CloseSketch()
         return list_region_objects

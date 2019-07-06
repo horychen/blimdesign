@@ -32,7 +32,7 @@ class CrossSectInnerNotchedRotor(object):
         self.location = location         # move this part to another location other than origin (not supported yet)
 
         # Validate that magnet spans only one pole pitch  
-        if self.deg_alpha_rm>=(180/self.p):
+        if self.deg_alpha_rm>(180/self.p):
             raise Exception('Invalid alpha_rm. Check that it is less than 180/p')
 
         if self.s>1:
@@ -67,6 +67,7 @@ class CrossSectInnerNotchedRotor(object):
         s        = self.s
         alpha_rp = 2*np.pi/(2*p) # pole span
 
+
         P1 = [r_ri, 0]
 
         r_P2 = r_ri + d_ri + d_rp
@@ -87,13 +88,24 @@ class CrossSectInnerNotchedRotor(object):
             # Then P6 is an extra point for a full rotor
             P6 = [r_ri*cos(alpha_P5), r_ri*-sin(alpha_P5)]
 
-            list_segments += drawer.drawLine(P1, P2)
-            list_segments += drawer.drawArc([0,0], P3, P2)
-            list_segments += drawer.drawLine(P3, P4)
-            list_segments += drawer.drawArc([0,0], P5, P4)
-            list_segments += drawer.drawLine(P5, P6)
-            list_segments += drawer.drawArc([0,0], P6, P1)
+            if self.deg_alpha_rm >= 180/p*0.999:
+                print('FULL POLE PITCH MAGNET IS USED.\n'*3)
+                P1p5 = [P2[0] - d_rp, P2[1]]
+                list_segments += drawer.drawLine(P1, P1p5)
+                list_segments += drawer.drawArc([0,0], P5, P1p5)
+                list_segments += drawer.drawLine(P5, P6)
+                list_segments += drawer.drawArc([0,0], P6, P1)
+            else:
+                list_segments += drawer.drawLine(P1, P2)
+                list_segments += drawer.drawArc([0,0], P3, P2)
+                list_segments += drawer.drawLine(P3, P4)
+                list_segments += drawer.drawArc([0,0], P5, P4)
+                list_segments += drawer.drawLine(P5, P6)
+                list_segments += drawer.drawArc([0,0], P6, P1)
         else:
+            if alpha_rm == 180/p*0.999:
+                print('WARNING: NOT TESTED FULL POLE PITCH MAGNET WHEN s>1.')
+
             alpha_notch  = (alpha_rm - s*alpha_rs) / (s-1) # 永磁体占的弧度
             P5
 
@@ -156,7 +168,6 @@ class CrossSectInnerNotchedMagnet(object):
         self.name = name
         self.color = color
         self.notched_rotor = notched_rotor
-
 
     def draw(self, drawer):
 
@@ -264,6 +275,7 @@ class CrossSectSleeve(object):
         r_ri  = self.notched_magnet.notched_rotor.mm_r_ri
         d_ri  = self.notched_magnet.notched_rotor.mm_d_ri
         d_pm  = self.notched_magnet.notched_rotor.mm_d_pm
+        p     = self.notched_magnet.notched_rotor.p
 
         r_or = r_ri + d_ri + d_pm 
         d_sleeve = self.d_sleeve
@@ -271,8 +283,11 @@ class CrossSectSleeve(object):
         P1 = [r_or, 0]
         P2 = [r_or+d_sleeve, 0]
 
-        P3 = [P1[1], -P1[0]]
-        P4 = [P2[1], -P2[0]]
+        P3 = [P1[0]*cos(np.pi/p), P1[1]*-sin(np.pi/p)]
+        P4 = [P2[0]*cos(np.pi/p), P2[1]*-sin(np.pi/p)]
+
+        # P3 = [P1[1], -P1[0]] # Rotate 90 deg
+        # P4 = [P2[1], -P2[0]] # Rotate 90 deg
 
         list_regions = []
         list_segments = []
@@ -284,6 +299,45 @@ class CrossSectSleeve(object):
         list_regions.append(list_segments)
         list_segments = []
         # raise
+
+        return list_regions # csToken # cross section token
+
+class CrossSectShaft(object):
+    def __init__(self, 
+                    name = 'Shaft',
+                    color = '#0EE0E2',
+                    notched_rotor = None,
+                    ):
+        self.name = name
+        self.color = color
+        self.notched_rotor = notched_rotor
+
+    def draw(self, drawer):
+
+        drawer.getSketch(self.name, self.color)
+
+        d_pm     = self.notched_rotor.mm_d_pm
+        alpha_rm = self.notched_rotor.deg_alpha_rm * np.pi/180
+        alpha_rs = self.notched_rotor.deg_alpha_rs * np.pi/180
+        r_ri     = self.notched_rotor.mm_r_ri
+        d_ri     = self.notched_rotor.mm_d_ri
+        d_rp     = self.notched_rotor.mm_d_rp
+        d_rs     = self.notched_rotor.mm_d_rs
+        p        = self.notched_rotor.p
+        s        = self.notched_rotor.s
+        alpha_rp = 2*np.pi/(2*p) # pole span
+
+        P1 = [r_ri, 0]
+        NP1 = [-r_ri, 0]
+
+        list_regions = []
+        list_segments = []
+        if True:
+            list_segments += drawer.drawArc([0,0], NP1, P1)
+            list_segments += drawer.drawArc([0,0], P1, NP1)
+
+            list_regions.append(list_segments)
+            list_segments = []
 
         return list_regions # csToken # cross section token
 

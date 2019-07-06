@@ -40,6 +40,7 @@ fea_config_dict = {
     ##########################
     'Active_Qr':None, #16, #32,
     'PoleSpecific': True,
+    'use_drop_shape_rotor_bar': True,
     'DPNV': True,
     # 'DPNV_separate_winding_implementation': None, # this is obsolete feature (it is not good because the copper loss is different from the reality and only works for Qs=24, p=2 case)
     'mimic_separate_winding_with_DPNV_winding':False,

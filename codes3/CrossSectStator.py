@@ -101,6 +101,11 @@ class CrossSectInnerRotorStator:
 
         return [list_segments]
 
+def get_area_polygon(a,b,c,d):
+    x1, x2, x3, x4 = a[0], b[0], c[0], d[0]
+    y1, y2, y3, y4 = a[1], b[1], c[1], d[1]
+
+    return 0.5*abs( x1*y2-y1*x2 + x2*y3-y2*x3 + x3*y4-y3*x4 + x4*y1-y4*x1 )
 
 class CrossSectInnerRotorStatorWinding(object):
     def __init__(self, 
@@ -133,8 +138,8 @@ class CrossSectInnerRotorStatorWinding(object):
 
         P1 = [r_si, 0]
 
-        # 乘以0.99避免上层导体和下层导体重合导致导入Designer时产生多余的Parts。
-        PMiddle = [(r_si+d_sp)*cos(alpha_slot_span*0.5*0.99), (r_si+d_sp)*-sin(alpha_slot_span*0.5*0.99)]
+            # 乘以0.99或0.95避免上层导体和下层导体重合导致导入Designer时产生多余的Parts。
+        POpen = [(r_si+d_sp)*cos(alpha_slot_span*0.5*1.00), (r_si+d_sp)*-sin(alpha_slot_span*0.5*1.00)]
 
         # P2 = [r_si*cos(alpha_st*0.5), r_si*-sin(alpha_st*0.5)]
 
@@ -149,35 +154,58 @@ class CrossSectInnerRotorStatorWinding(object):
         三角形的高 = w_st*0.5
         三角形的角度 = arctan(三角形的高 / 三角形的底)
         P4 = [  三角形的底*cos(三角形的角度), 
-                三角形的底*-sin(三角形的角度)]
+                三角形的底*-sin(三角形的角度) ]
 
         P5 = [ P4[0] + d_st, 
                P4[1]]
 
-        P6 = [ (r_si+d_sp+d_st)*cos(alpha_slot_span*0.5*0.99),
-               (r_si+d_sp+d_st)*-sin(alpha_slot_span*0.5*0.99) ]
+        PMiddle45 = [0.5*(P4[0] + P5[0]), P4[1]]
+        TheRadius = (P5[0] - P4[0])*0.45
 
-        P7 = [ (r_si+d_sp+d_st+d_sy)*cos(alpha_slot_span*0.5),
-               (r_si+d_sp+d_st+d_sy)*-sin(alpha_slot_span*0.5) ]
-        P8 = [  r_si+d_sp+d_st+d_sy, 0]
+            # 为了使得槽和导体之间不要接触，试着添加5%的clearance？
+        P6 = [ (r_si+d_sp+d_st)*cos(alpha_slot_span*0.5) *1.00,
+               (r_si+d_sp+d_st)*-sin(alpha_slot_span*0.5) *1.00 ]
+
+        self.slot_area = 2 * get_area_polygon(P4, P5, P6, POpen)
+        print('Slot area is %g mm^2'%(self.slot_area))
+
+        PMiddle6Open = [ 0.5*(P6[0]+POpen[0]), 0.5*(P6[1]+POpen[1])]
+        self.PCoil = PCoil = [ 0.5*(PMiddle45[0]+PMiddle6Open[0]), 0.5*(PMiddle45[1]+PMiddle6Open[1])]
+
+        # P7 = [ (r_si+d_sp+d_st+d_sy)*cos(alpha_slot_span*0.5),
+        #        (r_si+d_sp+d_st+d_sy)*-sin(alpha_slot_span*0.5) ]
+        # P8 = [  r_si+d_sp+d_st+d_sy, 0]
+
+        # Compute the vector starting from PCoil to one of the corner of the polygon.
+        def shrink(PC, P):
+            vector = [ P[0] - PC[0], P[1] - PC[1]]
+            return [ PC[0]+0.95*vector[0], PC[1]+0.95*vector[1] ]
+        P6_Shrink = shrink(PCoil, P6)
+        P5_Shrink = shrink(PCoil, P5)
+        P4_Shrink = shrink(PCoil, P4)
+        POpen_Shrink = shrink(PCoil, POpen)
 
         list_regions = []
+
         list_segments = []
-        list_segments += drawer.drawLine(P4, P5)
-        list_segments += drawer.drawArc([0,0], P6, P5)
-        list_segments += drawer.drawLine(P6, PMiddle)
-        list_segments += drawer.drawLine(P4, PMiddle)
+        # list_segments += drawer.drawCircle(PCoil, TheRadius)
+        list_segments += drawer.drawArc([0,0], P6_Shrink, P5_Shrink)
+        list_segments += drawer.drawLine(P5_Shrink, P4_Shrink)
+        list_segments += drawer.drawLine(P4_Shrink, POpen_Shrink)
+        list_segments += drawer.drawLine(POpen_Shrink, P6_Shrink)
         list_regions.append(list_segments)
 
-        P4[1] *= -1
-        P5[1] *= -1
-        P6[1] *= -1
-        PMiddle[1] *= -1
+        PCoil[1] *= -1
+        P6_Shrink[1] *= -1
+        P5_Shrink[1] *= -1
+        P4_Shrink[1] *= -1
+        POpen_Shrink[1] *= -1
         list_segments = []
-        list_segments += drawer.drawLine(P4, P5)
-        list_segments += drawer.drawArc([0,0], P5, P6)
-        list_segments += drawer.drawLine(P6, PMiddle)
-        list_segments += drawer.drawLine(P4, PMiddle)
+        # list_segments += drawer.drawCircle(PCoil, TheRadius)
+        list_segments += drawer.drawArc([0,0], P5_Shrink, P6_Shrink)
+        list_segments += drawer.drawLine(P5_Shrink, P4_Shrink)
+        list_segments += drawer.drawLine(P4_Shrink, POpen_Shrink)
+        list_segments += drawer.drawLine(POpen_Shrink, P6_Shrink)
         list_regions.append(list_segments)
         list_segments = []
 

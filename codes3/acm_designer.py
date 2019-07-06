@@ -599,6 +599,7 @@ class FEA_Solver:
         print(msg)
 
         # get local design variant
+        print('#', counter, 'x_denorm', x_denorm)
         spmsm_variant = bearingless_spmsm_design.bearingless_spmsm_design(
                                             spmsm_template=spmsm_template,
                                             free_variables=None,
@@ -606,6 +607,8 @@ class FEA_Solver:
                                             counter_loop=counter_loop
                                             )
         self.spmsm_variant = spmsm_variant
+
+        # print('------------------Js = %g'%(spmsm_variant.Js))
 
         # project name
         if counter_loop == 1:
@@ -615,7 +618,8 @@ class FEA_Solver:
         self.expected_project_file = self.output_dir + "%s.jproj"%(self.project_name)
 
         # study name
-        study_name = spmsm_variant.name + "Tran"
+        study_name = spmsm_variant.name + "TranPMSM" # Change here and there 
+        # ind1Tran_torque
 
         # Leave the solving task to JMAG
         if True:
@@ -641,8 +645,11 @@ class FEA_Solver:
                 raise Exception('why is there no model yet?')
 
             spmsm_variant.pre_process(app, model)
-            study = spmsm_variant.add_magnetic_transient_study(app, model, dir_csv_output_folder, 'TranPMSM')
+            study = spmsm_variant.add_magnetic_transient_study(app, model, self.dir_csv_output_folder, study_name) # Change here and there 
             self.mesh_study(spmsm_variant, app, model, study)
+            # raise KeyboardInterrupt
+            self.run_study(spmsm_variant, app, study, clock_time())
+
 
         # export Voltage if field data exists.
         if self.fea_config_dict['delete_results_after_calculation'] == False:
@@ -654,7 +661,7 @@ class FEA_Solver:
         ################################################################
         # Load data for cost function evaluation
         ################################################################
-        results_to_be_unpacked = utility.build_str_results(self.axeses, spmsm_variant, self.project_name, tran2tss_study_name, self.dir_csv_output_folder, self.fea_config_dict, self.femm_solver)
+        results_to_be_unpacked = utility.build_str_results(self.axeses, spmsm_variant, self.project_name, study_name, self.dir_csv_output_folder, self.fea_config_dict, None)
         if results_to_be_unpacked is not None:
             self.fig_main.savefig(self.output_dir + spmsm_variant.name + 'results.png', dpi=150)
             utility.pyplot_clear(self.axeses)
@@ -969,11 +976,6 @@ class FEA_Solver:
 class acm_designer(object):
     def __init__(self, fea_config_dict, spec):
 
-        spec.build_acm_template(fea_config_dict)
-
-        # spec.acm_template.show()
-        # quit()
-
         self.spec = spec
         self.solver = FEA_Solver(fea_config_dict)
         self.fea_config_dict = fea_config_dict
@@ -1072,21 +1074,22 @@ class acm_designer(object):
 
     def get_classic_bounds(self):
         if 'SM' in self.spec.acm_template.name:
-            Q = self.spec.acm_template.Q
-            s = self.spec.acm_template.s
-            p = self.spec.acm_template.p
+            Q = self.spec.pmsm_template.Q
+            s = self.spec.pmsm_template.s
+            p = self.spec.pmsm_template.p
+            PMSM = self.spec.pmsm_template
             self.classic_bounds =  [ 
-                                [  0.5*360/Q, 0.9*360/Q],    # deg_alpha_st        = free_variables[0]
-                                [  1,   5],                  # mm_d_so             = free_variables[1]
-                                [ 15,  35],                  # mm_d_st             = free_variables[2]
-                                [200, 250],                  # stator_outer_radius = free_variables[3]
-                                [ 20,  40],                  # mm_w_st             = free_variables[4]
-                                [  1,   3],                  # sleeve_length       = free_variables[5]
-                                [2.5,   6],                  # mm_d_pm             = free_variables[6]
-                                [0.6*360/p, 0.9*360/p],      # deg_alpha_rm        = free_variables[7]
-                                [0.8*360/p/s, 0.95*360/p/s], # deg_alpha_rs        = free_variables[8]
-                                [  8,  16],                  # mm_d_ri             = free_variables[9]
-                                [ 75, 100],                  # rotor_outer_radius  = free_variables[10] 
+                                [ 0.35*360/Q, 0.9*360/Q],    # deg_alpha_st        = free_variables[0]
+                                [  0.5,   5],                # mm_d_so             = free_variables[1]
+                                [0.8*PMSM.mm_d_st,                1.2*PMSM.mm_d_st], # mm_d_st    = free_variables[2]
+                                [0.8*PMSM.Radius_OuterStatorYoke, 1.2*PMSM.Radius_OuterStatorYoke], # stator_outer_radius = free_variables[3]
+                                [0.8*PMSM.mm_w_st,                1.2*PMSM.mm_w_st], # mm_w_st    = free_variables[4]
+                                [3,   4],                    # sleeve_length       = free_variables[5]
+                                [2.5, 7],                    # mm_d_pm             = free_variables[6]
+                                [0.6*360/(2*p), 1.0*360/(2*p)],      # deg_alpha_rm        = free_variables[7]
+                                [0.8*360/(2*p)/s, 0.975*360/(2*p)/s], # deg_alpha_rs        = free_variables[8]
+                                [0.8*PMSM.mm_d_ri,  1.2*PMSM.mm_d_ri], # mm_d_ri   = free_variables[9]
+                                [0.8*PMSM.Radius_OuterRotor, 1.2*PMSM.Radius_OuterRotor], # rotor_outer_radius  = free_variables[10] 
                                 [2.5,   6],                  # mm_d_rp             = free_variables[11]
                                 [2.5,   6] ]                 # mm_d_rs             = free_variables[12]
             self.original_bounds = self.classic_bounds

@@ -1,6 +1,7 @@
 from pylab import *
 import sys
 import os
+import logging
 
 # General Information
 # Steel
@@ -24,113 +25,11 @@ def get_parallel_tooth_height(area_rotor_slot_Sur, rotor_tooth_width_b_dr, Qr, r
     rotor_tooth_height_h_dr = rotor_tooth_height_h_dr_minus
     return rotor_tooth_height_h_dr, rotor_tooth_height_h_dr_plus, rotor_Delta
 
-class winding_layout(object):
-    def __init__(self, DPNV_or_SEPA, Qs, p):
-
-        # separate winding
-        if DPNV_or_SEPA == False \
-        and Qs == 24 \
-        and p == 2:
-            self.l41=[ 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', ]
-            self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', ]
-            # separate style for one phase: ---- ++++
-            self.l21=[ 'U', 'U', 'V', 'V', 'V', 'V', 'W', 'W', 'W', 'W', 'U', 'U', 'U', 'U', 'V', 'V', 'V', 'V', 'W', 'W', 'W', 'W', 'U', 'U', ]
-            self.l22=[ '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', ]
-            self.coil_pitch = 6 # = Qs / poles for single layer
-            self.CommutatingSequenceD = 0
-            self.CommutatingSequenceB = 0
-            self.number_parallel_branch = 1.
-            self.bool_3PhaseCurrentSource = True
-            self.no_winding_layer = 1 # for troque winding
-
-        # # combined winding
-        # if DPNV_or_SEPA == True \
-        # and Qs == 24 \
-        # and p == 2:
-        #     # DPNV winding implemented as separate winding
-        #     # if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False: 
-        #         # You may see this msg because there are more than one designs in the initial_design.txt file.
-        #         # msg = 'Not implemented error. In fact, this equivalent implementation works for 4 pole motor only.'
-        #         # logging.getLogger(__name__).warn(msg)
-
-        #     # this is legacy codes for easy implementation in FEMM
-        #     self.l41=[ 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V', 'W', 'W', 'U', 'U', 'V', 'V']
-        #     self.l42=[ '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
-        #     # DPNV style for one phase: -- oo ++ oo
-        #     self.l21=[  'U', 'U', 'W', 'W', 'V', 'V', 
-        #                 'U', 'U', 'W', 'W', 'V', 'V', 
-        #                 'U', 'U', 'W', 'W', 'V', 'V', 
-        #                 'U', 'U', 'W', 'W', 'V', 'V']
-        #     self.l22=[  '-', '-', 'o', 'o', '+', '+', # 横着读和竖着读都是负零正零。 
-        #                 'o', 'o', '-', '-', 'o', 'o', 
-        #                 '+', '+', 'o', 'o', '-', '-', 
-        #                 'o', 'o', '+', '+', 'o', 'o']
-        #     self.coil_pitch = 6
-        #     self.CommutatingSequenceD = 0
-        #     self.CommutatingSequenceB = 0
-        #     self.number_parallel_branch = 1.
-        #     self.bool_3PhaseCurrentSource = True
-        #     self.no_winding_layer = 1 # for troque winding
-
-        # combined winding
-        if DPNV_or_SEPA == True \
-        and Qs == 24 \
-        and p == 2:
-            # DPNV winding implemented as DPNV winding (GroupAC means it experiences flip phasor excitation from suspension inverter, while GroupBD does not.)
-            #                     U-GrBD                        U-GrBD    W-GrBD                        W-GrBD    V-GrBD                        V-GrBD
-            #                               W-GrAC    V-GrAC                        V-GrAC    U-GrAC                        U-GrAC    W-GrAC             : flip phases 19-14??? slot of phase U??? (这个例子的这句话看不懂)
-            self.l_rightlayer1 = ['U', 'U', 'W', 'W', 'V', 'V', 'U', 'U', 'W', 'W', 'V', 'V', 'U', 'U', 'W', 'W', 'V', 'V', 'U', 'U', 'W', 'W', 'V', 'V'] # ExampleQ24p2m3ps1: torque winding outer layer
-            self.l_rightlayer2 = ['+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-', '+', '+', '-', '-']
-            self.l_leftlayer1  = self.l_rightlayer1[::] # ExampleQ24p2m3ps1: torque winding inner layer
-            self.l_leftlayer2  = self.l_rightlayer2[::]
-            self.grouping_AC   = [  0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1,   0,   0] # 只取决于outerlayer/rightlayer的反相情况
-            self.coil_pitch    = 6 # left layer can be inferred from coil pitch and right layer diagram
-            self.CommutatingSequenceD = 1
-            self.CommutatingSequenceB = 0
-            self.number_parallel_branch = 2.
-            self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
-            self.no_winding_layer = 2 # for troque winding and this means there could be a short pitch
-
-            # backward compatibility
-            self.l41 = self.l_rightlayer1
-            self.l42 = self.l_rightlayer2
-            self.l21 = self.l_leftlayer1
-            self.l22 = self.l_leftlayer2
-
-        # combined winding
-        if DPNV_or_SEPA == True \
-        and Qs == 24 \
-        and p == 1:
-            # DPNV winding implemented as DPNV winding (GroupAC means it experiences flip phasor excitation from suspension inverter, while GroupBD does not.)
-            #                     U-GroupBD                               V-GroupBD                               W-GroupBD
-            #                                         W-GroupAC                               U-GroupAC                               V-GroupAC           : flip phases 13-16 slot of phase U
-            self.l_rightlayer1 = ['U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V'] # ExampleQ24p1m3ps2: torque winding outer layer
-            self.l_rightlayer2 = ['+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-'] 
-            self.l_leftlayer1  = ['U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U', 'U', 'W', 'W', 'W', 'W', 'V', 'V', 'V', 'V', 'U', 'U', 'U'] # ExampleQ24p1m3ps2: torque winding inner layer
-            self.l_leftlayer2  = ['+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+', '+', '-', '-', '-', '-', '+', '+', '+']
-            self.grouping_AC   = [  0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1] # 只取决于rightlayer的反相情况
-            self.coil_pitch    = 9 # left layer can be inferred from coil pitch and right layer diagram
-            self.CommutatingSequenceD = 1
-            self.CommutatingSequenceB = 0
-            self.number_parallel_branch = 2.
-            self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
-            self.no_winding_layer = 2 # for troque winding and this means there could be a short pitch
-
-            # backward compatibility
-            self.l41 = self.l_rightlayer1
-            self.l42 = self.l_rightlayer2
-            self.l21 = self.l_leftlayer1
-            self.l22 = self.l_leftlayer2
-
-        try: 
-            self.coil_pitch 
-        except:
-            raise Exception('Error: Not implemented for this winding.')
-
 class geometry_data(object):
     def __init__(self):
         pass
 
+from winding_layout import winding_layout
 class desgin_specification(object):
     def __init__(self,
                     PS_or_SC = None,
@@ -1373,7 +1272,7 @@ class desgin_specification(object):
 
         return True if self.Jr_backup < self.Jr else False # bool_bad_specifications
 
-    def build_acm_template(self, fea_config_dict):
+    def build_im_template(self, fea_config_dict):
         import utility
         import population
         # get rid of Swarm class
@@ -1388,21 +1287,93 @@ class desgin_specification(object):
                 self.im_list.append(im)
         for im in self.im_list:
             if im.Qr == fea_config_dict['Active_Qr']:
-                self.acm_template = im
+                self.im_template = im
                 print('Take the first Active_Qr match as initial design')
                 break
-        try: 
-            self.acm_template
-        except:
+        try:
+            self.im_template
+            self.im_template.Js = self.Js
+            self.im_template.fill_factor = self.space_factor_kCu
+        except Exception as e:
             print('There is no design matching Active_Qr.')
             msg = 'Please activate one initial design. Refer %s.' % (self.initial_design_file)
             logger = logging.getLogger(__name__)
-            logger.warn(msg)
+            logger.warn(msg+str(e))
+            print(e)
             raise Exception('no match for Active_Qr: %d'%(fea_config_dict['Active_Qr']))
 
         # 让儿子能访问爸爸
-        self.acm_template.spec = self
+        self.im_template.spec = self
 
+    def build_pmsm_template(self, fea_config_dict, im_template=None):
+        import bearingless_spmsm_design
+        self.pmsm_template = bearingless_spmsm_design.bearingless_spmsm_template(fea_config_dict=fea_config_dict)
+
+        if im_template is not None:
+            Q = im_template.Qs
+            p = im_template.DriveW_poles/2
+            self.pmsm_template.deg_alpha_st         = 360/Q - im_template.Angle_StatorSlotOpen
+            self.pmsm_template.deg_alpha_so         =                                   self.pmsm_template.deg_alpha_st/2 # im_template uses alpha_so as 0.
+            self.pmsm_template.mm_r_si              = im_template.Radius_OuterRotor + im_template.Length_AirGap
+            self.pmsm_template.mm_d_so              = im_template.Width_StatorTeethHeadThickness
+            self.pmsm_template.mm_d_sp              =                                   1.5*self.pmsm_template.mm_d_so
+            self.pmsm_template.mm_d_st              = im_template.Radius_InnerStatorYoke - self.pmsm_template.mm_r_si - self.pmsm_template.mm_d_sp
+            self.pmsm_template.mm_d_sy              = im_template.Radius_OuterStatorYoke - im_template.Radius_InnerStatorYoke
+            self.pmsm_template.mm_w_st              = self.im_template.Width_StatorTeethBody
+            self.pmsm_template.mm_r_st              = 0
+            self.pmsm_template.mm_r_sf              = 0
+            self.pmsm_template.mm_r_sb              = 0
+            self.pmsm_template.Q                    = Q
+            self.pmsm_template.sleeve_length        = 3  # mm
+            self.pmsm_template.fixed_air_gap_length = 0.75 # mm
+            self.pmsm_template.mm_d_pm              = 5  # mm
+            self.pmsm_template.deg_alpha_rm         = 90/90*360/(2*p) # deg
+            self.pmsm_template.deg_alpha_rs         = self.pmsm_template.deg_alpha_rm # if s=1
+            self.pmsm_template.mm_d_ri              = im_template.Location_RotorBarCenter2 - im_template.Radius_of_RotorSlot2 - im_template.Radius_Shaft
+            self.pmsm_template.mm_r_ri              = im_template.Radius_Shaft
+            self.pmsm_template.mm_d_rp              = 4  # mm
+            self.pmsm_template.mm_d_rs              = 0*3
+            self.pmsm_template.p                    = p
+            self.pmsm_template.s                    = 1
+
+            # print('As:', self.pmsm_template.mm_d_ri)
+            # print('As:', self.pmsm_template.mm_r_ri)
+            # Those are some obsolete variables that are convenient to have.
+            self.pmsm_template.Radius_OuterStatorYoke = im_template.Radius_OuterStatorYoke
+            self.pmsm_template.Radius_OuterRotor      = im_template.Radius_OuterRotor
+
+            # Excitation Properties
+            self.pmsm_template.DriveW_Freq       = im_template.DriveW_Freq      
+            self.pmsm_template.DriveW_Rs         = im_template.DriveW_Rs        
+            self.pmsm_template.DriveW_zQ         = im_template.DriveW_zQ        
+            self.pmsm_template.DriveW_CurrentAmp = im_template.DriveW_CurrentAmp
+            self.pmsm_template.DriveW_poles      = im_template.DriveW_poles
+
+            print('Pyrhonen TODO')
+            self.pmsm_template.Js                = im_template.Js # 4e6 # Arms/mm^2 im_template.Js 
+            self.pmsm_template.fill_factor       = im_template.fill_factor # 0.5 # im_template.fill_factor 
+
+            self.pmsm_template.stack_length      = im_template.stack_length 
+            self.pmsm_template.wily              = im_template.wily # winding_layout.winding_layout(fea_config_dict['DPNV'], self.Qs, self.p)
+
+            # free_variables = [None]*13
+            # # inherit the stator of IM for the PMSM
+            # deg_alpha_st             = free_variables[0]  = 
+            # mm_d_so                  = free_variables[1]  = 
+            # mm_d_st                  = free_variables[2]  = 
+            # stator_outer_radius      = free_variables[3]  = 
+            # mm_w_st                  = free_variables[4]  = 
+            # sleeve_length            = free_variables[5]  = 
+            # mm_d_pm                  = free_variables[6]  = 
+            # deg_alpha_rm             = free_variables[7]  = 
+            # deg_alpha_rs             = free_variables[8]  = 
+            # mm_d_ri                  = free_variables[9]  = 
+            # rotor_steel_outer_radius = free_variables[10] =  # the outer radius of the rotor without magnet / the steel
+            # mm_d_rp                  = free_variables[11] = 
+            # mm_d_rs                  = free_variables[12] = 
+            # self.free_variables = free_variables
+        else:
+            raise Exception('Not implemented error.')
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Play with this Pyrhonen procedure

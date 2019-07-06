@@ -1,21 +1,26 @@
-import bearingless_spmsm_design
-
-p = 2
-Q = 6
-spec = bearingless_spmsm_design.bpmsm_specification(
-        PS_or_SC = None, # Pole Specific or Squirrel Cage
+import pyrhonen_procedure_as_function 
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# Design Specification
+# 1. Specify desgin_specification
+# 2. Give a run folder
+# 3. Is it sensitivity analysis or not
+# 4. Does it use refined bounds or it is local tuning with local bounds based on the best design from another run
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+p = 1
+spec = pyrhonen_procedure_as_function.desgin_specification(
+        PS_or_SC = True, # Pole Specific or Squirrel Cage
         DPNV_or_SEPA = True, # Dual purpose no voltage or Separate winding
         p = p,
         ps = 2 if p==1 else 1,
         mec_power = 50e3, # kW
-        ExcitationFreq = 1000, # Hz
-        ExcitationFreqSimulated = 1000, # Hz This sets to DriveW_Freq that is actually used in FE simulation.
+        ExcitationFreq = 500, # Hz
+        ExcitationFreqSimulated = 500, # Hz This sets to DriveW_Freq that is actually used in FE simulation.
         VoltageRating = 480, # Vrms (line-to-line, Wye-Connect)
-        TangentialStress = None, # Pa
-        Qs = Q,
-        segment = 1,
+        TangentialStress = 12000, # Pa
+        Qs = 24,
+        Qr = 16,
         Js = 4e6, # Arms/m^2
-        Jr = None, # Arms/m^2
+        Jr = 6.5e6, # Arms/m^2
         Steel = 'M19Gauge29', # Arnon-7
         lamination_stacking_factor_kFe = 0.95, # from http://www.femm.info/wiki/spmloss # 0.91 for Arnon
         Coil = 'Cu',
@@ -38,4 +43,7 @@ spec = bearingless_spmsm_design.bpmsm_specification(
         bool_skew_stator = None,
         bool_skew_rotor = None,
 )
-
+# self.show()
+print(spec.build_name())
+spec.bool_bad_specifications = spec.pyrhonen_procedure(fea_config_dict['pc_name'])
+print(spec.build_name()) # TODO：自动修正转子电流密度的设置值？

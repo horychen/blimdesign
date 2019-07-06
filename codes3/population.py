@@ -3984,6 +3984,8 @@ class bearingless_induction_motor_design(object):
                 subcondition.SetValue("Direction2D", dict_dir[UpDown])
 
                 # left layer
+                if coil_pitch<=0:
+                    raise Exception('把永磁电机circuit部分的代码移植过来！')
                 if count+coil_pitch <= self.Qs:
                     count_leftlayer = count+coil_pitch
                     index_leftlayer = index+coil_pitch
