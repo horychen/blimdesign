@@ -8,139 +8,6 @@ import logging
 import utility
 EPS = 1e-2 # unit: mm
 
-# class bpmsm_specification(object):
-#     def __init__(self,
-#                     PS_or_SC = None,
-#                     DPNV_or_SEPA = None,
-#                     p  = None,
-#                     ps = None,
-#                     mec_power = None,
-#                     ExcitationFreq = None,
-#                     ExcitationFreqSimulated = None,
-#                     VoltageRating = None,
-#                     TangentialStress = None,
-#                     Qs = None,
-#                     segment = None,
-#                     Js = None,
-#                     Jr = None,
-#                     Coil = None,
-#                     space_factor_kCu = None,
-#                     Conductor = None,
-#                     space_factor_kAl = None,
-#                     Temperature = None,
-#                     Steel = None,
-#                     lamination_stacking_factor_kFe = None,
-#                     stator_tooth_flux_density_B_ds = None,
-#                     rotor_tooth_flux_density_B_dr = None,
-#                     stator_yoke_flux_density_Bys = None,
-#                     rotor_yoke_flux_density_Byr = None,
-#                     guess_air_gap_flux_density = None,
-#                     guess_efficiency = None,
-#                     guess_power_factor = None,
-#                     safety_factor_to_yield = None,
-#                     safety_factor_to_critical_speed = None,
-#                     use_drop_shape_rotor_bar = None,
-#                     tip_speed = None,
-#                     debug_or_release= None,
-#                     bool_skew_stator = None,
-#                     bool_skew_rotor = None,
-#                 ):
-#         self.DPNV_or_SEPA = DPNV_or_SEPA
-#         self.p = p
-#         self.ps = ps
-#         self.mec_power = mec_power
-#         self.ExcitationFreq = ExcitationFreq
-#         self.ExcitationFreqSimulated = ExcitationFreqSimulated
-#         self.VoltageRating = VoltageRating
-#         self.TangentialStress = TangentialStress
-#         self.Qs = Qs
-#         self.segment = segment
-#         self.Js = Js
-#         self.Jr = Jr
-#         self.Jr_backup = self.Jr
-#         self.Coil = Coil
-#         self.space_factor_kCu = space_factor_kCu
-#         self.Conductor = Conductor
-#         self.space_factor_kAl = space_factor_kAl
-#         self.Temperature = Temperature
-#         self.Steel = Steel
-#         self.lamination_stacking_factor_kFe = lamination_stacking_factor_kFe
-#         self.stator_tooth_flux_density_B_ds = stator_tooth_flux_density_B_ds
-#         self.rotor_tooth_flux_density_B_dr = rotor_tooth_flux_density_B_dr
-#         self.stator_yoke_flux_density_Bys = stator_yoke_flux_density_Bys
-#         self.rotor_yoke_flux_density_Byr = rotor_yoke_flux_density_Byr
-#         self.guess_air_gap_flux_density = guess_air_gap_flux_density
-#         self.guess_efficiency = guess_efficiency
-#         self.guess_power_factor = guess_power_factor
-#         self.safety_factor_to_yield = safety_factor_to_yield
-#         self.safety_factor_to_critical_speed = safety_factor_to_critical_speed
-#         self.use_drop_shape_rotor_bar = use_drop_shape_rotor_bar
-#         self.tip_speed = tip_speed
-#         self.debug_or_release = debug_or_release
-#         self.bool_skew_stator = bool_skew_stator
-#         self.bool_skew_rotor  = bool_skew_rotor 
-
-#         self.bool_high_speed_design = self.tip_speed is not None
-
-#         # if not os.path.isdir('../' + 'pop/'):
-#         #     os.mkdir('../' + 'pop/')
-#         # self.loc_txt_file = '../' + 'pop/' + r'initial_design.txt'
-#         # open(self.loc_txt_file, 'w').close() # clean slate to begin with
-
-#     def build_acm_template(self, fea_config_dict):
-        
-#         acm_template = bearingless_spmsm_template(fea_config_dict=fea_config_dict)
-#         Q = self.Qs
-
-#         acm_template.deg_alpha_st = 360/Q*0.8   # deg_alpha_st # span angle of tooth: class type DimAngular
-#         acm_template.deg_alpha_so = 0                          # deg_alpha_so # angle of tooth edge: class type DimAngular
-#         acm_template.mm_r_si      = 100   # mm_r_si           # inner radius of stator teeth: class type DimLinear
-#         acm_template.mm_d_so      = 5      # mm_d_so           # tooth edge length: class type DimLinear
-#         acm_template.mm_d_sp      = 1.5*acm_template.mm_d_so # mm_d_sp      # tooth tip length: class type DimLinear
-#         acm_template.mm_d_st      = 30     # mm_d_st      # tooth base length: class type DimLinear
-#         acm_template.mm_d_sy      = 15     # mm_d_sy      # back iron thickness: class type DimLinear
-#         acm_template.mm_w_st      = 13     # mm_w_st      # tooth base width: class type DimLinear
-#         acm_template.mm_r_st      = 0         # mm_r_st      # fillet on outter tooth: class type DimLinear
-#         acm_template.mm_r_sf      = 0         # mm_r_sf      # fillet between tooth tip and base: class type DimLinear
-#         acm_template.mm_r_sb      = 0         # mm_r_sb      # fillet at tooth base: class type DimLinear
-#         acm_template.Q            = Q      # number of stator slots (integer)
-#         acm_template.sleeve_length        = 2 # mm
-#         acm_template.fixed_air_gap_length = 0.75 # mm
-#         acm_template.mm_d_pm      = 6      # mm_d_pm          # manget depth
-#         acm_template.deg_alpha_rm = 60     # deg_alpha_rm     # angular span of the pole: class type DimAngular
-#         acm_template.deg_alpha_rs = 60     # deg_alpha_rs     # segment span: class type DimAngular
-#         acm_template.mm_d_ri      = 8      # mm_d_ri          # inner radius of rotor: class type DimLinear
-#         acm_template.mm_r_ri      = 40     # mm_r_ri          # rotor iron thickness: class type DimLinear
-#         acm_template.mm_d_rp      = 5      # mm_d_rp          # interpolar iron thickness: class type DimLinear
-#         acm_template.mm_d_rs      = 0*3      # mm_d_rs          # inter segment iron thickness: class type DimLinear
-#         acm_template.p = 2     # p     # number of pole pairs
-#         acm_template.s = 1     # s     # number of segments  
-
-#         acm_template.build_design_parameters_list()
-
-#         acm_template.DriveW_Freq       = 1000
-#         acm_template.DriveW_Rs         = 0.1 # TODO
-#         acm_template.DriveW_zQ         = 4
-#         acm_template.DriveW_CurrentAmp = 100 #None # this means it depends on the slot area
-#         acm_template.DriveW_poles = 2*acm_template.p
-
-#         acm_template.Js = 4e6 # Arms/m^2
-#         acm_template.fill_factor = 0.45
-
-#         acm_template.stack_length = 200 # mm
-
-#         # logger = logging.getLogger(__name__) 
-#         # logger.info('spmsm_variant ID %s is initialized.', self.ID)
-
-#         if fea_config_dict is not None:
-#             acm_template.wily = winding_layout.winding_layout(fea_config_dict['DPNV'], self.Qs, self.p)
-
-#         # 让儿子能访问爸爸
-#         self.acm_template = acm_template
-#         self.acm_template.spec = self
-
-#         return acm_template
-
 class bearingless_spmsm_template(object):
     def __init__(self, fea_config_dict=None, model_name_prefix='SPMSM'):
         self.model_name_prefix = model_name_prefix
@@ -175,13 +42,49 @@ class bearingless_spmsm_template(object):
             ]
         return self.design_parameters
 
-    def get_bounds(self):
-        return
-        # <360/Q
-        # >= 0
-        # r_ri + L_g
+    def get_classic_bounds(self, which_filter='FixedSleeveLength', user_bound_filter=None):
+        self.bound_filter = [ 1,          # deg_alpha_st        = free_variables[0]
+                              1,          # mm_d_so             = free_variables[1]
+                              1,          # mm_d_st             = free_variables[2]
+                              1,          # stator_outer_radius = free_variables[3]
+                              1,          # mm_w_st             = free_variables[4] # STATOR
+                              0,          # sleeve_length       = free_variables[5] # AIRGAP  # 0: sleeve_length = 3 mm        # TIA ITEC
+                              1,          # mm_d_pm             = free_variables[6] # ROTOR
+                              1,          # deg_alpha_rm        = free_variables[7]
+                              self.s!=1,  # deg_alpha_rs        = free_variables[8]           # 0: deg_alpha_rs = deg_alpha_rm # s=1
+                              1,          # mm_d_ri             = free_variables[9]
+                              1,          # rotor_outer_radius  = free_variables[10]                                           # Comment: the outer radius of the rotor without magnet
+                              1,          # mm_d_rp             = free_variables[11]
+                              self.s!=1]  # mm_d_rs             = free_variables[12]          # 0: mm_d_rs = 0                 # s=1
+        if 'FixedSleeveLength' in which_filter:
+            pass
+        elif 'VariableSleeveLength' in which_filter:
+            self.bound_filter[5] = 1
+        else:
+            if len(user_bound_filter) != 13:
+                raise Exception('Invalid bound_filter for bounds. Should be 13 length but %d.'%(len(user_bound_filter)))
+            self.bound_filter = user_bound_filter
 
-
+        Q = self.Q
+        s = self.s
+        p = self.p
+        self.original_template_neighbor_bounds =  [ 
+                            [ 0.35*360/Q, 0.9*360/Q],                                           # deg_alpha_st        = free_variables[0]
+                            [  0.5,   5],                                                       # mm_d_so             = free_variables[1]
+                            [0.8*self.mm_d_st,                1.2*self.mm_d_st],                # mm_d_st             = free_variables[2]
+                            [0.8*self.Radius_OuterStatorYoke, 1.2*self.Radius_OuterStatorYoke], # stator_outer_radius = free_variables[3]
+                            [0.8*self.mm_w_st,                1.2*self.mm_w_st],                # mm_w_st             = free_variables[4] # STATOR
+                            [3,   4],                                                           # sleeve_length       = free_variables[5] # AIRGAP
+                            [2.5, 7],                                                           # mm_d_pm             = free_variables[6] # ROTOR
+                            [0.6*360/(2*p), 1.0*360/(2*p)],                                     # deg_alpha_rm        = free_variables[7]
+                            [0.8*360/(2*p)/s, 0.975*360/(2*p)/s],                               # deg_alpha_rs        = free_variables[8]
+                            [0.8*self.mm_d_ri,  1.2*self.mm_d_ri],                              # mm_d_ri             = free_variables[9]
+                            [0.8*self.Radius_OuterRotor, 1.2*self.Radius_OuterRotor],           # rotor_outer_radius  = free_variables[10] 
+                            [2.5,   6],                                                         # mm_d_rp             = free_variables[11]
+                            [2.5,   6] ]                                                        # mm_d_rs             = free_variables[12]
+        index_not_included = [idx for idx, el in enumerate(self.bound_filter) if el==0]
+        self.filtered_template_neighbor_bounds = [bound for idx, bound in enumerate(self.original_template_neighbor_bounds) if idx not in index_not_included]
+        return self.filtered_template_neighbor_bounds
 
     def get_rotor_volume(self):
         return np.pi*(self.Radius_OuterRotor*1e-3)**2 * (self.stack_length*1e-3)
@@ -190,10 +93,9 @@ class bearingless_spmsm_template(object):
         material_density_rho = get_material_data()[0]
         return gravity * self.get_rotor_volume() * material_density_rho # steel 7860 or 8050 kg/m^3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
 
-
 class bearingless_spmsm_design(bearingless_spmsm_template):
 
-    def __init__(self, spmsm_template=None, free_variables=None, counter=None, counter_loop=None):
+    def __init__(self, spmsm_template=None, x_denorm=None, counter=None, counter_loop=None):
         #00 Settings
         super(bearingless_spmsm_design, self).__init__()
         self.fea_config_dict = spmsm_template.fea_config_dict
@@ -210,10 +112,8 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         else:
             self.name = 'SPMSM Template'
 
-        # self.spec = spmsm_template.spec
-
         #02 Geometry Data
-        if free_variables is None:
+        if x_denorm is None:
             free_variables = [0,0,0,0,0, 0,0,0,0,0, 0,0,0]
             free_variables[0]  = spmsm_template.deg_alpha_st    
             free_variables[1]  = spmsm_template.mm_d_so         
@@ -229,22 +129,37 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             free_variables[11] = spmsm_template.mm_d_rp         
             free_variables[12] = spmsm_template.mm_d_rs         
 
-        deg_alpha_st             = free_variables[0]
-        mm_d_so                  = free_variables[1]
-        mm_d_st                  = free_variables[2]
-        stator_outer_radius      = free_variables[3]
-        mm_w_st                  = free_variables[4]
-        sleeve_length            = free_variables[5]
-        mm_d_pm                  = free_variables[6]
-        deg_alpha_rm             = free_variables[7]
-        deg_alpha_rs             = free_variables[8]
-        mm_d_ri                  = free_variables[9]
-        rotor_steel_outer_radius = free_variables[10] # the outer radius of the rotor without magnet / the steel
-        mm_d_rp                  = free_variables[11]
-        mm_d_rs                  = free_variables[12]
+        # build free_variables from x_denorm
+        free_variables = [None]*13
+        idx_x_denorm = 0
+        for idx, boo in enumerate(spmsm_template.bound_filter):
+            if boo == 1:
+                free_variables[idx] = x_denorm[idx_x_denorm]
+                idx_x_denorm += 1
+            else:
+                if idx == 5:
+                    free_variables[5] = spmsm_template.sleeve_length
+                    print('TIA ITEC: Sleeve length is fixed to %g mm'%(spmsm_template.sleeve_length))
+                elif idx == 8:
+                    free_variables[8] = free_variables[idx-1]
+                elif idx == 12:
+                    free_variables[12] = spmsm_template.mm_d_rs
+                else:
+                    raise Exception('Not tested feature.')
 
-        print('TIA ITEC: Sleeve length is fixed to 3 mm')
-        sleeve_length = free_variables[5] = 3
+        deg_alpha_st             = free_variables[0]  # if self.filter[0]  else spmsm_template.deg_alpha_st            
+        mm_d_so                  = free_variables[1]  # if self.filter[1]  else spmsm_template.mm_d_so                 
+        mm_d_st                  = free_variables[2]  # if self.filter[2]  else spmsm_template.mm_d_st                 
+        stator_outer_radius      = free_variables[3]  # if self.filter[3]  else spmsm_template.stator_outer_radius     
+        mm_w_st                  = free_variables[4]  # if self.filter[4]  else spmsm_template.mm_w_st                 
+        sleeve_length            = free_variables[5]  # if self.filter[5]  else spmsm_template.sleeve_length           
+        mm_d_pm                  = free_variables[6]  # if self.filter[6]  else spmsm_template.mm_d_pm                 
+        deg_alpha_rm             = free_variables[7]  # if self.filter[7]  else spmsm_template.deg_alpha_rm            
+        deg_alpha_rs             = free_variables[8]  # if self.filter[8]  else deg_alpha_rm
+        mm_d_ri                  = free_variables[9]  # if self.filter[9]  else spmsm_template.mm_d_ri                 
+        rotor_steel_outer_radius = free_variables[10] # if self.filter[10] else spmsm_template.rotor_steel_outer_radius
+        mm_d_rp                  = free_variables[11] # if self.filter[11] else spmsm_template.mm_d_rp                 
+        mm_d_rs                  = free_variables[12] # if self.filter[12] else spmsm_template.mm_d_rs                 
 
         if mm_d_rp > mm_d_pm:
             mm_d_rp = mm_d_pm
@@ -293,18 +208,18 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         #                                   8 spmsm_template.mm_r_st      
         #                                   9 spmsm_template.mm_r_sf      
         #                                  10 spmsm_template.mm_r_sb      
-        #                                  11  spmsm_template.Q            
-        #                                  12  spmsm_template.sleeve_length
-        #                                  13  spmsm_template.fixed_air_gap_length
-        #                                  14  spmsm_template.mm_d_pm      
-        #                                  15  spmsm_template.deg_alpha_rm 
-        #                                  16  spmsm_template.deg_alpha_rs 
-        #                                  17  spmsm_template.mm_d_ri      
-        #                                  18  spmsm_template.mm_r_ri      
-        #                                  19  spmsm_template.mm_d_rp      
-        #                                  20  spmsm_template.mm_d_rs      
-        #                                  21  spmsm_template.p
-        #                                  22  spmsm_template.s
+        #                                  11 spmsm_template.Q            
+        #                                  12 spmsm_template.sleeve_length
+        #                                  13 spmsm_template.fixed_air_gap_length
+        #                                  14 spmsm_template.mm_d_pm      
+        #                                  15 spmsm_template.deg_alpha_rm 
+        #                                  16 spmsm_template.deg_alpha_rs 
+        #                                  17 spmsm_template.mm_d_ri      
+        #                                  18 spmsm_template.mm_r_ri      
+        #                                  19 spmsm_template.mm_d_rp      
+        #                                  20 spmsm_template.mm_d_rs      
+        #                                  21 spmsm_template.p
+        #                                  22 spmsm_template.s
         #                                 ]
 
         # obsolete variable from IM
@@ -314,7 +229,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         self.number_current_generation = 0
         self.individual_index = counter
 
-
+        # Parts
         self.rotorCore = CrossSectInnerNotchedRotor.CrossSectInnerNotchedRotor(
                             name = 'NotchedRotor',
                             mm_d_pm      = design_parameters[-9],
@@ -407,13 +322,6 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         self.max_nonlinear_iteration = 50 # 30 for transient solve
         self.meshSize_Magnet = 2 # mm
 
-
-        # self.RSH = []
-        # for pm in [-1, +1]:
-        #     for v in [-1, +1]:
-        #             self.RSH.append( (pm * self.Qr*(1-self.the_slip)/(0.5*self.DriveW_poles) + v)*self.DriveW_Freq )
-        # print self.Qr, ', '.join("%g" % (rsh/self.DriveW_Freq) for rsh in self.RSH), '\n'
-
     def update_mechanical_parameters(self, syn_freq=None):
         if syn_freq is None:
             self.the_speed = self.DriveW_Freq*60. / (0.5*self.DriveW_poles) # rpm
@@ -467,10 +375,12 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         toolJd.iRotateCopy = self.coils.stator_core.Q
         region4 = toolJd.prepareSection(list_regions)
 
-        variant_DriveW_CurrentAmp = self.coils.slot_area * self.Js*1e-6 * self.fill_factor
+        current_in_the_slot = self.coils.slot_area * self.Js*1e-6 * self.fill_factor
+        variant_DriveW_CurrentAmp = current_in_the_slot / self.DriveW_zQ * self.wily.number_parallel_branch # DriveW_CurrentAmp is the phase current seen from the inverter. 
         self.DriveW_CurrentAmp = variant_DriveW_CurrentAmp ########### will be assisned when drawing the coils
         self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975 # extra 2.5% as bearing current
-        print('---Variant CurrentAmp:', variant_DriveW_CurrentAmp)
+        print('---Variant current_in_the_slot =', current_in_the_slot)
+        print('---Variant CurrentAmp = current_in_the_slot / self.DriveW_zQ * self.wily.number_parallel_branch =', variant_DriveW_CurrentAmp)
 
         # Import Model into Designer
         toolJd.doc.SaveModel(False) # True: Project is also saved. 
@@ -566,7 +476,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
 
         # Create Set for 2 poles Winding
         # THETA = 0.75*(Angle_StatorSlotSpan)/180.*np.pi # 这里这个角度的选择，决定了悬浮绕组产生悬浮力的方向！！！！！
-        THETA = -np.arctan(self.coils.PCoil[1]/self.coils.PCoil[0]) + 360/self.Q
+        THETA = np.arctan(-self.coils.PCoil[1]/self.coils.PCoil[0]) + (2*np.pi)/self.Q
         X = R*np.cos(THETA)
         Y = R*np.sin(THETA)
         count = 0
@@ -972,7 +882,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         # 这里电流幅值中的0.5因子源自DPNV导致的等于2的平行支路数。没有考虑到这一点，是否会对initial design的有效性产生影响？
         # 仔细看DPNV的接线，对于转矩逆变器，绕组的并联支路数为2，而对于悬浮逆变器，绕组的并联支路数为1。
 
-        npb = self.number_parallel_branch
+        npb = self.wily.number_parallel_branch
         nwl = self.wily.no_winding_layer # number of windign layers 
         # if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False:
         if self.fea_config_dict['DPNV'] == False:

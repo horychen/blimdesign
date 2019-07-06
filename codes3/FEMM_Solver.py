@@ -333,7 +333,7 @@ class FEMM_Solver(object):
             block_label(101, 'Aluminum', (X, Y), MESH_SIZE_ALUMINUM, automesh=self.bool_automesh, incircuit='r%s'%(self.rotor_phase_name_list[0]), turns=-1) # However, this turns=-1 is not effective for PARALLEL_CONNECTED circuit
 
         # Stator Winding
-        npb = self.number_parallel_branch
+        npb = im.wily.number_parallel_branch
         nwl = im.wily.no_winding_layer # number of windign layers 
         if self.flag_static_solver == True: #self.freq == 0: 
             # static solver

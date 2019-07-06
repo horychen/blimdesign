@@ -62,6 +62,7 @@ class desgin_specification(object):
                     safety_factor_to_yield = None,
                     safety_factor_to_critical_speed = None,
                     use_drop_shape_rotor_bar = None,
+                    no_segmented_magnets = None,
                     tip_speed = None,
                     debug_or_release= None,
                     bool_skew_stator = None,
@@ -98,6 +99,7 @@ class desgin_specification(object):
         self.safety_factor_to_yield = safety_factor_to_yield
         self.safety_factor_to_critical_speed = safety_factor_to_critical_speed
         self.use_drop_shape_rotor_bar = use_drop_shape_rotor_bar
+        self.no_segmented_magnets = no_segmented_magnets
         self.tip_speed = tip_speed
         self.debug_or_release = debug_or_release
         self.bool_skew_stator = bool_skew_stator
@@ -1336,11 +1338,12 @@ class desgin_specification(object):
             self.pmsm_template.p                    = p
             self.pmsm_template.s                    = 1
 
-            # print('As:', self.pmsm_template.mm_d_ri)
-            # print('As:', self.pmsm_template.mm_r_ri)
             # Those are some obsolete variables that are convenient to have.
             self.pmsm_template.Radius_OuterStatorYoke = im_template.Radius_OuterStatorYoke
             self.pmsm_template.Radius_OuterRotor      = im_template.Radius_OuterRotor
+
+            # Those variables are for PMSM convenience
+            self.rotor_steel_outer_radius             = im_template.Radius_OuterRotor
 
             # Excitation Properties
             self.pmsm_template.DriveW_Freq       = im_template.DriveW_Freq      

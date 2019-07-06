@@ -3883,7 +3883,7 @@ class bearingless_induction_motor_design(object):
         # 这里电流幅值中的0.5因子源自DPNV导致的等于2的平行支路数。没有考虑到这一点，是否会对initial design的有效性产生影响？
         # 仔细看DPNV的接线，对于转矩逆变器，绕组的并联支路数为2，而对于悬浮逆变器，绕组的并联支路数为1。
 
-        npb = self.number_parallel_branch
+        npb = self.wily.number_parallel_branch
         nwl = self.wily.no_winding_layer # number of windign layers 
         # if self.fea_config_dict['DPNV_separate_winding_implementation'] == True or self.fea_config_dict['DPNV'] == False:
         if self.fea_config_dict['DPNV'] == False:

@@ -9,20 +9,22 @@ bool_post_processing = False # solve or post-processing
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 my_execfile('./default_setting.py', g=globals(), l=locals())
 fea_config_dict
-fea_config_dict['Active_Qr'] = 16
+fea_config_dict['Active_Qr'] = 16 # obsolete 
 if True:
     my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals())
     spec.build_im_template(fea_config_dict)
     spec.build_pmsm_template(fea_config_dict, im_template=spec.im_template)
-    print('Build ACM template...')
+
     # select motor type ehere
+    print('Build ACM template...')
     spec.acm_template = spec.pmsm_template
 
 
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2' # this is not used
-    run_folder = r'run#600/'
+    run_folder = r'run#600/' # test
+    run_folder = r'run#601/' # test
 else:
     pass
 fea_config_dict['run_folder'] = run_folder
@@ -32,12 +34,15 @@ global ad
 ad = acm_designer.acm_designer(fea_config_dict, spec)
 ad.init_logger(prefix='bpmsm')
 
-
-
-ad.bounds_denorm = ad.get_classic_bounds()
-print('classic_bounds and original_bounds')
-for A, B in zip(ad.bounds_denorm, ad.original_bounds):
-    print(A, B)
+ad.bounds_denorm = spec.acm_template.get_classic_bounds(which_filter='FixedSleeveLength') # ad.get_classic_bounds()
+print('---------------------\nBounds:')
+idx_ad = 0
+for idx, f in enumerate(spec.acm_template.bound_filter):
+    if f == True:
+        print(idx, f, '[%g,%g]'%tuple(spec.acm_template.original_template_neighbor_bounds[idx]), '[%g,%g]'%tuple(ad.bounds_denorm[idx_ad]))
+        idx_ad += 1
+    else:
+        print(idx, f, '[%g,%g]'%tuple(spec.acm_template.original_template_neighbor_bounds[idx]))
 # quit()
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
