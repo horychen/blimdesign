@@ -243,11 +243,18 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         mm_d_rp                  = free_variables[11]
         mm_d_rs                  = free_variables[12]
 
+        if mm_d_rp > mm_d_pm:
+            mm_d_rp = mm_d_pm
+            free_variables[11] = free_variables[6]
+            msg = 'Warning: mm_d_rp cannot be larger than mm_d_pm or else the sleeve cannot really hold or even touch the PM. So mm_d_rp is set to equal to mm_d_pm for this design variant.'
+            print(msg)
+            logger = logging.getLogger(__name__).warn(msg)
+
         self.deg_alpha_st = free_variables[0]
         self.deg_alpha_so = spmsm_template.deg_alpha_so
         self.mm_r_si      = rotor_steel_outer_radius + (mm_d_pm - mm_d_rp) + sleeve_length + spmsm_template.fixed_air_gap_length
         self.mm_d_so      = free_variables[1]
-        self.mm_d_sp      = spmsm_template.mm_d_sp # 0.5*mm_d_so
+        self.mm_d_sp      = 1.5*self.mm_d_so # The neck is 0.5 of the head as IM's geometry.
         self.mm_d_st      = free_variables[2]; stator_outer_radius = free_variables[3]
         self.mm_d_sy      = stator_outer_radius - spmsm_template.mm_d_sp - mm_d_st - self.mm_r_si
         self.mm_w_st      = free_variables[4]
@@ -266,6 +273,9 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         self.mm_d_rs      = free_variables[12]
         self.p = spmsm_template.p
         self.s = spmsm_template.s
+        if self.s == 1:
+            self.deg_alpha_rs = self.deg_alpha_rm # raise Exception('Invalid alpha_rs. Check that it is equal to alpha_rm for s=1')
+            self.mm_d_rs = 0 # raise Exception('Invalid d_rs. Check that it is equal to 0 for s =1')
         # This is all we need
         design_parameters = self.build_design_parameters_list()
         # spmsm_template.design_parameters = [

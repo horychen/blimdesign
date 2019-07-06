@@ -602,7 +602,7 @@ class FEA_Solver:
         print('#', counter, 'x_denorm', x_denorm)
         spmsm_variant = bearingless_spmsm_design.bearingless_spmsm_design(
                                             spmsm_template=spmsm_template,
-                                            free_variables=None,
+                                            free_variables=x_denorm,
                                             counter=counter,
                                             counter_loop=counter_loop
                                             )
