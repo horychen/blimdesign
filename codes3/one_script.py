@@ -101,8 +101,11 @@ for A, B in zip(ad.bounds_denorm, ad.original_bounds):
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Optimization
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-def get_bad_fintess_values():
-    return 0, 0, 99
+def get_bad_fintess_values(machine_type='IM'):
+    if 'IM' in machine_type:
+        return 0, 0, 99
+    elif 'PMSM' in machine_type:
+        return 99999999999999999, 0, 99
 import pygmo as pg
 global counter_fitness_called, counter_fitness_return
 class Problem_BearinglessInductionDesign(object):

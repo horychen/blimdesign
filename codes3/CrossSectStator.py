@@ -166,8 +166,8 @@ class CrossSectInnerRotorStatorWinding(object):
         P6 = [ (r_si+d_sp+d_st)*cos(alpha_slot_span*0.5) *1.00,
                (r_si+d_sp+d_st)*-sin(alpha_slot_span*0.5) *1.00 ]
 
-        self.slot_area = 2 * get_area_polygon(P4, P5, P6, POpen)
-        print('Slot area is %g mm^2'%(self.slot_area))
+        self.mm2_slot_area = 2 * get_area_polygon(P4, P5, P6, POpen)
+        print('Slot area is %g mm^2'%(self.mm2_slot_area))
 
         PMiddle6Open = [ 0.5*(P6[0]+POpen[0]), 0.5*(P6[1]+POpen[1])]
         self.PCoil = PCoil = [ 0.5*(PMiddle45[0]+PMiddle6Open[0]), 0.5*(PMiddle45[1]+PMiddle6Open[1])]

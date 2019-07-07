@@ -696,6 +696,7 @@ class desgin_specification(object):
             # space factor or slot packing factor
             # space_factor_kCu = 0.50 # 不计绝缘的导体填充率：也就是说，一般来说槽满率能达到60%-66%，但是，这里用于下式计算的，要求考虑导体，而槽满率已经考虑了细导线的绝缘了，所以space factor会比槽满率更小，一般在0.5-0.6，低压电机则取下限0.5。
             area_stator_slot_Sus = no_conductors_per_slot_zQ * area_one_conductor_stator_Scs / self.space_factor_kCu 
+            print('area_stator_slot_Sus:', area_stator_slot_Sus)
 
             # guess these local design values or adapt from other designs
             width_statorTeethHeadThickness = 1e-3 # m

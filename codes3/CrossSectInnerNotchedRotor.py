@@ -219,6 +219,10 @@ class CrossSectInnerNotchedMagnet(object):
                 alpha_notch  = (alpha_rm - s*alpha_rs) / (s-1) # 永磁体占的弧度
             P6_extra = [(r_P4+d_pm)*cos(alpha_P5), (r_P4+d_pm)*-sin(alpha_P5)]
 
+            Rout = r_P4+d_pm
+            Rin  = r_P4
+            self.mm2_magnet_area = alpha_rm/alpha_rp  *  np.pi*(Rout**2 - Rin**2) # magnet area for all the poles
+
             # list_segments += drawer.drawLine(P1, P2)
             # list_segments += drawer.drawArc([0,0], P3, P2)
             list_segments += drawer.drawLine(P3_extra, P4)

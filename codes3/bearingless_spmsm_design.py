@@ -228,6 +228,8 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         self.ID = 'p%gs%g'%(self.p,self.s)
         self.number_current_generation = 0
         self.individual_index = counter
+        self.Radius_OuterStatorYoke = stator_outer_radius
+        self.stator_yoke_diameter_Dsyi = 2*(stator_outer_radius - self.mm_d_sy)
 
         # Parts
         self.rotorCore = CrossSectInnerNotchedRotor.CrossSectInnerNotchedRotor(
@@ -275,6 +277,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         self.DriveW_Freq       = spmsm_template.DriveW_Freq      
         self.DriveW_Rs         = spmsm_template.DriveW_Rs        
         self.DriveW_zQ         = spmsm_template.DriveW_zQ
+        print('---DriveW_zQ:', self.DriveW_zQ)
         print('---Template CurrentAmp:', spmsm_template.DriveW_CurrentAmp)
         self.DriveW_CurrentAmp = None ########### will be assisned when drawing the coils
         self.DriveW_poles      = spmsm_template.DriveW_poles
@@ -375,12 +378,14 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         toolJd.iRotateCopy = self.coils.stator_core.Q
         region4 = toolJd.prepareSection(list_regions)
 
-        current_in_the_slot = self.coils.slot_area * self.Js*1e-6 * self.fill_factor
-        variant_DriveW_CurrentAmp = current_in_the_slot / self.DriveW_zQ * self.wily.number_parallel_branch # DriveW_CurrentAmp is the phase current seen from the inverter. 
+        CurrentAmp_in_the_slot = self.coils.mm2_slot_area * self.fill_factor * self.Js*1e-6 * np.sqrt(2) #/2.2*2.8
+        CurrentAmp_per_conductor = CurrentAmp_in_the_slot / self.DriveW_zQ
+        CurrentAmp_per_phase = CurrentAmp_per_conductor * self.wily.number_parallel_branch # 跟几层绕组根本没关系！除以zQ的时候，就已经变成每根导体的电流了。
+        variant_DriveW_CurrentAmp = CurrentAmp_per_phase
         self.DriveW_CurrentAmp = variant_DriveW_CurrentAmp ########### will be assisned when drawing the coils
         self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975 # extra 2.5% as bearing current
-        print('---Variant current_in_the_slot =', current_in_the_slot)
-        print('---Variant CurrentAmp = current_in_the_slot / self.DriveW_zQ * self.wily.number_parallel_branch =', variant_DriveW_CurrentAmp)
+        print('---Variant CurrentAmp_in_the_slot =', CurrentAmp_in_the_slot)
+        print('---variant_DriveW_CurrentAmp = CurrentAmp_per_phase =', variant_DriveW_CurrentAmp)
 
         # Import Model into Designer
         toolJd.doc.SaveModel(False) # True: Project is also saved. 
@@ -551,8 +556,9 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         study.GetCondition("RotCon").SetValue("AngularVelocity", int(self.the_speed))
         study.GetCondition("RotCon").ClearParts()
         study.GetCondition("RotCon").AddSet(model.GetSetList().GetSet("Motion_Region"), 0)
-        # d-axis initial position is self.deg_alpha_rm*0.5
-        # The U-phase current is sin(omega_syn*t) = 0 at t=0.
+        # Implementation of id=0 control:
+        #   d-axis initial position is self.deg_alpha_rm*0.5
+        #   The U-phase current is sin(omega_syn*t) = 0 at t=0.
         study.GetCondition("RotCon").SetValue(u"InitialRotationAngle", -self.deg_alpha_rm*0.5 + 90 + self.wily.initial_excitation_bias_compensation_deg + (180/self.p)) # add 360/(2p) deg to reverse the initial magnetizing direction to make torque positive.
 
 
@@ -832,6 +838,8 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             study.GetCircuit().GetSubCircuit("Star Connection %d"%(poles)).GetComponent("Coil1").SetName("CircuitCoil%dU"%(poles))
             study.GetCircuit().GetSubCircuit("Star Connection %d"%(poles)).GetComponent("Coil2").SetName("CircuitCoil%dV"%(poles))
             study.GetCircuit().GetSubCircuit("Star Connection %d"%(poles)).GetComponent("Coil3").SetName("CircuitCoil%dW"%(poles))
+            # Star Connection_2 is GroupAC
+            # Star Connection_4 is GroupBD
 
             if bool_3PhaseCurrentSource == True: # must use this for frequency analysis
 

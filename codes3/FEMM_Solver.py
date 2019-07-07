@@ -2009,7 +2009,7 @@ class FEMM_Solver(object):
 
         print('Rotor current [Arms]:', current_rms_value, 'Jr:', Jr)
 
-        return stator_copper_loss, rotor_copper_loss, stator_copper_loss_along_stack, rotor_copper_loss_along_stack, Js, Jr
+        return stator_copper_loss, rotor_copper_loss, stator_copper_loss_along_stack, rotor_copper_loss_along_stack, Js, Jr, Vol_Cu
 
     def get_copper_loss_pyrhonen(self, stator_slot_area, rotor_slot_area, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, TORQUE_CURRENT_RATIO=0.975): 
 

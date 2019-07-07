@@ -25,6 +25,7 @@ if True:
     fea_config_dict['use_weights'] = 'O2' # this is not used
     run_folder = r'run#600/' # test
     run_folder = r'run#601/' # test
+    run_folder = r'run#602/' # test
 else:
     pass
 fea_config_dict['run_folder'] = run_folder
@@ -50,8 +51,11 @@ for idx, f in enumerate(spec.acm_template.bound_filter):
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 import pygmo as pg
 global counter_fitness_called, counter_fitness_return
-def get_bad_fintess_values():
-    return 0, 0, 99
+def get_bad_fintess_values(machine_type='PMSM'):
+    if 'IM' in machine_type:
+        return 0, 0, 99
+    elif 'PMSM' in machine_type:
+        return 99999999999999999, 0, 99
 class Problem_BearinglessSynchronousDesign(object):
 
     # Define objectives
@@ -85,7 +89,7 @@ class Problem_BearinglessSynchronousDesign(object):
                     raise Exception('Abort the optimization. Five attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
 
             try:
-                cost_function, f1, f2, f3, \
+                cost_function, f1, f2, f3, FRW, \
                 normalized_torque_ripple, \
                 normalized_force_error_magnitude, \
                 force_error_angle = \
@@ -105,7 +109,7 @@ class Problem_BearinglessSynchronousDesign(object):
             except utility.ExceptionBadNumberOfParts as error:
                 print(str(error)) 
                 print("Detail: {}".format(error.payload))
-                f1, f2, f3 = get_bad_fintess_values()
+                f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
                 utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3 + "Detail: {}".format(error.payload))
                 break
 
@@ -143,7 +147,7 @@ class Problem_BearinglessSynchronousDesign(object):
                     if 'Number of Parts is unexpected' in str(e):
                         print('Shitty design is found as:\n'+str(e))
                         print('\nEmail has been sent.\nThis design is punished by specifying f1=0, f2=0, f3=99.')
-                        f1, f2, f3 = get_bad_fintess_values()
+                        f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
 
                     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e))
                     print('This is Obselete can will not be reached anymore. An exclusive exception is built for number of parts unexpected exception.')
@@ -162,9 +166,8 @@ class Problem_BearinglessSynchronousDesign(object):
         # Constraints (Em<0.2 and Ea<10 deg):
         # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or SafetyFactor < 1.5:
         # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
-        if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
-            f1 = 0
-            f2 = 0
+        if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
+            f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
 
         counter_fitness_return += 1
         print('Fitness: %d, %d\n----------------'%(counter_fitness_called, counter_fitness_return))

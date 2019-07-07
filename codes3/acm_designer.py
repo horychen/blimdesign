@@ -62,8 +62,10 @@ class swarm_data_container(object):
         self.l_rated_iron_loss                      = [el[7] for el in self.rated_data]
         self.l_rated_windage_loss                   = [el[8] for el in self.rated_data]
         self.l_rated_rotor_volume                   = [el[9] for el in self.rated_data]
-        # self.l_rated_stack_length                   = [el[10] for el in self.rated_data] # new!
         self.l_rated_rotor_weight                   = [(V*8050*9.8) for V in self.l_rated_rotor_volume] # density of rotor is estimated to be that of steel of 8050 g/cm^3
+        self.l_rated_stack_length                   = [el[10] for el in self.rated_data] # new!
+        self.l_original_stack_length                = [el[11] for el in self.rated_data] # new!
+        self.l_original_rotor_weight                = [el/rated*ori for el, ori, rated in zip(self.l_rated_rotor_weight, self.l_rated_stack_length, self.l_original_stack_length)]
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Utility
@@ -127,7 +129,7 @@ class swarm_data_container(object):
 
         list_y_data = [ [el/1e3 for el in self.l_OA], 
                         self.l_OC,
-                        [F/W for W, F in zip(self.l_rated_rotor_weight, self.l_ss_avg_force_magnitude)], # FRW
+                        [F/W for W, F in zip(self.l_original_rotor_weight, self.l_ss_avg_force_magnitude)], # FRW
                         self.l_force_error_angle,
                         [100*el for el in self.l_OB], 
                         [100*el for el in self.l_normalized_force_error_magnitude],
@@ -661,7 +663,7 @@ class FEA_Solver:
         ################################################################
         # Load data for cost function evaluation
         ################################################################
-        results_to_be_unpacked = utility.build_str_results(self.axeses, spmsm_variant, self.project_name, study_name, self.dir_csv_output_folder, self.fea_config_dict, None)
+        results_to_be_unpacked = utility.build_str_results(self.axeses, spmsm_variant, self.project_name, study_name, self.dir_csv_output_folder, self.fea_config_dict, None, machine_type='PMSM')
         if results_to_be_unpacked is not None:
             self.fig_main.savefig(self.output_dir + spmsm_variant.name + 'results.png', dpi=150)
             utility.pyplot_clear(self.axeses)
@@ -840,7 +842,7 @@ class FEA_Solver:
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         # Load Results for Tran2TSS
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        results_to_be_unpacked = utility.build_str_results(self.axeses, im_variant, self.project_name, tran2tss_study_name, self.dir_csv_output_folder, self.fea_config_dict, self.femm_solver)
+        results_to_be_unpacked = utility.build_str_results(self.axeses, im_variant, self.project_name, tran2tss_study_name, self.dir_csv_output_folder, self.fea_config_dict, self.femm_solver, machine_type='IM')
         if results_to_be_unpacked is not None:
             self.fig_main.savefig(self.output_dir + im_variant.name + 'results.png', dpi=150)
             utility.pyplot_clear(self.axeses)
@@ -973,7 +975,7 @@ class FEA_Solver:
         app.ExportImageWithSize(self.output_dir + model.GetName() + '.png', 2000, 2000)
         app.View().ShowModel() # 1st btn. close mesh view, and note that mesh data will be deleted if only ouput table results are selected.
 
-    def get_copper_loss_Bolognani(self, stator_slot_area, rotor_slot_area=None, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, TORQUE_CURRENT_RATIO=0.975): 
+    def get_copper_loss_Bolognani(self, stator_slot_area, rotor_slot_area=None, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, TORQUE_CURRENT_RATIO=0.975, design_parameters=None): 
         # make sure these two values 
         # space_factor_kCu = SLOT_FILL_FACTOR in Pyrhonen09 design
         # space_factor_kAl = 1 in Pyrhonen09 design
@@ -985,27 +987,22 @@ class FEA_Solver:
         #   Remember that the number_of_coil_per_slot (in series) is limited by the high back EMF rather than slot area.
         rho_Copper = (3.76*TEMPERATURE_OF_COIL+873)*1e-9/55. # resistivity
 
-        air_gap_length_delta     = self.im.design_parameters[0]*1e-3 # m
+        air_gap_length_delta     = design_parameters[0]*1e-3 # m (including sleeve, for PMSM)
 
         # http://127.0.0.1:4000/tech/ECCE-2019-Documentation/
 
         ################################################################
         # Stator Copper Loss 
         ################################################################
-        tooth_width_w_t          = self.im.design_parameters[1]*1e-3 # m
+        tooth_width_w_t          = design_parameters[1]*1e-3 # m
         Area_S_slot              = stator_slot_area
         area_copper_S_Cu         = STATOR_SLOT_FILL_FACTOR * Area_S_slot
-        a                        = self.im.wily.number_parallel_branch
-        zQ                       = self.im.DriveW_zQ
-        coil_pitch_yq            = self.im.wily.coil_pitch
-        Q                        = self.im.Qs
-        # the_radius_m             = 1e-3*(0.5*(self.im.Radius_OuterRotor + self.im.Length_AirGap + self.im.Radius_InnerStatorYoke))
-        stack_length_m           = 1e-3*self.im.stack_length
-        # number_of_phase          = 3
-        # Ns                       = zQ * self.im.Qs / (2 * number_of_phase * a) # 3 phase winding
-        # density_of_copper        = 8960 
-        # k_R                      = 1 # AC resistance factor
-        current_rms_value        = self.im.DriveW_CurrentAmp / 1.4142135623730951 * (1./TORQUE_CURRENT_RATIO) # for one phase
+        a                        = design_parameters[2]
+        zQ                       = design_parameters[3]
+        coil_pitch_yq            = design_parameters[4]
+        Q                        = design_parameters[5]
+        stack_length_m           = 1e-3*design_parameters[6]
+        current_rms_value        = design_parameters[7] / 1.4142135623730951 * (1./TORQUE_CURRENT_RATIO) # for one phase
         # Area_conductor_Sc        = Area_S_slot * STATOR_SLOT_FILL_FACTOR / zQ
 
         Js = (current_rms_value/a) * zQ / area_copper_S_Cu # 逆变器电流current_rms_value在流入电机时，
@@ -1013,8 +1010,8 @@ class FEA_Solver:
                                                            # 这样的电流在一个槽内有zQ个，所以Islot=(current_rms_value/a) * zQ
                                                            # 槽电流除以槽内铜的面积，就是电流密度
 
-        stator_inner_diameter_D = 2*(air_gap_length_delta + self.im.Radius_OuterRotor*1e-3)
-        slot_height_h_t = 0.5*(self.im.stator_yoke_diameter_Dsyi - stator_inner_diameter_D)
+        stator_inner_diameter_D = 2*(air_gap_length_delta + design_parameters[8]*1e-3)
+        slot_height_h_t = 0.5*(design_parameters[9] - stator_inner_diameter_D)
         slot_pitch_pps = np.pi * (stator_inner_diameter_D + slot_height_h_t) / Q
         kov = 1.8 # \in [1.6, 2.0]
         end_winding_length_Lew = np.pi*0.5 * (slot_pitch_pps + tooth_width_w_t) + slot_pitch_pps*kov * (coil_pitch_yq - 1)
@@ -1028,8 +1025,9 @@ class FEA_Solver:
         print('Stator current [Arms]:', current_rms_value, 'Js:', Js)
 
         if rotor_slot_area is not None:
+            raise Exception('Not supported')
             ################################################################
-            # Rotor Copper Loss
+            # Rotor Copper Loss (Valid for IM only)
             ################################################################
             tooth_width_w_t          = self.im.design_parameters[2]*1e-3 # m
             Area_S_slot              = rotor_slot_area
@@ -1064,7 +1062,7 @@ class FEA_Solver:
         else:
             rotor_copper_loss, rotor_copper_loss_along_stack, Jr = 0, 0, 0
 
-        return stator_copper_loss, rotor_copper_loss, stator_copper_loss_along_stack, rotor_copper_loss_along_stack, Js, Jr
+        return stator_copper_loss, rotor_copper_loss, stator_copper_loss_along_stack, rotor_copper_loss_along_stack, Js, Jr, Vol_Cu
 
 
 class acm_designer(object):
