@@ -179,7 +179,7 @@ class Problem_BearinglessSynchronousDesign(object):
         # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or SafetyFactor < 1.5:
         # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
         # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
-        if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.3 or abs(force_error_angle) > 15 or FRW < 0.5:
+        if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.3 or abs(force_error_angle) > 10 or FRW < 0.75:
             f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
         print('f1,f2,f3:',f1,f2,f3)
 
