@@ -88,8 +88,8 @@ class CrossSectInnerNotchedRotor(object):
             # Then P6 is an extra point for a full rotor
             P6 = [r_ri*cos(alpha_P5), r_ri*-sin(alpha_P5)]
 
-            if self.deg_alpha_rm >= 180/p*0.999:
-                print('FULL POLE PITCH MAGNET IS USED.\n'*3)
+            if self.deg_alpha_rm >= 180/p*0.9800:
+                print('Non-NOTCHED ROTOR IS USED.\n')
                 P1p5 = [P2[0] - d_rp, P2[1]]
                 list_segments += drawer.drawLine(P1, P1p5)
                 list_segments += drawer.drawArc([0,0], P5, P1p5)
@@ -103,7 +103,7 @@ class CrossSectInnerNotchedRotor(object):
                 list_segments += drawer.drawLine(P5, P6)
                 list_segments += drawer.drawArc([0,0], P6, P1)
         else:
-            if alpha_rm == 180/p*0.999:
+            if alpha_rm >= 180/p*0.9800:
                 print('WARNING: NOT TESTED FULL POLE PITCH MAGNET WHEN s>1.')
 
             alpha_notch  = (alpha_rm - s*alpha_rs) / (s-1) # 永磁体占的弧度
@@ -222,13 +222,25 @@ class CrossSectInnerNotchedMagnet(object):
             Rout = r_P4+d_pm
             Rin  = r_P4
             self.mm2_magnet_area = alpha_rm/alpha_rp  *  np.pi*(Rout**2 - Rin**2) # magnet area for all the poles
+            print('Magnet area in total is %g mm^2'%(self.mm2_magnet_area))
 
-            # list_segments += drawer.drawLine(P1, P2)
-            # list_segments += drawer.drawArc([0,0], P3, P2)
-            list_segments += drawer.drawLine(P3_extra, P4)
-            list_segments += drawer.drawArc([0,0], P5, P4)
-            list_segments += drawer.drawLine(P5, P6_extra)
-            list_segments += drawer.drawArc([0,0], P6_extra, P3_extra)
+            if self.notched_rotor.deg_alpha_rm >= 180/p*0.9800:
+                print('FULL POLE PITCH MAGNET IS USED.')
+                P1p5 = [P2[0] - d_rp, P2[1]]
+                P2_extra = [P1p5[0]+d_pm, P2[1]]
+                P1p5_rotate = [P1p5[0]*cos(alpha_rp), P1p5[1]*-sin(alpha_rp)]
+                P2_extra_rotate = [P2_extra[0]*cos(alpha_rp), P2_extra[1]*-sin(alpha_rp)]
+                list_segments += drawer.drawLine(P1p5, P2_extra)
+                list_segments += drawer.drawArc([0,0], P2_extra_rotate, P2_extra)
+                list_segments += drawer.drawLine(P2_extra_rotate, P1p5_rotate)
+                list_segments += drawer.drawArc([0,0], P1p5_rotate, P1p5)
+            else:
+                # list_segments += drawer.drawLine(P1, P2)
+                # list_segments += drawer.drawArc([0,0], P3, P2)
+                list_segments += drawer.drawLine(P3_extra, P4)
+                list_segments += drawer.drawArc([0,0], P5, P4)
+                list_segments += drawer.drawLine(P5, P6_extra)
+                list_segments += drawer.drawArc([0,0], P6_extra, P3_extra)
             
             list_regions.append(list_segments)
             list_segments = []

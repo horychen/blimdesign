@@ -105,7 +105,7 @@ def get_bad_fintess_values(machine_type='IM'):
     if 'IM' in machine_type:
         return 0, 0, 99
     elif 'PMSM' in machine_type:
-        return 99999999999999999, 0, 99
+        return 9999, 0, 99
 import pygmo as pg
 global counter_fitness_called, counter_fitness_return
 class Problem_BearinglessInductionDesign(object):
@@ -1146,7 +1146,7 @@ if True:
 
     print('-'*40, '\nPop is initialized:\n', pop)
     hv = pg.hypervolume(pop)
-    quality_measure = hv.compute(ref_point=[0.,0.,100.]) # ref_point must be dominated by the pop's pareto front
+    quality_measure = hv.compute(ref_point=get_bad_fintess_values()) # ref_point must be dominated by the pop's pareto front
     print('quality_measure: %g'%(quality_measure))
     # raise KeyboardInterrupt
 

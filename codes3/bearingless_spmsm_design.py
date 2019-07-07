@@ -42,7 +42,9 @@ class bearingless_spmsm_template(object):
             ]
         return self.design_parameters
 
+
     def get_classic_bounds(self, which_filter='FixedSleeveLength', user_bound_filter=None):
+        # bound_filter is used to filter out some free_variables that are not going to be optimized.
         self.bound_filter = [ 1,          # deg_alpha_st        = free_variables[0]
                               1,          # mm_d_so             = free_variables[1]
                               1,          # mm_d_st             = free_variables[2]
@@ -86,12 +88,18 @@ class bearingless_spmsm_template(object):
         self.filtered_template_neighbor_bounds = [bound for idx, bound in enumerate(self.original_template_neighbor_bounds) if idx not in index_not_included]
         return self.filtered_template_neighbor_bounds
 
-    def get_rotor_volume(self):
-        return np.pi*(self.Radius_OuterRotor*1e-3)**2 * (self.stack_length*1e-3)
+    def get_rotor_volume(self, stack_length=None):
+        if stack_length is None:
+            return np.pi*(self.Radius_OuterRotor*1e-3)**2 * (self.stack_length*1e-3)
+        else:
+            return np.pi*(self.Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
 
-    def get_rotor_weight(self, gravity=9.8):
+    def get_rotor_weight(self, gravity=9.8, stack_length=None):
         material_density_rho = get_material_data()[0]
-        return gravity * self.get_rotor_volume() * material_density_rho # steel 7860 or 8050 kg/m^3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
+        if stack_length is None:
+            return gravity * self.get_rotor_volume() * material_density_rho # steel 7860 or 8050 kg/m^3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
+        else:
+            return gravity * self.get_rotor_volume(stack_length=stack_length) * material_density_rho # steel 7860 or 8050 kg/m^3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
 
 class bearingless_spmsm_design(bearingless_spmsm_template):
 
@@ -128,24 +136,26 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             free_variables[10] = spmsm_template.mm_r_ri + spmsm_template.mm_d_ri + spmsm_template.mm_d_rp
             free_variables[11] = spmsm_template.mm_d_rp         
             free_variables[12] = spmsm_template.mm_d_rs         
-
-        # build free_variables from x_denorm
-        free_variables = [None]*13
-        idx_x_denorm = 0
-        for idx, boo in enumerate(spmsm_template.bound_filter):
-            if boo == 1:
-                free_variables[idx] = x_denorm[idx_x_denorm]
-                idx_x_denorm += 1
-            else:
-                if idx == 5:
-                    free_variables[5] = spmsm_template.sleeve_length
-                    print('TIA ITEC: Sleeve length is fixed to %g mm'%(spmsm_template.sleeve_length))
-                elif idx == 8:
-                    free_variables[8] = free_variables[idx-1]
-                elif idx == 12:
-                    free_variables[12] = spmsm_template.mm_d_rs
+            # use bound_filter to get x_denorm from free_variables
+            # raise Exception('Not implemented')
+        else:
+            # build free_variables from x_denorm
+            free_variables = [None]*13
+            idx_x_denorm = 0
+            for idx, boo in enumerate(spmsm_template.bound_filter):
+                if boo == 1:
+                    free_variables[idx] = x_denorm[idx_x_denorm]
+                    idx_x_denorm += 1
                 else:
-                    raise Exception('Not tested feature.')
+                    if idx == 5:
+                        free_variables[5] = spmsm_template.sleeve_length
+                        print('TIA ITEC: Sleeve length is fixed to %g mm'%(spmsm_template.sleeve_length))
+                    elif idx == 8:
+                        free_variables[8] = free_variables[idx-1]
+                    elif idx == 12:
+                        free_variables[12] = spmsm_template.mm_d_rs
+                    else:
+                        raise Exception('Not tested feature.')
 
         deg_alpha_st             = free_variables[0]  # if self.filter[0]  else spmsm_template.deg_alpha_st            
         mm_d_so                  = free_variables[1]  # if self.filter[1]  else spmsm_template.mm_d_so                 
@@ -229,7 +239,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         self.number_current_generation = 0
         self.individual_index = counter
         self.Radius_OuterStatorYoke = stator_outer_radius
-        self.stator_yoke_diameter_Dsyi = 2*(stator_outer_radius - self.mm_d_sy)
+        self.stator_yoke_diameter_Dsyi = 1e-3 * 2*(stator_outer_radius - self.mm_d_sy)
 
         # Parts
         self.rotorCore = CrossSectInnerNotchedRotor.CrossSectInnerNotchedRotor(
@@ -287,6 +297,8 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
 
         self.stack_length      = spmsm_template.stack_length 
 
+        self.TORQUE_CURRENT_RATIO = spmsm_template.TORQUE_CURRENT_RATIO
+
         #03 Mechanical Parameters
         self.update_mechanical_parameters()
 
@@ -315,7 +327,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         if self.DriveW_CurrentAmp is None:
             self.BeariW_CurrentAmp = None
         else:
-            self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975 # extra 2.5% as bearing current
+            self.BeariW_CurrentAmp = (1-self.TORQUE_CURRENT_RATIO) * (self.DriveW_CurrentAmp / self.TORQUE_CURRENT_RATIO)
         self.BeariW_Freq       = self.DriveW_Freq
 
         if self.fea_config_dict is not None:
@@ -382,8 +394,9 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         CurrentAmp_per_conductor = CurrentAmp_in_the_slot / self.DriveW_zQ
         CurrentAmp_per_phase = CurrentAmp_per_conductor * self.wily.number_parallel_branch # 跟几层绕组根本没关系！除以zQ的时候，就已经变成每根导体的电流了。
         variant_DriveW_CurrentAmp = CurrentAmp_per_phase
-        self.DriveW_CurrentAmp = variant_DriveW_CurrentAmp ########### will be assisned when drawing the coils
-        self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975 # extra 2.5% as bearing current
+        self.DriveW_CurrentAmp = self.TORQUE_CURRENT_RATIO * variant_DriveW_CurrentAmp ########### will be assisned when drawing the coils
+        self.BeariW_CurrentAmp = (1-self.TORQUE_CURRENT_RATIO) * (self.DriveW_CurrentAmp / self.TORQUE_CURRENT_RATIO)
+
         print('---Variant CurrentAmp_in_the_slot =', CurrentAmp_in_the_slot)
         print('---variant_DriveW_CurrentAmp = CurrentAmp_per_phase =', variant_DriveW_CurrentAmp)
 
@@ -605,15 +618,18 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             number_of_steps_2ndTTS = self.fea_config_dict['number_of_steps_2ndTTS'] 
             DM = app.GetDataManager()
             DM.CreatePointArray("point_array/timevsdivision", "SectionStepTable")
-            refarray = [[0 for i in range(3)] for j in range(2)]
+            refarray = [[0 for i in range(3)] for j in range(3)]
             refarray[0][0] = 0
             refarray[0][1] =    1
             refarray[0][2] =        50
-            refarray[1][0] = 0.5/self.DriveW_Freq #0.5 for 17.1.03l # 1 for 17.1.02y
-            refarray[1][1] =    1 * number_of_steps_2ndTTS                          # 16 for 17.1.03l #32 for 17.1.02y
+            refarray[1][0] = 1.0/self.DriveW_Freq
+            refarray[1][1] =    0.5 * number_of_steps_2ndTTS
             refarray[1][2] =        50
+            refarray[2][0] = 1.5/self.DriveW_Freq
+            refarray[2][1] =    1 * number_of_steps_2ndTTS # 最后的number_of_steps_2ndTTS（32）步，必须对应半个周期，从而和后面的铁耗计算相对应。
+            refarray[2][2] =        50
             DM.GetDataSet("SectionStepTable").SetTable(refarray)
-            number_of_total_steps = 1 + number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
+            number_of_total_steps = 1 + 0.5*number_of_steps_2ndTTS + 1 * number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
             study.GetStep().SetValue("Step", number_of_total_steps)
             study.GetStep().SetValue("StepType", 3)
             study.GetStep().SetTableProperty("Division", DM.GetDataSet("SectionStepTable"))

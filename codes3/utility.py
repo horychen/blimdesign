@@ -498,10 +498,10 @@ def add_plots(axeses, dm, title=None, label=None, zorder=None, time_list=None, s
 
     if axeses is not None:
         # plot for torque and force
-        ax = axeses[0][0]; ax.plot(time_list, torque, alpha=alpha, label=label, zorder=zorder)
-        ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs, alpha=alpha, label=label, zorder=zorder)
+        ax = axeses[0][0]; ax.plot(time_list, torque,                                           alpha=alpha, label=label, zorder=zorder)
+        ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs,                                    alpha=alpha, label=label, zorder=zorder)
         ax = axeses[1][0]; ax.plot(time_list, 100*sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
-        ax = axeses[1][1]; ax.plot(time_list, np.arctan2(sfv.force_y, sfv.force_x)/np.pi*180. - sfv.ss_avg_force_angle, label=label, alpha=alpha, zorder=zorder)
+        ax = axeses[1][1]; ax.plot(time_list, sfv.force_ang - sfv.ss_avg_force_angle,           label=label, alpha=alpha, zorder=zorder)
 
     # plot for visialization of power factor 
     # dm.get_voltage_and_current(range_ss)
@@ -565,8 +565,10 @@ def build_str_results(axeses, acm_variant, project_name, tran_study_name, dir_cs
                 copper_loss  = dm.femm_loss_list[0] + dm.femm_loss_list[1]
             iron_loss = dm.jmag_loss_list[2] 
     elif 'PMSM' in machine_type:
-          # Stator copper loss by Bolognani  # Rotor magnet loss by JMAG
-        copper_loss = dm.femm_loss_list[0] + dm.jmag_loss_list[1]
+        # Rotor magnet loss by JMAG
+        magnet_Joule_loss = dm.jmag_loss_list[1]
+                      # Stator copper loss by Bolognani  
+        copper_loss = dm.femm_loss_list[0] + magnet_Joule_loss
         iron_loss = dm.jmag_loss_list[2] 
 
     windage_loss = get_windage_loss(acm_variant, acm_variant.stack_length)
@@ -597,11 +599,19 @@ def build_str_results(axeses, acm_variant, project_name, tran_study_name, dir_cs
     print('Calculate the fitness for', acm_variant.name)
 
     # LOSS
-    stator_copper_loss_along_stack = dm.femm_loss_list[2]
-    rotor_copper_loss_along_stack  = dm.femm_loss_list[3]
+    if 'IM' in machine_type:
+        stator_copper_loss_along_stack = dm.femm_loss_list[2]
+        rotor_copper_loss_along_stack  = dm.femm_loss_list[3]
 
-    stator_copper_loss_in_end_turn = dm.femm_loss_list[0] - stator_copper_loss_along_stack 
-    rotor_copper_loss_in_end_turn  = dm.femm_loss_list[1] - rotor_copper_loss_along_stack
+        stator_copper_loss_in_end_turn = dm.femm_loss_list[0] - stator_copper_loss_along_stack 
+        rotor_copper_loss_in_end_turn  = dm.femm_loss_list[1] - rotor_copper_loss_along_stack
+
+    elif 'PMSM' in machine_type:
+        stator_copper_loss_along_stack = dm.femm_loss_list[2]
+        rotor_copper_loss_along_stack  = magnet_Joule_loss
+
+        stator_copper_loss_in_end_turn = dm.femm_loss_list[0] - stator_copper_loss_along_stack 
+        rotor_copper_loss_in_end_turn  = 0
 
     rated_ratio                          = acm_variant.spec.required_torque / torque_average 
     rated_stack_length_mm                = rated_ratio * acm_variant.stack_length
@@ -618,6 +628,7 @@ def build_str_results(axeses, acm_variant, project_name, tran_study_name, dir_cs
                       + rated_iron_loss \
                       + rated_windage_loss
 
+
     # THERMAL
     if 'IM' in machine_type:
         stator_current_density = dm.femm_loss_list[4]
@@ -628,9 +639,11 @@ def build_str_results(axeses, acm_variant, project_name, tran_study_name, dir_cs
     else:
                                  # 基波电流幅值（在一根导体里的电流，六相逆变器中的4W相的电流，所以相当于已经考虑了并联支路数了）
         stator_current_density = dm.ui_info[2] / 1.4142135623730951 / (acm_variant.coils.mm2_slot_area*1e-6/acm_variant.DriveW_zQ)
-        print('Data Magager: stator_current_density = %g Arms/m^2'%(stator_current_density))
+        print('Data Magager: stator_current_density (4W) = %g Arms/m^2'%(stator_current_density))
         rotor_current_density = 0
 
+    print('Required torque: %g Nm'%(acm_variant.spec.required_torque))
+    print('acm_variant.Omega: %g rad/s'%(acm_variant.Omega))
     rated_shaft_power  = acm_variant.Omega * acm_variant.spec.required_torque
     rated_efficiency   = rated_shaft_power / (rated_total_loss + rated_shaft_power)  # 效率计算：机械功率/(损耗+机械功率)
 
@@ -647,15 +660,24 @@ def build_str_results(axeses, acm_variant, project_name, tran_study_name, dir_cs
         f1 = f1_IM
     elif 'PMSM' in machine_type:
         # - Cost
-        price_per_volume_steel    = 0.28  / 16387.064 # $/in^3 (M19 Gauge26) # 0.23 for low carbon, semi-processed 24 Gauge electrical steel
-        price_per_volume_copper   = 1.2   / 16387.064 # $/in^3 wire or bar or end-ring
-        price_per_volume_magnet   = 11.61 / 16387.064 # $/in^3 NdFeB PM
+        price_per_volume_steel    = 0.28  * 61023.744 # $/in^3 (M19 Gauge26) # 0.23 for low carbon, semi-processed 24 Gauge electrical steel
+        price_per_volume_copper   = 1.2   * 61023.744 # $/in^3 wire or bar or end-ring
+        price_per_volume_magnet   = 11.61 * 61023.744 # $/in^3 NdFeB PM
         # price_per_volume_aluminum = 0.88  / 16387.064 # $/in^3 wire or cast Al
-        Vol_Fe = (acm_variant.Radius_OuterStatorYoke*1e-3) ** 2 * (acm_variant.rated_stack_length_mm*1e-3) # 注意，硅钢片切掉的方形部分全部消耗了。
-        Vol_PM = (acm_variant.rotorMagnet.mm2_magnet_area*1e-6) * (acm_variant.rated_stack_length_mm*1e-3)
+        Vol_Fe = (acm_variant.Radius_OuterStatorYoke*1e-3) ** 2 * (rated_stack_length_mm*1e-3) # 注意，硅钢片切掉的方形部分全部消耗了。
+        Vol_PM = (acm_variant.rotorMagnet.mm2_magnet_area*1e-6) * (rated_stack_length_mm*1e-3)
+        print('Area_Fe', (acm_variant.Radius_OuterStatorYoke*1e-3) ** 2)
+        print('Area_Cu (est.)', dm.Vol_Cu/(rated_stack_length_mm*1e-3))
+        print('Area_PM', (acm_variant.rotorMagnet.mm2_magnet_area*1e-6))
+        print('Volume_Fe',    Vol_Fe)
+        print('Volume_Cu', dm.Vol_Cu)
+        print('Volume_PM',    Vol_PM)
         f1_PMSM =    Vol_Fe * price_per_volume_steel \
                 + dm.Vol_Cu * price_per_volume_copper\
                 +    Vol_PM * price_per_volume_magnet
+        print('Cost Fe:',   Vol_Fe * price_per_volume_steel )
+        print('Cost Cu:',dm.Vol_Cu * price_per_volume_copper)
+        print('Cost PM:',   Vol_PM * price_per_volume_magnet)
         f1 = f1_PMSM
 
     # - Efficiency @ Rated Power
@@ -664,6 +686,10 @@ def build_str_results(axeses, acm_variant, project_name, tran_study_name, dir_cs
     f3 = sum(list_weighted_ripples)
 
     FRW = ss_avg_force_magnitude / rotor_weight
+    print('FRW:', FRW, 'Rotor weight:', rotor_weight, 'Stack length:', acm_variant.stack_length, 'Rated stack length:', rated_stack_length_mm)
+    rated_rotor_volume = acm_variant.get_rotor_volume(stack_length=rated_stack_length_mm) 
+    rated_rotor_weight = acm_variant.get_rotor_weight(stack_length=rated_stack_length_mm)
+    print('rated_rotor_volume:', rated_rotor_volume, 'rated_rotor_weight:', rated_rotor_weight)
 
     rated_results = [   rated_shaft_power, 
                         rated_efficiency,
@@ -707,8 +733,13 @@ class suspension_force_vector(object):
         super(suspension_force_vector, self).__init__()
         self.force_x = force_x
         self.force_y = force_y
-        self.force_ang = np.arctan2(force_y, force_x) / np.pi * 180 # [deg]
-        print('-'*40+'\nsfv:', self.force_ang)
+        self.force_ang = []
+        temp_force_ang = np.arctan2(force_y, force_x) / np.pi * 180 # [deg]
+        for angle in temp_force_ang:
+            if angle < 0:
+                angle += 360
+            self.force_ang.append(angle)
+        # print('-'*40+'\nsfv:', self.force_ang)
         self.force_abs = np.sqrt(np.array(force_x)**2 + np.array(force_y)**2 )
 
         if range_ss == None:
@@ -717,11 +748,13 @@ class suspension_force_vector(object):
 
         self.ss_avg_force_vector    = np.array([sum(force_x[-range_ss:]), sum(force_y[-range_ss:])]) / range_ss #len(force_x[-range_ss:])
         self.ss_avg_force_angle     = np.arctan2(self.ss_avg_force_vector[1], self.ss_avg_force_vector[0]) / np.pi * 180
-        print('sfv:', self.ss_avg_force_angle)
+        if self.ss_avg_force_angle < 0:
+            self.ss_avg_force_angle += 360
+        # print('sfv:', self.ss_avg_force_angle)
         self.ss_avg_force_magnitude = np.sqrt(self.ss_avg_force_vector[0]**2 + self.ss_avg_force_vector[1]**2)
 
         self.force_err_ang = self.force_ang - self.ss_avg_force_angle
-        print('sfv:', self.force_err_ang)
+        # print('sfv:', self.force_err_ang)
         self.force_err_abs = self.force_abs - self.ss_avg_force_magnitude
 
         self.ss_max_force_err_ang = max(self.force_err_ang[-range_ss:]), min(self.force_err_ang[-range_ss:])
@@ -1033,6 +1066,99 @@ def whole_row_reader(reader):
     for row in reader:
         yield row[:]
 
+
+
+def get_copper_loss_Bolognani(stator_slot_area, rotor_slot_area=None, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, TORQUE_CURRENT_RATIO=0.975, copper_loss_parameters=None): 
+    # make sure these two values 
+    # space_factor_kCu = SLOT_FILL_FACTOR in Pyrhonen09 design
+    # space_factor_kAl = 1 in Pyrhonen09 design
+    # as well as temperature
+    #   TEMPERATURE_OF_COIL: temperature increase, degrees C
+    #   Here, by conductor it means the parallel branch (=1) is considered, and number_of_coil_per_slot = 8 (and will always be 8, see example below).
+    #   Just for example, if parallel branch is 2, number_of_coil_per_slot will still be 8, even though we cut the motor in half and count there will be 16 wire cross-sections,
+    #   because the reduction in resistance due to parallel branch will be considered into the variable resistance_per_coil.
+    #   Remember that the number_of_coil_per_slot (in series) is limited by the high back EMF rather than slot area.
+    rho_Copper = (3.76*TEMPERATURE_OF_COIL+873)*1e-9/55. # resistivity
+
+    air_gap_length_delta     = copper_loss_parameters[0]*1e-3 # m (including sleeve, for PMSM)
+
+    # http://127.0.0.1:4000/tech/ECCE-2019-Documentation/
+
+    ################################################################
+    # Stator Copper Loss 
+    ################################################################
+    tooth_width_w_t          = copper_loss_parameters[1]*1e-3 # m
+    Area_S_slot              = stator_slot_area
+    area_copper_S_Cu         = STATOR_SLOT_FILL_FACTOR * Area_S_slot
+    a                        = copper_loss_parameters[2]
+    zQ                       = copper_loss_parameters[3]
+    coil_pitch_yq            = copper_loss_parameters[4]
+    Q                        = copper_loss_parameters[5]
+    stack_length_m           = 1e-3*copper_loss_parameters[6]
+    current_rms_value        = copper_loss_parameters[7] / 1.4142135623730951 * (1./TORQUE_CURRENT_RATIO) # for one phase
+    # Area_conductor_Sc        = Area_S_slot * STATOR_SLOT_FILL_FACTOR / zQ
+
+    Js = (current_rms_value/a) * zQ / area_copper_S_Cu # 逆变器电流current_rms_value在流入电机时，
+                                                       # 受到并联支路分流，(current_rms_value/a)才是实际导体中流动的电流值，
+                                                       # 这样的电流在一个槽内有zQ个，所以Islot=(current_rms_value/a) * zQ
+                                                       # 槽电流除以槽内铜的面积，就是电流密度
+
+    stator_inner_diameter_D = 2*(air_gap_length_delta + copper_loss_parameters[8]*1e-3)
+    slot_height_h_t = 0.5*(copper_loss_parameters[9] - stator_inner_diameter_D)
+    slot_pitch_pps = np.pi * (stator_inner_diameter_D + slot_height_h_t) / Q
+    kov = 1.8 # \in [1.6, 2.0]
+    end_winding_length_Lew = np.pi*0.5 * (slot_pitch_pps + tooth_width_w_t) + slot_pitch_pps*kov * (coil_pitch_yq - 1)
+
+    Vol_Cu = area_copper_S_Cu * (stack_length_m + end_winding_length_Lew) * Q
+    stator_copper_loss = rho_Copper * Vol_Cu * Js**2
+
+    Vol_Cu_along_stack = area_copper_S_Cu * (end_winding_length_Lew) * Q
+    stator_copper_loss_along_stack = rho_Copper * Vol_Cu_along_stack * Js**2
+
+    print('Stator current [Arms]:', current_rms_value, 'Js:', Js)
+
+    if rotor_slot_area is not None:
+        raise Exception('Not supported')
+        ################################################################
+        # Rotor Copper Loss (Valid for IM only)
+        ################################################################
+        tooth_width_w_t          = self.im.design_parameters[2]*1e-3 # m
+        Area_S_slot              = rotor_slot_area
+        area_copper_S_Cu         = ROTOR_SLOT_FILL_FACTOR * Area_S_slot
+        a                        = 1
+        zQ                       = 1
+        coil_pitch_yq            = self.im.Qr/self.im.DriveW_poles
+        Q                        = self.im.Qr
+        # the_radius_m             = 1e-3*(self.im.Radius_OuterRotor - self.im.Radius_of_RotorSlot)
+        stack_length_m           = 1e-3*self.im.stack_length
+        # number_of_phase          = self.im.Qr/self.im.DriveW_poles
+        # Ns                       = zQ * self.im.Qr / (2 * number_of_phase * a) # turns in series = 2 for 4 pole winding; = 1 for 2 pole winding
+        # density_of_copper        = 8960 
+        # k_R                      = 1 # AC resistance factor
+        current_rms_value = sum(self.list_rotor_current_amp) / ( 1.4142135623730951 * len(self.list_rotor_current_amp) )
+        # Area_conductor_Sc        = Area_S_slot * ROTOR_SLOT_FILL_FACTOR / zQ        
+        Jr = (current_rms_value/a) * zQ / area_copper_S_Cu # 逆变器电流current_rms_value在流入电机时，
+
+
+        rotor_outer_diameter_Dor = 2*(self.im.Radius_OuterRotor*1e-3)
+        slot_height_h_t = self.im.rotor_slot_height_h_sr
+        slot_pitch_pps = np.pi * (rotor_outer_diameter_Dor - slot_height_h_t) / Q
+        kov = 1.6 
+        end_winding_length_Lew = np.pi*0.5 * (slot_pitch_pps + tooth_width_w_t) + slot_pitch_pps*kov * (coil_pitch_yq - 1)
+
+        Vol_Cu = area_copper_S_Cu * (stack_length_m + end_winding_length_Lew) * Q
+        rotor_copper_loss = rho_Copper * Vol_Cu * Jr**2
+
+        Vol_Cu_along_stack = area_copper_S_Cu * (end_winding_length_Lew) * Q
+        rotor_copper_loss_along_stack = rho_Copper * Vol_Cu_along_stack * Jr**2
+        print('Rotor current [Arms]:', current_rms_value, 'Jr:', Jr)
+    else:
+        rotor_copper_loss, rotor_copper_loss_along_stack, Jr = 0, 0, 0
+
+    return stator_copper_loss, rotor_copper_loss, stator_copper_loss_along_stack, rotor_copper_loss_along_stack, Js, Jr, Vol_Cu
+
+
+
 def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict, femm_solver, machine_type=None, acm_variant=None):
     # Read TranFEAwi2TSS results
     
@@ -1185,10 +1311,12 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
                     rotor_Joule_loss_list.append(float(row[7])) # Cage
                 elif 'PMSM' in machine_type:
                     rotor_Joule_loss_list.append(float(row[7])) # Magnet
-    
+
     # use the last 1/4 period data to compute average copper loss of Tran2TSS rather than use that of Freq study
     effective_part = rotor_Joule_loss_list[:int(0.5*fea_config_dict['number_of_steps_2ndTTS'])] # number_of_steps_2ndTTS = steps for half peirod
     rotor_Joule_loss = sum(effective_part) / len(effective_part)
+    if 'PMSM' in machine_type:
+        print('Magnet Joule loss:', rotor_Joule_loss)
 
     if fea_config_dict['jmag_run_list'][0] == 0 and femm_solver is not None:
         # blockPrint()
@@ -1196,8 +1324,8 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             # convert rotor current results (complex number) into its amplitude
             femm_solver.list_rotor_current_amp = [abs(el) for el in femm_solver.vals_results_rotor_current] # el is complex number
             # settings not necessarily be consistent with Pyrhonen09's design: , STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1., TEMPERATURE_OF_COIL=75
-            _s, _r, _sAlongStack, _rAlongStack, _Js, _Jr = femm_solver.get_copper_loss_pyrhonen(femm_solver.stator_slot_area, femm_solver.rotor_slot_area)
-            s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = femm_solver.get_copper_loss_Bolognani(femm_solver.stator_slot_area, femm_solver.rotor_slot_area)
+            _s, _r, _sAlongStack, _rAlongStack, _Js, _Jr = femm_solver.get_copper_loss_pyrhonen(femm_solver.stator_slot_area, femm_solver.rotor_slot_area, TORQUE_CURRENT_RATIO=acm_variant.TORQUE_CURRENT_RATIO)
+            s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = femm_solver.get_copper_loss_Bolognani(femm_solver.stator_slot_area, femm_solver.rotor_slot_area, TORQUE_CURRENT_RATIO=acm_variant.TORQUE_CURRENT_RATIO)
 
             msg1 = 'Pyrhonen : %g, %g | %g, %g | %g, %g ' % (_s, _r, _sAlongStack, _rAlongStack, _Js, _Jr) 
             msg2 = 'Bolognani: %g, %g | %g, %g | %g, %g ' % (s, r, sAlongStack, rAlongStack, Js, Jr) 
@@ -1208,8 +1336,7 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             raise e
         # enablePrint()
     else:
-        import acm_designer
-        design_parameters = [acm_variant.sleeve_length + acm_variant.fixed_air_gap_length,
+        copper_loss_parameters = [acm_variant.sleeve_length + acm_variant.fixed_air_gap_length,
                              acm_variant.mm_w_st,
                              acm_variant.wily.number_parallel_branch,
                              acm_variant.DriveW_zQ,
@@ -1220,7 +1347,7 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
                              acm_variant.Radius_OuterRotor,
                              acm_variant.stator_yoke_diameter_Dsyi
                              ]
-        s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = acm_designer.FEA_Solver.get_copper_loss_Bolognani(acm_variant.coils.mm2_slot_area*1e-6, design_parameters=design_parameters)
+        s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = get_copper_loss_Bolognani(acm_variant.coils.mm2_slot_area*1e-6, copper_loss_parameters=copper_loss_parameters, TORQUE_CURRENT_RATIO=acm_variant.TORQUE_CURRENT_RATIO)
         # s, r, sAlongStack, rAlongStack, Js, Jr = 0, 0, 0, 0, 0, 0
 
     dm = data_manager()

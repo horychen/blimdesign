@@ -7,27 +7,41 @@ bool_post_processing = False # solve or post-processing
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# FEA setting
 my_execfile('./default_setting.py', g=globals(), l=locals())
 fea_config_dict
 fea_config_dict['Active_Qr'] = 16 # obsolete 
-if True:
-    my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals())
-    spec.build_im_template(fea_config_dict)
-    spec.build_pmsm_template(fea_config_dict, im_template=spec.im_template)
-
-    # select motor type ehere
-    print('Build ACM template...')
-    spec.acm_template = spec.pmsm_template
-
-
+# spec's
+my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals())
+spec.build_im_template(fea_config_dict)
+spec.build_pmsm_template(fea_config_dict, im_template=spec.im_template)
+# select motor type ehere
+print('Build ACM template...')
+spec.acm_template = spec.pmsm_template
+if False:
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2' # this is not used
-    run_folder = r'run#600/' # test
-    run_folder = r'run#601/' # test
-    run_folder = r'run#602/' # test
+    run_folder = r'run#600/' # FRW constraint is removed and sleeve_length is 3 (not varying)
+    run_folder = r'run#601/' # FRW constraint is removed and sleeve_length is 2.5 (not varying)
+
+    spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
+    run_folder = r'run#602/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
 else:
-    pass
+    fea_config_dict['local_sensitivity_analysis'] = False
+    fea_config_dict['bool_refined_bounds'] = False
+    fea_config_dict['use_weights'] = 'O2' # this is not used
+
+    # Severson01
+    print('Severson01')
+    spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
+    run_folder = r'run#603010/'
+
+    # Severson01
+    print('Severson02')
+    spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
+    run_folder = r'run#603020/'
+
 fea_config_dict['run_folder'] = run_folder
 
 import acm_designer
@@ -36,9 +50,10 @@ ad = acm_designer.acm_designer(fea_config_dict, spec)
 ad.init_logger(prefix='bpmsm')
 
 ad.bounds_denorm = spec.acm_template.get_classic_bounds(which_filter='FixedSleeveLength') # ad.get_classic_bounds()
+ad.bound_filter  = spec.acm_template.bound_filter
 print('---------------------\nBounds:')
 idx_ad = 0
-for idx, f in enumerate(spec.acm_template.bound_filter):
+for idx, f in enumerate(ad.bound_filter):
     if f == True:
         print(idx, f, '[%g,%g]'%tuple(spec.acm_template.original_template_neighbor_bounds[idx]), '[%g,%g]'%tuple(ad.bounds_denorm[idx_ad]))
         idx_ad += 1
@@ -51,11 +66,11 @@ for idx, f in enumerate(spec.acm_template.bound_filter):
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 import pygmo as pg
 global counter_fitness_called, counter_fitness_return
-def get_bad_fintess_values(machine_type='PMSM'):
+def get_bad_fintess_values(machine_type=None):
     if 'IM' in machine_type:
         return 0, 0, 99
     elif 'PMSM' in machine_type:
-        return 99999999999999999, 0, 99
+        return 9999, 0, 99
 class Problem_BearinglessSynchronousDesign(object):
 
     # Define objectives
@@ -100,12 +115,9 @@ class Problem_BearinglessSynchronousDesign(object):
                     shutil.rmtree(ad.solver.folder_to_be_deleted) # .jfiles directory
                 # update to be deleted when JMAG releases the use
                 ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
-
-            except Exception as e: # debugging
-
-                print(e)
-                raise e
-
+            # except Exception as e: # debugging. do not re-try
+            #     print(e)
+            #     raise e
             except utility.ExceptionBadNumberOfParts as error:
                 print(str(error)) 
                 print("Detail: {}".format(error.payload))
@@ -161,13 +173,15 @@ class Problem_BearinglessSynchronousDesign(object):
         f2 
         # Ripple Performance (Weighted Sum)
         f3 
-        print(f1,f2,f3)
+        print('f1,f2,f3:',f1,f2,f3)
 
         # Constraints (Em<0.2 and Ea<10 deg):
         # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or SafetyFactor < 1.5:
         # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
-        if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
+        # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
+        if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.3 or abs(force_error_angle) > 15 or FRW < 0.5:
             f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
+        print('f1,f2,f3:',f1,f2,f3)
 
         counter_fitness_return += 1
         print('Fitness: %d, %d\n----------------'%(counter_fitness_called, counter_fitness_return))
@@ -209,7 +223,7 @@ if True:
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # 检查swarm_data.txt，如果有至少一个数据，返回就不是None。
     print('Check swarm_data.txt...')
-    number_of_chromosome = ad.solver.read_swarm_data()
+    number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
     if number_of_chromosome is not None:
         # 禁止在初始化pop时运行有限元
         ad.flag_do_not_evaluate_when_init_pop               = True
@@ -261,7 +275,7 @@ if True:
         if number_of_chromosome <= popsize:
             for i in range(popsize):
                 if i < number_of_chromosome: #number_of_finished_chromosome_in_current_generation:
-                    pop.set_xf(i, ad.solver.swarm_data[i][:7], ad.solver.swarm_data[i][-3:])
+                    pop.set_xf(i, ad.solver.swarm_data[i][:-3], ad.solver.swarm_data[i][-3:])
                 else:
                     print('Set ad.flag_do_not_evaluate_when_init_pop to False...')
                     ad.flag_do_not_evaluate_when_init_pop = False
@@ -273,14 +287,14 @@ if True:
             swarm_data_on_pareto_front = learn_about_the_archive(prob, ad.solver.swarm_data, popsize)
             # print(swarm_data_on_pareto_front)
             for i in range(popsize):
-                pop.set_xf(i, swarm_data_on_pareto_front[i][:7], swarm_data_on_pareto_front[i][-3:])
+                pop.set_xf(i, swarm_data_on_pareto_front[i][:-3], swarm_data_on_pareto_front[i][-3:])
 
         # 必须放到这个if的最后，因为在 learn_about_the_archive 中是有初始化一个 pop_archive 的，会调用fitness方法。
         ad.flag_do_not_evaluate_when_init_pop = False
 
     print('-'*40, '\nPop is initialized:\n', pop)
     hv = pg.hypervolume(pop)
-    quality_measure = hv.compute(ref_point=[0.,0.,100.]) # ref_point must be dominated by the pop's pareto front
+    quality_measure = hv.compute(ref_point=get_bad_fintess_values(machine_type='PMSM')) # ref_point must be dominated by the pop's pareto front
     print('quality_measure: %g'%(quality_measure))
     # raise KeyboardInterrupt
 
@@ -306,7 +320,7 @@ if True:
 # MOO Step 3:
 #   Begin optimization
 ################################################################
-    number_of_chromosome = ad.solver.read_swarm_data()
+    number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
     number_of_finished_iterations = number_of_chromosome // popsize
     number_of_iterations = 50
     logger = logging.getLogger(__name__)
