@@ -37,7 +37,7 @@ else:
     spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
     run_folder = r'run#603010/'
 
-    # Severson01
+    # Severson02
     print('Severson02')
     spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
     run_folder = r'run#603020/'
@@ -162,9 +162,12 @@ class Problem_BearinglessSynchronousDesign(object):
                         print('\nEmail has been sent.\nThis design is punished by specifying f1=0, f2=0, f3=99.')
                         f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
 
-                    utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e))
-                    print('This is Obselete can will not be reached anymore. An exclusive exception is built for number of parts unexpected exception.')
-                    break
+                        utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e))
+                        print('This is Obselete can will not be reached anymore. An exclusive exception is built for number of parts unexpected exception.')
+                        break
+
+                    # retry
+                    pass                    
             else:
                 break
 
