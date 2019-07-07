@@ -197,7 +197,7 @@ class Problem_BearinglessSynchronousDesign(object):
                 print('\tabs(normalized_force_error_magnitude) >= 0.3')
             if abs(force_error_angle) > 10:
                 print('\tabs(force_error_angle) > 10')
-            if FRW < 0.75::
+            if FRW < 0.75:
                 print('\tFRW < 0.75')
             f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
         print('f1,f2,f3:',f1,f2,f3)
