@@ -205,9 +205,12 @@ class Problem_BearinglessInductionDesign(object):
                         print('\nEmail has been sent.\nThis design is punished by specifying f1=0, f2=0, f3=99.')
                         f1, f2, f3 = get_bad_fintess_values()
 
-                    utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e))
-                    print('This is Obselete can will not be reached anymore. An exclusive exception is built for number of parts unexpected exception.')
-                    break
+                        utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e))
+                        print('This is Obselete can will not be reached anymore. An exclusive exception is built for number of parts unexpected exception.')
+                        break
+
+                    # retry
+                    pass
             else:
                 break
 

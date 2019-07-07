@@ -127,8 +127,9 @@ class Problem_BearinglessSynchronousDesign(object):
 
             except Exception as e: # retry
 
+                print('-'*40 + 'Unexpected error is caught.')
                 print(e)
-                raise e
+                # raise e
 
                 msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
                 logger = logging.getLogger(__name__)
