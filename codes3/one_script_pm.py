@@ -66,11 +66,17 @@ for idx, f in enumerate(ad.bound_filter):
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 import pygmo as pg
 global counter_fitness_called, counter_fitness_return
-def get_bad_fintess_values(machine_type=None):
-    if 'IM' in machine_type:
-        return 0, 0, 99
-    elif 'PMSM' in machine_type:
-        return 9999, 0, 99
+def get_bad_fintess_values(machine_type=None, ref=False):
+    if ref == False:
+        if 'IM' in machine_type:
+            return 0, 0, 99
+        elif 'PMSM' in machine_type:
+            return 9999, 0, 999
+    else:
+        if 'IM' in machine_type:
+            return 1, 1, 100
+        elif 'PMSM' in machine_type:
+            return 10000, 1, 1000        
 class Problem_BearinglessSynchronousDesign(object):
 
     # Define objectives
@@ -184,6 +190,15 @@ class Problem_BearinglessSynchronousDesign(object):
         # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
         # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
         if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.3 or abs(force_error_angle) > 10 or FRW < 0.75:
+            print('Constraints are violated:')
+            if abs(normalized_torque_ripple)>=0.3:
+                print('\tabs(normalized_torque_ripple)>=0.3')
+            if abs(normalized_force_error_magnitude) >= 0.3:
+                print('\tabs(normalized_force_error_magnitude) >= 0.3')
+            if abs(force_error_angle) > 10:
+                print('\tabs(force_error_angle) > 10')
+            if FRW < 0.75::
+                print('\tFRW < 0.75')
             f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
         print('f1,f2,f3:',f1,f2,f3)
 
@@ -281,7 +296,7 @@ if True:
                 if i < number_of_chromosome: #number_of_finished_chromosome_in_current_generation:
                     pop.set_xf(i, ad.solver.swarm_data[i][:-3], ad.solver.swarm_data[i][-3:])
                 else:
-                    print('Set ad.flag_do_not_evaluate_when_init_pop to False...')
+                    print('Set "ad.flag_do_not_evaluate_when_init_pop" to False...')
                     ad.flag_do_not_evaluate_when_init_pop = False
                     print('Calling pop.set_x()---this is a restart for individual#%d during pop initialization.'%(i))
                     print(i, 'get_fevals:', prob.get_fevals())
@@ -298,7 +313,7 @@ if True:
 
     print('-'*40, '\nPop is initialized:\n', pop)
     hv = pg.hypervolume(pop)
-    quality_measure = hv.compute(ref_point=get_bad_fintess_values(machine_type='PMSM')) # ref_point must be dominated by the pop's pareto front
+    quality_measure = hv.compute(ref_point=get_bad_fintess_values(machine_type='PMSM', ref=True)) # ref_point must be dominated by the pop's pareto front
     print('quality_measure: %g'%(quality_measure))
     # raise KeyboardInterrupt
 
