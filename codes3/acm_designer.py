@@ -784,8 +784,8 @@ class FEA_Solver:
                 expected_project_file_path = temp_path
 
             app.NewProject("Untitled")
-            app.SaveAs(expected_project_file)
-            logger.debug('Create JMAG project file: %s'%(expected_project_file))
+            app.SaveAs(expected_project_file_path)
+            logger.debug('Create JMAG project file: %s'%(expected_project_file_path))
 
             return app
 
