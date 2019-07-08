@@ -42,6 +42,11 @@ else:
     spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
     run_folder = r'run#603020/'
 
+    # T440p
+    print('T440p')
+    spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
+    run_folder = r'run#603040/'
+
 fea_config_dict['run_folder'] = run_folder
 
 import acm_designer
