@@ -525,7 +525,6 @@ def build_str_results(axeses, acm_variant, project_name, tran_study_name, dir_cs
         print(e)
         logging.getLogger(__name__).error('Error when loading csv results for Tran2TSS. Check the Report of JMAG Designer. (Maybe Material is not added.)', exc_info=True)
         陌生感 = 'CSV results are not found. Will re-build and re-run the JMAG project...' 
-        print(陌生感)
         raise ExceptionReTry(陌生感)
         # return None
         # raise e

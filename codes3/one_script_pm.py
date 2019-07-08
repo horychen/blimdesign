@@ -135,8 +135,8 @@ class Problem_BearinglessSynchronousDesign(object):
                 counter_loop = 0 # reset
             if stuck_at == counter_fitness_called:
                 counter_loop += 1
-                if counter_loop > 5:
-                    raise Exception('Abort the optimization. Five attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+                if counter_loop > 3:
+                    raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
 
             try:
                 cost_function, f1, f2, f3, FRW, \
@@ -154,7 +154,7 @@ class Problem_BearinglessSynchronousDesign(object):
             except utility.ExceptionBadNumberOfParts as error:
                 print(str(error)) 
                 print("Detail: {}".format(error.payload))
-                f1, f2, f3 = get_bad_fintess_values()
+                f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
                 utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3 + "Detail: {}".format(error.payload))
                 break
 

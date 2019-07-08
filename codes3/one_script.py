@@ -4,6 +4,7 @@
 import shutil
 from utility import my_execfile
 from utility_moo import *
+from win32com.client import pywintypes
 bool_post_processing = False # solve or post-processing
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -137,7 +138,7 @@ class Problem_BearinglessInductionDesign(object):
             if stuck_at == counter_fitness_called:
                 counter_loop += 1
                 if counter_loop > 3:
-                    raise Exception('Abort the optimization. Five attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+                    raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
 
             try:
                 cost_function, f1, f2, f3, FRW, \
