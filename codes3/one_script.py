@@ -23,19 +23,28 @@ if False:
     run_folder = r'run#550/'
 
 else:
-    pass
+    fea_config_dict['local_sensitivity_analysis'] = False
+    fea_config_dict['bool_refined_bounds'] = False
+    fea_config_dict['use_weights'] = 'O2' # this is not working
+
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # Severson01
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # Combined winding PMSM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.975
+    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
+    fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
+    run_folder = r'run#550010/'
+
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson02
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # Combined winding PMSM
+    # Separate winding PMSM
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
     run_folder = r'run#550020/'
 
-    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # Severson01
-    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 fea_config_dict['run_folder'] = run_folder
 build_model_name_prefix(fea_config_dict) # rebuild the model name for fea_config_dict
 
@@ -144,7 +153,7 @@ class Problem_BearinglessInductionDesign(object):
 
                 print('-'*40+'unexpected error is caught.')
                 print(e)
-                raise e
+                # raise e
 
                 msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
                 logger = logging.getLogger(__name__)

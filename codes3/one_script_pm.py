@@ -35,16 +35,16 @@ else:
 
     # Severson01
     print('Severson01')
-        # Combined winding PMSM
-        # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
-        # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-        # run_folder = r'run#603010/'
-    # Separate winding PMSM
-    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
+    # Combined winding PMSM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    run_folder = r'run#604010/'
+    run_folder = r'run#603010/'
+    # # Separate winding PMSM
+    # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
+    # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+    # run_folder = r'run#604010/'
 
-    # Severson02
+    # # Severson02
     # print('Severson02')
     # # Combined winding PMSM
     # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
