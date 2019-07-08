@@ -818,8 +818,6 @@ class FEA_Solver:
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         if self.fea_config_dict['jmag_run_list'][0] == 0:
             # check for existing results
-        if self.fea_config_dict['jmag_run_list'][0] == 0:
-            # check for existing results
             if os.path.exists(self.femm_output_file_path):
                 # for file in os.listdir(self.dir_femm_temp):
                 #     if original_study_name in file:
