@@ -20,8 +20,11 @@ def remove_files(list_solver_id, dir_femm_temp, suffix='.txt', id_solver_femm_fo
         if id_solver == id_solver_femm_found:
             found_file_name = dir_femm_temp + "femm_found" + suffix
             if os.path.exists(found_file_name):
-                os.remove(found_file_name)
-            os.rename(fname, found_file_name)
+                os.remove(found_file_name) # remove already existing file (due to interrupted run)
+            if not os.path.exists(fname):
+                raise Exception('File %s does not exist for id_solver=%d'%(fname, id_solver))
+            else:
+                os.rename(fname, found_file_name)
             continue
 
         os.remove(fname)
