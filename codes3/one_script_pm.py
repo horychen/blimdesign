@@ -19,43 +19,48 @@ if False:
     # run_folder = r'run#600/' # FRW constraint is removed and sleeve_length is 3 (not varying)
     # run_folder = r'run#601/' # FRW constraint is removed and sleeve_length is 2.5 (not varying)
 
-    # Combined winding PMSM
-    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
-    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    run_folder = r'run#603/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
+    # # Combined winding PMSM
+    # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
+    # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+    # run_folder = r'run#603/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
 
-    # Separate winding PMSM
-    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
-    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    run_folder = r'run#604/'
+    # # Separate winding PMSM
+    # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
+    # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+    # run_folder = r'run#604/'
+    raise
 else:
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2' # this is not used
 
+    ################################################################
     # Severson01
+    ################################################################
     print('Severson01')
+    # Separate winding PMSM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
+    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+    run_folder = r'run#604010/'
+
+    ################################################################
+    # Severson02
+    ################################################################
+    print('Severson02')
     # Combined winding PMSM
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    run_folder = r'run#603010/'
-    # # Separate winding PMSM
-    # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
-    # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    # run_folder = r'run#604010/'
+    run_folder = r'run#603020/'
 
-    # # Severson02
-    # print('Severson02')
-    # # Combined winding PMSM
-    # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
-    # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    # run_folder = r'run#603020/'
-
+    ################################################################
     # T440p
-    # print('T440p')
-    # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
-    # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    # run_folder = r'run#603040/'
+    ################################################################
+    print('T440p')
+    # Combined winding PMSM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
+    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+    run_folder = r'run#603010/' # continued run from severson01
+
 fea_config_dict['run_folder'] = run_folder
 
 # spec's
@@ -152,9 +157,8 @@ class Problem_BearinglessSynchronousDesign(object):
                 utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3 + "Detail: {}".format(error.payload))
                 break
 
-            except utility.ExceptionReTry as error:
-                print(str(error)) 
-                print("Detail: {}".format(error.payload))
+            except (utility.ExceptionReTry, pywintypes.com_error) as error:
+                print(error)
 
                 msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
                 logger = logging.getLogger(__name__)

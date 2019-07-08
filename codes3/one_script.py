@@ -54,6 +54,7 @@ else:
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
     run_folder = r'run#550040/'
+    
 fea_config_dict['run_folder'] = run_folder
 
 # spec's
