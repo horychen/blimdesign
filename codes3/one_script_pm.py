@@ -2,6 +2,7 @@
 import shutil
 import utility
 from utility import my_execfile
+import utility_moo
 bool_post_processing = False # solve or post-processing
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -324,7 +325,6 @@ if True:
                     print(i, 'get_fevals:', prob.get_fevals())
                     pop.set_x(i, pop_array[i]) # evaluate this guy
         else:
-            import utility_moo
             # 新办法，直接从swarm_data.txt（相当于archive）中判断出当前最棒的群体
             swarm_data_on_pareto_front = utility_moo.learn_about_the_archive(prob, ad.solver.swarm_data, popsize, fea_config_dict)
             # print(swarm_data_on_pareto_front)
@@ -382,7 +382,7 @@ if True:
             print(msg)
             logger.info(msg)
             
-            my_print(pop, _)
+            utility_moo.my_print(ad, pop, _)
             # my_plot(fits, vectors, ndf)
     except Exception as e:
         print(pop.get_x())

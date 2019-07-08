@@ -386,7 +386,7 @@ def my_plot(fits, vectors, ndf):
                 ax.plot([fits_A[0], fits_A[0]], 
                         [fits_A[1], fits_B[1]], color=the_color, lw=0.25) # 取低的点的X
         ax.title.set_text("Pareto Front | Objective Function Space")
-def my_print(pop, _):
+def my_print(ad, pop, _):
     # ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
     # extract and print non-dominated fronts
     # - ndf (list of 1D NumPy int array): the non dominated fronts

@@ -3,6 +3,7 @@
 # coding:u8
 import shutil
 from utility import my_execfile
+from utility_moo import *
 bool_post_processing = False # solve or post-processing
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -198,9 +199,18 @@ class Problem_BearinglessInductionDesign(object):
         f3 #= sum(list_weighted_ripples)
 
         # Constraints (Em<0.2 and Ea<10 deg):
-        if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
-            f1 = 0
-            f2 = 0
+        # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
+        if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.3 or abs(force_error_angle) > 10 or FRW < 0.75:
+            print('Constraints are violated:')
+            if abs(normalized_torque_ripple)>=0.3:
+                print('\tabs(normalized_torque_ripple)>=0.3')
+            if abs(normalized_force_error_magnitude) >= 0.3:
+                print('\tabs(normalized_force_error_magnitude) >= 0.3')
+            if abs(force_error_angle) > 10:
+                print('\tabs(force_error_angle) > 10')
+            if FRW < 0.75:
+                print('\tFRW < 0.75')
+            f1, f2, f3 = get_bad_fintess_values()
 
         counter_fitness_return += 1
         print('Fitness: %d, %d\n----------------'%(counter_fitness_called, counter_fitness_return))
@@ -228,7 +238,6 @@ class Problem_BearinglessInductionDesign(object):
     def get_name(self):
         return "Bearingless Induction Motor Design"
 
-from utility_moo import *
 if bool_post_processing == True:
     # Combine all data 
 
@@ -605,7 +614,7 @@ if True:
             print(msg)
             logger.info(msg)
             
-            my_print(pop, _)
+            my_print(ad, pop, _)
             # my_plot(fits, vectors, ndf)
     except Exception as e:
         print(pop.get_x())
