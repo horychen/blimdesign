@@ -172,6 +172,9 @@ class Problem_BearinglessSynchronousDesign(object):
                     print(error)
                     raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
                 else:
+                    from time import sleep
+                    print('\n\n\nSleep for 3 sec and continue.')
+                    sleep(3)
                     continue
 
             except AttributeError as error:
@@ -188,6 +191,9 @@ class Problem_BearinglessSynchronousDesign(object):
                         print(error)
                         raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
                     else:
+                        from time import sleep
+                        print('\n\n\nSleep for 3 sec and continue.')
+                        sleep(3)                        
                         continue
                 else:
                     raise error

@@ -200,6 +200,10 @@ class Problem_BearinglessInductionDesign(object):
                     # except Exception as e2:
                     #     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(error) + '\n'*3 + 'Exception 2:' + str(e2))
                     #     raise e2
+                from time import sleep
+                print('\n\n\nSleep for 3 sec and continue.')
+                sleep(3)
+
                 continue
 
             except AttributeError as error:
@@ -212,6 +216,10 @@ class Problem_BearinglessInductionDesign(object):
                 print(msg)
 
                 if 'designer.Application' in str(error):
+                    from time import sleep
+                    print('\n\n\nSleep for 3 sec and continue.')
+                    sleep(3)
+
                     continue
                 else:
                     raise error
