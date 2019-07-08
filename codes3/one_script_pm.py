@@ -13,10 +13,13 @@ bool_post_processing = False # solve or post-processing
 my_execfile('./default_setting.py', g=globals(), l=locals())
 fea_config_dict
 fea_config_dict['Active_Qr'] = 16 # obsolete 
-if False:
-    fea_config_dict['local_sensitivity_analysis'] = False
-    fea_config_dict['bool_refined_bounds'] = False
-    fea_config_dict['use_weights'] = 'O2' # this is not used
+fea_config_dict['local_sensitivity_analysis'] = False
+fea_config_dict['bool_refined_bounds'] = False
+fea_config_dict['use_weights'] = 'O2' # this is not used
+if 'Y730' in fea_config_dict['pc_name']:
+    ################################################################
+    # Y730
+    ################################################################
     # run_folder = r'run#600/' # FRW constraint is removed and sleeve_length is 3 (not varying)
     # run_folder = r'run#601/' # FRW constraint is removed and sleeve_length is 2.5 (not varying)
 
@@ -30,11 +33,7 @@ if False:
     # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
     # run_folder = r'run#604/'
     raise
-else:
-    fea_config_dict['local_sensitivity_analysis'] = False
-    fea_config_dict['bool_refined_bounds'] = False
-    fea_config_dict['use_weights'] = 'O2' # this is not used
-
+elif 'Severson01' in fea_config_dict['pc_name']:
     ################################################################
     # Severson01
     ################################################################
@@ -44,6 +43,7 @@ else:
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
     run_folder = r'run#604010/'
 
+elif 'Severson02' in fea_config_dict['pc_name']:
     ################################################################
     # Severson02
     ################################################################
@@ -52,7 +52,7 @@ else:
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
     run_folder = r'run#603020/'
-
+else:
     ################################################################
     # T440p
     ################################################################

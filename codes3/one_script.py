@@ -12,22 +12,20 @@ bool_post_processing = False # solve or post-processing
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 my_execfile('./default_setting.py', g=globals(), l=locals())
 fea_config_dict
-if False:
-    fea_config_dict['local_sensitivity_analysis'] = False
-    fea_config_dict['bool_refined_bounds'] = False
-    fea_config_dict['use_weights'] = 'O2' # this is not working
-
+fea_config_dict['local_sensitivity_analysis'] = False
+fea_config_dict['bool_refined_bounds'] = False
+fea_config_dict['use_weights'] = 'O2' # this is not working
+if 'Y730' in fea_config_dict['pc_name']:
+    ################################################################
+    # Y730
+    ################################################################
     # Combined winding IM
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.975
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
     run_folder = r'run#550/'
 
-else:
-    fea_config_dict['local_sensitivity_analysis'] = False
-    fea_config_dict['bool_refined_bounds'] = False
-    fea_config_dict['use_weights'] = 'O2' # this is not working
-
+elif 'Severson01' in fea_config_dict['pc_name']:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson01
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -37,6 +35,7 @@ else:
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
     run_folder = r'run#550010/'
 
+elif 'Severson02' in fea_config_dict['pc_name']:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson02
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -45,8 +44,7 @@ else:
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
     run_folder = r'run#550020/'
-
-
+else:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # T440p
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
