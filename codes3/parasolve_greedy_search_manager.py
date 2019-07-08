@@ -28,7 +28,7 @@ def remove_files(list_solver_id, dir_femm_temp, suffix, id_solver_femm_found=Non
                 raise Exception('FEMM file %s does not exist for id_solver=%d'%(fname, id_solver))
 
             os.rename(fname, found_file_name)
-            continue
+            break
 
         # what if we don't remove temp file??? 2019/7/8
         # os.remove(fname)
