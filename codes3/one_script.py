@@ -116,7 +116,7 @@ class Problem_BearinglessInductionDesign(object):
                     raise Exception('Abort the optimization. Five attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
 
             try:
-                cost_function, f1, f2, f3, \
+                cost_function, f1, f2, f3, FRW, \
                 normalized_torque_ripple, \
                 normalized_force_error_magnitude, \
                 force_error_angle = \
