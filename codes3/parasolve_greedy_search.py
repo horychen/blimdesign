@@ -45,12 +45,19 @@ fem_file_path = dir_femm_temp + 'femm_temp_%d.fem'%(id_solver)
 
 
 femm.opendocument(fem_file_path)
-try:
-    femm.mi_analyze(1) # None for inherited. 1 for a minimized window,
-    freq, torque = get_slipfreq_torque()
-except Exception as error:
-    print(error.args)
-    raise error
+counter_loop = 0
+while True:
+    counter_loop += 1
+    try:
+        femm.mi_analyze(1) # None for inherited. 1 for a minimized window,
+        freq, torque = get_slipfreq_torque()
+    except Exception as error:
+        print('It is likely you are running the codes on server and we have no access to the disk, right? Will try again...')
+        print(error.args)
+        if counter_loop > 3:
+            raise error
+    else:
+        break
 femm.mi_close()
 toc = time()
 print('id_solver=%d:'% (id_solver), toc - tic, 's')
