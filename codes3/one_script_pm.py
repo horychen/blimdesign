@@ -135,8 +135,6 @@ class Problem_BearinglessSynchronousDesign(object):
                 counter_loop = 0 # reset
             if stuck_at == counter_fitness_called:
                 counter_loop += 1
-                if counter_loop > 3:
-                    raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
 
             try:
                 cost_function, f1, f2, f3, FRW, \
@@ -166,7 +164,10 @@ class Problem_BearinglessSynchronousDesign(object):
                 logger.error(msg)
                 print(msg)
 
-                continue
+                if counter_loop > 2:
+                    raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+                else:
+                    continue
 
             except AttributeError as error:
                 print(str(error)) 
@@ -178,7 +179,10 @@ class Problem_BearinglessSynchronousDesign(object):
                 print(msg)
 
                 if 'designer.Application' in str(error):
-                    continue
+                    if counter_loop > 2:
+                        raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+                    else:
+                        continue
                 else:
                     raise error
 
