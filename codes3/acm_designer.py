@@ -676,8 +676,8 @@ class FEA_Solver:
             if app.NumModels()>=1:
                 model = app.GetModel(spmsm_variant.name)
             else:
-                logger.error('there is no model yet!')
-                raise Exception('why is there no model yet?')
+                logger.error('there is no model yet for %s'%(spmsm_variant.name))
+                raise Exception('why is there no model yet? %s'%(spmsm_variant.name))
 
             spmsm_variant.pre_process(app, model)
             study = spmsm_variant.add_magnetic_transient_study(app, model, self.dir_csv_output_folder, study_name) # Change here and there 
