@@ -10,78 +10,41 @@ bool_post_processing = False # solve or post-processing
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 my_execfile('./default_setting.py', g=globals(), l=locals())
 fea_config_dict
+fea_config_dict['Active_Qr'] = 16
 if True:
-    # ECCE
-    my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals())
-    spec
-
-    fea_config_dict['local_sensitivity_analysis'] = True
-    fea_config_dict['bool_refined_bounds'] = True
-    fea_config_dict['use_weights'] = 'O2'
-
-    # run_folder = r'run#530/' # 圆形槽JMAG绘制失败BUG
-
-    # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 2
-    # run_folder = r'run#531/' # number_of_variant = 2
-    # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 10
-    # run_folder = r'run#533/' # number_of_variant = 10
-
-    fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 20
-    run_folder = r'run#534/' # number_of_variant = 20
-
-
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2' # this is not working
 
-    # run_folder = r'run#535/' # test with pygmo
-    # run_folder = r'run#537/' # test with pygmo
-    run_folder = r'run#538/' # test with pygmo with new fitness and constraints, Rotor current density Jr is 6.5 Arms/mm^2
+    # Combined winding PMSM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.975
+    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
+    fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
+    run_folder = r'run#550/'
 
-    # run_folder = r'run#539/' # New copper loss formula from Bolognani 2006
-    run_folder = r'run#540/' # New copper loss formula from Bolognani 2006 # Fix small bugs
-
-
-    # fea_config_dict['local_sensitivity_analysis'] = True
-
-    # # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 3 # =2 would waste 1/3 of pop to evaluate the same reference design
-    # # fea_config_dict['local_sensitivity_analysis_percent'] = 0.05
-    # # run_folder = r'run#5409/' # LSA of high torque density design
-
-    # fea_config_dict['local_sensitivity_analysis_number_of_variants'] = 19 # =20 is also bad idea!
-    # fea_config_dict['local_sensitivity_analysis_percent'] = 0.2
-    # # run_folder = r'run#54099/' # LSA of high torque density design
-    # # run_folder = r'run#54088/' # LSA of high efficiency design
-    # run_folder = r'run#54077/' # LSA of low ripple performance design
 else:
-    # Prototype
     pass
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson02
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # my_execfile('./spec_Prototype2poleOD150mm500Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
-    my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals())
-    fea_config_dict['local_sensitivity_analysis'] = False
-    fea_config_dict['bool_refined_bounds'] = False
-    fea_config_dict['use_weights'] = 'O2'
-    # run_folder = r'run#538021/'
-    run_folder = r'run#540021/'
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson01
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # my_execfile('./spec_Prototype4poleOD150mm1000Hz_SpecifyTipSpeed.py', g=globals(), l=locals()) # define spec
-    my_execfile('./spec_ECCE_4pole32Qr1000Hz.py', g=globals(), l=locals())
-    fea_config_dict['local_sensitivity_analysis'] = False
-    fea_config_dict['bool_refined_bounds'] = False
-    fea_config_dict['use_weights'] = 'O2'
-    # run_folder = r'run#538011/'
-    run_folder = r'run#540011/'
-
 fea_config_dict['run_folder'] = run_folder
+build_model_name_prefix(fea_config_dict) # rebuild the model name for fea_config_dict
+
+# spec's
+my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals())
+spec
 fea_config_dict['Active_Qr'] = spec.Qr
 fea_config_dict['use_drop_shape_rotor_bar'] = spec.use_drop_shape_rotor_bar
-build_model_name_prefix(fea_config_dict) # rebuild the model name for fea_config_dict
+spec.build_im_template(fea_config_dict)
+
+# select motor type ehere
+print('Build ACM template...')
+spec.acm_template = spec.im_template
+
 
 import acm_designer
 global ad
@@ -92,10 +55,16 @@ ad = acm_designer.acm_designer(fea_config_dict, spec)
 #     quit()
 ad.init_logger()
 
-ad.bounds_denorm = ad.get_classic_bounds()
-print('classic_bounds and original_bounds')
-for A, B in zip(ad.bounds_denorm, ad.original_bounds):
-    print(A, B)
+ad.bounds_denorm = spec.get_im_classic_bounds(which_filter=fea_config_dict['which_filter'])
+ad.bound_filter  = spec.bound_filter
+print('---------------------\nBounds:')
+idx_ad = 0
+for idx, f in enumerate(ad.bound_filter):
+    if f == True:
+        print(idx, f, '[%g,%g]'%tuple(spec.original_template_neighbor_bounds[idx]), '[%g,%g]'%tuple(ad.bounds_denorm[idx_ad]))
+        idx_ad += 1
+    else:
+        print(idx, f, '[%g,%g]'%tuple(spec.original_template_neighbor_bounds[idx]))
 # quit()
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -168,8 +137,9 @@ class Problem_BearinglessInductionDesign(object):
 
             except Exception as e: # retry
 
-                # raise e
+                print('-'*40+'unexpected error is caught.')
                 print(e)
+                raise e
 
                 msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
                 logger = logging.getLogger(__name__)
@@ -265,7 +235,7 @@ if bool_post_processing == True:
     # Select optimal design by user-defined criteria
     if r'run#540' in fea_config_dict['run_folder']:
         ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#540011/' # severson01
-        number_of_chromosome = ad.solver.read_swarm_data()
+        number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
         swarm_data_severson01 = ad.solver.swarm_data
 
         def selection_criteria(swarm_data_):
@@ -300,7 +270,7 @@ if bool_post_processing == True:
                     def pyx_script():
                         # Plot cross section view
                         import population
-                        im_best = population.bearingless_induction_motor_design.local_design_variant(ad.spec.im_template, 99, 999, best_chromosome[:7])
+                        im_best = population.bearingless_induction_motor_design.local_design_variant(ad.spec.im_template, 99, 999, best_chromosome[:-3])
                         im_best.ID = str(best_idx)
                         pyx_draw_model(im_best)
                         quit()
@@ -329,7 +299,7 @@ if bool_post_processing == True:
         selection_criteria(swarm_data_severson01)
 
         ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#540021/' # severson02
-        number_of_chromosome = ad.solver.read_swarm_data()
+        number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
         swarm_data_severson02 = ad.solver.swarm_data
 
         print('-'*40+'\nSeverson02' + '\n      L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.')
@@ -338,7 +308,7 @@ if bool_post_processing == True:
         # swarm_data_severson01 = []
         # swarm_data_severson02 = []
         ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#540/' # ad.solver.fea_config_dict['run_folder'] 
-        number_of_chromosome = ad.solver.read_swarm_data()
+        number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
         swarm_data_Y730 = ad.solver.swarm_data
 
         print('-'*40+'\nY730' + '\n      L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.')
@@ -350,15 +320,15 @@ if bool_post_processing == True:
 
     elif fea_config_dict['run_folder'] == r'run#538/':
         ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#538011/' # severson01
-        number_of_chromosome = ad.solver.read_swarm_data()
+        number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
         swarm_data_severson01 = ad.solver.swarm_data
 
         ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#538021/' # severson02
-        number_of_chromosome = ad.solver.read_swarm_data()
+        number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
         swarm_data_severson02 = ad.solver.swarm_data
 
         ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#538/' # ad.solver.fea_config_dict['run_folder'] 
-        number_of_chromosome = ad.solver.read_swarm_data()
+        number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
         swarm_data_Y730 = ad.solver.swarm_data
 
     print('Sizes of the 3 populations (in order):', len(swarm_data_severson01), len(swarm_data_severson02), len(swarm_data_Y730))
@@ -372,7 +342,7 @@ if bool_post_processing == True:
     # LSA
     if fea_config_dict['local_sensitivity_analysis'] == True:
 
-        number_of_chromosome = ad.solver.read_swarm_data()
+        number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
 
         if number_of_chromosome is not None:
             ad.solver.swarm_data
@@ -426,7 +396,7 @@ if bool_post_processing == True:
                 return lsa_swarm, lsa_swarm_denorm
 
             print('Best index', best_idx, '#%d'%(best_idx+1), 'Best chromosome', best_chromosome)
-            _, lsa_swarm_denorm = local_sensitivity_analysis( reference_design_denorm=best_chromosome[:7],
+            _, lsa_swarm_denorm = local_sensitivity_analysis( reference_design_denorm=best_chromosome[:-3],
                                                               percent=fea_config_dict['local_sensitivity_analysis_percent'] )
             lsa_popsize = len(lsa_swarm_denorm)
 
@@ -451,7 +421,7 @@ if bool_post_processing == True:
         # normalized_torque_ripple, \
         # normalized_force_error_magnitude, \
         # force_error_angle = \
-        #     ad.evaluate_design(ad.spec.im_template, best_chromosome[:7], 1130)
+        #     ad.evaluate_design(ad.spec.im_template, best_chromosome[:-3], 1130)
         quit()
         run_static_structural_fea(swda.best_design_denorm)
 
@@ -485,7 +455,7 @@ if True:
 
     # 检查swarm_data.txt，如果有至少一个数据，返回就不是None。
     print('Check swarm_data.txt...')
-    number_of_chromosome = ad.solver.read_swarm_data()
+    number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
     if number_of_chromosome is not None:
         # 禁止在初始化pop时运行有限元
         ad.flag_do_not_evaluate_when_init_pop               = True
@@ -537,7 +507,7 @@ if True:
         if number_of_chromosome <= popsize:
             for i in range(popsize):
                 if i < number_of_chromosome: #number_of_finished_chromosome_in_current_generation:
-                    pop.set_xf(i, ad.solver.swarm_data[i][:7], ad.solver.swarm_data[i][-3:])
+                    pop.set_xf(i, ad.solver.swarm_data[i][:-3], ad.solver.swarm_data[i][-3:])
                 else:
                     print('Set ad.flag_do_not_evaluate_when_init_pop to False...')
                     ad.flag_do_not_evaluate_when_init_pop = False
@@ -549,12 +519,12 @@ if True:
             swarm_data_on_pareto_front = learn_about_the_archive(prob, ad.solver.swarm_data, popsize)
             # print(swarm_data_on_pareto_front)
             for i in range(popsize):
-                pop.set_xf(i, swarm_data_on_pareto_front[i][:7], swarm_data_on_pareto_front[i][-3:])
+                pop.set_xf(i, swarm_data_on_pareto_front[i][:-3], swarm_data_on_pareto_front[i][-3:])
 
             # if False:
                 # # 老办法（蠢办法），依赖于swarm_survivor.txt
                 # for i in range(popsize):
-                #     pop.set_xf(i, ad.solver.survivor[i][:7], ad.solver.survivor[i][-3:])
+                #     pop.set_xf(i, ad.solver.survivor[i][:-3], ad.solver.survivor[i][-3:])
 
                 # # 小测试，该式子应该永远成立，如果不成立，说明分析完一代以后，write survivor没有被正常调用。
                 # if ad.solver.survivor is not None:
@@ -578,7 +548,7 @@ if True:
                 #     for i in range(number_of_chromosome % popsize):
                 #         obj_challenger = ad.solver.swarm_data[i+base][-3:]
                 #         if pg.pareto_dominance(obj_challenger, fits_array[i]):
-                #             pop.set_xf(i, ad.solver.swarm_data[i+base][:7] , obj_challenger)
+                #             pop.set_xf(i, ad.solver.swarm_data[i+base][:-3] , obj_challenger)
                 #             print(i+base, '\t', obj_challenger, '\n\t', fits_array[i].tolist())
                 #             print('\t', pop.get_x()[i], pop.get_f()[i].tolist())
                 #         else:
@@ -615,7 +585,7 @@ if True:
 # MOO Step 3:
 #   Begin optimization
 ################################################################
-    number_of_chromosome = ad.solver.read_swarm_data()
+    number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
     number_of_finished_iterations = number_of_chromosome // popsize
     number_of_iterations = 50
     logger = logging.getLogger(__name__)

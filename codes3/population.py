@@ -1110,6 +1110,7 @@ class swarm(object):
                 d.plot_cage("Cage")
 
                 d.plot_statorCore("Stator Core")
+
                 d.plot_coil("Coil")
                 # d.plot_airWithinRotorSlots(u"Air Within Rotor Slots")
             else:
@@ -2734,6 +2735,7 @@ class bearingless_induction_motor_design(object):
     
         #01 Model Name
         self.model_name_prefix = model_name_prefix # do include 'PS' here
+        self.name = 'BLIM'
 
         # self.TORQUE_CURRENT_RATIO = 0.975
 
@@ -2815,6 +2817,9 @@ class bearingless_induction_motor_design(object):
         self.BeariW_Freq       = self.DriveW_Freq
 
 
+        # 临时这么处理吧，好困了
+        self.fill_factor = 0.5
+        self.Js = 4e6
         # CurrentAmp_in_the_slot = self.coils.mm2_slot_area * self.fill_factor * self.Js*1e-6 * np.sqrt(2) #/2.2*2.8
         # CurrentAmp_per_conductor = CurrentAmp_in_the_slot / self.DriveW_zQ
         # CurrentAmp_per_phase = CurrentAmp_per_conductor * self.wily.number_parallel_branch # 跟几层绕组根本没关系！除以zQ的时候，就已经变成每根导体的电流了。
@@ -2973,20 +2978,20 @@ class bearingless_induction_motor_design(object):
         return rotor_tooth_height_h_dr, new__rotor_tooth_width_b_dr, thermal_penalty, new__area_rotor_slot_Sur
 
     @classmethod
-    def local_design_variant(cls, im, number_current_generation, individual_index, design_parameters):
+    def local_design_variant(cls, im, number_current_generation, individual_index, x_denorm):
         # Never assign anything to im, you can build your self after calling cls and assign stuff to self
 
-        # unpack design_parameters
-        air_gap_length_delta          = design_parameters[0]*1e-3 # m
-        stator_tooth_width_b_ds       = design_parameters[1]*1e-3 # m
-        rotor_tooth_width_b_dr        = design_parameters[2]*1e-3 # m
+        # unpack x_denorm
+        air_gap_length_delta          = x_denorm[0]*1e-3 # m
+        stator_tooth_width_b_ds       = x_denorm[1]*1e-3 # m
+        rotor_tooth_width_b_dr        = x_denorm[2]*1e-3 # m
 
-        Width_RotorSlotOpen           = design_parameters[4]      # mm, rotor slot opening
-        Length_HeadNeckRotorSlot      = design_parameters[6]
+        Width_RotorSlotOpen           = x_denorm[4]      # mm, rotor slot opening
+        Length_HeadNeckRotorSlot      = x_denorm[6]
 
         # Constranint #2
         # stator_tooth_width_b_ds imposes constraint on stator slot height
-        Width_StatorTeethHeadThickness = design_parameters[5]
+        Width_StatorTeethHeadThickness = x_denorm[5]
         Width_StatorTeethNeck = 0.5 * Width_StatorTeethHeadThickness
 
         area_stator_slot_Sus    = im.parameters_for_imposing_constraints_among_design_parameters[0]
@@ -2997,6 +3002,18 @@ class bearingless_induction_motor_design(object):
                                                                     im.Qs,
                                                                     Width_StatorTeethHeadThickness,
                                                                     Width_StatorTeethNeck)
+
+        if 'VariableStatorSlotDepth' in im.fea_config_dict['which_filter']:
+            backup = stator_yoke_diameter_Dsyi
+            print('[V] The original stator_yoke_diameter_Dsyi is %g m'%(stator_yoke_diameter_Dsyi))
+            # TODO: 用定子槽深变量，覆盖掉这边计算出来的 stator_yoke_diameter_Dsyi 即可。
+            # 同时们还要修改 Radius_OuterStatorYoke，从而保证轭部深度不变！
+            stator_tooth_height_h_ds = x_denorm[7]*1e-3
+            stator_yoke_diameter_Dsyi = 2*stator_inner_radius_r_is + 2*stator_tooth_height_h_ds
+            My_Radius_OuterStatorYoke = im.Radius_OuterStatorYoke + 0.5*(stator_yoke_diameter_Dsyi - backup)*1e3
+            print('[V] The new stator_yoke_diameter_Dsyi is %g mm (the original one is %g mm)'%(1e3*stator_yoke_diameter_Dsyi, 1e3*backup))
+            print('[V] The new Radius_OuterStatorYoke is %g mm (the original one is %g mm)' % (My_Radius_OuterStatorYoke, im.Radius_OuterStatorYoke))
+
 
         # Constranint #3
         # rotor_tooth_width_b_dr imposes constraint on rotor slot height
@@ -3034,9 +3051,9 @@ class bearingless_induction_motor_design(object):
             [   im.ID + '-' + str(number_current_generation) + '-' + str(individual_index), # the ID is str
                 im.Qs,
                 im.Qr,
-                im.Radius_OuterStatorYoke,
+                My_Radius_OuterStatorYoke, #im.Radius_OuterStatorYoke,
                 0.5*stator_yoke_diameter_Dsyi * 1e3, # 定子内轭部处的半径由需要的定子槽面积和定子齿宽来决定。
-                design_parameters[0],                # [1] # Length_AirGap
+                x_denorm[0],                # [1] # Length_AirGap
                 im.Radius_OuterRotor,
                 im.Radius_Shaft, 
                 Length_HeadNeckRotorSlot,            # [6]
@@ -3045,8 +3062,8 @@ class bearingless_induction_motor_design(object):
                 Width_RotorSlotOpen,                 # [4]
                 Radius_of_RotorSlot2,
                 Location_RotorBarCenter2,
-                design_parameters[3],                # [3] # Angle_StatorSlotOpen
-                design_parameters[1],                # [1] # Width_StatorTeethBody
+                x_denorm[3],                # [3] # Angle_StatorSlotOpen
+                x_denorm[1],                # [1] # Width_StatorTeethBody
                 Width_StatorTeethHeadThickness,      # [5]
                 Width_StatorTeethNeck,
                 im.DriveW_poles, 
@@ -3065,7 +3082,8 @@ class bearingless_induction_motor_design(object):
                     im.model_name_prefix)
         self.number_current_generation = number_current_generation
         self.individual_index = individual_index
-        self.design_parameters = design_parameters
+
+        self.design_parameters = x_denorm
 
         self.stator_yoke_diameter_Dsyi = stator_yoke_diameter_Dsyi # this is used for copper loss calculation in FEMM_Solver.py
         self.rotor_slot_height_h_sr = rotor_slot_height_h_sr       # this is used for copper loss calculation in FEMM_Solver.py
@@ -3149,12 +3167,19 @@ class bearingless_induction_motor_design(object):
             exec('self.' + line[count_of_space:-3]) 
         return self
 
-    def get_rotor_volume(self):
-        return pi*(self.Radius_OuterRotor*1e-3)**2 * (self.stack_length*1e-3)
 
-    def get_rotor_weight(self, gravity=9.8):
+    def get_rotor_volume(self, stack_length=None):
+        if stack_length is None:
+            return np.pi*(self.Radius_OuterRotor*1e-3)**2 * (self.stack_length*1e-3)
+        else:
+            return np.pi*(self.Radius_OuterRotor*1e-3)**2 * (stack_length*1e-3)
+
+    def get_rotor_weight(self, gravity=9.8, stack_length=None):
         material_density_rho = get_material_data()[0]
-        return gravity * self.get_rotor_volume() * material_density_rho # steel 7860 or 8050 kg/m^3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
+        if stack_length is None:
+            return gravity * self.get_rotor_volume() * material_density_rho # steel 7860 or 8050 kg/m^3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
+        else:
+            return gravity * self.get_rotor_volume(stack_length=stack_length) * material_density_rho # steel 7860 or 8050 kg/m^3. Copper/Density 8.96 g/cm³. gravity: 9.8 N/kg
 
     def whole_row_reader(self, reader):
         for row in reader:
@@ -3836,6 +3861,7 @@ class bearingless_induction_motor_design(object):
             if bool_3PhaseCurrentSource != True:
                 raise Exception('Logic Error Detected.')
         else:
+            '[B]: DriveW_CurrentAmp is set.'
             # case: DPNV as an actual two layer winding
             ampD = self.DriveW_CurrentAmp/npb
             ampB = self.BeariW_CurrentAmp
@@ -4639,7 +4665,6 @@ class bearingless_induction_motor_design(object):
         # for key, item in dict_circuit_current_complex.iteritems():
         #     print key, dict_circuit_current_complex[key],
         #     print dict_circuit_current_amp_and_phase[key]
-
 
 class VanGogh_JMAG(VanGogh):
     def __init__(self, im, child_index=1, doNotRotateCopy=False):
@@ -5470,6 +5495,21 @@ class TrimDrawer(object):
             l6 = self.line(self.l5_start_vertex_x, self.l5_start_vertex_y, \
                             l3.GetStartVertex().GetX(), l3.GetStartVertex().GetY())
 
+
+            from CrossSectStator import get_area_polygon
+            # print(  sketch.GetItem("Line").GetStartVertex().GetX(), sketch.GetItem("Line").GetStartVertex().GetY(),
+            #         sketch.GetItem("Line").GetEndVertex().GetX(), sketch.GetItem("Line").GetEndVertex().GetY(),
+            #         sketch.GetItem("Line.2").GetStartVertex().GetX(), sketch.GetItem("Line.2").GetStartVertex().GetY(),
+            #         sketch.GetItem("Line.2").GetEndVertex().GetX(), sketch.GetItem("Line.2").GetEndVertex().GetY()
+            #         )
+            self.mm2_slot_area = 2 * get_area_polygon(
+                                                        [sketch.GetItem("Line").GetStartVertex().GetX(), sketch.GetItem("Line").GetStartVertex().GetY()],
+                                                        [sketch.GetItem("Line").GetEndVertex().GetX(), sketch.GetItem("Line").GetEndVertex().GetY()],
+                                                        [sketch.GetItem("Line.2").GetStartVertex().GetX(), sketch.GetItem("Line.2").GetStartVertex().GetY()],
+                                                        [sketch.GetItem("Line.2").GetEndVertex().GetX(), sketch.GetItem("Line.2").GetEndVertex().GetY()]
+                                                        )
+            print('Stator Slot Area: %g mm^2'%(self.mm2_slot_area))
+            # raise KeyboardInterrupt
 
             # Trim Circles
             self.trim_c(c1,0, self.im.Radius_InnerStatorYoke)

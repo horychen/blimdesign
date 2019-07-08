@@ -42,7 +42,6 @@ class bearingless_spmsm_template(object):
             ]
         return self.design_parameters
 
-
     def get_classic_bounds(self, which_filter='FixedSleeveLength', user_bound_filter=None):
         # bound_filter is used to filter out some free_variables that are not going to be optimized.
         self.bound_filter = [ 1,          # deg_alpha_st        = free_variables[0]

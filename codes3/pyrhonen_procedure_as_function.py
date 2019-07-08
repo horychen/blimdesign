@@ -1252,13 +1252,15 @@ class desgin_specification(object):
             Width_StatorTeethHeadThickness = design_parameters[6]             # [6]       # stator tooth head length [mm]
         '''
 
-        self.delta      = 1e3*air_gap_length_delta      # delta
+        self.delta      = 1e3*air_gap_length_delta      # delta or L_g
         self.w_st       = 1e3*stator_tooth_width_b_ds   # w_st
         self.w_rt       = 1e3*rotor_tooth_width_b_dr    # w_rt
         self.theta_so   = Angle_StatorSlotOpen          # theta_so
         self.w_ro       = 1e3*b1                        # w_ro
         self.d_so       = Width_StatorTeethHeadThickness# d_so
         self.d_ro       = Length_HeadNeckRotorSlot      # d_ro
+        self.d_st       = 1e3*stator_slot_height_h_ss   # d_st
+        self.d_sy       = 1e3*stator_yoke_height_h_ys   # d_sy
 
         print('-'*20+'\ndelta', '%g mm'%self.delta, file=fname)
         print('w_st',           '%g mm'%self.w_st, file=fname)
@@ -1383,6 +1385,43 @@ class desgin_specification(object):
             # self.free_variables = free_variables
         else:
             raise Exception('Not implemented error.')
+
+    def get_im_classic_bounds(self, which_filter='FixedStatorSlotDepth', user_bound_filter=None):
+        spec = self
+        # bound_filter is used to filter out some free_variables that are not going to be optimized.
+        self.bound_filter = [ 1,                     # air_gap_length_delta
+                              1,                  #--# stator_tooth_width_b_ds
+                              1,                  #--# rotor_tooth_width_b_dr
+                              1,                     # Angle_StatorSlotOpen
+                              1,                     # Width_RotorSlotOpen 
+                              1,                     # Width_StatorTeethHeadThickness
+                              1,                     # Length_HeadNeckRotorSlot
+                              0,                     # Depth_StatorSlot
+                              0 ]                    # Depth_StatorYoke (not supported yet)
+        if 'FixedStatorSlotDepth' in which_filter:
+            pass
+        elif 'VariableStatorSlotDepth' in which_filter:
+            self.bound_filter[7] = 1
+        else:
+            if len(user_bound_filter) != 9:
+                raise Exception('Invalid bound_filter for bounds. Should be 9 length but %d.'%(len(user_bound_filter)))
+            self.bound_filter = user_bound_filter
+
+        self.original_template_neighbor_bounds = [ 
+                                [     spec.delta*0.9,       spec.delta*2  ],           # air_gap_length_delta
+                                [     spec.w_st *0.5,       spec.w_st *1.5],        #--# stator_tooth_width_b_ds
+                                [     spec.w_rt *0.5,       spec.w_rt *1.5],        #--# rotor_tooth_width_b_dr
+                                [    0.2*360/spec.Qs,      0.8*360/spec.Qs],           # Angle_StatorSlotOpen
+                                [               5e-1,                    3],           # Width_RotorSlotOpen 
+                                [               5e-1,                    3],           # Width_StatorTeethHeadThickness
+                                [               5e-1,                    3],           # Length_HeadNeckRotorSlot
+                                [     spec.d_st *0.8,       spec.d_st *1.2],           # Depth_StatorSlot
+                                [     spec.d_sy *0.8,       spec.d_sy *1.2]]           # Depth_StatorYoke
+
+        index_not_included = [idx for idx, el in enumerate(self.bound_filter) if el==0]
+        self.filtered_template_neighbor_bounds = [bound for idx, bound in enumerate(self.original_template_neighbor_bounds) if idx not in index_not_included]
+        return self.filtered_template_neighbor_bounds
+
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Play with this Pyrhonen procedure
@@ -1520,6 +1559,4 @@ def get_stack_length_critical_speed(speed_rpm, rotor_radius, material_density_rh
                                       / (material_density_rho* cross_section_area_S) ) )
     return stack_length_max
     # print('stack_length_max=', stack_length_max*1e3, 'mm', file=fname)
-
-
 

@@ -517,21 +517,24 @@ class swarm_data_container(object):
 
 
     def get_x_denorm_from_design_parameters(self, design_parameters, bound_filter):
-        # step 1: get free_variables from design_parameters
-        free_variables = [None]*13
-        free_variables[0]  = design_parameters[0] # spmsm_template.deg_alpha_st 
-        free_variables[1]  = design_parameters[3] # spmsm_template.mm_d_so         
-        free_variables[2]  = design_parameters[5] # spmsm_template.mm_d_st
-        free_variables[3]  = sum([design_parameters[i] for i in (2,4,5,6)]) # spmsm_template.mm_r_si + spmsm_template.mm_d_sp + spmsm_template.mm_d_st + spmsm_template.mm_d_sy # stator outer radius
-        free_variables[4]  = design_parameters[7] # spmsm_template.mm_w_st         
-        free_variables[5]  = design_parameters[12] # spmsm_template.sleeve_length   
-        free_variables[6]  = design_parameters[14] # spmsm_template.mm_d_pm         
-        free_variables[7]  = design_parameters[15] # spmsm_template.deg_alpha_rm    
-        free_variables[8]  = design_parameters[16] # spmsm_template.deg_alpha_rs    
-        free_variables[9]  = design_parameters[17] # spmsm_template.mm_d_ri         
-        free_variables[10] = sum([design_parameters[i] for i in (18,17,19)]) # spmsm_template.mm_r_ri + spmsm_template.mm_d_ri + spmsm_template.mm_d_rp
-        free_variables[11] = design_parameters[19] # spmsm_template.mm_d_rp         
-        free_variables[12] = design_parameters[20] # spmsm_template.mm_d_rs         
+        if len(bound_filter) == 13:
+            # step 1: get free_variables from design_parameters
+            free_variables = [None]*13
+            free_variables[0]  = design_parameters[0] # spmsm_template.deg_alpha_st 
+            free_variables[1]  = design_parameters[3] # spmsm_template.mm_d_so         
+            free_variables[2]  = design_parameters[5] # spmsm_template.mm_d_st
+            free_variables[3]  = sum([design_parameters[i] for i in (2,4,5,6)]) # spmsm_template.mm_r_si + spmsm_template.mm_d_sp + spmsm_template.mm_d_st + spmsm_template.mm_d_sy # stator outer radius
+            free_variables[4]  = design_parameters[7] # spmsm_template.mm_w_st         
+            free_variables[5]  = design_parameters[12] # spmsm_template.sleeve_length   
+            free_variables[6]  = design_parameters[14] # spmsm_template.mm_d_pm         
+            free_variables[7]  = design_parameters[15] # spmsm_template.deg_alpha_rm    
+            free_variables[8]  = design_parameters[16] # spmsm_template.deg_alpha_rs    
+            free_variables[9]  = design_parameters[17] # spmsm_template.mm_d_ri         
+            free_variables[10] = sum([design_parameters[i] for i in (18,17,19)]) # spmsm_template.mm_r_ri + spmsm_template.mm_d_ri + spmsm_template.mm_d_rp
+            free_variables[11] = design_parameters[19] # spmsm_template.mm_d_rp         
+            free_variables[12] = design_parameters[20] # spmsm_template.mm_d_rs         
+        elif len(bound_filter) == 9:
+            free_variables = design_parameters # For IM, free_variables are design_parameters (even always having the same length)
 
         # step 2: get x_denorm from free_variables
         x_denorm = []
@@ -745,7 +748,7 @@ class FEA_Solver:
 
                 def add_steel(self):
                     print('[First run on this computer detected]', self.fea_config_dict['Steel'], 'is added to jmag material library.')
-
+                    import population
                     if 'M15' in self.fea_config_dict['Steel']:
                         population.add_M1xSteel(self.app, self.fea_config_dict['dir_parent'], steel_name="M-15 Steel")
                     elif 'M19' in self.fea_config_dict['Steel']:
@@ -917,8 +920,28 @@ class FEA_Solver:
                 d.plot_cage("Cage")
 
                 d.plot_statorCore("Stator Core")
+
                 d.plot_coil("Coil")
                 # d.plot_airWithinRotorSlots(u"Air Within Rotor Slots")
+
+                if 'VariableStatorSlotDepth' in self.fea_config_dict['which_filter']:
+                    # set DriveW_CurrentAmp using the calculated stator slot area.
+                    print('[A]: DriveW_CurrentAmp is updated.')
+
+                    # 槽深变化，电密不变，所以电流也会变化。
+                    CurrentAmp_in_the_slot = d.mm2_slot_area * im_variant.fill_factor * im_variant.Js*1e-6 * np.sqrt(2)
+                    CurrentAmp_per_conductor = CurrentAmp_in_the_slot / im_variant.DriveW_zQ
+                    CurrentAmp_per_phase = CurrentAmp_per_conductor * im_variant.wily.number_parallel_branch # 跟几层绕组根本没关系！除以zQ的时候，就已经变成每根导体的电流了。
+                    variant_DriveW_CurrentAmp = CurrentAmp_per_phase # this current amp value is for non-bearingless motor
+                    im_variant.DriveW_CurrentAmp = self.fea_config_dict['TORQUE_CURRENT_RATIO'] * variant_DriveW_CurrentAmp 
+                    im_variant.BeariW_CurrentAmp = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] * variant_DriveW_CurrentAmp
+                    print('---Variant CurrentAmp_in_the_slot =', CurrentAmp_in_the_slot)
+                    print('---variant_DriveW_CurrentAmp = CurrentAmp_per_phase =', variant_DriveW_CurrentAmp)
+                    print('---im_variant.DriveW_CurrentAmp =', im_variant.DriveW_CurrentAmp)
+                    print('---im_variant.BeariW_CurrentAmp =', im_variant.BeariW_CurrentAmp)
+                    print('---TORQUE_CURRENT_RATIO:', self.fea_config_dict['TORQUE_CURRENT_RATIO'])
+                    print('---SUSPENSION_CURRENT_RATIO:', self.fea_config_dict['SUSPENSION_CURRENT_RATIO'])
+
             else:
                 d = VanGogh_JMAG(im_variant, doNotRotateCopy=doNotRotateCopy) # 传递的是地址哦
                 d.doc, d.ass = doc, ass
@@ -1051,101 +1074,101 @@ class acm_designer(object):
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # 1. Bounds for DE optimiazation
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    def get_original_bounds(self, Jr_max=8e6):
+    # def get_original_bounds(self, Jr_max=8e6):
 
-        from math import tan, pi
-        定子齿宽最小值 = 1
-        定子齿宽最大值 = tan(2*pi/self.spec.Qs*0.5)*self.spec.Radius_OuterRotor * 2 # 圆（半径为Radius_OuterRotor）的外接正多边形（Regular polygon）的边长
-        # print(定子齿宽最大值, 2*pi*self.spec.Radius_OuterRotor/self.spec.Qs) # 跟弧长比应该比较接近说明对了
+        # from math import tan, pi
+        # 定子齿宽最小值 = 1
+        # 定子齿宽最大值 = tan(2*pi/self.spec.Qs*0.5)*self.spec.Radius_OuterRotor * 2 # 圆（半径为Radius_OuterRotor）的外接正多边形（Regular polygon）的边长
+        # # print(定子齿宽最大值, 2*pi*self.spec.Radius_OuterRotor/self.spec.Qs) # 跟弧长比应该比较接近说明对了
 
-        转子齿宽最小值 = 1
-        内接圆的半径 = self.spec.Radius_OuterRotor - (self.spec.d_ro + self.spec.Radius_of_RotorSlot)
-        转子齿宽最大值 = tan(2*pi/self.spec.Qr*0.5)*内接圆的半径 * 2 
-        # print(转子齿宽最大值, 2*pi*内接圆的半径/self.spec.Qr) # 跟弧长比应该比较接近说明对了
+        # 转子齿宽最小值 = 1
+        # 内接圆的半径 = self.spec.Radius_OuterRotor - (self.spec.d_ro + self.spec.Radius_of_RotorSlot)
+        # 转子齿宽最大值 = tan(2*pi/self.spec.Qr*0.5)*内接圆的半径 * 2 
+        # # print(转子齿宽最大值, 2*pi*内接圆的半径/self.spec.Qr) # 跟弧长比应该比较接近说明对了
 
-        self.original_bounds = [ [           1.0,                3],          # air_gap_length_delta
-                                 [定子齿宽最小值,   定子齿宽最大值],#--# stator_tooth_width_b_ds
-                                 [转子齿宽最小值,   转子齿宽最大值],#--# rotor_tooth_width_b_dr
-                                 [             1, 360/self.spec.Qs],           # Angle_StatorSlotOpen
-                                 [          5e-1,                3],           # Width_RotorSlotOpen 
-                                 [          5e-1,                3],           # Width_StatorTeethHeadThickness
-                                 [          5e-1,                3] ]          # Length_HeadNeckRotorSlot
-        # 定子齿范围检查
-        # 定子齿再宽，都可以无限加长轭部来满足导电面积。
-        # stator_inner_radius_r_is_eff = stator_inner_radius_r_is + (width_statorTeethHeadThickness + width_StatorTeethNeck)
-        # temp = (2*pi*stator_inner_radius_r_is_eff - self.Qs*stator_tooth_width_b_ds)
-        # stator_tooth_height_h_ds = ( sqrt(temp**2 + 4*pi*area_stator_slot_Sus*self.Qs) - temp ) / (2*pi)
+        # self.original_bounds = [ [           1.0,                3],          # air_gap_length_delta
+        #                          [定子齿宽最小值,   定子齿宽最大值],#--# stator_tooth_width_b_ds
+        #                          [转子齿宽最小值,   转子齿宽最大值],#--# rotor_tooth_width_b_dr
+        #                          [             1, 360/self.spec.Qs],           # Angle_StatorSlotOpen
+        #                          [          5e-1,                3],           # Width_RotorSlotOpen 
+        #                          [          5e-1,                3],           # Width_StatorTeethHeadThickness
+        #                          [          5e-1,                3] ]          # Length_HeadNeckRotorSlot
+        # # 定子齿范围检查
+        # # 定子齿再宽，都可以无限加长轭部来满足导电面积。
+        # # stator_inner_radius_r_is_eff = stator_inner_radius_r_is + (width_statorTeethHeadThickness + width_StatorTeethNeck)
+        # # temp = (2*pi*stator_inner_radius_r_is_eff - self.Qs*stator_tooth_width_b_ds)
+        # # stator_tooth_height_h_ds = ( sqrt(temp**2 + 4*pi*area_stator_slot_Sus*self.Qs) - temp ) / (2*pi)
 
-        def check_valid_rotor_slot_height(rotor_tooth_width_b_dr, Jr_max):
+        # def check_valid_rotor_slot_height(rotor_tooth_width_b_dr, Jr_max):
 
-            area_conductor_rotor_Scr = self.spec.rotor_current_actual / Jr_max
-            area_rotor_slot_Sur = area_conductor_rotor_Scr
+        #     area_conductor_rotor_Scr = self.spec.rotor_current_actual / Jr_max
+        #     area_rotor_slot_Sur = area_conductor_rotor_Scr
             
-            rotor_outer_radius_r_or_eff = 1e-3*(self.spec.Radius_OuterRotor - self.spec.d_ro)
+        #     rotor_outer_radius_r_or_eff = 1e-3*(self.spec.Radius_OuterRotor - self.spec.d_ro)
 
-            slot_height, _, _ = pyrhonen_procedure_as_function.get_parallel_tooth_height(area_rotor_slot_Sur, rotor_tooth_width_b_dr, self.spec.Qr, rotor_outer_radius_r_or_eff)
-            return np.isnan(slot_height)
+        #     slot_height, _, _ = pyrhonen_procedure_as_function.get_parallel_tooth_height(area_rotor_slot_Sur, rotor_tooth_width_b_dr, self.spec.Qr, rotor_outer_radius_r_or_eff)
+        #     return np.isnan(slot_height)
 
 
-        # 转子齿范围检查
-        下界, 上界 = self.original_bounds[2][0], self.original_bounds[2][1]
-        步长 = (上界-下界)*0.05
-        list_valid_tooth_width = []
-        for rotor_tooth_width_b_dr in np.arange(下界, 上界, 步长):
-            # print('b_dr =', rotor_tooth_width_b_dr)
-            list_valid_tooth_width.append( check_valid_rotor_slot_height(rotor_tooth_width_b_dr, Jr_max) ) # 8e6 from Pyrhonen's book for copper
-        # print(list_valid_tooth_width)
-        有效上界 = 下界
-        for ind, el in enumerate(list_valid_tooth_width):
-            if el == True:
-                break
-            else:
-                有效上界 += 步长
-        self.original_bounds[2][1] = 有效上界
+        # # 转子齿范围检查
+        # 下界, 上界 = self.original_bounds[2][0], self.original_bounds[2][1]
+        # 步长 = (上界-下界)*0.05
+        # list_valid_tooth_width = []
+        # for rotor_tooth_width_b_dr in np.arange(下界, 上界, 步长):
+        #     # print('b_dr =', rotor_tooth_width_b_dr)
+        #     list_valid_tooth_width.append( check_valid_rotor_slot_height(rotor_tooth_width_b_dr, Jr_max) ) # 8e6 from Pyrhonen's book for copper
+        # # print(list_valid_tooth_width)
+        # 有效上界 = 下界
+        # for ind, el in enumerate(list_valid_tooth_width):
+        #     if el == True:
+        #         break
+        #     else:
+        #         有效上界 += 步长
+        # self.original_bounds[2][1] = 有效上界
 
-        return self.original_bounds
+        # return self.original_bounds
 
-    def get_classic_bounds(self):
-        if 'SM' in self.spec.acm_template.name:
-            Q = self.spec.pmsm_template.Q
-            s = self.spec.pmsm_template.s
-            p = self.spec.pmsm_template.p
-            PMSM = self.spec.pmsm_template
-            self.classic_bounds =  [ 
-                                [ 0.35*360/Q, 0.9*360/Q],    # deg_alpha_st        = free_variables[0]
-                                [  0.5,   5],                # mm_d_so             = free_variables[1]
-                                [0.8*PMSM.mm_d_st,                1.2*PMSM.mm_d_st], # mm_d_st    = free_variables[2]
-                                [0.8*PMSM.Radius_OuterStatorYoke, 1.2*PMSM.Radius_OuterStatorYoke], # stator_outer_radius = free_variables[3]
-                                [0.8*PMSM.mm_w_st,                1.2*PMSM.mm_w_st], # mm_w_st    = free_variables[4]
-                                [3,   4],                    # sleeve_length       = free_variables[5]
-                                [2.5, 7],                    # mm_d_pm             = free_variables[6]
-                                [0.6*360/(2*p), 1.0*360/(2*p)],      # deg_alpha_rm        = free_variables[7]
-                                [0.8*360/(2*p)/s, 0.975*360/(2*p)/s], # deg_alpha_rs        = free_variables[8]
-                                [0.8*PMSM.mm_d_ri,  1.2*PMSM.mm_d_ri], # mm_d_ri   = free_variables[9]
-                                [0.8*PMSM.Radius_OuterRotor, 1.2*PMSM.Radius_OuterRotor], # rotor_outer_radius  = free_variables[10] 
-                                [2.5,   6],                  # mm_d_rp             = free_variables[11]
-                                [2.5,   6] ]                 # mm_d_rs             = free_variables[12]
-            self.original_bounds = self.classic_bounds
-            return self.classic_bounds
-        else:
-            self.get_original_bounds()
-            self.classic_bounds = [ [self.spec.delta*0.9, self.spec.delta*2  ],          # air_gap_length_delta
-                                    [self.spec.w_st *0.5, self.spec.w_st *1.5],          #--# stator_tooth_width_b_ds
-                                    [self.spec.w_rt *0.5, self.spec.w_rt *1.5],          #--# rotor_tooth_width_b_dr
-                                    [                1.5,                  12],           # Angle_StatorSlotOpen
-                                    [               5e-1,                   3],           # Width_RotorSlotOpen 
-                                    [               5e-1,                   3],           # Width_StatorTeethHeadThickness
-                                    [               5e-1,                   3] ]          # Length_HeadNeckRotorSlot
-            # classic_bounds cannot be beyond original_bounds
-            index = 0
-            for A, B in zip(self.classic_bounds, self.original_bounds):
-                if A[0] < B[0]:
-                    self.classic_bounds[index] = B[0]
-                if A[1] > B[1]:
-                    self.classic_bounds[index] = B[1]
-                index += 1
+    # def get_classic_bounds(self):
+        # if 'SM' in self.spec.acm_template.name:
+        #     Q = self.spec.pmsm_template.Q
+        #     s = self.spec.pmsm_template.s
+        #     p = self.spec.pmsm_template.p
+        #     PMSM = self.spec.pmsm_template
+        #     self.classic_bounds =  [ 
+        #                         [ 0.35*360/Q, 0.9*360/Q],    # deg_alpha_st        = free_variables[0]
+        #                         [  0.5,   5],                # mm_d_so             = free_variables[1]
+        #                         [0.8*PMSM.mm_d_st,                1.2*PMSM.mm_d_st], # mm_d_st    = free_variables[2]
+        #                         [0.8*PMSM.Radius_OuterStatorYoke, 1.2*PMSM.Radius_OuterStatorYoke], # stator_outer_radius = free_variables[3]
+        #                         [0.8*PMSM.mm_w_st,                1.2*PMSM.mm_w_st], # mm_w_st    = free_variables[4]
+        #                         [3,   4],                    # sleeve_length       = free_variables[5]
+        #                         [2.5, 7],                    # mm_d_pm             = free_variables[6]
+        #                         [0.6*360/(2*p), 1.0*360/(2*p)],      # deg_alpha_rm        = free_variables[7]
+        #                         [0.8*360/(2*p)/s, 0.975*360/(2*p)/s], # deg_alpha_rs        = free_variables[8]
+        #                         [0.8*PMSM.mm_d_ri,  1.2*PMSM.mm_d_ri], # mm_d_ri   = free_variables[9]
+        #                         [0.8*PMSM.Radius_OuterRotor, 1.2*PMSM.Radius_OuterRotor], # rotor_outer_radius  = free_variables[10] 
+        #                         [2.5,   6],                  # mm_d_rp             = free_variables[11]
+        #                         [2.5,   6] ]                 # mm_d_rs             = free_variables[12]
+        #     self.original_bounds = self.classic_bounds
+        #     return self.classic_bounds
+        # else:
+        #     self.get_original_bounds()
+        #     self.classic_bounds = [ [self.spec.delta*0.9, self.spec.delta*2  ],          # air_gap_length_delta
+        #                             [self.spec.w_st *0.5, self.spec.w_st *1.5],          #--# stator_tooth_width_b_ds
+        #                             [self.spec.w_rt *0.5, self.spec.w_rt *1.5],          #--# rotor_tooth_width_b_dr
+        #                             [                1.5,                  12],           # Angle_StatorSlotOpen
+        #                             [               5e-1,                   3],           # Width_RotorSlotOpen 
+        #                             [               5e-1,                   3],           # Width_StatorTeethHeadThickness
+        #                             [               5e-1,                   3] ]          # Length_HeadNeckRotorSlot
+        #     # classic_bounds cannot be beyond original_bounds
+        #     index = 0
+        #     for A, B in zip(self.classic_bounds, self.original_bounds):
+        #         if A[0] < B[0]:
+        #             self.classic_bounds[index] = B[0]
+        #         if A[1] > B[1]:
+        #             self.classic_bounds[index] = B[1]
+        #         index += 1
                 
-            return self.classic_bounds
+        #     return self.classic_bounds
 
     def get_de_config(self):
 
