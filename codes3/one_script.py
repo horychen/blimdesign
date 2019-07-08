@@ -11,8 +11,7 @@ bool_post_processing = False # solve or post-processing
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 my_execfile('./default_setting.py', g=globals(), l=locals())
 fea_config_dict
-fea_config_dict['Active_Qr'] = 16
-if True:
+if False:
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2' # this is not working
@@ -28,6 +27,11 @@ else:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson02
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # Combined winding PMSM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
+    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
+    fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
+    run_folder = r'run#550020/'
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson01
@@ -525,7 +529,7 @@ if True:
                     pop.set_x(i, pop_array[i]) # evaluate this guy
         else:
             # 新办法，直接从swarm_data.txt（相当于archive）中判断出当前最棒的群体
-            swarm_data_on_pareto_front = learn_about_the_archive(prob, ad.solver.swarm_data, popsize)
+            swarm_data_on_pareto_front = learn_about_the_archive(prob, ad.solver.swarm_data, popsize, fea_config_dict)
             # print(swarm_data_on_pareto_front)
             for i in range(popsize):
                 pop.set_xf(i, swarm_data_on_pareto_front[i][:-3], swarm_data_on_pareto_front[i][-3:])
