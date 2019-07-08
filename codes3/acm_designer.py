@@ -735,7 +735,7 @@ class FEA_Solver:
         # self.jmag_control_state = False
 
         # local scripts
-        def open_jmag(expected_project_file):
+        def open_jmag(expected_project_file_path):
             if self.app is None:
                 app = win32com.client.Dispatch('designer.Application.171')
                 if self.fea_config_dict['designer.Show'] == True:
