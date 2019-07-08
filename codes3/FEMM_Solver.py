@@ -2419,6 +2419,7 @@ class FEMM_Solver(object):
                 os.rename(fname[:-4]+'.fem', new_fname[:-4]+'.fem')
                 break
             else:
+                print('Wait for greedy search: sleep 1 sec...')
                 sleep(1)
                 # print clock_time() - tic, 's'
         toc = clock_time()
