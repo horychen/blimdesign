@@ -4989,8 +4989,12 @@ class TrimDrawer(object):
         ref2 = self.doc.CreateReferenceFromItem(region)
         circular_pattern.SetPropertyByReference("Region", ref2)
         face_region_string = circular_pattern.GetProperty("Region")
-        face_region_string = face_region_string[0]
-        # print circular_pattern.GetProperty("Region") # this will produce faceRegion references!
+        if isinstance(face_region_string, tuple): #type(face_region_string) == type(tuple()):
+            print('[DEBUG] TUPLE type face_region_string', face_region_string)
+            face_region_string = face_region_string[0]
+        else:
+            print('[DEBUG] INT type face_region_string', face_region_string)
+            # face_region_string = face_region_string[0]
 
         if do_you_have_region_in_the_mirror == True:
             # 这里假设face_region_string最后两位是数字
