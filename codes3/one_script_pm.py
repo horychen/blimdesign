@@ -42,10 +42,6 @@ else:
     spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
     run_folder = r'run#603020/'
 
-    # T440p
-    print('T440p')
-    spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
-    run_folder = r'run#603040/'
 
 fea_config_dict['run_folder'] = run_folder
 
@@ -307,8 +303,9 @@ if True:
                     print(i, 'get_fevals:', prob.get_fevals())
                     pop.set_x(i, pop_array[i]) # evaluate this guy
         else:
+            import utility_moo
             # 新办法，直接从swarm_data.txt（相当于archive）中判断出当前最棒的群体
-            swarm_data_on_pareto_front = learn_about_the_archive(prob, ad.solver.swarm_data, popsize)
+            swarm_data_on_pareto_front = utility_moo.learn_about_the_archive(prob, ad.solver.swarm_data, popsize, fea_config_dict)
             # print(swarm_data_on_pareto_front)
             for i in range(popsize):
                 pop.set_xf(i, swarm_data_on_pareto_front[i][:-3], swarm_data_on_pareto_front[i][-3:])
