@@ -818,19 +818,29 @@ class FEA_Solver:
         #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
         if self.fea_config_dict['jmag_run_list'][0] == 0:
             # check for existing results
+        if self.fea_config_dict['jmag_run_list'][0] == 0:
+            # check for existing results
             if os.path.exists(self.femm_output_file_path):
-                raise Exception('os.path.exists(self.femm_output_file_path): %s'%(self.femm_output_file_path))
+                # for file in os.listdir(self.dir_femm_temp):
+                #     if original_study_name in file:
+                #         print('----------', original_study_name, file)
+                print('Remove legacy femm output files @ %s'%(self.femm_output_file_path))
+                os.remove(self.femm_output_file_path)
+                os.remove(self.femm_output_file_path[:-4]+'.fem')
+                quit()
                 # quit()
+
+
+            # At this point, no results exist from femm.
+            print('Run greedy_search_for_breakdown_slip...')
+            femm_tic = clock_time()
+            # self.femm_solver.__init__(im_variant, flag_read_from_jmag=False, freq=50.0)
+            if im_variant.DriveW_poles == 2:
+                self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
+                                                                    bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=1) # 转子导条必须形成通路
             else:
-                # no direct returning of results, wait for it later when you need it.
-                femm_tic = clock_time()
-                # self.femm_solver.__init__(im_variant, flag_read_from_jmag=False, freq=50.0)
-                if im_variant.DriveW_poles == 2:
-                    self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
-                                                                        bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=1) # 转子导条必须形成通路
-                else:
-                    self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
-                                                                        bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=2)
+                self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
+                                                                    bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=2)
         else:
             raise Exception("if self.fea_config_dict['jmag_run_list'][0] == 0:")
 

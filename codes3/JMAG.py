@@ -76,16 +76,15 @@ class JMAG(object): #< ToolBase & DrawerBase & MakerExtrudeBase & MakerRevolveBa
         else:
             app = self.app
 
-
-        print(expected_project_file)
-        if os.path.exists(expected_project_file):
+        print(expected_project_file_path)
+        if os.path.exists(expected_project_file_path):
             print('JMAG project exists already. Will delete it and create a new one.')
-            os.remove(expected_project_file)
+            os.remove(expected_project_file_path)
 
         app.NewProject("Untitled")
-        app.SaveAs(expected_project_file)
+        app.SaveAs(expected_project_file_path)
         logger = logging.getLogger(__name__)
-        logger.debug('Create JMAG project file: %s'%(expected_project_file))
+        logger.debug('Create JMAG project file: %s'%(expected_project_file_path))
         return app
 
     def close(self):
