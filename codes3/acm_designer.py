@@ -825,7 +825,7 @@ class FEA_Solver:
                 print('Remove legacy femm output files @ %s'%(self.femm_output_file_path))
                 os.remove(self.femm_output_file_path)
                 os.remove(self.femm_output_file_path[:-4]+'.fem')
-                quit()
+                # quit()
                 # quit()
 
 
