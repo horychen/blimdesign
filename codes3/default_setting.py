@@ -83,11 +83,12 @@ def where_am_i(fea_config_dict):
     else:
         # elif 'Chen' in 'dir_interpreter':
         print('you are on T440p')
-        dir_parent = 'C:/Users/Hory Chen/OneDrive - UW-Madison/c/'
+        # dir_parent = 'C:/Users/Hory Chen/OneDrive - UW-Madison/c/'
+        dir_parent = 'd:/c/'
         dir_codes = dir_parent + 'codes3/'
         dir_lib = dir_parent + 'codes3/'
-        dir_femm_files = 'C:/femm42/'
-        dir_project_files = 'C:/JMAG_Files/'
+        dir_femm_files = 'd:/femm42/'
+        dir_project_files = 'd:/JMAG_Files/'
         pc_name = 'T440p'
 
     os.chdir(dir_codes)
