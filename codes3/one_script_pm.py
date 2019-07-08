@@ -165,6 +165,7 @@ class Problem_BearinglessSynchronousDesign(object):
                 print(msg)
 
                 if counter_loop > 2:
+                    print(error)
                     raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
                 else:
                     continue
@@ -180,6 +181,7 @@ class Problem_BearinglessSynchronousDesign(object):
 
                 if 'designer.Application' in str(error):
                     if counter_loop > 2:
+                        print(error)
                         raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
                     else:
                         continue
