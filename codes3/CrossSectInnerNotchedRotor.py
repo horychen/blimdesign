@@ -1,4 +1,5 @@
 from pylab import np, cos, sin
+EPS = 1e-2 # mm
 class CrossSectInnerNotchedRotor(object):
     # CrossSectInnerNotchedRotor Describes the inner notched rotor.
     #    Properties are set upon class creation and cannot be modified.
@@ -183,6 +184,10 @@ class CrossSectInnerNotchedMagnet(object):
         p        = self.notched_rotor.p
         s        = self.notched_rotor.s
         alpha_rp = 2*np.pi/(2*p) # pole span
+
+        if abs(d_pm - d_rp) < 2*EPS:
+            d_rp = d_pm
+            print('Detect d_rp is too close to d_pm. To avoid small line entity error in JMAG, set d_rp equal to d_pm.')
 
         P1 = [r_ri, 0]
 
