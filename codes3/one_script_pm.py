@@ -3,6 +3,7 @@ import shutil
 import utility
 from utility import my_execfile
 import utility_moo
+from win32com.client import pywintypes
 bool_post_processing = False # solve or post-processing
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -166,6 +167,20 @@ class Problem_BearinglessSynchronousDesign(object):
                 print(msg)
 
                 continue
+
+            except AttributeError as error:
+                print(str(error)) 
+                print("Detail: {}".format(error.payload))
+
+                msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
+                logger = logging.getLogger(__name__)
+                logger.error(msg)
+                print(msg)
+
+                if 'designer.Application' in str(error):
+                    continue
+                else:
+                    raise error
 
             except Exception as e: # raise and need human inspection
 

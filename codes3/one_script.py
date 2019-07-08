@@ -54,7 +54,7 @@ else:
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
     run_folder = r'run#550040/'
-    
+
 fea_config_dict['run_folder'] = run_folder
 
 # spec's
@@ -159,7 +159,46 @@ class Problem_BearinglessInductionDesign(object):
                 utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3 + "Detail: {}".format(error.payload))
                 break
 
-            except utility.ExceptionReTry as error:
+
+            except (utility.ExceptionReTry, pywintypes.com_error) as error:
+                print(error)
+
+                msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
+                logger = logging.getLogger(__name__)
+                logger.error(msg)
+                print(msg)
+
+                # if False:
+                    # msg = 'Removing all files for individual #%d and try again...'%(counter_fitness_called)
+                    # logger.error(msg)
+                    # print(msg)
+                    # try:
+                    #         # turn off JMAG Designer
+                    #         # try:
+                    #         #     ad.solver.app.Quit()
+                    #         # except:
+                    #         #     print('I think there is no need to Quit the app')
+                    #     ad.solver.app = None
+
+                    #     # JMAG files
+                    #     # os.remove(ad.solver.expected_project_file) # .jproj
+                    #     # shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory # .jplot file in this folder will be used by JSOL softwares even JMAG Designer is closed.
+
+                    #     # FEMM files
+                    #     if os.path.exists(ad.solver.femm_output_file_path):
+                    #         os.remove(ad.solver.femm_output_file_path) # .csv
+                    #     if os.path.exists(ad.solver.femm_output_file_path[:-3]+'fem'):
+                    #         os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
+                    #     for file in os.listdir(ad.solver.dir_femm_temp):
+                    #         if 'femm_temp_' in file or 'femm_found' in file:
+                    #             os.remove(ad.solver.dir_femm_temp + file)
+
+                    # except Exception as e2:
+                    #     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(error) + '\n'*3 + 'Exception 2:' + str(e2))
+                    #     raise e2
+                continue
+
+            except AttributeError as error:
                 print(str(error)) 
                 print("Detail: {}".format(error.payload))
 
@@ -168,36 +207,10 @@ class Problem_BearinglessInductionDesign(object):
                 logger.error(msg)
                 print(msg)
 
-                if False:
-                    msg = 'Removing all files for individual #%d and try again...'%(counter_fitness_called)
-                    logger.error(msg)
-                    print(msg)
-                    try:
-                            # turn off JMAG Designer
-                            # try:
-                            #     ad.solver.app.Quit()
-                            # except:
-                            #     print('I think there is no need to Quit the app')
-                        ad.solver.app = None
-
-                        # JMAG files
-                        # os.remove(ad.solver.expected_project_file) # .jproj
-                        # shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory # .jplot file in this folder will be used by JSOL softwares even JMAG Designer is closed.
-
-                        # FEMM files
-                        if os.path.exists(ad.solver.femm_output_file_path):
-                            os.remove(ad.solver.femm_output_file_path) # .csv
-                        if os.path.exists(ad.solver.femm_output_file_path[:-3]+'fem'):
-                            os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
-                        for file in os.listdir(ad.solver.dir_femm_temp):
-                            if 'femm_temp_' in file or 'femm_found' in file:
-                                os.remove(ad.solver.dir_femm_temp + file)
-
-                    except Exception as e2:
-                        utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(error) + '\n'*3 + 'Exception 2:' + str(e2))
-                        raise e2
-
-                continue
+                if 'designer.Application' in str(error):
+                    continue
+                else:
+                    raise error
 
             except Exception as e: # raise and need human inspection
 
