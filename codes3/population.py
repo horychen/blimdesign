@@ -4835,32 +4835,13 @@ class VanGogh_JMAG(VanGogh):
         ref2 = self.doc.CreateReferenceFromItem(region)
         circular_pattern.SetPropertyByReference("Region", ref2)
         face_region_string = circular_pattern.GetProperty("Region")
-        print('[DEBUG] this should be a list?:', face_region_string)
-        try:
+        if type(face_region_string) == type(tuple()):
+            print('[DEBUG] TUPLE type face_region_string', face_region_string)
             face_region_string = face_region_string[0]
-            # print circular_pattern.GetProperty("Region") # this will produce faceRegion references!
-        except TypeError as error:
-            print('face_region_string is an int object here.')
-            # See log file to plotting error.
-            # Traceback (most recent call last):
-            #   File "one_script.py", line 128, in fitness
-            #     ad.evaluate_design(ad.spec.im_template, x_denorm, counter_fitness_called, counter_loop=counter_loop)
-            #   File "K:\jchen782\c\codes3\acm_designer.py", line 1072, in evaluate_design
-            #     return function(acm_template, x_denorm, counter, counter_loop)
-            #   File "K:\jchen782\c\codes3\acm_designer.py", line 841, in fea_bearingless_induction
-            #     model = draw_jmag(app)
-            #   File "K:\jchen782\c\codes3\acm_designer.py", line 793, in draw_jmag
-            #     im_variant.name)
-            #   File "K:\jchen782\c\codes3\acm_designer.py", line 955, in draw_jmag_induction
-            #     raise e
-            #   File "K:\jchen782\c\codes3\acm_designer.py", line 920, in draw_jmag_induction
-            #     d.plot_cage("Cage")
-            #   File "K:\jchen782\c\codes3\population.py", line 5454, in plot_cage
-            #     self.region_circular_pattern_360_origin(region, self.im.Qr)
-            #   File "K:\jchen782\c\codes3\population.py", line 4988, in region_circular_pattern_360_origin
-            #     face_region_string = face_region_string[0]
-            # TypeError: 'int' object is not subscriptable        
-  
+        else:
+            print('[DEBUG] INT type face_region_string', face_region_string)
+            # face_region_string = face_region_string[0]
+
         if do_you_have_region_in_the_mirror == True:
             # è¿™é‡Œå‡è®¾face_region_stringæœ€åŽä¸¤ä½æ˜¯æ•°å­—
             if face_region_string[-7:-3] == 'Item':
