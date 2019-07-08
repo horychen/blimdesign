@@ -773,13 +773,12 @@ class FEA_Solver:
 
             print(expected_project_file)
             if os.path.exists(expected_project_file):
+                print('JMAG project exists already. Will delete it and create a new one.')
                 os.remove(expected_project_file)
-            if not os.path.exists(expected_project_file):
-                app.NewProject("Untitled")
-                app.SaveAs(expected_project_file)
-                logger.debug('Create JMAG project file: %s'%(expected_project_file))
-            else:
-                raise Exception('Create JMAG project file')
+
+            app.NewProject("Untitled")
+            app.SaveAs(expected_project_file)
+            logger.debug('Create JMAG project file: %s'%(expected_project_file))
 
             return app
 
@@ -804,8 +803,8 @@ class FEA_Solver:
             if app.NumModels()>=1:
                 model = app.GetModel(im_variant.name)
             else:
-                logger.error('there is no model yet!')
-                raise Exception('why is there no model yet?')
+                logger.error('there is no model yet for %s'%(im_variant.name))
+                raise Exception('why is there no model yet? %s'%(im_variant.name))
             return model
 
         # this should be summoned even before initializing femm, and it will decide whether the femm results are reliable

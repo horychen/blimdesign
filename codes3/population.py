@@ -4835,7 +4835,7 @@ class VanGogh_JMAG(VanGogh):
         ref2 = self.doc.CreateReferenceFromItem(region)
         circular_pattern.SetPropertyByReference("Region", ref2)
         face_region_string = circular_pattern.GetProperty("Region")
-        if type(face_region_string) == type(tuple()):
+        if isinstance(face_region_string, tuple): #type(face_region_string) == type(tuple()):
             print('[DEBUG] TUPLE type face_region_string', face_region_string)
             face_region_string = face_region_string[0]
         else:
