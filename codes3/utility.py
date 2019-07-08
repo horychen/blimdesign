@@ -8,7 +8,13 @@ def my_execfile(filename, g=None, l=None):
     # g=globals(), l=locals()
     exec(compile(open(filename, "rb").read(), filename, 'exec'), g, l)
 
-
+class ExceptionReTry(Exception):
+    """Exception for requiring a second attemp."""
+    def __init__(self, message, payload=None):
+        self.message = message
+        self.payload = payload # you could add more args
+    def __str__(self):
+        return str(self.message)    
 
 class ExceptionBadNumberOfParts(Exception):
     """Exception for unexpected number of parts in JMAG Designer."""
@@ -518,8 +524,10 @@ def build_str_results(axeses, acm_variant, project_name, tran_study_name, dir_cs
     except Exception as e:
         print(e)
         logging.getLogger(__name__).error('Error when loading csv results for Tran2TSS. Check the Report of JMAG Designer. (Maybe Material is not added.)', exc_info=True)
-        print('Will re-build and re-run the JMAG project...')
-        return None
+        陌生感 = 'CSV results are not found. Will re-build and re-run the JMAG project...' 
+        print(陌生感)
+        raise ExceptionReTry(陌生感)
+        # return None
         # raise e
 
     basic_info, time_list, TorCon_list, ForConX_list, ForConY_list, ForConAbs_list = dm.unpack()

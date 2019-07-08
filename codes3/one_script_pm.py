@@ -144,61 +144,35 @@ class Problem_BearinglessSynchronousDesign(object):
                     shutil.rmtree(ad.solver.folder_to_be_deleted) # .jfiles directory
                 # update to be deleted when JMAG releases the use
                 ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
-            # except Exception as e: # debugging. do not re-try
-            #     print(e)
-            #     raise e
+
             except utility.ExceptionBadNumberOfParts as error:
                 print(str(error)) 
                 print("Detail: {}".format(error.payload))
-                f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
+                f1, f2, f3 = get_bad_fintess_values()
                 utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3 + "Detail: {}".format(error.payload))
                 break
 
-            except Exception as e: # retry
-
-                print('-'*40 + 'Unexpected error is caught.')
-                print(e)
-                # raise e
+            except utility.ExceptionReTry as error:
+                print(str(error)) 
+                print("Detail: {}".format(error.payload))
 
                 msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
                 logger = logging.getLogger(__name__)
                 logger.error(msg)
                 print(msg)
 
-                msg = 'Removing all files for individual #%d and try again...'%(counter_fitness_called)
-                logger.error(msg)
-                print(msg)
+                continue
 
-                try:
-                        # turn off JMAG Designer
-                        # try:
-                        #     ad.solver.app.Quit()
-                        # except:
-                        #     print('I think there is no need to Quit the app')
-                    ad.solver.app = None
+            except Exception as e: # raise and need human inspection
 
-                    # JMAG files
-                    # os.remove(ad.solver.expected_project_file) # .jproj
-                    # shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory # .jplot file in this folder will be used by JSOL softwares even JMAG Designer is closed.
+                print('-'*40 + 'Unexpected error is caught.')
+                print(str(e)) 
+                utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nUnexpected expection:' + str(e))
+                raise e
 
-                except Exception as e2:
-                    utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e) + '\n'*3 + 'Exception 2:' + str(e2))
-                    raise e2
-
-                else:
-                    if 'Number of Parts is unexpected' in str(e):
-                        print('Shitty design is found as:\n'+str(e))
-                        print('\nEmail has been sent.\nThis design is punished by specifying f1=0, f2=0, f3=99.')
-                        f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
-
-                        utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e))
-                        print('This is Obselete can will not be reached anymore. An exclusive exception is built for number of parts unexpected exception.')
-                        break
-
-                    # retry
-                    pass                    
             else:
                 break
+
 
         # - Price
         f1 
@@ -366,7 +340,8 @@ if True:
     number_of_finished_iterations = number_of_chromosome // popsize
     number_of_iterations = 50
     logger = logging.getLogger(__name__)
-    try:
+    # try:
+    if True:
         for _ in range(number_of_finished_iterations, number_of_iterations):
             msg = 'This is iteration #%d. '%(_)
             print(msg)
@@ -384,7 +359,7 @@ if True:
             
             utility_moo.my_print(ad, pop, _)
             # my_plot(fits, vectors, ndf)
-    except Exception as e:
-        print(pop.get_x())
-        print(pop.get_f().tolist())
-        raise e
+    # except Exception as e:
+    #     print(pop.get_x())
+    #     print(pop.get_f().tolist())
+    #     raise e

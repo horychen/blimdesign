@@ -16,7 +16,7 @@ if False:
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2' # this is not working
 
-    # Combined winding PMSM
+    # Combined winding IM
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.975
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
@@ -30,7 +30,7 @@ else:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson01
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # Combined winding PMSM
+    # Combined winding IM
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.975
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
@@ -39,20 +39,29 @@ else:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson02
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-    # Separate winding PMSM
+    # Separate winding IM
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
     run_folder = r'run#550020/'
 
+
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # T440p
+    #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+    # Separate winding IM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
+    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
+    fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
+    run_folder = r'run#550040/'
 fea_config_dict['run_folder'] = run_folder
-build_model_name_prefix(fea_config_dict) # rebuild the model name for fea_config_dict
 
 # spec's
 my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals())
 spec
 fea_config_dict['Active_Qr'] = spec.Qr
 fea_config_dict['use_drop_shape_rotor_bar'] = spec.use_drop_shape_rotor_bar
+build_model_name_prefix(fea_config_dict) # rebuild the model name for fea_config_dict
 spec.build_im_template(fea_config_dict)
 
 # select motor type ehere
@@ -126,7 +135,7 @@ class Problem_BearinglessInductionDesign(object):
                 counter_loop = 0 # reset
             if stuck_at == counter_fitness_called:
                 counter_loop += 1
-                if counter_loop > 5:
+                if counter_loop > 3:
                     raise Exception('Abort the optimization. Five attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
 
             try:
@@ -149,58 +158,53 @@ class Problem_BearinglessInductionDesign(object):
                 utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3 + "Detail: {}".format(error.payload))
                 break
 
-            except Exception as e: # retry
-
-                print('-'*40+'unexpected error is caught.')
-                print(e)
-                # raise e
+            except utility.ExceptionReTry as error:
+                print(str(error)) 
+                print("Detail: {}".format(error.payload))
 
                 msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
                 logger = logging.getLogger(__name__)
                 logger.error(msg)
                 print(msg)
 
-                msg = 'Removing all files for individual #%d and try again...'%(counter_fitness_called)
-                logger.error(msg)
-                print(msg)
+                if False:
+                    msg = 'Removing all files for individual #%d and try again...'%(counter_fitness_called)
+                    logger.error(msg)
+                    print(msg)
+                    try:
+                            # turn off JMAG Designer
+                            # try:
+                            #     ad.solver.app.Quit()
+                            # except:
+                            #     print('I think there is no need to Quit the app')
+                        ad.solver.app = None
 
-                try:
-                        # turn off JMAG Designer
-                        # try:
-                        #     ad.solver.app.Quit()
-                        # except:
-                        #     print('I think there is no need to Quit the app')
-                    ad.solver.app = None
+                        # JMAG files
+                        # os.remove(ad.solver.expected_project_file) # .jproj
+                        # shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory # .jplot file in this folder will be used by JSOL softwares even JMAG Designer is closed.
 
-                    # JMAG files
-                    # os.remove(ad.solver.expected_project_file) # .jproj
-                    # shutil.rmtree(ad.solver.expected_project_file[:-5]+'jfiles') # .jfiles directory # .jplot file in this folder will be used by JSOL softwares even JMAG Designer is closed.
+                        # FEMM files
+                        if os.path.exists(ad.solver.femm_output_file_path):
+                            os.remove(ad.solver.femm_output_file_path) # .csv
+                        if os.path.exists(ad.solver.femm_output_file_path[:-3]+'fem'):
+                            os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
+                        for file in os.listdir(ad.solver.dir_femm_temp):
+                            if 'femm_temp_' in file or 'femm_found' in file:
+                                os.remove(ad.solver.dir_femm_temp + file)
 
-                    # FEMM files
-                    if os.path.exists(ad.solver.femm_output_file_path):
-                        os.remove(ad.solver.femm_output_file_path) # .csv
-                    if os.path.exists(ad.solver.femm_output_file_path[:-3]+'fem'):
-                        os.remove(ad.solver.femm_output_file_path[:-3]+'fem') # .fem
-                    for file in os.listdir(ad.solver.dir_femm_temp):
-                        if 'femm_temp_' in file or 'femm_found' in file:
-                            os.remove(ad.solver.dir_femm_temp + file)
+                    except Exception as e2:
+                        utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(error) + '\n'*3 + 'Exception 2:' + str(e2))
+                        raise e2
 
-                except Exception as e2:
-                    utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e) + '\n'*3 + 'Exception 2:' + str(e2))
-                    raise e2
+                continue
 
-                else:
-                    if 'Number of Parts is unexpected' in str(e):
-                        print('Shitty design is found as:\n'+str(e))
-                        print('\nEmail has been sent.\nThis design is punished by specifying f1=0, f2=0, f3=99.')
-                        f1, f2, f3 = get_bad_fintess_values()
+            except Exception as e: # raise and need human inspection
 
-                        utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nException 1:' + str(e))
-                        print('This is Obselete can will not be reached anymore. An exclusive exception is built for number of parts unexpected exception.')
-                        break
+                print('-'*40 + 'Unexpected error is caught.')
+                print(str(e)) 
+                utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nUnexpected expection:' + str(e))
+                raise e
 
-                    # retry
-                    pass
             else:
                 break
 
@@ -210,6 +214,7 @@ class Problem_BearinglessInductionDesign(object):
         f2 #= - rated_efficiency
         # Ripple Performance (Weighted Sum)
         f3 #= sum(list_weighted_ripples)
+        print('f1,f2,f3:',f1,f2,f3)
 
         # Constraints (Em<0.2 and Ea<10 deg):
         # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
@@ -224,6 +229,7 @@ class Problem_BearinglessInductionDesign(object):
             if FRW < 0.75:
                 print('\tFRW < 0.75')
             f1, f2, f3 = get_bad_fintess_values()
+        print('f1,f2,f3:',f1,f2,f3)
 
         counter_fitness_return += 1
         print('Fitness: %d, %d\n----------------'%(counter_fitness_called, counter_fitness_return))
@@ -611,7 +617,8 @@ if True:
     number_of_finished_iterations = number_of_chromosome // popsize
     number_of_iterations = 50
     logger = logging.getLogger(__name__)
-    try:
+    # try:
+    if True:
         for _ in range(number_of_finished_iterations, number_of_iterations):
             msg = 'This is iteration #%d. '%(_)
             print(msg)
@@ -629,10 +636,10 @@ if True:
             
             my_print(ad, pop, _)
             # my_plot(fits, vectors, ndf)
-    except Exception as e:
-        print(pop.get_x())
-        print(pop.get_f().tolist())
-        raise e
+    # except Exception as e:
+    #     print(pop.get_x())
+    #     print(pop.get_f().tolist())
+    #     raise e
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Weighted objective function optimmization
