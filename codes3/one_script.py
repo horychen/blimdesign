@@ -147,7 +147,12 @@ class Problem_BearinglessInductionDesign(object):
 
                 # remove folder .jfiles to save space (we have to generate it first in JMAG Designer to have field data and voltage profiles)
                 if ad.solver.folder_to_be_deleted is not None:
-                    shutil.rmtree(ad.solver.folder_to_be_deleted) # .jfiles directory
+                    try:
+                        shutil.rmtree(ad.solver.folder_to_be_deleted) # .jfiles directory
+                    except PermissionError as error:
+                        print(error)
+                        print('Skip deleting this folder...')
+
                 # update to be deleted when JMAG releases the use
                 ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
 

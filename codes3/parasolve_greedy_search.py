@@ -52,7 +52,7 @@ while True:
         femm.mi_analyze(1) # None for inherited. 1 for a minimized window,
         freq, torque = get_slipfreq_torque()
     except Exception as error:
-        print('It is likely you are running the codes on server and we have no access to the disk, right? Will try again...')
+        print('Error occurs when analyzing the femm file.')
         print(error.args)
         if counter_loop > 3:
             raise error

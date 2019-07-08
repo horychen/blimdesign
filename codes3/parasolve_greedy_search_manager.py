@@ -13,8 +13,8 @@ def savetofile(id_solver, freq, stack_length):
                     stack_length, 18, 1) # The acsolver parameter (default: 0) specifies which solver is to be used for AC problems: 0 for successive approximation, 1 for Newton.
     femm.mi_saveas(dir_femm_temp+'femm_temp_%d.fem'%(id_solver))
 
-def remove_files(list_solver_id, dir_femm_temp, suffix='.txt', id_solver_femm_found=None):
-    print('Rename femm file for index', id_solver_femm_found, 'Others will be deleted.')
+def remove_files(list_solver_id, dir_femm_temp, suffix, id_solver_femm_found=None):
+    print('Rename femm file for index', id_solver_femm_found, 'with suffix of', suffix, 'Others will be deleted.')
     for id_solver in list_solver_id:
         fname = dir_femm_temp + "femm_temp_%d"%(id_solver) + suffix
 
