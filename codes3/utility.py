@@ -1068,7 +1068,7 @@ def whole_row_reader(reader):
 
 
 
-def get_copper_loss_Bolognani(stator_slot_area, rotor_slot_area=None, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, TORQUE_CURRENT_RATIO=0.975, copper_loss_parameters=None): 
+def get_copper_loss_Bolognani(stator_slot_area, rotor_slot_area=None, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, copper_loss_parameters=None): 
     # make sure these two values 
     # space_factor_kCu = SLOT_FILL_FACTOR in Pyrhonen09 design
     # space_factor_kAl = 1 in Pyrhonen09 design
@@ -1095,7 +1095,7 @@ def get_copper_loss_Bolognani(stator_slot_area, rotor_slot_area=None, STATOR_SLO
     coil_pitch_yq            = copper_loss_parameters[4]
     Q                        = copper_loss_parameters[5]
     stack_length_m           = 1e-3*copper_loss_parameters[6]
-    current_rms_value        = copper_loss_parameters[7] / 1.4142135623730951 * (1./TORQUE_CURRENT_RATIO) # for one phase
+    current_rms_value        = copper_loss_parameters[7] / 1.4142135623730951 # for one phase
     # Area_conductor_Sc        = Area_S_slot * STATOR_SLOT_FILL_FACTOR / zQ
 
     Js = (current_rms_value/a) * zQ / area_copper_S_Cu # 逆变器电流current_rms_value在流入电机时，
@@ -1324,8 +1324,8 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             # convert rotor current results (complex number) into its amplitude
             femm_solver.list_rotor_current_amp = [abs(el) for el in femm_solver.vals_results_rotor_current] # el is complex number
             # settings not necessarily be consistent with Pyrhonen09's design: , STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1., TEMPERATURE_OF_COIL=75
-            _s, _r, _sAlongStack, _rAlongStack, _Js, _Jr = femm_solver.get_copper_loss_pyrhonen(femm_solver.stator_slot_area, femm_solver.rotor_slot_area, TORQUE_CURRENT_RATIO=acm_variant.TORQUE_CURRENT_RATIO)
-            s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = femm_solver.get_copper_loss_Bolognani(femm_solver.stator_slot_area, femm_solver.rotor_slot_area, TORQUE_CURRENT_RATIO=acm_variant.TORQUE_CURRENT_RATIO)
+            _s, _r, _sAlongStack, _rAlongStack, _Js, _Jr = femm_solver.get_copper_loss_pyrhonen(femm_solver.stator_slot_area, femm_solver.rotor_slot_area, total_CurrentAmp=acm_variant.DriveW_CurrentAmp+acm_variant.BeariW_CurrentAmp)
+            s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = femm_solver.get_copper_loss_Bolognani(femm_solver.stator_slot_area, femm_solver.rotor_slot_area, total_CurrentAmp=acm_variant.DriveW_CurrentAmp+acm_variant.BeariW_CurrentAmp)
 
             msg1 = 'Pyrhonen : %g, %g | %g, %g | %g, %g ' % (_s, _r, _sAlongStack, _rAlongStack, _Js, _Jr) 
             msg2 = 'Bolognani: %g, %g | %g, %g | %g, %g ' % (s, r, sAlongStack, rAlongStack, Js, Jr) 
@@ -1343,11 +1343,11 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
                              acm_variant.wily.coil_pitch,
                              acm_variant.Q,
                              acm_variant.stack_length,
-                             acm_variant.DriveW_CurrentAmp,
+                             acm_variant.DriveW_CurrentAmp + acm_variant.BeariW_CurrentAmp, # total current amplitude
                              acm_variant.Radius_OuterRotor,
                              acm_variant.stator_yoke_diameter_Dsyi
                              ]
-        s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = get_copper_loss_Bolognani(acm_variant.coils.mm2_slot_area*1e-6, copper_loss_parameters=copper_loss_parameters, TORQUE_CURRENT_RATIO=acm_variant.TORQUE_CURRENT_RATIO)
+        s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = get_copper_loss_Bolognani(acm_variant.coils.mm2_slot_area*1e-6, copper_loss_parameters=copper_loss_parameters)
         # s, r, sAlongStack, rAlongStack, Js, Jr = 0, 0, 0, 0, 0, 0
 
     dm = data_manager()

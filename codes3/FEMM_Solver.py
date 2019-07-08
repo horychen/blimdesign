@@ -1919,7 +1919,7 @@ class FEMM_Solver(object):
 
         femm.mo_close()
 
-    def get_copper_loss_Bolognani(self, stator_slot_area, rotor_slot_area, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, TORQUE_CURRENT_RATIO=0.975): 
+    def get_copper_loss_Bolognani(self, stator_slot_area, rotor_slot_area, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, total_CurrentAmp=None):
         # make sure these two values 
         # space_factor_kCu = SLOT_FILL_FACTOR in Pyrhonen09 design
         # space_factor_kAl = 1 in Pyrhonen09 design
@@ -1951,7 +1951,7 @@ class FEMM_Solver(object):
         # Ns                       = zQ * self.im.Qs / (2 * number_of_phase * a) # 3 phase winding
         # density_of_copper        = 8960 
         # k_R                      = 1 # AC resistance factor
-        current_rms_value        = self.im.DriveW_CurrentAmp / 1.4142135623730951 * (1./TORQUE_CURRENT_RATIO) # for one phase
+        current_rms_value        = total_CurrentAmp / 1.4142135623730951 # for one phase
         # Area_conductor_Sc        = Area_S_slot * STATOR_SLOT_FILL_FACTOR / zQ
 
         Js = (current_rms_value/a) * zQ / area_copper_S_Cu # 逆变器电流current_rms_value在流入电机时，
@@ -2011,7 +2011,7 @@ class FEMM_Solver(object):
 
         return stator_copper_loss, rotor_copper_loss, stator_copper_loss_along_stack, rotor_copper_loss_along_stack, Js, Jr, Vol_Cu
 
-    def get_copper_loss_pyrhonen(self, stator_slot_area, rotor_slot_area, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, TORQUE_CURRENT_RATIO=0.975): 
+    def get_copper_loss_pyrhonen(self, stator_slot_area, rotor_slot_area, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, total_CurrentAmp=None):
 
         # 这里有一个问题：就是用的几何参数是im_template的值，而不是来自 self.im.design_parameter
         # 这里有一个问题：就是用的几何参数是im_template的值，而不是来自 self.im.design_parameter
@@ -2042,7 +2042,7 @@ class FEMM_Solver(object):
         Ns                       = zQ * im.Qs / (2 * number_of_phase * a) # 3 phase winding
         density_of_copper        = 8960 
         k_R                      = 1 # AC resistance factor
-        current_rms_value        = im.DriveW_CurrentAmp / 1.4142135623730951 * (1./TORQUE_CURRENT_RATIO) # for one phase
+        current_rms_value        = total_CurrentAmp / 1.4142135623730951 # for one phase
 
         Area_conductor_Sc        = Area_slot * STATOR_SLOT_FILL_FACTOR / zQ
         Js = current_rms_value / (a * Area_conductor_Sc)

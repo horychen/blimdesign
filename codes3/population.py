@@ -2735,7 +2735,7 @@ class bearingless_induction_motor_design(object):
         #01 Model Name
         self.model_name_prefix = model_name_prefix # do include 'PS' here
 
-        self.TORQUE_CURRENT_RATIO = 0.975
+        # self.TORQUE_CURRENT_RATIO = 0.975
 
         #02 Pyrhonen Data
         if row != None:
@@ -2767,7 +2767,8 @@ class bearingless_induction_motor_design(object):
             self.DriveW_poles       = row[18]
             self.DriveW_zQ          = row[19] # per slot
             self.DriveW_Rs          = row[20]
-            self.DriveW_CurrentAmp  = row[21] * self.TORQUE_CURRENT_RATIO
+            self.DriveW_CurrentAmp  = row[21] * self.fea_config_dict['TORQUE_CURRENT_RATIO']
+            print('IM template: self.DriveW_CurrentAmp = %g, while row[21] = %g, and TORQUE_CURRENT_RATIO = %g' % (self.DriveW_CurrentAmp, row[21], self.fea_config_dict['TORQUE_CURRENT_RATIO']))
             self.DriveW_Freq        = row[22]
 
             self.stack_length       = row[23]
@@ -2810,8 +2811,24 @@ class bearingless_induction_motor_design(object):
         self.BeariW_turns      = self.DriveW_zQ
         self.BeariW_Rs         = self.DriveW_Rs * self.BeariW_turns / self.DriveW_zQ
         # self.BeariW_CurrentAmp = 0.025 * self.DriveW_CurrentAmp/0.975 # extra 2.5% as bearing current
-        self.BeariW_CurrentAmp = (1-self.TORQUE_CURRENT_RATIO) * (self.DriveW_CurrentAmp / self.TORQUE_CURRENT_RATIO)
+        self.BeariW_CurrentAmp = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] * (self.DriveW_CurrentAmp / self.fea_config_dict['TORQUE_CURRENT_RATIO'])
         self.BeariW_Freq       = self.DriveW_Freq
+
+
+        # CurrentAmp_in_the_slot = self.coils.mm2_slot_area * self.fill_factor * self.Js*1e-6 * np.sqrt(2) #/2.2*2.8
+        # CurrentAmp_per_conductor = CurrentAmp_in_the_slot / self.DriveW_zQ
+        # CurrentAmp_per_phase = CurrentAmp_per_conductor * self.wily.number_parallel_branch # 跟几层绕组根本没关系！除以zQ的时候，就已经变成每根导体的电流了。
+        # variant_DriveW_CurrentAmp = CurrentAmp_per_phase # this current amp value is for non-bearingless motor
+        # self.DriveW_CurrentAmp = self.fea_config_dict['TORQUE_CURRENT_RATIO'] * variant_DriveW_CurrentAmp 
+        # self.BeariW_CurrentAmp = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] * variant_DriveW_CurrentAmp
+        # print('---Variant CurrentAmp_in_the_slot =', CurrentAmp_in_the_slot)
+        # print('---variant_DriveW_CurrentAmp = CurrentAmp_per_phase =', variant_DriveW_CurrentAmp)
+        # print('---self.DriveW_CurrentAmp =', self.DriveW_CurrentAmp)
+        # print('---self.BeariW_CurrentAmp =', self.BeariW_CurrentAmp)
+        # print('---TORQUE_CURRENT_RATIO:', self.fea_config_dict['TORQUE_CURRENT_RATIO'])
+        # print('---SUSPENSION_CURRENT_RATIO:', self.fea_config_dict['SUSPENSION_CURRENT_RATIO'])
+
+
 
         if self.fea_config_dict is not None:
             self.dict_coil_connection = {41:self.wily.l41, 42:self.wily.l42, 21:self.wily.l21, 22:self.wily.l22} # 这里的2和4等价于leftlayer和rightlayer。

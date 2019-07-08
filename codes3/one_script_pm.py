@@ -11,22 +11,22 @@ bool_post_processing = False # solve or post-processing
 my_execfile('./default_setting.py', g=globals(), l=locals())
 fea_config_dict
 fea_config_dict['Active_Qr'] = 16 # obsolete 
-# spec's
-my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals())
-spec.build_im_template(fea_config_dict)
-spec.build_pmsm_template(fea_config_dict, im_template=spec.im_template)
-# select motor type ehere
-print('Build ACM template...')
-spec.acm_template = spec.pmsm_template
 if False:
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
     fea_config_dict['use_weights'] = 'O2' # this is not used
-    run_folder = r'run#600/' # FRW constraint is removed and sleeve_length is 3 (not varying)
-    run_folder = r'run#601/' # FRW constraint is removed and sleeve_length is 2.5 (not varying)
+    # run_folder = r'run#600/' # FRW constraint is removed and sleeve_length is 3 (not varying)
+    # run_folder = r'run#601/' # FRW constraint is removed and sleeve_length is 2.5 (not varying)
 
-    spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
-    run_folder = r'run#602/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
+    # Combined winding PMSM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
+    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+    run_folder = r'run#603/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
+
+    # Separate winding PMSM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
+    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+    run_folder = r'run#604/'
 else:
     fea_config_dict['local_sensitivity_analysis'] = False
     fea_config_dict['bool_refined_bounds'] = False
@@ -34,21 +34,37 @@ else:
 
     # Severson01
     print('Severson01')
-    spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
-    run_folder = r'run#603010/'
+        # Combined winding PMSM
+        # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
+        # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+        # run_folder = r'run#603010/'
+    # Separate winding PMSM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
+    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+    run_folder = r'run#604010/'
 
     # Severson02
-    print('Severson02')
-    spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
-    run_folder = r'run#603020/'
+    # print('Severson02')
+    # # Combined winding PMSM
+    # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
+    # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+    # run_folder = r'run#603020/'
 
-    # # T440p
+    # T440p
     # print('T440p')
-    # spec.acm_template.TORQUE_CURRENT_RATIO = 0.95
+    # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
+    # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
     # run_folder = r'run#603040/'
-
-
 fea_config_dict['run_folder'] = run_folder
+
+# spec's
+my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals())
+spec.build_im_template(fea_config_dict)
+spec.build_pmsm_template(fea_config_dict, im_template=spec.im_template)
+
+# select motor type ehere
+print('Build ACM template...')
+spec.acm_template = spec.pmsm_template
 
 import acm_designer
 global ad
@@ -361,7 +377,7 @@ if True:
             ad.solver.write_swarm_survivor(pop, counter_fitness_return)
 
             hv = pg.hypervolume(pop)
-            quality_measure = hv.compute(ref_point=[0.,0.,100.]) # ref_point must be dominated by the pop's pareto front
+            quality_measure = hv.compute(ref_point=get_bad_fintess_values(machine_type='PMSM', ref=True)) # ref_point must be dominated by the pop's pareto front
             msg += 'Quality measure by hyper-volume: %g'% (quality_measure)
             print(msg)
             logger.info(msg)

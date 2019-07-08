@@ -54,7 +54,7 @@ class JMAG(object): #< ToolBase & DrawerBase & MakerExtrudeBase & MakerRevolveBa
 
             def add_steel(self):
                 print('[First run on %s detected]'%(self.fea_config_dict['pc_name']), self.fea_config_dict['Steel'], 'is added to jmag material library.')
-
+                import population
                 if 'M15' in self.fea_config_dict['Steel']:
                     population.add_M1xSteel(self.app, self.fea_config_dict['dir_parent'], steel_name="M-15 Steel")
                 elif 'M19' in self.fea_config_dict['Steel']:

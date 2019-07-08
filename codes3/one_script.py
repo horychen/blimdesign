@@ -3,7 +3,7 @@
 # coding:u8
 import shutil
 from utility import my_execfile
-bool_post_processing = True # solve or post-processing
+bool_post_processing = False # solve or post-processing
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
@@ -630,7 +630,7 @@ if True:
             ad.solver.write_swarm_survivor(pop, counter_fitness_return)
 
             hv = pg.hypervolume(pop)
-            quality_measure = hv.compute(ref_point=[0.,0.,100.]) # ref_point must be dominated by the pop's pareto front
+            quality_measure = hv.compute(ref_point=get_bad_fintess_values(ref=True)) # ref_point must be dominated by the pop's pareto front
             msg += 'Quality measure by hyper-volume: %g'% (quality_measure)
             print(msg)
             logger.info(msg)

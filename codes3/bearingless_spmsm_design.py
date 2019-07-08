@@ -297,7 +297,8 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
 
         self.stack_length      = spmsm_template.stack_length 
 
-        self.TORQUE_CURRENT_RATIO = spmsm_template.TORQUE_CURRENT_RATIO
+        # self.TORQUE_CURRENT_RATIO = spmsm_template.TORQUE_CURRENT_RATIO
+        # self.SUSPENSION_CURRENT_RATIO = spmsm_template.SUSPENSION_CURRENT_RATIO
 
         #03 Mechanical Parameters
         self.update_mechanical_parameters()
@@ -327,7 +328,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         if self.DriveW_CurrentAmp is None:
             self.BeariW_CurrentAmp = None
         else:
-            self.BeariW_CurrentAmp = (1-self.TORQUE_CURRENT_RATIO) * (self.DriveW_CurrentAmp / self.TORQUE_CURRENT_RATIO)
+            self.BeariW_CurrentAmp = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] * (self.DriveW_CurrentAmp / self.fea_config_dict['TORQUE_CURRENT_RATIO'])
         self.BeariW_Freq       = self.DriveW_Freq
 
         if self.fea_config_dict is not None:
@@ -393,12 +394,15 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         CurrentAmp_in_the_slot = self.coils.mm2_slot_area * self.fill_factor * self.Js*1e-6 * np.sqrt(2) #/2.2*2.8
         CurrentAmp_per_conductor = CurrentAmp_in_the_slot / self.DriveW_zQ
         CurrentAmp_per_phase = CurrentAmp_per_conductor * self.wily.number_parallel_branch # 跟几层绕组根本没关系！除以zQ的时候，就已经变成每根导体的电流了。
-        variant_DriveW_CurrentAmp = CurrentAmp_per_phase
-        self.DriveW_CurrentAmp = self.TORQUE_CURRENT_RATIO * variant_DriveW_CurrentAmp ########### will be assisned when drawing the coils
-        self.BeariW_CurrentAmp = (1-self.TORQUE_CURRENT_RATIO) * (self.DriveW_CurrentAmp / self.TORQUE_CURRENT_RATIO)
-
+        variant_DriveW_CurrentAmp = CurrentAmp_per_phase # this current amp value is for non-bearingless motor
+        self.DriveW_CurrentAmp = self.fea_config_dict['TORQUE_CURRENT_RATIO'] * variant_DriveW_CurrentAmp 
+        self.BeariW_CurrentAmp = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] * variant_DriveW_CurrentAmp
         print('---Variant CurrentAmp_in_the_slot =', CurrentAmp_in_the_slot)
         print('---variant_DriveW_CurrentAmp = CurrentAmp_per_phase =', variant_DriveW_CurrentAmp)
+        print('---self.DriveW_CurrentAmp =', self.DriveW_CurrentAmp)
+        print('---self.BeariW_CurrentAmp =', self.BeariW_CurrentAmp)
+        print('---TORQUE_CURRENT_RATIO:', self.fea_config_dict['TORQUE_CURRENT_RATIO'])
+        print('---SUSPENSION_CURRENT_RATIO:', self.fea_config_dict['SUSPENSION_CURRENT_RATIO'])
 
         # Import Model into Designer
         toolJd.doc.SaveModel(False) # True: Project is also saved. 

@@ -1,5 +1,14 @@
 # blimdesign
 
+Requirements:
+
+- install anaconda3
+- pyx, pyfemm can be installed via pip
+- pygmo:
+    conda config --add channels conda-forge
+    conda install pygmo
+
+
 
 Steps:
 
