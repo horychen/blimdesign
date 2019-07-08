@@ -391,8 +391,7 @@ def add_Pyrhonen_design_to_first_generation(sw, de_config_dict, logger):
     # quit()
 
 from smtplib import SMTP
-def send_notification(text='Hello'):
-    subject = 'AUTO BLIM OPTIMIZATION NOTIFICATION'
+def send_notification(text='Hello', subject='AUTO BLIM OPTIMIZATION NOTIFICATION'):
     content = 'Subject: %s\n\n%s' % (subject, text)
     mail = SMTP('smtp.gmail.com', 587)
     mail.ehlo()
