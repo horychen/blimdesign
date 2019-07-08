@@ -78,8 +78,15 @@ class JMAG(object): #< ToolBase & DrawerBase & MakerExtrudeBase & MakerRevolveBa
 
         print(expected_project_file_path)
         if os.path.exists(expected_project_file_path):
-            print('JMAG project exists already. Will delete it and create a new one.')
-            os.remove(expected_project_file_path)
+            print('JMAG project exists already. I learned my lessions. I will NOT delete it but create a new one with a different name instead.')
+            # os.remove(expected_project_file_path)
+            attempts = 2
+            temp_path = expected_project_file_path[:-len('.jproj')] + 'attempts%d.jproj'%(attempts)
+            while os.path.exists(temp_path):
+                attempts += 1
+                temp_path = expected_project_file_path[:-len('.jproj')] + 'attempts%d.jproj'%(attempts)
+
+            expected_project_file_path = temp_path
 
         app.NewProject("Untitled")
         app.SaveAs(expected_project_file_path)

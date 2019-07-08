@@ -14,17 +14,20 @@ def savetofile(id_solver, freq, stack_length):
     femm.mi_saveas(dir_femm_temp+'femm_temp_%d.fem'%(id_solver))
 
 def remove_files(list_solver_id, dir_femm_temp, suffix='.txt', id_solver_femm_found=None):
+    print('Rename femm file for index', id_solver_femm_found, 'Others will be deleted.')
     for id_solver in list_solver_id:
         fname = dir_femm_temp + "femm_temp_%d"%(id_solver) + suffix
 
         if id_solver == id_solver_femm_found:
             found_file_name = dir_femm_temp + "femm_found" + suffix
+
             if os.path.exists(found_file_name):
                 os.remove(found_file_name) # remove already existing file (due to interrupted run)
+
             if not os.path.exists(fname):
                 raise Exception('FEMM file %s does not exist for id_solver=%d'%(fname, id_solver))
-            else:
-                os.rename(fname, found_file_name)
+
+            os.rename(fname, found_file_name)
             continue
 
         os.remove(fname)
@@ -136,8 +139,8 @@ while True:
 
     # find the two slip freq close enough then break.5
     if abs(breakdown_slipfreq_1st - breakdown_slipfreq_2nd) < VAREPSILON: # Hz
-        print('Found it.', breakdown_slipfreq_1st, 'Hz', breakdown_torque_1st, 'Nm')
         the_index = list_solver_id[index_1st]
+        print('Found it.', breakdown_slipfreq_1st, 'Hz', breakdown_torque_1st, 'Nm', 'The index is', the_index)
         remove_files(list_solver_id, dir_femm_temp, suffix='.fem', id_solver_femm_found=the_index)
         remove_files(list_solver_id, dir_femm_temp, suffix='.ans', id_solver_femm_found=the_index)
 
