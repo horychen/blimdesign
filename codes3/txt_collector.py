@@ -23,14 +23,14 @@ for key, val in run_folder_set_dict.items():
                 os.mkdir('./txt_collected/' + pair[1])
             try:
                 copyfile(path_to + 'swarm_survivor.txt', './txt_collected/' + pair[1] + 'swarm_survivor.txt')
-            except:
-                pass
+            except Exception as e:
+                print(e)
             try:
                 copyfile(path_to + 'swarm_MOO_log.txt',  './txt_collected/' + pair[1] + 'swarm_MOO_log.txt')
-            except:
-                pass
+            except Exception as e:
+                print(e)
             try:
                 copyfile(path_to + 'swarm_data.txt',     './txt_collected/' + pair[1] + 'swarm_data.txt')
-            except:
-                pass
+            except Exception as e:
+                print(e)
 
