@@ -11,8 +11,8 @@ run_folder_set_dict = {'IM' + 'Combined':[],
 
 run_folder_set_dict['IM' + 'Combined']   += [ ('Y730',  r'run#550/'),    ('Severson01', r'run#550010/') ]
 run_folder_set_dict['IM' + 'Separate']   += [ ('T440p', r'run#550040/'), ('Severson02', r'run#550020/') ]
-run_folder_set_dict['PMSM' + 'Combined'] += [ ('T440p', r'run#603010/'), ('Severson02', r'run#603020') ]
-run_folder_set_dict['PMSM' + 'Separate'] += [                            ('Severson01', r'run#604010') ]
+run_folder_set_dict['PMSM' + 'Combined'] += [ ('T440p', r'run#603010/'), ('Severson02', r'run#603020/') ]
+run_folder_set_dict['PMSM' + 'Separate'] += [                            ('Severson01', r'run#604010/') ]
 
 for key, val in run_folder_set_dict.items():
     # print(key, val)
