@@ -21,7 +21,16 @@ for key, val in run_folder_set_dict.items():
         if os.path.isdir(path_to):
             if not os.path.isdir('./txt_collected/' + pair[1]):
                 os.mkdir('./txt_collected/' + pair[1])
-            copyfile(path_to + 'swarm_survivor.txt', './txt_collected/' + pair[1] + 'swarm_survivor.txt')
-            copyfile(path_to + 'swarm_MOO_log.txt',  './txt_collected/' + pair[1] + 'swarm_MOO_log.txt')
-            copyfile(path_to + 'swarm_data.txt',     './txt_collected/' + pair[1] + 'swarm_data.txt')
+            try:
+                copyfile(path_to + 'swarm_survivor.txt', './txt_collected/' + pair[1] + 'swarm_survivor.txt')
+            except:
+                pass
+            try:
+                copyfile(path_to + 'swarm_MOO_log.txt',  './txt_collected/' + pair[1] + 'swarm_MOO_log.txt')
+            except:
+                pass
+            try:
+                copyfile(path_to + 'swarm_data.txt',     './txt_collected/' + pair[1] + 'swarm_data.txt')
+            except:
+                pass
 

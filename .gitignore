@@ -26,4 +26,5 @@
 *.zip
 *.7z
 /*run#*
+/txt_collected
 *.html
