@@ -516,7 +516,11 @@ class swarm_data_container(object):
         return results_for_refining_bounds
 
 
-    def get_x_denorm_from_design_parameters(self, design_parameters, bound_filter):
+    def get_x_denorm_from_design_parameters(self, design_parameters, bound_filter=None):
+        if bound_filter is None:
+            x_denorm = design_parameters
+            return x_denorm
+
         if len(bound_filter) == 13:
             # step 1: get free_variables from design_parameters
             free_variables = [None]*13
@@ -586,7 +590,7 @@ class FEA_Solver:
             f.write('\n---------%d\n'%(counter_fitness_return) \
                     + '\n'.join(','.join('%.16f'%(x) for x in el[0].tolist() + el[1].tolist() ) for el in zip(pop.get_x(), pop.get_f()) )) # convert 2d array to string
 
-    def read_swarm_data(self, bound_filter):
+    def read_swarm_data(self, bound_filter=None):
         if not os.path.exists(self.output_dir + 'swarm_data.txt'):
             return None
 

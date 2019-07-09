@@ -8,6 +8,8 @@ from time import time, sleep
 import operator
 import subprocess
 
+bool_remove_files = False
+
 def savetofile(id_solver, freq, stack_length):
     femm.mi_probdef(freq, 'millimeters', 'planar', 1e-8, # must < 1e-8
                     stack_length, 18, 1) # The acsolver parameter (default: 0) specifies which solver is to be used for AC problems: 0 for successive approximation, 1 for Newton.
@@ -28,10 +30,14 @@ def remove_files(list_solver_id, dir_femm_temp, suffix, id_solver_femm_found=Non
                 raise Exception('FEMM file %s does not exist for id_solver=%d'%(fname, id_solver))
 
             os.rename(fname, found_file_name)
-            break
+            if bool_remove_files:
+                continue
+            else:
+                break
 
         # what if we don't remove temp file??? 2019/7/8
-        # os.remove(fname)
+        if bool_remove_files:
+            os.remove(fname)
 
 DEBUG_MODE = False
 # if __name__ == '__main__':
@@ -177,7 +183,8 @@ while True:
         print('try: freq_begin=%g, freq_end=%g.' % (freq_begin, freq_end))
 
 remove_files(list_solver_id, dir_femm_temp, suffix='.txt')
-os.remove(dir_femm_temp + "femm_temp.fem")
+if bool_remove_files:
+    os.remove(dir_femm_temp + "femm_temp.fem")
 
 femm.mi_close()
 femm.closefemm()
