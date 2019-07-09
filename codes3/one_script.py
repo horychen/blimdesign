@@ -25,6 +25,12 @@ if 'Y730' in fea_config_dict['pc_name']:
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
     run_folder = r'run#550/'
 
+    # Separate winding IM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
+    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
+    fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
+    run_folder = r'run#551/'
+
 elif 'Severson01' in fea_config_dict['pc_name']:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Severson01
@@ -43,7 +49,7 @@ elif 'Severson02' in fea_config_dict['pc_name']:
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
-    run_folder = r'run#550020/'
+    run_folder = r'run#550021/'
 else:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # T440p
@@ -93,19 +99,10 @@ for idx, f in enumerate(ad.bound_filter):
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Optimization
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-def get_bad_fintess_values(machine_type='IM', ref=False):
-    if ref == False:
-        if 'IM' in machine_type:
-            return 0, 0, 99
-        elif 'PMSM' in machine_type:
-            return 9999, 0, 999
-    else:
-        if 'IM' in machine_type:
-            return 1, 1, 100
-        elif 'PMSM' in machine_type:
-            return 10000, 1, 1000        
 import pygmo as pg
 global counter_fitness_called, counter_fitness_return
+from acm_designer import get_bad_fintess_values
+
 class Problem_BearinglessInductionDesign(object):
 
     # Define objectives
@@ -267,6 +264,7 @@ class Problem_BearinglessInductionDesign(object):
 
     # Return bounds of decision variables (a.k.a. chromosome)
     def get_bounds(self):
+        global ad
 
         # denormalize the normalized chromosome x to x_denorm
         min_b, max_b = np.asarray(ad.bounds_denorm).T 
@@ -282,6 +280,8 @@ class Problem_BearinglessInductionDesign(object):
     # Return function name
     def get_name(self):
         return "Bearingless Induction Motor Design"
+
+
 
 if bool_post_processing == True:
     # Combine all data 

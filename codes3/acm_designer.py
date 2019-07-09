@@ -38,7 +38,7 @@ class swarm_data_container(object):
             self.rated_data.append(  [float(x) for x in el[4].split(',')])
 
         self.number_of_free_variables = len(x_denorm)
-        print('Count of individuals:', len(self.swarm_data_raw))
+        print('\tCount of individuals:', len(self.swarm_data_raw))
 
         self.l_OA = [el[-3] for el in self.swarm_data_xf]
         self.l_OB = [el[-2] for el in self.swarm_data_xf]
@@ -68,6 +68,14 @@ class swarm_data_container(object):
         self.l_rated_stack_length                   = [el[10] for el in self.rated_data] # new!
         self.l_original_stack_length                = [el[11] for el in self.rated_data] # new!
         self.l_original_rotor_weight                = [el/rated*ori for el, ori, rated in zip(self.l_rated_rotor_weight, self.l_rated_stack_length, self.l_original_stack_length)]
+
+
+    def get_list_y_data(self):
+
+        list_y_data = [ self.l_rated_stack_length,
+                        [100*el for el in self.l_OB], 
+                        ]
+        return list_y_data
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Utility
@@ -592,9 +600,10 @@ class FEA_Solver:
 
     def read_swarm_data(self, bound_filter=None):
         if not os.path.exists(self.output_dir + 'swarm_data.txt'):
+            print('\tNo file!')
             return None
 
-        print('Read in', self.output_dir + 'swarm_data.txt')
+        print('\tRead in', self.output_dir + 'swarm_data.txt')
         with open(self.output_dir + 'swarm_data.txt', 'r') as f:
             buf = f.readlines()
             buf = buf[1:]
@@ -1045,7 +1054,6 @@ class FEA_Solver:
         app.View().Pan(-im_variant.Radius_OuterRotor, 0)
         app.ExportImageWithSize(self.output_dir + model.GetName() + '.png', 2000, 2000)
         app.View().ShowModel() # 1st btn. close mesh view, and note that mesh data will be deleted if only ouput table results are selected.
-
 
 class acm_designer(object):
     def __init__(self, fea_config_dict, spec):
@@ -1587,3 +1595,15 @@ class acm_designer(object):
         from pylab import show
         show()
 
+
+def get_bad_fintess_values(machine_type='IM', ref=False):
+    if ref == False:
+        if 'IM' in machine_type:
+            return 0, 0, 99
+        elif 'PMSM' in machine_type:
+            return 9999, 0, 999
+    else:
+        if 'IM' in machine_type:
+            return 1, 1, 100
+        elif 'PMSM' in machine_type:
+            return 10000, 1, 1000        

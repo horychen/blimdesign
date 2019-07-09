@@ -95,17 +95,8 @@ for idx, f in enumerate(ad.bound_filter):
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 import pygmo as pg
 global counter_fitness_called, counter_fitness_return
-def get_bad_fintess_values(machine_type=None, ref=False):
-    if ref == False:
-        if 'IM' in machine_type:
-            return 0, 0, 99
-        elif 'PMSM' in machine_type:
-            return 9999, 0, 999
-    else:
-        if 'IM' in machine_type:
-            return 1, 1, 100
-        elif 'PMSM' in machine_type:
-            return 10000, 1, 1000        
+from acm_designer import get_bad_fintess_values
+
 class Problem_BearinglessSynchronousDesign(object):
 
     # Define objectives
@@ -245,6 +236,7 @@ class Problem_BearinglessSynchronousDesign(object):
 
     # Return bounds of decision variables (a.k.a. chromosome)
     def get_bounds(self):
+        global ad
         print('Problem_BearinglessSynchronousDesign.get_bounds:', ad.bounds_denorm)
         min_b, max_b = np.asarray(ad.bounds_denorm).T 
         return ( min_b.tolist(), max_b.tolist() )
@@ -252,7 +244,7 @@ class Problem_BearinglessSynchronousDesign(object):
     # Return function name
     def get_name(self):
         return "Bearingless PMSM Design"
-
+    
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Multi-Objective Optimization
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
