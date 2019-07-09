@@ -12,6 +12,7 @@ import FEMM_Solver
 import bearingless_spmsm_design
 import JMAG
 
+
 class swarm_data_container(object):
     def __init__(self, swarm_data_raw, fea_config_dict, bound_filter):
         self.swarm_data_raw = swarm_data_raw

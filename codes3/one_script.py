@@ -25,11 +25,11 @@ if 'Y730' in fea_config_dict['pc_name']:
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
     run_folder = r'run#550/'
 
-    # Separate winding IM
-    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
-    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
-    fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
-    run_folder = r'run#551/'
+    # # Separate winding IM
+    # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
+    # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
+    # fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
+    # run_folder = r'run#551/'
 
 elif 'Severson01' in fea_config_dict['pc_name']:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -49,7 +49,7 @@ elif 'Severson02' in fea_config_dict['pc_name']:
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
-    run_folder = r'run#550021/'
+    run_folder = r'run#550020/'
 else:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # T440p

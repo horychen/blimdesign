@@ -17,9 +17,14 @@ run_folder_set_dict = {'IM' + 'Combined':[],
                   'PMSM' + 'Combined':[],
                   'PMSM' + 'Separate':[]}
 
-run_folder_set_dict['IM' + 'Combined']   += [ ('Y730',  r'run#550/'),    ('Severson01', r'run#550010/') ]
-run_folder_set_dict['IM' + 'Separate']   += [ ('T440p', r'run#550040/'), ('Severson02', r'run#550020/') ]
-run_folder_set_dict['PMSM' + 'Combined'] += [ ('T440p', r'run#603010/'), ('Severson02', r'run#603020/') ]
+run_folder_set_dict['IM' + 'Combined']   += [ ('Y730',  r'run#550/'),    ('Severson01Local', r'run#550010/') ]
+run_folder_set_dict['IM' + 'Separate']   += [                            ('Severson02', r'run#550020/'), ('T440p', r'run#550040/') ]
+run_folder_set_dict['PMSM' + 'Combined'] += [                            ('Severson02', r'run#603020/'), ('T440p', r'run#603010/') ]
+run_folder_set_dict['PMSM' + 'Separate'] += [                            ('Severson01', r'run#604010/') ]
+
+run_folder_set_dict['IM' + 'Combined']   += [ ('Y730',  r'run#550/'),    ('Severson01Local', r'run#550010/') ]
+run_folder_set_dict['IM' + 'Separate']   += [                            ('Severson02', r'run#550020/') ]
+run_folder_set_dict['PMSM' + 'Combined'] += [                            ('Severson02', r'run#603020/') ]
 run_folder_set_dict['PMSM' + 'Separate'] += [                            ('Severson01', r'run#604010/') ]
 
 fea_config_dict['run_folder'] = 'None'
@@ -35,6 +40,23 @@ ad = acm_designer.acm_designer(fea_config_dict, spec)
 
 
 
+import pygmo as pg
+global DIMENSION
+
+class Problem_Dummy(object):
+
+    # Define objectives
+    def fitness(self, x):
+        return [0, 0, 0]
+
+    # Return number of objectives
+    def get_nobj(self):
+        return 3
+
+    # Return bounds of decision variables (a.k.a. chromosome)
+    def get_bounds(self):
+        global DIMENSION
+        return ([0]*DIMENSION, [1]*DIMENSION)
 
 
 
@@ -55,6 +77,7 @@ ad = acm_designer.acm_designer(fea_config_dict, spec)
 # from pylab import plt, np
 
 def get_swarm_data(run_folder):
+    ad.solver.swarm_data_container = None
     ad.solver.swarm_data = []
     ad.solver.output_dir = './txt_collected/' + run_folder # severson01
     number_of_chromosome = ad.solver.read_swarm_data()
@@ -68,21 +91,36 @@ index = 0
 plt.figure()
 for key, val in run_folder_set_dict.items():
     print('-'*20, key)
-    swarm_data = []
+    SWARM_DATA = []
     for run_folder_set in val:
         print(run_folder_set[0], run_folder_set[1])
-        swarm_data += get_swarm_data(run_folder_set[1])
+        SWARM_DATA += get_swarm_data(run_folder_set[1])
 
-        # if 'PMSMC' in key or 'IMS' in key:
-        # if 'Com' in key:
-        # if 'PMSMC' not in key:
-        ll = ad.solver.swarm_data_container.get_list_y_data()
-        print('\t index:', index)
-        plt.scatter(ll[0], ll[1], marker=markers[index], color=colors[index], alpha=1.0, label=key)
-        
-    print('Count of chromosomes:', len(swarm_data))
-    data_dict[key] = (swarm_data, markers[index], colors[index])
+        if ad.solver.swarm_data_container is not None:
+            # if 'PMSMC' in key or 'IMS' in key:
+            # if 'Com' in key:
+            # if 'IMS' not in key:
+            ll = ad.solver.swarm_data_container.get_list_y_data()
+            print('\t index:', index)
+            plt.scatter(ll[0], ll[1], marker=markers[index], color=colors[index], alpha=0.6, label=key)
+
+        if ad.solver.swarm_data_container is not None:
+            DIMENSION = len(ad.solver.swarm_data[0][:-3])
+            udp = Problem_Dummy()
+            prob = pg.problem(udp)
+            pop_archive = pg.population(prob, size=len(ad.solver.swarm_data))
+            for i in range(len(ad.solver.swarm_data)):
+                pop_archive.set_xf(i, ad.solver.swarm_data[i][:-3], ad.solver.swarm_data[i][-3:])
+            fits, vectors = pop_archive.get_f(), pop_archive.get_x()
+            ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
+            utility_moo.my_plot(pop_archive.get_f(), pop_archive.get_x(), ndf)
+
+
+    print('Count of chromosomes:', len(SWARM_DATA))
+    data_dict[key] = (SWARM_DATA, markers[index], colors[index])
     index += 1
+plt.xlabel('stack length [mm]')
+plt.ylabel('-$\\eta$ [%] (efficiency)')
 plt.grid()
 from collections import OrderedDict
 handles, labels = plt.gca().get_legend_handles_labels()
@@ -90,34 +128,10 @@ by_label = OrderedDict(zip(labels, handles))
 plt.legend(by_label.values(), by_label.keys(), loc='upper left')
 plt.show()
 quit()
-# Combine all data 
-# swarm_data_severson01 = get_swarm_data(r'run#540???/')
-# swarm_data_severson02 = get_swarm_data(r'run#540???/')
-# swarm_data_Y730       = get_swarm_data(r'run#540???/')
-# swarm_data_T440p      = get_swarm_data(r'run#540???/')
 
-# print('Sizes of the 4 populations (in order):', len(swarm_data_severson01), len(swarm_data_severson02), len(swarm_data_Y730), len(swarm_data_T440p))
-# ad.solver.swarm_data = swarm_data_severson01 + swarm_data_severson02 + swarm_data_Y730 + swarm_data_T440p # list add
 
 # Learn Pareto front rank and plot
 print('count:', len(ad.solver.swarm_data))
-
-import pygmo as pg
-global DIMENSION
-class Problem_Dummy(object):
-
-    # Define objectives
-    def fitness(self, x):
-        return [0, 0, 0]
-
-    # Return number of objectives
-    def get_nobj(self):
-        return 3
-
-    # Return bounds of decision variables (a.k.a. chromosome)
-    def get_bounds(self):
-        global DIMENSION
-        return ([0]*DIMENSION, [1]*DIMENSION)
 
 popsize = 78
 for key, val in run_folder_set_dict.items():
