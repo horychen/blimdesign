@@ -409,7 +409,7 @@ def my_print(ad, pop, _):
         print(pop, file=fname)
 
 
-def learn_about_the_archive(prob, swarm_data, popsize, fea_config_dict, len_s01=None, len_s02=None):
+def learn_about_the_archive(prob, swarm_data, popsize, fea_config_dict, len_s01=None, len_s02=None, bool_plot_and_show=False):
     number_of_chromosome = len(swarm_data)
     print('Archive size:', number_of_chromosome)
     # for el in swarm_data:
@@ -461,9 +461,10 @@ def learn_about_the_archive(prob, swarm_data, popsize, fea_config_dict, len_s01=
     sorted_vectors = [vectors[index].tolist() for index in sorted_index]
     sorted_fits    = [fits[index].tolist() for index in sorted_index]
 
-    my_plot(pop_archive.get_f(), pop_archive.get_x(), ndf)
-    my_3d_plot_non_dominated_fronts(pop_archive, rank1_ParetoPoints, fea_config_dict, plot_option=1)
-    plt.show()
+    if bool_plot_and_show:
+        my_plot(pop_archive.get_f(), pop_archive.get_x(), ndf)
+        my_3d_plot_non_dominated_fronts(pop_archive, rank1_ParetoPoints, fea_config_dict, plot_option=1)
+        plt.show()
 
     swarm_data_on_pareto_front = [design_parameters_denorm + fits for design_parameters_denorm, fits in zip(sorted_vectors, sorted_fits)]
     return swarm_data_on_pareto_front
