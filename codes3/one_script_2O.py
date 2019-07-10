@@ -39,7 +39,8 @@ elif 'Severson01' in fea_config_dict['pc_name']:
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.975
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
-    run_folder = r'run#550010/'
+    # run_folder = r'run#550010/'
+    run_folder = r'run#550019/'
 
 elif 'Severson02' in fea_config_dict['pc_name']:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -50,6 +51,7 @@ elif 'Severson02' in fea_config_dict['pc_name']:
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
     run_folder = r'run#550020/'
+    run_folder = r'run#550029/'
 else:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # T440p

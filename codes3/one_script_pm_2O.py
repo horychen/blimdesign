@@ -41,7 +41,8 @@ elif 'Severson01' in fea_config_dict['pc_name']:
     # Separate winding PMSM
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    run_folder = r'run#604010/'
+    # run_folder = r'run#604010/'
+    run_folder = r'run#604019/'
 
 elif 'Severson02' in fea_config_dict['pc_name']:
     ################################################################
@@ -51,7 +52,8 @@ elif 'Severson02' in fea_config_dict['pc_name']:
     # Combined winding PMSM
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    run_folder = r'run#603020/'
+    # run_folder = r'run#603020/'
+    run_folder = r'run#603029/'
 else:
     ################################################################
     # T440p
