@@ -172,9 +172,10 @@ class CrossSectInnerNotchedMagnet(object):
         self.color = color
         self.notched_rotor = notched_rotor
 
-    def draw(self, drawer):
+    def draw(self, drawer, bool_re_evaluate=False):
 
-        drawer.getSketch(self.name, self.color)
+        if False == bool_re_evaluate:
+            drawer.getSketch(self.name, self.color)
 
         d_pm  = self.notched_rotor.mm_d_pm
         alpha_rm = self.notched_rotor.deg_alpha_rm * np.pi/180
@@ -230,6 +231,8 @@ class CrossSectInnerNotchedMagnet(object):
             Rin  = r_P4
             self.mm2_magnet_area = alpha_rm/alpha_rp  *  np.pi*(Rout**2 - Rin**2) # magnet area for all the poles
             print('Magnet area in total is %g mm^2'%(self.mm2_magnet_area))
+            if bool_re_evaluate:
+                return self.mm2_magnet_area
 
             if self.notched_rotor.deg_alpha_rm >= 180/p*0.9800:
                 print('FULL POLE PITCH MAGNET IS USED.')

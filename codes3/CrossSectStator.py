@@ -117,9 +117,10 @@ class CrossSectInnerRotorStatorWinding(object):
         self.color = color
         self.stator_core = stator_core
 
-    def draw(self, drawer):
+    def draw(self, drawer, bool_re_evaluate=False):
 
-        drawer.getSketch(self.name, self.color)
+        if False == bool_re_evaluate:
+            drawer.getSketch(self.name, self.color)
 
         alpha_st = self.stator_core.deg_alpha_st * np.pi/180
         alpha_so = self.stator_core.deg_alpha_so * np.pi/180
@@ -168,6 +169,8 @@ class CrossSectInnerRotorStatorWinding(object):
 
         self.mm2_slot_area = 2 * get_area_polygon(P4, P5, P6, POpen)
         print('Slot area is %g mm^2'%(self.mm2_slot_area))
+        if bool_re_evaluate:
+            return self.mm2_slot_area
 
         PMiddle6Open = [ 0.5*(P6[0]+POpen[0]), 0.5*(P6[1]+POpen[1])]
         self.PCoil = PCoil = [ 0.5*(PMiddle45[0]+PMiddle6Open[0]), 0.5*(PMiddle45[1]+PMiddle6Open[1])]

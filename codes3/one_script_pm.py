@@ -128,17 +128,17 @@ class Problem_BearinglessSynchronousDesign(object):
         counter_loop = 0
         stuck_at = 0
         while True:
-            if stuck_at < counter_fitness_called:
-                stuck_at = counter_fitness_called
-                counter_loop = 0 # reset
-            if stuck_at == counter_fitness_called:
-                counter_loop += 1
-
             if ad.bool_re_evaluate:
                 if counter_fitness_return >= len(ad.solver.swarm_data):
                     quit()
                 x_denorm = ad.solver.swarm_data[counter_fitness_return][:-3]
                 print(ad.solver.swarm_data[counter_fitness_return])
+
+            if stuck_at < counter_fitness_called:
+                stuck_at = counter_fitness_called
+                counter_loop = 0 # reset
+            if stuck_at == counter_fitness_called:
+                counter_loop += 1
 
             try:
                 cost_function, f1, f2, f3, FRW, \
