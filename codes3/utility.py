@@ -1395,11 +1395,11 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
                              acm_variant.Radius_OuterRotor,
                              acm_variant.stator_yoke_diameter_Dsyi
                              ]
-        slot_area_utilizing_ratio = (acm_variant.DriveW_CurrentAmp + acm_variant.BeariW_CurrentAmp) / acm_variant.CurrentAmp_per_phase
-        if slot_area_utilizing_ratio < 1:
-            print('Heads up! slot_area_utilizing_ratio is', slot_area_utilizing_ratio, 'which means you are simulating a separate winding? If not, contrats--you found a bug...')
-            print('DW, BW, Total:', acm_variant.DriveW_CurrentAmp, acm_variant.BeariW_CurrentAmp, acm_variant.CurrentAmp_per_phase)
-        s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = get_copper_loss_Bolognani(slot_area_utilizing_ratio*acm_variant.coils.mm2_slot_area*1e-6, copper_loss_parameters=copper_loss_parameters)
+        # slot_area_utilizing_ratio = (acm_variant.DriveW_CurrentAmp + acm_variant.BeariW_CurrentAmp) / acm_variant.CurrentAmp_per_phase
+        # if slot_area_utilizing_ratio < 1:
+        #     print('Heads up! slot_area_utilizing_ratio is', slot_area_utilizing_ratio, 'which means you are simulating a separate winding? If not, contrats--you found a bug...')
+        #     print('DW, BW, Total:', acm_variant.DriveW_CurrentAmp, acm_variant.BeariW_CurrentAmp, acm_variant.CurrentAmp_per_phase)
+        s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = get_copper_loss_Bolognani(acm_variant.slot_area_utilizing_ratio*acm_variant.coils.mm2_slot_area*1e-6, copper_loss_parameters=copper_loss_parameters)
         # s, r, sAlongStack, rAlongStack, Js, Jr = 0, 0, 0, 0, 0, 0
 
     dm = data_manager()
