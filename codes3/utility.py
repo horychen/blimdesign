@@ -1343,9 +1343,9 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
 
     # use the last 1/4 period data to compute average copper loss of Tran2TSS rather than use that of Freq study
     effective_part = rotor_Joule_loss_list[-int(0.5*fea_config_dict['number_of_steps_2ndTTS']):] # number_of_steps_2ndTTS = steps for half peirod
-    print(rotor_Joule_loss_list)
-    print(effective_part)
-    quit()
+    # print(rotor_Joule_loss_list)
+    # print(effective_part)
+    # quit()
     rotor_Joule_loss = sum(effective_part) / len(effective_part)
     if 'PMSM' in machine_type:
         print('Magnet Joule loss:', rotor_Joule_loss)
@@ -1357,15 +1357,15 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             femm_solver.list_rotor_current_amp = [abs(el) for el in femm_solver.vals_results_rotor_current] # el is complex number
             # settings not necessarily be consistent with Pyrhonen09's design: , STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1., TEMPERATURE_OF_COIL=75
 
-            slot_area_utilizing_ratio = (acm_variant.DriveW_CurrentAmp + acm_variant.BeariW_CurrentAmp) / acm_variant.CurrentAmp_per_phase
-            if slot_area_utilizing_ratio < 1:
-                print('Heads up! slot_area_utilizing_ratio is', slot_area_utilizing_ratio, 'which means you are simulating a separate winding? If not, contrats--you found a bug...')
-                print('DW, BW, Total:', acm_variant.DriveW_CurrentAmp, acm_variant.BeariW_CurrentAmp, acm_variant.CurrentAmp_per_phase)
+            # slot_area_utilizing_ratio = (acm_variant.DriveW_CurrentAmp + acm_variant.BeariW_CurrentAmp) / acm_variant.CurrentAmp_per_phase
+            # if slot_area_utilizing_ratio < 1:
+            #     print('Heads up! slot_area_utilizing_ratio is', slot_area_utilizing_ratio, 'which means you are simulating a separate winding? If not, contrats--you found a bug...')
+            #     print('DW, BW, Total:', acm_variant.DriveW_CurrentAmp, acm_variant.BeariW_CurrentAmp, acm_variant.CurrentAmp_per_phase)
 
-            _s, _r, _sAlongStack, _rAlongStack, _Js, _Jr = femm_solver.get_copper_loss_pyrhonen(slot_area_utilizing_ratio*femm_solver.stator_slot_area, 
+            _s, _r, _sAlongStack, _rAlongStack, _Js, _Jr = femm_solver.get_copper_loss_pyrhonen(acm_variant.slot_area_utilizing_ratio*femm_solver.stator_slot_area, 
                                                                                                                           femm_solver.rotor_slot_area, 
                                                                                                                           total_CurrentAmp=acm_variant.DriveW_CurrentAmp+acm_variant.BeariW_CurrentAmp)
-            s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = femm_solver.get_copper_loss_Bolognani(slot_area_utilizing_ratio*femm_solver.stator_slot_area, 
+            s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = femm_solver.get_copper_loss_Bolognani(acm_variant.slot_area_utilizing_ratio*femm_solver.stator_slot_area, 
                                                                                                                           femm_solver.rotor_slot_area, 
                                                                                                                           total_CurrentAmp=acm_variant.DriveW_CurrentAmp+acm_variant.BeariW_CurrentAmp)
 

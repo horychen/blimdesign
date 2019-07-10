@@ -892,7 +892,7 @@ class FEA_Solver:
 
                 self.run_study(im_variant, app, study, clock_time())
             else:
-                raise Exception("if self.fea_config_dict['jmag_run_list'][0] == 0: TranFEAwi2TSS")
+                raise Exception("self.fea_config_dict['jmag_run_list'][0] == 0: TranFEAwi2TSS")
 
             # export Voltage if field data exists.
             if self.fea_config_dict['delete_results_after_calculation'] == False:
@@ -900,6 +900,33 @@ class FEA_Solver:
                 ref1 = app.GetDataManager().GetDataSet("Circuit Voltage")
                 app.GetDataManager().CreateGraphModel(ref1)
                 app.GetDataManager().GetGraphModel("Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+        else:
+            # FEMM的转子电流，哎，是个麻烦事儿。。。
+
+            self.femm_solver.vals_results_rotor_current = []
+
+            new_fname = self.dir_femm_temp + original_study_name + '.csv'
+            with open(new_fname, 'r') as f:
+                buf = f.readlines()
+                for idx, el in enumerate(buf):
+                    if idx == 0:
+                        slip_freq_breakdown_torque = float(el)
+                        continue
+                    if idx == 1:
+                        breakdown_torque = float(el)
+                        continue
+                    if idx == 2:
+                        self.femm_solver.stator_slot_area = float(el)
+                        continue
+                    if idx == 3:
+                        self.femm_solver.rotor_slot_area = float(el)
+                        continue
+                    # print(el)
+                    # print(el.split(','))
+                    temp = el.split(',')
+                    self.femm_solver.vals_results_rotor_current.append( float(temp[0])+ 1j*float(temp[1]) )
+                    # print(self.femm_solver.vals_results_rotor_current)
+
 
         ################################################################
         # Load data for cost function evaluation

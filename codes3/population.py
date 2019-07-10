@@ -3118,7 +3118,9 @@ class bearingless_induction_motor_design(object):
                 if self.Radius_of_RotorSlot2 > self.Radius_of_RotorSlot:
                     self.Radius_of_RotorSlot2 = self.Radius_of_RotorSlot
 
-
+        self.CurrentAmp_per_phase = None # will be used in copper loss calculation
+        self.slot_area_utilizing_ratio = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] + self.fea_config_dict['TORQUE_CURRENT_RATIO']
+        print('self.slot_area_utilizing_ratio:', self.slot_area_utilizing_ratio)
 
         # thermal penalty for reduced rotor slot area (copper hot) and rotor tooth width (iron hot)
         # try:

@@ -330,6 +330,10 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             self.BeariW_CurrentAmp = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] * (self.DriveW_CurrentAmp / self.fea_config_dict['TORQUE_CURRENT_RATIO'])
         self.BeariW_Freq       = self.DriveW_Freq
 
+        self.CurrentAmp_per_phase = None # will be used in copper loss calculation
+        self.slot_area_utilizing_ratio = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] + self.fea_config_dict['TORQUE_CURRENT_RATIO']
+        print('self.slot_area_utilizing_ratio:', self.slot_area_utilizing_ratio)
+
         if self.fea_config_dict is not None:
             self.dict_coil_connection = {41:self.wily.l41, 42:self.wily.l42, 21:self.wily.l21, 22:self.wily.l22} # 这里的2和4等价于leftlayer和rightlayer。
 
