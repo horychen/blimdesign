@@ -964,6 +964,11 @@ class FEA_Solver:
                     CurrentAmp_per_conductor = CurrentAmp_in_the_slot / im_variant.DriveW_zQ
                     CurrentAmp_per_phase = CurrentAmp_per_conductor * im_variant.wily.number_parallel_branch # 跟几层绕组根本没关系！除以zQ的时候，就已经变成每根导体的电流了。
                     variant_DriveW_CurrentAmp = CurrentAmp_per_phase # this current amp value is for non-bearingless motor
+                    self.CurrentAmp_per_phase = CurrentAmp_per_phase
+
+                    slot_area_utilizing_ratio = (self.DriveW_CurrentAmp + self.BeariW_CurrentAmp) / self.CurrentAmp_per_phase
+                    print('---Heads up! slot_area_utilizing_ratio is', slot_area_utilizing_ratio)
+                    
                     im_variant.DriveW_CurrentAmp = self.fea_config_dict['TORQUE_CURRENT_RATIO'] * variant_DriveW_CurrentAmp 
                     im_variant.BeariW_CurrentAmp = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] * variant_DriveW_CurrentAmp
                     print('---Variant CurrentAmp_in_the_slot =', CurrentAmp_in_the_slot)

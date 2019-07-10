@@ -397,6 +397,10 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         self.CurrentAmp_per_phase = CurrentAmp_per_phase
         self.DriveW_CurrentAmp = self.fea_config_dict['TORQUE_CURRENT_RATIO'] * variant_DriveW_CurrentAmp 
         self.BeariW_CurrentAmp = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] * variant_DriveW_CurrentAmp
+
+        slot_area_utilizing_ratio = (self.DriveW_CurrentAmp + self.BeariW_CurrentAmp) / self.CurrentAmp_per_phase
+        print('---Heads up! slot_area_utilizing_ratio is', slot_area_utilizing_ratio)
+
         print('---Variant CurrentAmp_in_the_slot =', CurrentAmp_in_the_slot)
         print('---variant_DriveW_CurrentAmp = CurrentAmp_per_phase =', variant_DriveW_CurrentAmp)
         print('---self.DriveW_CurrentAmp =', self.DriveW_CurrentAmp)
