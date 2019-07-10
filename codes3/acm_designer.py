@@ -906,26 +906,36 @@ class FEA_Solver:
             self.femm_solver.vals_results_rotor_current = []
 
             new_fname = self.dir_femm_temp + original_study_name + '.csv'
-            with open(new_fname, 'r') as f:
-                buf = f.readlines()
-                for idx, el in enumerate(buf):
-                    if idx == 0:
-                        slip_freq_breakdown_torque = float(el)
-                        continue
-                    if idx == 1:
-                        breakdown_torque = float(el)
-                        continue
-                    if idx == 2:
-                        self.femm_solver.stator_slot_area = float(el)
-                        continue
-                    if idx == 3:
-                        self.femm_solver.rotor_slot_area = float(el)
-                        continue
-                    # print(el)
-                    # print(el.split(','))
-                    temp = el.split(',')
-                    self.femm_solver.vals_results_rotor_current.append( float(temp[0])+ 1j*float(temp[1]) )
-                    # print(self.femm_solver.vals_results_rotor_current)
+            try:
+                with open(new_fname, 'r') as f:
+                    buf = f.readlines()
+                    for idx, el in enumerate(buf):
+                        if idx == 0:
+                            slip_freq_breakdown_torque = float(el)
+                            continue
+                        if idx == 1:
+                            breakdown_torque = float(el)
+                            continue
+                        if idx == 2:
+                            self.femm_solver.stator_slot_area = float(el)
+                            continue
+                        if idx == 3:
+                            self.femm_solver.rotor_slot_area = float(el)
+                            continue
+                        # print(el)
+                        # print(el.split(','))
+                        temp = el.split(',')
+                        self.femm_solver.vals_results_rotor_current.append( float(temp[0])+ 1j*float(temp[1]) )
+                        # print(self.femm_solver.vals_results_rotor_current)
+                self.dirty_backup_stator_slot_area = self.femm_solver.stator_slot_area
+                self.dirty_backup_rotor_slot_area = self.femm_solver.rotor_slot_area
+                self.dirty_backup_vals_results_rotor_current = self.femm_solver.vals_results_rotor_current
+            except FileNotFoundError as error:
+                print(error)
+                print('Use dirty_backup to continue...') # 有些时候，不知道为什么femm的结果文件（.csv）没了，这时候曲线救国，凑活一下吧
+                self.femm_solver.stator_slot_area = self.dirty_backup_stator_slot_area           
+                self.femm_solver.rotor_slot_area = self.dirty_backup_rotor_slot_area            
+                self.femm_solver.vals_results_rotor_current = self.dirty_backup_vals_results_rotor_current 
 
 
         ################################################################
