@@ -12,20 +12,20 @@ fea_config_dict['local_sensitivity_analysis'] = False
 fea_config_dict['bool_refined_bounds'] = False
 fea_config_dict['use_weights'] = 'O2' # this is not working
 
-run_folder_set_dict = {'IM' + 'Combined':[], 
-                  'IM' + 'Separate':[],
-                  'PMSM' + 'Combined':[],
-                  'PMSM' + 'Separate':[]}
+run_folder_set_dict = {'IM' + ' Combined':[], 
+                  'IM' + ' Separate':[],
+                  'PMSM' + ' Combined':[],
+                  'PMSM' + ' Separate':[]}
 
-run_folder_set_dict['IM' + 'Combined']   += [ ('Y730',  r'run#550/'),    ('Severson01Local', r'run#550010/') ]
-run_folder_set_dict['IM' + 'Separate']   += [                            ('Severson02', r'run#550020/'), ('T440p', r'run#550040/') ]
-run_folder_set_dict['PMSM' + 'Combined'] += [                            ('Severson02', r'run#603020/'), ('T440p', r'run#603010/') ]
-run_folder_set_dict['PMSM' + 'Separate'] += [                            ('Severson01', r'run#604010/') ]
+# run_folder_set_dict['IM' + ' Combined']   += [ ('Y730',  r'run#550/'),    ('Severson01Local', r'run#550010/') ]
+# run_folder_set_dict['IM' + ' Separate']   += [                            ('Severson02', r'run#550020/'), ('T440p', r'run#550040/') ]
+# run_folder_set_dict['PMSM' + ' Combined'] += [                            ('Severson02', r'run#603020/'), ('T440p', r'run#603010/') ]
+# run_folder_set_dict['PMSM' + ' Separate'] += [                            ('Severson01', r'run#604010/') ]
 
-run_folder_set_dict['IM' + 'Combined']   += [ ('Y730',  r'run#550/'),    ('Severson01Local', r'run#550010/') ]
-run_folder_set_dict['IM' + 'Separate']   += [                            ('Severson02', r'run#550020/') ]
-run_folder_set_dict['PMSM' + 'Combined'] += [                            ('Severson02', r'run#603020/') ]
-run_folder_set_dict['PMSM' + 'Separate'] += [                            ('Severson01', r'run#604010/') ]
+run_folder_set_dict['IM' + ' Combined']   += [ ('Y730',  r'run#550/'),               ]
+run_folder_set_dict['IM' + ' Separate']   += [ ('Severson02', r'run#550020/')        ]
+run_folder_set_dict['PMSM' + ' Combined'] += [ ('Severson02', r'run#603020/')        ]
+run_folder_set_dict['PMSM' + ' Separate'] += [ ('Severson01', r'run#604010/')        ]
 
 fea_config_dict['run_folder'] = 'None'
 # spec's
@@ -36,6 +36,22 @@ import acm_designer
 global ad
 ad = acm_designer.acm_designer(fea_config_dict, spec)
 
+
+
+from pylab import mpl
+# mpl.style.use('classic')
+mpl.rcParams['legend.fontsize'] = 12
+# mpl.rcParams['legend.family'] = 'Times New Roman'
+mpl.rcParams['font.family'] = ['Times New Roman']
+# mpl.rcParams['font.size'] = 15.0
+font = {'family' : 'Times New Roman', #'serif',
+        'color' : 'darkblue',
+        'weight' : 'normal',
+        'size' : 14,}
+textfont = {'family' : 'Times New Roman', #'serif',
+            'color' : 'darkblue',
+            'weight' : 'normal',
+            'size' : 11.5,}
 
 
 
@@ -85,10 +101,13 @@ def get_swarm_data(run_folder):
     return ad.solver.swarm_data
 
 data_dict = {}
-markers = ['s', '^', 'o', '*']
-colors = ['tomato', '#C766A1', '#3064FD', '#6F50E2']
+markers = ['s', '^', 'o', 'd']
+# markers = ['s', '$I$', 'o', '$P$']
+# markers = ['$IC$', '$IS$', '$PC$', '$PS$']
+colors = ['tomato', '#C766A1', '#BBCD49', '#3064FD'] # blue:#3064FD, purple:6F50E2
+zorders = [3,4,1,2]
 index = 0
-plt.figure()
+fig = plt.figure()
 for key, val in run_folder_set_dict.items():
     print('-'*20, key)
     SWARM_DATA = []
@@ -102,30 +121,39 @@ for key, val in run_folder_set_dict.items():
             # if 'IMS' not in key:
             ll = ad.solver.swarm_data_container.get_list_y_data()
             print('\t index:', index)
-            plt.scatter(ll[0], ll[1], marker=markers[index], color=colors[index], alpha=0.6, label=key)
+            x = [1e-3*ll[0][idx] for idx, el in enumerate(ll[2]) if el < 10]
+            y = [-ll[1][idx] for idx, el in enumerate(ll[2]) if el < 10]
+            plt.scatter(x, y, marker=markers[index], color=colors[index], edgecolor='white', alpha=1.0, label=key, zorder=zorders[index])
+            # plt.scatter(x, y, marker=markers[index], color=colors[index], edgecolor='black', alpha=0.8, label=key)
+            # plt.scatter(x, y, marker=markers[index], color=colors[index], edgecolor=None, alpha=0.8, label=key)
 
-        if ad.solver.swarm_data_container is not None:
-            DIMENSION = len(ad.solver.swarm_data[0][:-3])
-            udp = Problem_Dummy()
-            prob = pg.problem(udp)
-            pop_archive = pg.population(prob, size=len(ad.solver.swarm_data))
-            for i in range(len(ad.solver.swarm_data)):
-                pop_archive.set_xf(i, ad.solver.swarm_data[i][:-3], ad.solver.swarm_data[i][-3:])
-            fits, vectors = pop_archive.get_f(), pop_archive.get_x()
-            ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
-            utility_moo.my_plot(pop_archive.get_f(), pop_archive.get_x(), ndf)
+        # if ad.solver.swarm_data_container is not None:
+        #     DIMENSION = len(ad.solver.swarm_data[0][:-3])
+        #     udp = Problem_Dummy()
+        #     prob = pg.problem(udp)
+        #     pop_archive = pg.population(prob, size=len(ad.solver.swarm_data))
+        #     for i in range(len(ad.solver.swarm_data)):
+        #         pop_archive.set_xf(i, ad.solver.swarm_data[i][:-3], ad.solver.swarm_data[i][-3:])
+        #     fits, vectors = pop_archive.get_f(), pop_archive.get_x()
+        #     ndf, dl, dc, ndr = pg.fast_non_dominated_sorting(fits)
+        #     utility_moo.my_plot(pop_archive.get_f(), pop_archive.get_x(), ndf)
 
 
     print('Count of chromosomes:', len(SWARM_DATA))
     data_dict[key] = (SWARM_DATA, markers[index], colors[index])
     index += 1
-plt.xlabel('stack length [mm]')
-plt.ylabel('-$\\eta$ [%] (efficiency)')
+# plt.xlabel('Motor Stack Length [mm]')
+plt.xlabel('Torque per Rotor Volume [kNm/m^3]')
+plt.ylabel('Efficiency [%]')
 plt.grid()
 from collections import OrderedDict
 handles, labels = plt.gca().get_legend_handles_labels()
 by_label = OrderedDict(zip(labels, handles))
-plt.legend(by_label.values(), by_label.keys(), loc='upper left')
+plt.legend(by_label.values(), by_label.keys(), loc='lower right')
+# plt.xticks(range(40,241,40))
+plt.xlim([2,50])
+plt.ylim([94,98.5])
+fig.savefig(r'C:\Users\horyc\Desktop\IM_PMSM_COMPARISON.eps')
 plt.show()
 quit()
 

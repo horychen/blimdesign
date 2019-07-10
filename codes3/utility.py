@@ -1330,8 +1330,18 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             # convert rotor current results (complex number) into its amplitude
             femm_solver.list_rotor_current_amp = [abs(el) for el in femm_solver.vals_results_rotor_current] # el is complex number
             # settings not necessarily be consistent with Pyrhonen09's design: , STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1., TEMPERATURE_OF_COIL=75
-            _s, _r, _sAlongStack, _rAlongStack, _Js, _Jr = femm_solver.get_copper_loss_pyrhonen(femm_solver.stator_slot_area, femm_solver.rotor_slot_area, total_CurrentAmp=acm_variant.DriveW_CurrentAmp+acm_variant.BeariW_CurrentAmp)
-            s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = femm_solver.get_copper_loss_Bolognani(femm_solver.stator_slot_area, femm_solver.rotor_slot_area, total_CurrentAmp=acm_variant.DriveW_CurrentAmp+acm_variant.BeariW_CurrentAmp)
+
+            slot_area_utilizing_ratio = (acm_variant.DriveW_CurrentAmp + acm_variant.BeariW_CurrentAmp) / CurrentAmp_per_phase
+            if slot_area_utilizing_ratio < 1:
+                print('Heads up! slot_area_utilizing_ratio is', slot_area_utilizing_ratio, 'which means you are simulating a separate winding? If not, contrats--you found a bug...')
+                print('DW, BW, Total:', acm_variant.DriveW_CurrentAmp, acm_variant.BeariW_CurrentAmp, CurrentAmp_per_phase)
+
+            _s, _r, _sAlongStack, _rAlongStack, _Js, _Jr = femm_solver.get_copper_loss_pyrhonen(slot_area_utilizing_ratio*femm_solver.stator_slot_area, 
+                                                                                                                          femm_solver.rotor_slot_area, 
+                                                                                                                          total_CurrentAmp=acm_variant.DriveW_CurrentAmp+acm_variant.BeariW_CurrentAmp)
+            s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = femm_solver.get_copper_loss_Bolognani(slot_area_utilizing_ratio*femm_solver.stator_slot_area, 
+                                                                                                                          femm_solver.rotor_slot_area, 
+                                                                                                                          total_CurrentAmp=acm_variant.DriveW_CurrentAmp+acm_variant.BeariW_CurrentAmp)
 
             msg1 = 'Pyrhonen : %g, %g | %g, %g | %g, %g ' % (_s, _r, _sAlongStack, _rAlongStack, _Js, _Jr) 
             msg2 = 'Bolognani: %g, %g | %g, %g | %g, %g ' % (s, r, sAlongStack, rAlongStack, Js, Jr) 
@@ -1353,7 +1363,11 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
                              acm_variant.Radius_OuterRotor,
                              acm_variant.stator_yoke_diameter_Dsyi
                              ]
-        s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = get_copper_loss_Bolognani(acm_variant.coils.mm2_slot_area*1e-6, copper_loss_parameters=copper_loss_parameters)
+        slot_area_utilizing_ratio = (acm_variant.DriveW_CurrentAmp + acm_variant.BeariW_CurrentAmp) / CurrentAmp_per_phase
+        if slot_area_utilizing_ratio < 1:
+            print('Heads up! slot_area_utilizing_ratio is', slot_area_utilizing_ratio, 'which means you are simulating a separate winding? If not, contrats--you found a bug...')
+            print('DW, BW, Total:', acm_variant.DriveW_CurrentAmp, acm_variant.BeariW_CurrentAmp, CurrentAmp_per_phase)
+        s, r, sAlongStack, rAlongStack, Js, Jr, Vol_Cu = get_copper_loss_Bolognani(slot_area_utilizing_ratio*acm_variant.coils.mm2_slot_area*1e-6, copper_loss_parameters=copper_loss_parameters)
         # s, r, sAlongStack, rAlongStack, Js, Jr = 0, 0, 0, 0, 0, 0
 
     dm = data_manager()

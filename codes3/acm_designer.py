@@ -70,11 +70,14 @@ class swarm_data_container(object):
         self.l_original_stack_length                = [el[11] for el in self.rated_data] # new!
         self.l_original_rotor_weight                = [el/rated*ori for el, ori, rated in zip(self.l_rated_rotor_weight, self.l_rated_stack_length, self.l_original_stack_length)]
 
+        required_torque = 50e3 / (30000/60*2*np.pi)
+        self.l_TRV = [required_torque/el for el in self.l_rated_rotor_volume]
 
     def get_list_y_data(self):
 
-        list_y_data = [ self.l_rated_stack_length,
+        list_y_data = [ self.l_TRV, ##self.l_rated_stack_length,
                         [100*el for el in self.l_OB], 
+                        self.l_force_error_angle,
                         ]
         return list_y_data
 
