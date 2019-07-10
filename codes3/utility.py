@@ -1312,22 +1312,34 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             if 'IM' in machine_type:
                 if count == 8:
                     header = row
+
+                if count>8:
+                    if count==8+1:
+                        if 'Coil' not in header[7]:
+                            print(header)
+                            raise Exception('Error when load csv data for Coil.')
+                        stator_copper_loss = float(row[7]) # Coil # it is the same over time, this value does not account for end coil
+
+                    if 'Cage' not in header[6]:
+                        print(header)
+                        raise Exception('Error when load csv data for Cage.')
+                    rotor_Joule_loss_list.append(float(row[6])) # Cage
+
             elif 'PMSM' in machine_type:
                 if count == 7:
                     header = row
-            if count>8:
-                if count==9:
-                    stator_copper_loss = float(row[8]) # Coil # it is the same over time, this value does not account for end coil
 
-                if 'IM' in machine_type:
-                    if 'Cage' not in header[6]:
-                        raise Exception('Error when load csv data for Cage.')
-                    rotor_Joule_loss_list.append(float(row[6])) # Cage
-                elif 'PMSM' in machine_type:
-                    if 'Magnet' not in header[8]:
+                if count>7:
+                    if count==7+1:
+                        if 'Coil' not in header[8]:
+                            print(header)
+                            raise Exception('Error when load csv data for Coil.')
+                        stator_copper_loss = float(row[8]) # Coil # it is the same over time, this value does not account for end coil
+
+                    if 'Magnet' not in header[7]:
                         print(header)
                         raise Exception('Error when load csv data for Magnet.')
-                    rotor_Joule_loss_list.append(float(row[8])) # Magnet
+                    rotor_Joule_loss_list.append(float(row[7])) # Magnet
 
     # use the last 1/4 period data to compute average copper loss of Tran2TSS rather than use that of Freq study
     effective_part = rotor_Joule_loss_list[:int(0.5*fea_config_dict['number_of_steps_2ndTTS'])] # number_of_steps_2ndTTS = steps for half peirod
