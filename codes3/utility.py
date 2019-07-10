@@ -1342,7 +1342,10 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
                     rotor_Joule_loss_list.append(float(row[7])) # Magnet
 
     # use the last 1/4 period data to compute average copper loss of Tran2TSS rather than use that of Freq study
-    effective_part = rotor_Joule_loss_list[:int(0.5*fea_config_dict['number_of_steps_2ndTTS'])] # number_of_steps_2ndTTS = steps for half peirod
+    effective_part = rotor_Joule_loss_list[-int(0.5*fea_config_dict['number_of_steps_2ndTTS']):] # number_of_steps_2ndTTS = steps for half peirod
+    print(rotor_Joule_loss_list)
+    print(effective_part)
+    quit()
     rotor_Joule_loss = sum(effective_part) / len(effective_part)
     if 'PMSM' in machine_type:
         print('Magnet Joule loss:', rotor_Joule_loss)
