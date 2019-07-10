@@ -144,6 +144,8 @@ class Problem_BearinglessInductionDesign(object):
                     raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
 
             if ad.bool_re_evaluate:
+                if counter_fitness_return >= len(ad.solver.swarm_data):
+                    quit()
                 x_denorm = ad.solver.swarm_data[counter_fitness_return][:-3]
                 print(ad.solver.swarm_data[counter_fitness_return])
 

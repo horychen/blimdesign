@@ -1311,35 +1311,41 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
             count +=1
             if 'IM' in machine_type:
                 if count == 8:
-                    header = row
+                    headers = row
+                    for idx_coil, h in enumerate(headers): # on server there are 3 air regions... while on PC there are 2...
+                        if 'Coil' in h:
+                            break
 
                 if count>8:
                     if count==8+1:
-                        if 'Coil' not in header[7]:
-                            print(header)
+                        if 'Coil' not in headers[idx_coil]:
+                            print(headers)
                             raise Exception('Error when load csv data for Coil.')
-                        stator_copper_loss = float(row[7]) # Coil # it is the same over time, this value does not account for end coil
+                        stator_copper_loss = float(row[idx_coil]) # Coil # it is the same over time, this value does not account for end coil
 
-                    if 'Cage' not in header[6]:
-                        print(header)
+                    if 'Cage' not in headers[idx_coil-1]:
+                        print(headers)
                         raise Exception('Error when load csv data for Cage.')
-                    rotor_Joule_loss_list.append(float(row[6])) # Cage
+                    rotor_Joule_loss_list.append(float(row[idx_coil-1])) # Cage
 
             elif 'PMSM' in machine_type:
-                if count == 7:
-                    header = row
+                if count == 7: # 少一个slip变量，所以不是8，是7。
+                    headers = row
+                    for idx_coil, h in enumerate(headers):
+                        if 'Coil' in h:
+                            break
 
                 if count>7:
                     if count==7+1:
-                        if 'Coil' not in header[8]:
-                            print(header)
+                        if 'Coil' not in headers[idx_coil]:
+                            print(headers)
                             raise Exception('Error when load csv data for Coil.')
-                        stator_copper_loss = float(row[8]) # Coil # it is the same over time, this value does not account for end coil
+                        stator_copper_loss = float(row[idx_coil]) # Coil # it is the same over time, this value does not account for end coil
 
-                    if 'Magnet' not in header[7]:
-                        print(header)
+                    if 'Magnet' not in headers[idx_coil-1]:
+                        print(headers)
                         raise Exception('Error when load csv data for Magnet.')
-                    rotor_Joule_loss_list.append(float(row[7])) # Magnet
+                    rotor_Joule_loss_list.append(float(row[idx_coil-1])) # Magnet
 
     # use the last 1/4 period data to compute average copper loss of Tran2TSS rather than use that of Freq study
     effective_part = rotor_Joule_loss_list[-int(0.5*fea_config_dict['number_of_steps_2ndTTS']):] # number_of_steps_2ndTTS = steps for half peirod

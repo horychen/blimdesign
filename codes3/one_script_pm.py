@@ -135,6 +135,8 @@ class Problem_BearinglessSynchronousDesign(object):
                 counter_loop += 1
 
             if ad.bool_re_evaluate:
+                if counter_fitness_return >= len(ad.solver.swarm_data):
+                    quit()
                 x_denorm = ad.solver.swarm_data[counter_fitness_return][:-3]
                 print(ad.solver.swarm_data[counter_fitness_return])
 
