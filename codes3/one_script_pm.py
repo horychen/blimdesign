@@ -148,7 +148,7 @@ class Problem_BearinglessSynchronousDesign(object):
                     ad.evaluate_design(ad.spec.acm_template, x_denorm, counter_fitness_called, counter_loop=counter_loop)
 
                 # remove folder .jfiles to save space (we have to generate it first in JMAG Designer to have field data and voltage profiles)
-                if ad.solver.folder_to_be_deleted is not None:
+                if ad.solver.folder_to_be_deleted is not None and os.path.isdir(ad.solver.folder_to_be_deleted):
                     try:
                         shutil.rmtree(ad.solver.folder_to_be_deleted) # .jfiles directory
                     except PermissionError as error:
