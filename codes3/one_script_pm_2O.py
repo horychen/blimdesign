@@ -43,6 +43,7 @@ elif 'Severson01' in fea_config_dict['pc_name']:
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
     run_folder = r'run#604010/'
+    run_folder = r'run#604019/'
 
 elif 'Severson02' in fea_config_dict['pc_name']:
     ################################################################
@@ -53,6 +54,7 @@ elif 'Severson02' in fea_config_dict['pc_name']:
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
     run_folder = r'run#603020/'
+    run_folder = r'run#603029/'
 else:
     ################################################################
     # T440p
@@ -135,6 +137,8 @@ class Problem_BearinglessSynchronousDesign(object):
                 counter_loop += 1
 
             if ad.bool_re_evaluate:
+                if counter_fitness_return >= len(ad.solver.swarm_data):
+                    quit()
                 x_denorm = ad.solver.swarm_data[counter_fitness_return][:-3]
                 print(ad.solver.swarm_data[counter_fitness_return])
 
@@ -235,7 +239,6 @@ class Problem_BearinglessSynchronousDesign(object):
         #         print('\tFRW < 0.75')
         #     f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
         # print('f1,f2,f3:',f1,f2,f3)
-
 
         # 2O
         f3 = 2.233

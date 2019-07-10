@@ -6,6 +6,7 @@ from utility import my_execfile
 from utility_moo import *
 from win32com.client import pywintypes
 bool_post_processing = False # solve or post-processing
+bool_re_evaluate = True
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
@@ -39,7 +40,7 @@ elif 'Severson01' in fea_config_dict['pc_name']:
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.975
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
-    # run_folder = r'run#550010/'
+    run_folder = r'run#550010/'
     run_folder = r'run#550019/'
 
 elif 'Severson02' in fea_config_dict['pc_name']:
@@ -52,6 +53,7 @@ elif 'Severson02' in fea_config_dict['pc_name']:
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
     run_folder = r'run#550020/'
     run_folder = r'run#550029/'
+
 else:
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # T440p
@@ -85,6 +87,8 @@ ad = acm_designer.acm_designer(fea_config_dict, spec)
 #     ad.talk_to_mysql_database() # require MySQL
 #     quit()
 ad.init_logger()
+ad.bool_re_evaluate = bool_re_evaluate
+
 
 ad.bounds_denorm = spec.get_im_classic_bounds(which_filter=fea_config_dict['which_filter'])
 ad.bound_filter  = spec.bound_filter
@@ -97,6 +101,11 @@ for idx, f in enumerate(ad.bound_filter):
     else:
         print(idx, f, '[%g,%g]'%tuple(spec.original_template_neighbor_bounds[idx]))
 # quit()
+
+if ad.bool_re_evaluate:
+    ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + ad.solver.fea_config_dict['run_folder']
+    number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
+    print('Count of chromosomes:', len(ad.solver.swarm_data))
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Optimization
@@ -137,6 +146,12 @@ class Problem_BearinglessInductionDesign(object):
                 if counter_loop > 3:
                     raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
 
+            if ad.bool_re_evaluate:
+                if counter_fitness_return >= len(ad.solver.swarm_data):
+                    quit()
+                x_denorm = ad.solver.swarm_data[counter_fitness_return][:-3]
+                print(ad.solver.swarm_data[counter_fitness_return])
+
             try:
                 cost_function, f1, f2, f3, FRW, \
                 normalized_torque_ripple, \
@@ -145,7 +160,7 @@ class Problem_BearinglessInductionDesign(object):
                     ad.evaluate_design(ad.spec.im_template, x_denorm, counter_fitness_called, counter_loop=counter_loop)
 
                 # remove folder .jfiles to save space (we have to generate it first in JMAG Designer to have field data and voltage profiles)
-                if ad.solver.folder_to_be_deleted is not None:
+                if ad.solver.folder_to_be_deleted is not None and os.path.isdir(ad.solver.folder_to_be_deleted):
                     try:
                         shutil.rmtree(ad.solver.folder_to_be_deleted) # .jfiles directory
                     except PermissionError as error:
@@ -161,7 +176,6 @@ class Problem_BearinglessInductionDesign(object):
                 f1, f2, f3 = get_bad_fintess_values()
                 utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3 + "Detail: {}".format(error.payload))
                 break
-
 
             except (utility.ExceptionReTry, pywintypes.com_error) as error:
                 print(error)
@@ -556,6 +570,9 @@ if True:
         ad.flag_do_not_evaluate_when_init_pop = False
         number_of_finished_chromosome_in_current_generation = None
         number_of_finished_iterations = 0 # 实际上跑起来它不是零，而是一，因为我们认为初始化的一代也是一代。或者，我们定义number_of_finished_iterations = number_of_chromosome // popsize
+
+    if bool_re_evaluate:
+        counter_fitness_called = counter_fitness_return = 0        
 
     # 初始化population，如果ad.flag_do_not_evaluate_when_init_pop是False，那么就说明是 new run，否则，整代个体的fitness都是[0,0,0]。
     pop = pg.population(prob, size=popsize) 
