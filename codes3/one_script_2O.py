@@ -6,7 +6,7 @@ from utility import my_execfile
 from utility_moo import *
 from win32com.client import pywintypes
 bool_post_processing = False # solve or post-processing
-bool_re_evaluate = True
+bool_re_evaluate = False
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
