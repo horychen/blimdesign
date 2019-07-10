@@ -5,6 +5,7 @@ from utility import my_execfile
 import utility_moo
 from win32com.client import pywintypes
 bool_post_processing = False # solve or post-processing
+bool_re_evaluate = False
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
@@ -23,16 +24,16 @@ if 'Y730' in fea_config_dict['pc_name']:
     # run_folder = r'run#600/' # FRW constraint is removed and sleeve_length is 3 (not varying)
     # run_folder = r'run#601/' # FRW constraint is removed and sleeve_length is 2.5 (not varying)
 
-    # # Combined winding PMSM
-    # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
-    # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    # run_folder = r'run#603/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
+    # Combined winding PMSM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
+    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+    run_folder = r'run#603/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
 
     # # Separate winding PMSM
     # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
     # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
     # run_folder = r'run#604/'
-    raise
+    # raise
 elif 'Severson01' in fea_config_dict['pc_name']:
     ################################################################
     # Severson01
@@ -41,8 +42,7 @@ elif 'Severson01' in fea_config_dict['pc_name']:
     # Separate winding PMSM
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    # run_folder = r'run#604010/'
-    run_folder = r'run#604019/'
+    run_folder = r'run#604010/'
 
 elif 'Severson02' in fea_config_dict['pc_name']:
     ################################################################
@@ -52,8 +52,7 @@ elif 'Severson02' in fea_config_dict['pc_name']:
     # Combined winding PMSM
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    # run_folder = r'run#603020/'
-    run_folder = r'run#603029/'
+    run_folder = r'run#603020/'
 else:
     ################################################################
     # T440p
@@ -79,6 +78,7 @@ import acm_designer
 global ad
 ad = acm_designer.acm_designer(fea_config_dict, spec)
 ad.init_logger(prefix='bpmsm')
+ad.bool_re_evaluate = bool_re_evaluate
 
 ad.bounds_denorm = spec.acm_template.get_classic_bounds(which_filter='FixedSleeveLength') # ad.get_classic_bounds()
 ad.bound_filter  = spec.acm_template.bound_filter
@@ -91,6 +91,11 @@ for idx, f in enumerate(ad.bound_filter):
     else:
         print(idx, f, '[%g,%g]'%tuple(spec.acm_template.original_template_neighbor_bounds[idx]))
 # quit()
+
+if ad.bool_re_evaluate:
+    ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + ad.solver.fea_config_dict['run_folder']
+    number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
+    print('Count of chromosomes:', len(ad.solver.swarm_data))
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Optimization
@@ -128,6 +133,10 @@ class Problem_BearinglessSynchronousDesign(object):
                 counter_loop = 0 # reset
             if stuck_at == counter_fitness_called:
                 counter_loop += 1
+
+            if ad.bool_re_evaluate:
+                x_denorm = ad.solver.swarm_data[counter_fitness_return][:-3]
+                print(ad.solver.swarm_data[counter_fitness_return])
 
             try:
                 cost_function, f1, f2, f3, FRW, \
@@ -227,6 +236,7 @@ class Problem_BearinglessSynchronousDesign(object):
         #     f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
         # print('f1,f2,f3:',f1,f2,f3)
 
+
         # 2O
         f3 = 2.233
 
@@ -313,6 +323,9 @@ if True:
         ad.flag_do_not_evaluate_when_init_pop = False
         number_of_finished_chromosome_in_current_generation = None
         number_of_finished_iterations = 0 # 实际上跑起来它不是零，而是一，因为我们认为初始化的一代也是一代。或者，我们定义number_of_finished_iterations = number_of_chromosome // popsize
+
+    if bool_re_evaluate:
+        counter_fitness_called = counter_fitness_return = 0        
 
     # 初始化population，如果ad.flag_do_not_evaluate_when_init_pop是False，那么就说明是 new run，否则，整代个体的fitness都是[0,0,0]。
     pop = pg.population(prob, size=popsize) 
