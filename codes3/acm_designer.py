@@ -644,7 +644,7 @@ class FEA_Solver:
             #         print('swarm_data.txt is empty')
             #         return None
 
-    def fea_bearingless_spmsm(self, spmsm_template, x_denorm, counter, counter_loop):
+    def fea_bearingless_spmsm(self, spmsm_template, x_denorm, counter, counter_loop, bool_re_evaluate=False):
         logger = logging.getLogger(__name__)
         msg = 'SPMSM: Run FEA for individual #%d'%(counter)
         logger.info(msg)
@@ -676,7 +676,7 @@ class FEA_Solver:
         # ind1Tran_torque
 
         # Leave the solving task to JMAG
-        if True:
+        if bool_re_evaluate==False:
 
             # def draw_jmag_bpmsm():
             import JMAG
@@ -703,17 +703,17 @@ class FEA_Solver:
             self.run_study(spmsm_variant, app, study, clock_time())
 
 
-        # export Voltage if field data exists.
-        if self.fea_config_dict['delete_results_after_calculation'] == False:
-            # Export Circuit Voltage
-            ref1 = app.GetDataManager().GetDataSet("Circuit Voltage")
-            app.GetDataManager().CreateGraphModel(ref1)
-            app.GetDataManager().GetGraphModel("Circuit Voltage").WriteTable(self.dir_csv_output_folder + spmsm_variant.name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+            # export Voltage if field data exists.
+            if self.fea_config_dict['delete_results_after_calculation'] == False:
+                # Export Circuit Voltage
+                ref1 = app.GetDataManager().GetDataSet("Circuit Voltage")
+                app.GetDataManager().CreateGraphModel(ref1)
+                app.GetDataManager().GetGraphModel("Circuit Voltage").WriteTable(self.dir_csv_output_folder + spmsm_variant.name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
 
         ################################################################
         # Load data for cost function evaluation
         ################################################################
-        results_to_be_unpacked = utility.build_str_results(self.axeses, spmsm_variant, self.project_name, study_name, self.dir_csv_output_folder, self.fea_config_dict, None, machine_type='PMSM')
+        results_to_be_unpacked = utility.build_str_results(self.axeses, spmsm_variant, self.project_name, study_name, self.dir_csv_output_folder, self.fea_config_dict, femm_solver=None, machine_type='PMSM')
         if results_to_be_unpacked is not None:
             self.fig_main.savefig(self.output_dir + spmsm_variant.name + 'results.png', dpi=150)
             utility.pyplot_clear(self.axeses)
@@ -722,7 +722,7 @@ class FEA_Solver:
         else:
             raise Exception('results_to_be_unpacked is None.')
 
-    def fea_bearingless_induction(self, im_template, x_denorm, counter, counter_loop):
+    def fea_bearingless_induction(self, im_template, x_denorm, counter, counter_loop, bool_re_evaluate=False):
         logger = logging.getLogger(__name__)
         print('Run FEA for individual #%d'%(counter))
 
@@ -831,74 +831,75 @@ class FEA_Solver:
                 raise Exception('why is there no model yet? %s'%(im_variant.name))
             return model
 
-        # this should be summoned even before initializing femm, and it will decide whether the femm results are reliable
-        app = open_jmag(self.expected_project_file) # will set self.jmag_control_state to True
+        if bool_re_evaluate==False:
+            # this should be summoned even before initializing femm, and it will decide whether the femm results are reliable
+            app = open_jmag(self.expected_project_file) # will set self.jmag_control_state to True
 
-        ################################################################
-        # Begin from where left: Frequency Study
-        ################################################################
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # Eddy Current Solver for Breakdown Torque and Slip
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        if self.fea_config_dict['jmag_run_list'][0] == 0:
-            # check for existing results
-            if os.path.exists(self.femm_output_file_path):
-                # for file in os.listdir(self.dir_femm_temp):
-                #     if original_study_name in file:
-                #         print('----------', original_study_name, file)
-                print('Remove legacy femm output files @ %s'%(self.femm_output_file_path))
-                os.remove(self.femm_output_file_path)
-                os.remove(self.femm_output_file_path[:-4]+'.fem')
-                # quit()
-                # quit()
+            ################################################################
+            # Begin from where left: Frequency Study
+            ################################################################
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            # Eddy Current Solver for Breakdown Torque and Slip
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            if self.fea_config_dict['jmag_run_list'][0] == 0:
+                # check for existing results
+                if os.path.exists(self.femm_output_file_path):
+                    # for file in os.listdir(self.dir_femm_temp):
+                    #     if original_study_name in file:
+                    #         print('----------', original_study_name, file)
+                    print('Remove legacy femm output files @ %s'%(self.femm_output_file_path))
+                    os.remove(self.femm_output_file_path)
+                    os.remove(self.femm_output_file_path[:-4]+'.fem')
+                    # quit()
+                    # quit()
 
 
-            # At this point, no results exist from femm.
-            print('Run greedy_search_for_breakdown_slip...')
-            femm_tic = clock_time()
-            # self.femm_solver.__init__(im_variant, flag_read_from_jmag=False, freq=50.0)
-            if im_variant.DriveW_poles == 2:
-                self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
-                                                                    bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=1) # 转子导条必须形成通路
+                # At this point, no results exist from femm.
+                print('Run greedy_search_for_breakdown_slip...')
+                femm_tic = clock_time()
+                # self.femm_solver.__init__(im_variant, flag_read_from_jmag=False, freq=50.0)
+                if im_variant.DriveW_poles == 2:
+                    self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
+                                                                        bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=1) # 转子导条必须形成通路
+                else:
+                    self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
+                                                                        bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=2)
             else:
-                self.femm_solver.greedy_search_for_breakdown_slip( self.dir_femm_temp, original_study_name, 
-                                                                    bool_run_in_JMAG_Script_Editor=self.bool_run_in_JMAG_Script_Editor, fraction=2)
-        else:
-            raise Exception("if self.fea_config_dict['jmag_run_list'][0] == 0:")
+                raise Exception("if self.fea_config_dict['jmag_run_list'][0] == 0:")
 
-        ################################################################
-        # Begin from where left: Transient Study
-        ################################################################
-        model = draw_jmag(app)
+            ################################################################
+            # Begin from where left: Transient Study
+            ################################################################
+            model = draw_jmag(app)
 
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # TranFEAwi2TSS for ripples and iron loss
-        #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-        # add or duplicate study for transient FEA denpending on jmag_run_list
-        if self.fea_config_dict['jmag_run_list'][0] == 0:
-            # FEMM+JMAG
-            study = im_variant.add_TranFEAwi2TSS_study( 50.0, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
-            self.mesh_study(im_variant, app, model, study)
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            # TranFEAwi2TSS for ripples and iron loss
+            #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+            # add or duplicate study for transient FEA denpending on jmag_run_list
+            if self.fea_config_dict['jmag_run_list'][0] == 0:
+                # FEMM+JMAG
+                study = im_variant.add_TranFEAwi2TSS_study( 50.0, app, model, self.dir_csv_output_folder, tran2tss_study_name, logger)
+                self.mesh_study(im_variant, app, model, study)
 
-            # wait for femm to finish, and get your slip of breakdown
-            slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
+                # wait for femm to finish, and get your slip of breakdown
+                slip_freq_breakdown_torque, breakdown_torque, breakdown_force = self.femm_solver.wait_greedy_search(femm_tic)
 
-            # Now we have the slip, set it up!
-            im_variant.update_mechanical_parameters(slip_freq_breakdown_torque) # do this for records only
-            if im_variant.the_slip != slip_freq_breakdown_torque / im_variant.DriveW_Freq:
-                raise Exception('Check update_mechanical_parameters().')
-            study.GetDesignTable().GetEquation("slip").SetExpression("%g"%(im_variant.the_slip))
+                # Now we have the slip, set it up!
+                im_variant.update_mechanical_parameters(slip_freq_breakdown_torque) # do this for records only
+                if im_variant.the_slip != slip_freq_breakdown_torque / im_variant.DriveW_Freq:
+                    raise Exception('Check update_mechanical_parameters().')
+                study.GetDesignTable().GetEquation("slip").SetExpression("%g"%(im_variant.the_slip))
 
-            self.run_study(im_variant, app, study, clock_time())
-        else:
-            raise Exception("if self.fea_config_dict['jmag_run_list'][0] == 0: TranFEAwi2TSS")
+                self.run_study(im_variant, app, study, clock_time())
+            else:
+                raise Exception("if self.fea_config_dict['jmag_run_list'][0] == 0: TranFEAwi2TSS")
 
-        # export Voltage if field data exists.
-        if self.fea_config_dict['delete_results_after_calculation'] == False:
-            # Export Circuit Voltage
-            ref1 = app.GetDataManager().GetDataSet("Circuit Voltage")
-            app.GetDataManager().CreateGraphModel(ref1)
-            app.GetDataManager().GetGraphModel("Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
+            # export Voltage if field data exists.
+            if self.fea_config_dict['delete_results_after_calculation'] == False:
+                # Export Circuit Voltage
+                ref1 = app.GetDataManager().GetDataSet("Circuit Voltage")
+                app.GetDataManager().CreateGraphModel(ref1)
+                app.GetDataManager().GetGraphModel("Circuit Voltage").WriteTable(self.dir_csv_output_folder + im_variant.name + "_EXPORT_CIRCUIT_VOLTAGE.csv")
 
         ################################################################
         # Load data for cost function evaluation
@@ -1106,7 +1107,7 @@ class acm_designer(object):
         else:
             function = self.solver.fea_bearingless_induction
 
-        return function(acm_template, x_denorm, counter, counter_loop)
+        return function(acm_template, x_denorm, counter, counter_loop, bool_re_evaluate=self.bool_re_evaluate)
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # 1. Bounds for DE optimiazation

@@ -515,7 +515,7 @@ def add_plots(axeses, dm, title=None, label=None, zorder=None, time_list=None, s
 
     return info, torque_average, normalized_torque_ripple, sfv.ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
 
-def build_str_results(axeses, acm_variant, project_name, tran_study_name, dir_csv_output_folder, fea_config_dict, femm_solver, machine_type=None):
+def build_str_results(axeses, acm_variant, project_name, tran_study_name, dir_csv_output_folder, fea_config_dict, femm_solver=None, machine_type=None):
     # originate from fobj
 
     try:
@@ -1309,8 +1309,12 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
         count = 0
         for row in csv_row_reader(f):
             count +=1
-            if count == 8:
-                header = row
+            if 'IM' in machine_type:
+                if count == 8:
+                    header = row
+            elif 'PMSM' in machine_type:
+                if count == 7:
+                    header = row
             if count>8:
                 if count==9:
                     stator_copper_loss = float(row[8]) # Coil # it is the same over time, this value does not account for end coil
@@ -1318,14 +1322,10 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
                 if 'IM' in machine_type:
                     if 'Cage' not in header[6]:
                         raise Exception('Error when load csv data for Cage.')
-                    else:
-                        print('Read joule loss for part Cage.')
                     rotor_Joule_loss_list.append(float(row[6])) # Cage
                 elif 'PMSM' in machine_type:
                     if 'Magnet' not in header[8]:
                         raise Exception('Error when load csv data for Magnet.')
-                    else:
-                        print('Read joule loss for part Magnet.')
                     rotor_Joule_loss_list.append(float(row[8])) # Magnet
 
     # use the last 1/4 period data to compute average copper loss of Tran2TSS rather than use that of Freq study
