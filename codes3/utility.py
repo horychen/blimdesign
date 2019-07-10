@@ -1325,6 +1325,7 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
                     rotor_Joule_loss_list.append(float(row[6])) # Cage
                 elif 'PMSM' in machine_type:
                     if 'Magnet' not in header[8]:
+                        print(header)
                         raise Exception('Error when load csv data for Magnet.')
                     rotor_Joule_loss_list.append(float(row[8])) # Magnet
 

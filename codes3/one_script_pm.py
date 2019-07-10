@@ -24,16 +24,16 @@ if 'Y730' in fea_config_dict['pc_name']:
     # run_folder = r'run#600/' # FRW constraint is removed and sleeve_length is 3 (not varying)
     # run_folder = r'run#601/' # FRW constraint is removed and sleeve_length is 2.5 (not varying)
 
-    # # Combined winding PMSM
-    # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
-    # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    # run_folder = r'run#603/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
+    # Combined winding PMSM
+    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
+    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+    run_folder = r'run#603/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
 
     # # Separate winding PMSM
     # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
     # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
     # run_folder = r'run#604/'
-    raise
+    # raise
 elif 'Severson01' in fea_config_dict['pc_name']:
     ################################################################
     # Severson01
