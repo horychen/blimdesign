@@ -1,12 +1,29 @@
+    # # -*- coding: utf-8 -*-
+    # app = designer.GetApplication()
+    # app.SetCurrentStudy(u"ID16-17-2Tran2TSS-Prototype-CasesAmp")
+    # app.View().SetCurrentCase(1)
+
+    # #app.GetModel(u"ID16-17-2").GetStudy(u"ID16-17-2Tran2TSS-Prototype-CasesAmp").GetDesignTable().SetValue(0, 3, 127.897334)
+    # #app.GetModel(u"ID16-17-2").GetStudy(u"ID16-17-2Tran2TSS-Prototype-CasesAmp").GetDesignTable().SetValue(0, 4, -6.558837641)
+
+    # study = app.GetModel(u"ID16-17-2").GetStudy(u"ID16-17-2Tran2TSS-Prototype-CasesAmp")
+
+    # Total_Current = 127.897334*2
+
+    # study.GetDesignTable().SetValue(1, 3, 127.897334)
+    # study.GetDesignTable().SetValue(1, 4, -Total_Current*0.05)
+
+    # for i in range(2, 21):
+    #     study.GetDesignTable().AddCase()
+    #     study.GetDesignTable().SetValue(i, 3, 127.897334)
+    #     study.GetDesignTable().SetValue(i, 4, -Total_Current *0.05*i)
+
 
 import pandas as pd
 from pylab import subplots, mpl, plt, np
 # plt.style.use('seaborn')
 # plt.style.use('fivethirtyeight')
 mpl.style.use('classic')
-
-mpl.rcParams['mathtext.fontset'] = 'stix'
-mpl.rcParams['font.family'] = 'STIXGeneral'
 
 mpl.rcParams['legend.fontsize'] = 15
 # mpl.rcParams['legend.family'] = 'Times New Roman'
@@ -42,7 +59,7 @@ def performance_metrics(time, torque, x_force, y_force, number_of_steps_2ndTSS):
                       range_ss=sfv.range_ss)
     return str_results, torque_average, normalized_torque_ripple, ss_avg_force_magnitude, normalized_force_error_magnitude, force_error_angle
 
-def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, label='', marker='-ko'):
+def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, number_of_steps_2ndTSS, label='', marker='-ko'):
 
     fig4eric, ax4eric = plt.subplots(1, 1, figsize=(3,2.75), sharex=True, facecolor='w', edgecolor='k', constrained_layout=True)
 
@@ -50,16 +67,18 @@ def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, la
     ################################################################
     # Common
     ################################################################
-    number_of_steps_2ndTSS = 300
+    # number_of_steps_2ndTSS = 300 # 32
     index_begin = -number_of_steps_2ndTSS
 
-    stack_length_mm = 92.592593
-    rated_rotor_volume = 0.000830274
-    rated_stack_length_mm = 1e3 * rated_rotor_volume / (np.pi*(47.746483*1e-3)**2)
+    stack_length_mm = 50 # 92.592593
+    rated_rotor_volume = np.pi*(31.8107*1e-3)**2 *stack_length_mm*1e-3
+    rotor_weight = rated_rotor_volume * 8050 * 9.8 # N
+    print('rotor_weight', rotor_weight, 'N')
+    rated_stack_length_mm = stack_length_mm  #1e3 * rated_rotor_volume / (np.pi*(47.746483*1e-3)**2)
     rated_scale = rated_stack_length_mm / stack_length_mm
 
     # excitation_ratio = [2.5] + list(range(5,100,5))
-    excitation_ratio = [0.025] + list(np.arange(0.05,1,0.05))
+    excitation_ratio = [0.025] + list(np.arange(0.05,1.01,0.05))
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Force
@@ -91,23 +110,24 @@ def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, la
         if count % 2 == 0:
             if count <= 7*2:
                 if count in [0*2, 1*2, 2*2, 3*2, 4*2, 5*2, 7*2]: # 
-                    # ax_list[2].plot(time[index_begin:], np.sqrt(x_force**2+y_force**2), label=str(int(count/2)))
-                    amp_force = np.sqrt(x_force**2+y_force**2)
-                    ax.plot(time[index_begin:], amp_force, label=str(count//2))
-                    t=ax.text(  time[index_begin:][number_of_steps_2ndTSS//2], 
-                                amp_force[number_of_steps_2ndTSS//2] + 0, # BIAS
-                                '%g'%(excitation_ratio[count//2-1])+' p.u.', fontdict=font)
-                    t.set_bbox(dict(facecolor='white', alpha=0.75, edgecolor=None))
+                    pass
+                    # # ax_list[2].plot(time[index_begin:], np.sqrt(x_force**2+y_force**2), label=str(int(count/2)))
+                    # amp_force = np.sqrt(x_force**2+y_force**2)
+                    # ax.plot(time[index_begin:], amp_force, label=str(count//2))
+                    # t=ax.text(  time[index_begin:][number_of_steps_2ndTSS//2], 
+                    #             amp_force[number_of_steps_2ndTSS//2] + 0, # BIAS
+                    #             '%g'%(excitation_ratio[count//2-1])+' p.u.', fontdict=font)
+                    # t.set_bbox(dict(facecolor='white', alpha=0.75, edgecolor=None))
 
     # ax_list[-1].set_xlabel('Time [s]')
     # ax_list[0].set_ylabel('x-axis Force [N]')
     # ax_list[1].set_ylabel('y-axis Force [N]')
     # ax_list[2].legend()
 
-    ax.set_xlabel('Time [ms]\n%s'%(fig2_title[0]))
-    ax.set_ylabel('Force Amplitude [N]')
-    ax.set_xticks([0, 0.5, 1.0])
-    ax.grid(True)
+    # ax.set_xlabel('Time [ms]\n%s'%(fig2_title[0]))
+    # ax.set_ylabel('Force Amplitude [N]')
+    # ax.set_xticks([0, 0.5, 1.0])
+    # ax.grid(True)
 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # Torque
@@ -130,22 +150,22 @@ def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, la
 
         if count <=7:
             if count in [1, 4, 5, 7]: # 
-
-                ax.plot(time[index_begin:], torque, label=str(int(count)))
-                t=ax.text(  time[index_begin:][number_of_steps_2ndTSS//2], 
-                            torque[number_of_steps_2ndTSS//2], # BIAS
-                            '%g'%(excitation_ratio[count-1])+' p.u.', fontdict=font)
-                t.set_bbox(dict(facecolor='white', alpha=0.75, edgecolor=None))
+                pass
+                # ax.plot(time[index_begin:], torque, label=str(int(count)))
+                # t=ax.text(  time[index_begin:][number_of_steps_2ndTSS//2], 
+                #             torque[number_of_steps_2ndTSS//2], # BIAS
+                #             '%g'%(excitation_ratio[count-1])+' p.u.', fontdict=font)
+                # t.set_bbox(dict(facecolor='white', alpha=0.75, edgecolor=None))
 
         l_torque.append(torque)
 
-    ax.set_xlabel('Time [ms]\n%s'%(fig2_title[1]))
-    ax.set_ylabel('Torque [Nm]')
-    ax.set_xticks([0, 0.5, 1.0])
-    ax.grid(True)
+    # ax.set_xlabel('Time [ms]\n%s'%(fig2_title[1]))
+    # ax.set_ylabel('Torque [Nm]')
+    # ax.set_xticks([0, 0.5, 1.0])
+    # ax.grid(True)
 
-    fig2.tight_layout()
-    fig2.savefig(r'C:\Users\horyc\Desktop/cases_force_amp.png', dpi=150)
+    # fig2.tight_layout()
+    # fig2.savefig(r'C:\Users\horyc\Desktop/cases_force_amp.png', dpi=150)
 
     ################################################################
     # Performance Metrics
@@ -173,9 +193,11 @@ def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, la
     # ax.plot(excitation_ratio, l_torque_average)
     # for x, y in zip(excitation_ratio, l_force_error_angle):
     #     print(x,y )
+    print(len(excitation_ratio))
+    print(len(l_torque_average))
     ax_list[0][0].plot(excitation_ratio, l_torque_average, marker, alpha=0.75, label=label)
     ax_list[0][0].set_ylabel('Torque [Nm]')
-    ax_list[0][1].plot(excitation_ratio, [el/65.5 for el in l_ss_avg_force_magnitude], marker, alpha=0.75)
+    ax_list[0][1].plot(excitation_ratio, [el/rotor_weight for el in l_ss_avg_force_magnitude], marker, alpha=0.75)
     ax_list[0][1].set_ylabel('Force / Rotor Weight [p.u.]')
     ax_list[1][0].plot(excitation_ratio, l_force_error_angle, marker, alpha=0.75)
     ax_list[1][0].set_ylabel('Force Error Angle $E_a$ [deg]')
@@ -183,7 +205,7 @@ def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, la
     ax_list[1][1].set_ylabel('Force Error Magnitude $E_m$ [%]')
 
     if 'Over' in label:
-        ax4eric.plot(excitation_ratio, [el/65.5 for el in l_ss_avg_force_magnitude], marker, alpha=0.75)
+        ax4eric.plot(excitation_ratio, [el/rotor_weight for el in l_ss_avg_force_magnitude], marker, alpha=0.75)
         ax4eric.set_ylabel('Force / Rotor Weight [p.u.]')
         ax4eric.set_xlabel('Suspension Current [p.u.]')
         ax4eric.grid()
@@ -202,18 +224,23 @@ def plot_data(fname_force, fname_torque, fig2, ax2, fig2_title, fig, ax_list, la
             ax_list[i][j].grid(True)
     fig.savefig(r'C:\Users\horyc\Desktop/cases_suspension_current_ratio.png', dpi=300)
 
-fname_force = '../article/csv_proj1130/ind1130Tran2TSSProlong-Cases_force.csv'
-fname_torque = '../article/csv_proj1130/ind1130Tran2TSSProlong-Cases_torque.csv'
+fname_force = '../article/csv_proj5284/ID16-17-2Tran2TSS-Prototype-CasesAmp_force.csv'
+fname_torque = '../article/csv_proj5284/ID16-17-2Tran2TSS-Prototype-CasesAmp_torque.csv'
     # fname_force = '../article/csv_proj1130/ind1130Tran2TSSProlong-CasesNoload_force.csv'
     # fname_torque = '../article/csv_proj1130/ind1130Tran2TSSProlong-CasesNoload_torque.csv'
 fig2, ax2 = subplots(1, 4, figsize=(16,8), facecolor='w', edgecolor='k', constrained_layout=False, dpi=200)
 fig2.subplots_adjust(wspace=0.25)
 fig, ax_list = subplots(2, 2, sharex=True, facecolor='w', edgecolor='k', constrained_layout=True)
-plot_data(fname_force, fname_torque, fig2, ax2[:2], ('(a)', '(b)'), fig, ax_list, label='Rated Current', marker='--ko')
+# plot_data(fname_force, fname_torque, fig2, ax2[:2], ('(a)', '(b)'), fig, ax_list, number_of_steps_2ndTSS=number_of_steps_2ndTSS, label='Rated Current', marker='--ko')
 
-fname_force = '../article/csv_proj1130/ind1130Tran2TSSProlong-CasesTorqueFixed_force.csv'
-fname_torque = '../article/csv_proj1130/ind1130Tran2TSSProlong-CasesTorqueFixed_torque.csv'
-plot_data(fname_force, fname_torque, fig2, ax2[2:], ('(c)', '(d)'), fig, ax_list, label='Over Current', marker='--rs')
+# fname_force = '../article/csv_proj5284/ID16-17-2Tran2TSS-Prototype-CasesAmp_force.csv'
+# fname_torque = '../article/csv_proj5284/ID16-17-2Tran2TSS-Prototype-CasesAmp_torque.csv'
+# number_of_steps_2ndTSS = 32
+fname_force = '../article/csv_proj5284/ID16-17-2Tran2TSS-Prototype-CasesAmp333_force.csv'
+fname_torque = '../article/csv_proj5284/ID16-17-2Tran2TSS-Prototype-CasesAmp333_torque.csv'
+number_of_steps_2ndTSS = 300
+# 结论：300步和32步的画图结果几乎完全一样！
+plot_data(fname_force, fname_torque, fig2, ax2[2:], ('(c)', '(d)'), fig, ax_list, number_of_steps_2ndTSS=number_of_steps_2ndTSS, label='Over Current', marker='--rs')
 
 plt.show()
 quit()

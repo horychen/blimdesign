@@ -1857,13 +1857,13 @@ if __name__ == '__main__':
                 list_terminals = [(9-Qs/3, -(10-Qs/3)),    (-(4-Qs/3+Qs),  3-Qs/3+Qs),  (-(16-Qs/3), 15-Qs/3),     (21-Qs/3, -(22-Qs/3))]
 
         else: # 2 pole motor
-            if phase == 'u': 
+            if phase == 'w': # Swap u and w. --7/15/2019
                 color = '#5C9C31'
                 list_terminals = [(19, -20),                (-10, 9),                    (21,  -22),                 (-8, 7)] # we have swapped the order of ub and ud
             if phase == 'v': 
                 color = '#E97675'
                 list_terminals = [(19+Qs/3, -(20+Qs/3)),    (-(10+Qs/3), 9+Qs/3),        (21+Qs/3,  -(22+Qs/3)),     (-(8+Qs/3), 7+Qs/3)] # we have swapped the order of ub and ud
-            if phase == 'w': 
+            if phase == 'u': 
                 color = '#6C8FAB'
                 list_terminals = [(19-Qs/3, -(20-Qs/3)),    (-(10-Qs/3), 9-Qs/3),        (21-Qs/3,  -(22-Qs/3)),     (-(8-Qs/3+Qs), 7-Qs/3+Qs)] # we have swapped the order of ub and ud
 

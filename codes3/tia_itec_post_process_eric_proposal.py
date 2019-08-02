@@ -16,10 +16,8 @@ run_folder_set_dict = {'IM' + ' Combined':[],
                   'IM' + ' Separate':[],
                   'PM' + ' Combined':[],
                   'PM' + ' Separate':[],
-                  'IM' + ' No Ripple Constraint':[], # wo/ $E_a$ Constraint
-                  'PM' + ' No Ripple Constraint':[]} # wo/ $E_a$ Constraint
-                  # 'IM' + ' Combined' + ' No Ripple Constraint':[], # wo/ $E_a$ Constraint
-                  # 'PM' + ' Combined' + ' No Ripple Constraint':[]} # wo/ $E_a$ Constraint
+                  'IM' + ' Combined' + ' No Radial Forces':[], # wo/ $E_a$ Constraint
+                  'PM' + ' Combined' + ' No Radial Forces':[]} # wo/ $E_a$ Constraint
 
     # JMAG 狂甩Exception，如果你试图在一台电脑上同时调用两个jmag实例，就算是Hide状态也不行，当然有一定的概率你可以继续运行，但是出现exception的概率翻了好几倍！
     # run_folder_set_dict['IM' + ' Combined']   += [ ('Y730',  r'run#550/'),    ('Severson01Local', r'run#550010/') ]
@@ -32,10 +30,11 @@ run_folder_set_dict['IM' + ' Separate']   += [ ('Severson02', r'run#550020/')   
 run_folder_set_dict['PM' + ' Combined'] += [ ('Severson02', r'run#603020/')        ]
 run_folder_set_dict['PM' + ' Separate'] += [ ('Severson01', r'run#604010/')        ]
 
-run_folder_set_dict['IM' + ' No Ripple Constraint'] += [ ('Severson02', r'run#550019/')        ]
-run_folder_set_dict['PM' + ' No Ripple Constraint'] += [ ('Severson01', r'run#603029/')        ]
-# run_folder_set_dict['IM' + ' Combined' + ' No Ripple Constraint'] += [ ('Severson02', r'run#550019/')        ]
-# run_folder_set_dict['PM' + ' Combined' + ' No Ripple Constraint'] += [ ('Severson01', r'run#603029/')        ]
+# run_folder_set_dict['IM' + ' Combined' + ' wo/ $E_a$ Constraint']   += [ ('Severson02', r'run#550019/')        ]
+# run_folder_set_dict['PMSM' + ' Combined' + ' wo/ $E_a$ Constraint'] += [ ('Severson01', r'run#603029/')        ]
+
+run_folder_set_dict['IM' + ' Combined' + ' No Radial Forces'] += [ ('Severson02', r'run#550019/')        ]
+run_folder_set_dict['PM' + ' Combined' + ' No Radial Forces'] += [ ('Severson01', r'run#603029/')        ]
 
 fea_config_dict['run_folder'] = 'None'
 # spec's
@@ -49,15 +48,11 @@ ad = acm_designer.acm_designer(fea_config_dict, spec)
 
 
 from pylab import mpl
-
-mpl.rcParams['mathtext.fontset'] = 'stix'
-mpl.rcParams['font.family'] = 'STIXGeneral'
-
 # mpl.style.use('classic')
-mpl.rcParams['legend.fontsize'] = 12.5
+mpl.rcParams['legend.fontsize'] = 12
 # mpl.rcParams['legend.family'] = 'Times New Roman'
 mpl.rcParams['font.family'] = ['Times New Roman']
-mpl.rcParams['font.size'] = 14.0
+# mpl.rcParams['font.size'] = 15.0
 font = {'family' : 'Times New Roman', #'serif',
         'color' : 'darkblue',
         'weight' : 'normal',
@@ -71,6 +66,9 @@ textfont = {'family' : 'Times New Roman', #'serif',
 # mpl.rcParams['mathtext.rm'] = 'Bitstream Vera Sans'
 # mpl.rcParams['mathtext.it'] = 'Bitstream Vera Sans:italic'
 # mpl.rcParams['mathtext.bf'] = 'Bitstream Vera Sans:bold'
+
+mpl.rcParams['mathtext.fontset'] = 'stix'
+mpl.rcParams['font.family'] = 'STIXGeneral'
 
 import pygmo as pg
 global DIMENSION
@@ -124,9 +122,7 @@ colors = ['tomato', '#C766A1', '#BBCD49', '#3064FD', 'tomato', '#BBCD49'] # blue
 edgecolors = ['white', 'white', 'white', 'white', 'black', 'black']
 zorders = [13,16,11,15, 6,5]
 index = 0
-
-# fig = plt.figure()
-fig, ax = plt.subplots(1, 1, figsize=(6,3), sharex=True, facecolor='w', edgecolor='k', constrained_layout=True)
+fig = plt.figure()
 for key, val in run_folder_set_dict.items():
     print('-'*20, key)
     SWARM_DATA = []
@@ -137,7 +133,7 @@ for key, val in run_folder_set_dict.items():
         SWARM_DATA += get_swarm_data(run_folder_set[1])
 
         if ad.solver.swarm_data_container is not None:
-            # if 'PMSMC' in key or 'IMS' in key:
+            # if 'PMC' in key or 'IMS' in key:
             # if 'Com' in key:
             # if 'IMS' not in key:
             ll = ad.solver.swarm_data_container.get_list_y_data()
@@ -172,15 +168,15 @@ for key, val in run_folder_set_dict.items():
 # plt.xlabel('Motor Stack Length [mm]')
 plt.xlabel('Torque per Rotor Volume [${\\rm kNm/m^3}$]')
 plt.ylabel('Efficiency [%]')
+plt.grid()
 from collections import OrderedDict
 handles, labels = plt.gca().get_legend_handles_labels()
 by_label = OrderedDict(zip(labels, handles))
-plt.legend(by_label.values(), by_label.keys(), loc=(0.50,0.0)).set_zorder(2)
-plt.grid(zorder=1)
+plt.legend(by_label.values(), by_label.keys(), loc='lower right')
 # plt.xticks(range(40,241,40))
-plt.xlim([2,57])
-plt.ylim([90,98.5])
-fig.savefig(r'C:\Users\horyc\Desktop\IM_PMSM_COMPARISON.eps', format='eps', dpi=1000)
+# plt.xlim([2,50])
+# plt.ylim([90,98.5])
+fig.savefig(r'C:\Users\horyc\Desktop\IM_PM_COMPARISON.eps')
 plt.show()
 quit()
 

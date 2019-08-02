@@ -3013,7 +3013,8 @@ class bearingless_induction_motor_design(object):
             My_Radius_OuterStatorYoke = im.Radius_OuterStatorYoke + 0.5*(stator_yoke_diameter_Dsyi - backup)*1e3
             print('[V] The new stator_yoke_diameter_Dsyi is %g mm (the original one is %g mm)'%(1e3*stator_yoke_diameter_Dsyi, 1e3*backup))
             print('[V] The new Radius_OuterStatorYoke is %g mm (the original one is %g mm)' % (My_Radius_OuterStatorYoke, im.Radius_OuterStatorYoke))
-
+        else:
+            My_Radius_OuterStatorYoke = im.Radius_OuterStatorYoke
 
         # Constranint #3
         # rotor_tooth_width_b_dr imposes constraint on rotor slot height

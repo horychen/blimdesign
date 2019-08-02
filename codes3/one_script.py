@@ -6,7 +6,7 @@ from utility import my_execfile
 from utility_moo import *
 from win32com.client import pywintypes
 bool_post_processing = False # solve or post-processing
-bool_re_evaluate = True
+bool_re_evaluate = True # re-evaluate the designs using csv (without calling FEA softwares)
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
@@ -51,7 +51,8 @@ elif 'Severson02' in fea_config_dict['pc_name']:
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.025
     fea_config_dict['which_filter'] = 'VariableStatorSlotDepth'
     run_folder = r'run#550020/'
-else:
+
+else: #T440p 
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
     # T440p
     #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~

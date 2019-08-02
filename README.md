@@ -3,12 +3,22 @@
 Requirements:
 
 - install anaconda3
-- pyx, pyfemm can be installed via pip
+
+- pyx, pyfemm and others (if any) can be installed via pip
+
 - pygmo:
-    conda config --add channels conda-forge
-    conda install pygmo
+    
+    - > conda config --add channels conda-forge
+      > conda install pygmo
 
 
+
+
+
+
+
+
+**[Under development]**
 
 Steps:
 
@@ -24,7 +34,6 @@ At design phase 12, choose the correct magnetic material you want to use: Arnon5
 At design phase 11, Check the current density specified on the design, especially the rotor current density.
 The current density should be chosen according to your cooling method.
 A hot rotor should be avoided.
-
 
 2.
 
