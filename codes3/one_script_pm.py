@@ -5,7 +5,7 @@ from utility import my_execfile
 import utility_moo
 from win32com.client import pywintypes
 bool_post_processing = False # solve or post-processing
-bool_re_evaluate = True
+bool_re_evaluate = False
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
@@ -17,56 +17,62 @@ fea_config_dict['Active_Qr'] = 16 # obsolete
 fea_config_dict['local_sensitivity_analysis'] = False
 fea_config_dict['bool_refined_bounds'] = False
 fea_config_dict['use_weights'] = 'O2' # this is not used
-if 'Y730' in fea_config_dict['pc_name']:
-    ################################################################
-    # Y730
-    ################################################################
-    # run_folder = r'run#600/' # FRW constraint is removed and sleeve_length is 3 (not varying)
-    # run_folder = r'run#601/' # FRW constraint is removed and sleeve_length is 2.5 (not varying)
-
+if True:
     # Combined winding PMSM
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    run_folder = r'run#603/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
-
-    # # Separate winding PMSM
-    # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
-    # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    # run_folder = r'run#604/'
-    # raise
-elif 'Severson01' in fea_config_dict['pc_name']:
-    ################################################################
-    # Severson01
-    ################################################################
-    print('Severson01')
-    # Separate winding PMSM
-    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
-    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    run_folder = r'run#604010/'
-
-elif 'Severson02' in fea_config_dict['pc_name']:
-    ################################################################
-    # Severson02
-    ################################################################
-    print('Severson02')
-    # Combined winding PMSM
-    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
-    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    run_folder = r'run#603020/'
+    run_folder = r'run#610/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
 else:
-    ################################################################
-    # T440p
-    ################################################################
-    print('T440p')
-    # Combined winding PMSM
-    fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
-    fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    run_folder = r'run#603010/' # continued run from severson01
+    if 'Y730' in fea_config_dict['pc_name']:
+        ################################################################
+        # Y730
+        ################################################################
+        # run_folder = r'run#600/' # FRW constraint is removed and sleeve_length is 3 (not varying)
+        # run_folder = r'run#601/' # FRW constraint is removed and sleeve_length is 2.5 (not varying)
+
+        # Combined winding PMSM
+        fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
+        fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+        run_folder = r'run#603/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
+
+        # # Separate winding PMSM
+        # fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
+        # fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+        # run_folder = r'run#604/'
+        # raise
+    elif 'Severson01' in fea_config_dict['pc_name']:
+        ################################################################
+        # Severson01
+        ################################################################
+        print('Severson01')
+        # Separate winding PMSM
+        fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.60
+        fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+        run_folder = r'run#604010/'
+    elif 'Severson02' in fea_config_dict['pc_name']:
+        ################################################################
+        # Severson02
+        ################################################################
+        print('Severson02')
+        # Combined winding PMSM
+        fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
+        fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+        run_folder = r'run#603020/'
+    else:
+        ################################################################
+        # T440p
+        ################################################################
+        print('T440p')
+        # Combined winding PMSM
+        fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
+        fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
+        run_folder = r'run#603010/' # continued run from severson01
 
 fea_config_dict['run_folder'] = run_folder
 
 # spec's
-my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals())
+# my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals())
+my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals())
 spec.build_im_template(fea_config_dict)
 spec.build_pmsm_template(fea_config_dict, im_template=spec.im_template)
 

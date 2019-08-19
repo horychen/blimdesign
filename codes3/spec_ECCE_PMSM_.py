@@ -1,9 +1,15 @@
-import bearingless_spmsm_design
-
+import pyrhonen_procedure_as_function 
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
+# Design Specification
+# 1. Specify desgin_specification
+# 2. Give a run folder
+# 3. Is it sensitivity analysis or not
+# 4. Does it use refined bounds or it is local tuning with local bounds based on the best design from another run
+#~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 p = 2
 Q = 6
-spec = bearingless_spmsm_design.bpmsm_specification(
-        PS_or_SC = None, # Pole Specific or Squirrel Cage
+spec = pyrhonen_procedure_as_function.desgin_specification(
+        PS_or_SC = True, # Pole Specific or Squirrel Cage
         DPNV_or_SEPA = True, # Dual purpose no voltage or Separate winding
         p = p,
         ps = 2 if p==1 else 1,
@@ -11,11 +17,11 @@ spec = bearingless_spmsm_design.bpmsm_specification(
         ExcitationFreq = 1000, # Hz
         ExcitationFreqSimulated = 1000, # Hz This sets to DriveW_Freq that is actually used in FE simulation.
         VoltageRating = 480, # Vrms (line-to-line, Wye-Connect)
-        TangentialStress = None, # Pa
+        TangentialStress = 12000, # Pa
         Qs = Q,
-        segment = 1,
+        Qr = 16,
         Js = 4e6, # Arms/m^2
-        Jr = None, # Arms/m^2
+        Jr = 6.5e6, # Arms/m^2
         Steel = 'M19Gauge29', # Arnon-7
         lamination_stacking_factor_kFe = 0.95, # from http://www.femm.info/wiki/spmloss # 0.91 for Arnon
         Coil = 'Cu',
@@ -33,9 +39,16 @@ spec = bearingless_spmsm_design.bpmsm_specification(
         safety_factor_to_yield = None, # use this or use tip speed
         safety_factor_to_critical_speed = 1.5,
         use_drop_shape_rotor_bar = True,
+        no_segmented_magnets = 1,
         tip_speed = 150, # m/s, use this or use safety_factor_to_yield
         debug_or_release = True, # 如果是debug，数据库里有记录就删掉重新跑；如果release且有记录，那就报错。
         bool_skew_stator = None,
         bool_skew_rotor = None,
 )
+# print(spec.guess_power_factor)
+# spec.show()
+# quit()
+print(spec.build_name())
+spec.bool_bad_specifications = spec.pyrhonen_procedure(fea_config_dict['pc_name'])
+print(spec.build_name()) # TODO：自动修正转子电流密度的设置值？
 

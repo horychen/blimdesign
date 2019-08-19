@@ -1709,3 +1709,4 @@ def get_bad_fintess_values(machine_type='IM', ref=False):
             return 1, 1, 100
         elif 'PMSM' in machine_type:
             return 10000, 1, 1000        
+
