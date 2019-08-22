@@ -24,8 +24,11 @@ if True:
     run_folder = r'run#610/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
     run_folder = r'run#611/' # zero Rs is not allowed
 
-    run_folder = r'run#612/'
-    run_folder = r'run#613/'
+    run_folder = r'run#612/' # spec_ECCE_PMSM_
+    run_folder = r'run#613/' # spec_ECCE_PMSM_ (Q6p2)
+    run_folder = r'run#614/' # spec_PEMD_BPMSM_Q12p2
+    run_folder = r'run#615/' # spec_PEMD_BPMSM_Q6p1
+    run_folder = r'run#616/' # spec_PEMD_BPMSM_Q12p4
 else:
     if 'Y730' in fea_config_dict['pc_name']:
         ################################################################
@@ -75,8 +78,11 @@ else:
 fea_config_dict['run_folder'] = run_folder
 
 # spec's
-# my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals())
-my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals())
+# my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals()) # Q=24, p=1
+# my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
+# my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
+# my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
+my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=6, p=1
 if False: 
     # Case Q=24 can use IM's stator for PMSM's
     spec.build_im_template(fea_config_dict)
@@ -191,9 +197,9 @@ class Problem_BearinglessSynchronousDesign(object):
                 logger.error(msg)
                 print(msg)
 
-                if counter_loop > 2:
+                if counter_loop > 1: # > 1 = two attemps; > 2 = three attemps
                     print(error)
-                    raise Exception('Abort the optimization. Three attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+                    raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
                 else:
                     from time import sleep
                     print('\n\n\nSleep for 3 sec and continue.')
@@ -210,7 +216,7 @@ class Problem_BearinglessSynchronousDesign(object):
                 print(msg)
 
                 if 'designer.Application' in str(error):
-                    if counter_loop > 1: # > 1 = two attemps; > 2 = three attemps
+                    if counter_loop > 1: 
                         print(error)
                         raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
                     else:
@@ -241,22 +247,27 @@ class Problem_BearinglessSynchronousDesign(object):
         f3 
         print('f1,f2,f3:',f1,f2,f3)
 
-        # Constraints (Em<0.2 and Ea<10 deg):
-        # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or SafetyFactor < 1.5:
-        # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
-        # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
-        if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.3 or abs(force_error_angle) > 10 or FRW < 0.75:
-            print('Constraints are violated:')
-            if abs(normalized_torque_ripple)>=0.3:
-                print('\tabs(normalized_torque_ripple)>=0.3')
-            if abs(normalized_force_error_magnitude) >= 0.3:
-                print('\tabs(normalized_force_error_magnitude) >= 0.3')
-            if abs(force_error_angle) > 10:
-                print('\tabs(force_error_angle) > 10')
-            if FRW < 0.75:
-                print('\tFRW < 0.75')
-            f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
-        print('f1,f2,f3:',f1,f2,f3)
+        try:
+            # Constraints (Em<0.2 and Ea<10 deg):
+            # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or SafetyFactor < 1.5:
+            # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
+            # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
+            if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.3 or abs(force_error_angle) > 10 or FRW < 0.75:
+                print('Constraints are violated:')
+                if abs(normalized_torque_ripple)>=0.3:
+                    print('\tabs(normalized_torque_ripple)>=0.3')
+                if abs(normalized_force_error_magnitude) >= 0.3:
+                    print('\tabs(normalized_force_error_magnitude) >= 0.3')
+                if abs(force_error_angle) > 10:
+                    print('\tabs(force_error_angle) > 10')
+                if FRW < 0.75:
+                    print('\tFRW < 0.75')
+                f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
+            print('f1,f2,f3:',f1,f2,f3)
+        except:
+            print(msg)
+            logger = logging.getLogger(__name__)
+            logger.warn(msg)
 
         counter_fitness_return += 1
         print('Fitness: %d, %d\n----------------'%(counter_fitness_called, counter_fitness_return))

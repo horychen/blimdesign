@@ -1,6 +1,6 @@
 
 class winding_layout(object):
-    def __init__(self, DPNV_or_SEPA, Qs, p):
+    def __init__(self, DPNV_or_SEPA, Qs, p, ps=None):
 
         # separate winding
         if DPNV_or_SEPA == False \
@@ -31,8 +31,8 @@ class winding_layout(object):
             self.l_leftlayer2  = self.l_rightlayer2[::]
             self.grouping_AC   = [  0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1,   0,   0,   0,   0,   1,   1,   1,   1,   0,   0] # 只取决于outerlayer/rightlayer的反相情况
             self.coil_pitch    = 6 # left layer can be inferred from coil pitch and right layer diagram
-            self.CommutatingSequenceD = 1
-            self.CommutatingSequenceB = 0
+            self.CommutatingSequenceD = 1 # D stands for Drive winding (i.e., torque winding)
+            self.CommutatingSequenceB = 0 # B stands for Bearing winding (i.e., suspension winding), commutating sequence decides the direction of the rotating field
             self.number_parallel_branch = 2.
             self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
             self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
@@ -73,6 +73,7 @@ class winding_layout(object):
         # PMSM
 
         # combined winding
+        # concentrated winding
         if DPNV_or_SEPA == True \
         and Qs == 6 \
         and p == 2:
@@ -82,6 +83,7 @@ class winding_layout(object):
             self.l_leftlayer1  = ['W', 'U', 'V', 'W', 'U', 'V']
             self.l_leftlayer2  = ['-', '-', '-', '-', '-', '-']
             self.grouping_AC   = [  1,   0,   0,   0,   1,   1] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+            # self.grouping_AC   = [  0,   1,   1,   1,   0,   0]
             self.coil_pitch    = -1 # left layer can be inferred from coil pitch and right layer diagram
             self.CommutatingSequenceD = 1
             self.CommutatingSequenceB = 0
@@ -96,6 +98,98 @@ class winding_layout(object):
             self.l42 = self.l_rightlayer2
             self.l21 = self.l_leftlayer1
             self.l22 = self.l_leftlayer2
+
+        # combined winding
+        # distrubuted winding
+        if DPNV_or_SEPA == True \
+        and Qs == 6 \
+        and p == 1:
+            # DPNV winding implemented as DPNV winding (GroupAC means it experiences flip phasor excitation from suspension inverter, while GroupBD does not.)
+            self.l_rightlayer1 = ['U', 'W', 'V', 'U', 'W', 'V'] # torque winding right layer
+            self.l_rightlayer2 = ['+', '-', '+', '-', '+', '-']
+            self.l_leftlayer1  = ['W', 'V', 'U', 'W', 'V', 'U']
+            self.l_leftlayer2  = ['-', '+', '-', '+', '-', '+']
+            self.grouping_AC   = [  0,   1,   0,   1,   0,   1] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+            self.coil_pitch    = 2 # left layer can be inferred from coil pitch and right layer diagram
+            self.CommutatingSequenceD = 1
+            self.CommutatingSequenceB = 0
+            self.number_parallel_branch = 2.
+            self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
+            self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
+
+            self.initial_excitation_bias_compensation_deg = 0 # for torque winding
+
+            # backward compatibility
+            self.l41 = self.l_rightlayer1
+            self.l42 = self.l_rightlayer2
+            self.l21 = self.l_leftlayer1
+            self.l22 = self.l_leftlayer2
+
+
+
+        # combined winding
+        # distrubuted winding
+        if DPNV_or_SEPA == True \
+        and Qs == 12 \
+        and p == 2:
+            # DPNV winding implemented as DPNV winding (GroupAC means it experiences flip phasor excitation from suspension inverter, while GroupBD does not.)
+            self.l_rightlayer1 = ['U', 'W', 'V', 'U', 'W', 'V', 'U', 'W', 'V', 'U', 'W', 'V'] # torque winding right layer
+            self.l_rightlayer2 = ['+', '-', '+', '-', '+', '-', '+', '-', '+', '-', '+', '-']
+            self.l_leftlayer1  = ['U', 'W', 'V', 'U', 'W', 'V', 'U', 'W', 'V', 'U', 'W', 'V']
+            self.l_leftlayer2  = ['+', '-', '+', '-', '+', '-', '+', '-', '+', '-', '+', '-']
+            self.grouping_AC   = [  0,   1,   0,   0,   0,   0,   1,   0,   1,   1,   1,   1] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+            self.coil_pitch    = 3 # left layer can be inferred from coil pitch and right layer diagram
+            self.CommutatingSequenceD = 1 # D stands for Drive winding (i.e., torque winding)
+            self.CommutatingSequenceB = 0 # B stands for Bearing winding (i.e., suspension winding), commutating sequence decides the direction of the rotating field
+            self.number_parallel_branch = 2.
+            self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
+            self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
+
+            self.initial_excitation_bias_compensation_deg = 0 # for torque winding
+
+            # backward compatibility
+            self.l41 = self.l_rightlayer1
+            self.l42 = self.l_rightlayer2
+            self.l21 = self.l_leftlayer1
+            self.l22 = self.l_leftlayer2
+
+        # combined winding
+        # concentrated winding
+        ps = 5 # ps should be specified in future revision
+        if DPNV_or_SEPA == True \
+        and Qs == 12 \
+        and p == 4 \
+        and ps == 5:
+            # DPNV winding implemented as DPNV winding (GroupAC means it experiences flip phasor excitation from suspension inverter, while GroupBD does not.)
+            # self.l_rightlayer1 = ['U', 'V', 'W', 'U', 'V', 'W', 'U', 'V', 'W', 'U', 'V', 'W'] # torque winding right layer
+            # self.l_rightlayer2 = ['+', '+', '+', '+', '+', '+', '+', '+', '+', '+', '+', '+'] # This configuration gives negative torque
+            # self.l_leftlayer1  = ['W', 'U', 'V', 'W', 'U', 'V', 'W', 'U', 'V', 'W', 'U', 'V']
+            # self.l_leftlayer2  = ['-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']
+            # self.l_rightlayer1 = ['U', 'W', 'V', 'U', 'W', 'V', 'U', 'W', 'V', 'U', 'W', 'V'] # Want to change the commutating sequence so the torque is positive? No, it is not that intuitive.
+            # self.l_rightlayer2 = ['+', '+', '+', '+', '+', '+', '+', '+', '+', '+', '+', '+']
+            # self.l_leftlayer1  = ['V', 'U', 'W', 'V', 'U', 'W', 'V', 'U', 'W', 'V', 'U', 'W']
+            # self.l_leftlayer2  = ['-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']
+            self.l_rightlayer1 = ['U', 'V', 'W', 'U', 'V', 'W', 'U', 'V', 'W', 'U', 'V', 'W'] # Want to change torque sign? Yes, this works
+            self.l_rightlayer2 = ['-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']
+            self.l_leftlayer1  = ['W', 'U', 'V', 'W', 'U', 'V', 'W', 'U', 'V', 'W', 'U', 'V']
+            self.l_leftlayer2  = ['+', '+', '+', '+', '+', '+', '+', '+', '+', '+', '+', '+']
+            self.grouping_AC   = [  0,   0,   0,   1,   1,   1,   1,   1,   1,   0,   0,   0] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+            self.coil_pitch    = -1 # left layer can be inferred from coil pitch and right layer diagram
+            self.CommutatingSequenceD = 1 # D stands for Drive winding (i.e., torque winding)
+            self.CommutatingSequenceB = 0 # B stands for Bearing winding (i.e., suspension winding), commutating sequence decides the direction of the rotating field
+            self.number_parallel_branch = 2.
+            self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
+            self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
+
+            self.initial_excitation_bias_compensation_deg = 0 # for torque winding
+
+            # backward compatibility
+            self.l41 = self.l_rightlayer1
+            self.l42 = self.l_rightlayer2
+            self.l21 = self.l_leftlayer1
+            self.l22 = self.l_leftlayer2
+
+
 
         try: 
             self.coil_pitch

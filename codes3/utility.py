@@ -1023,10 +1023,19 @@ class data_manager(object):
 
     def get_voltage_and_current(self, number_of_steps_2ndTTS):
 
-        # 4C <- the C-phase of the 4 pole winding
-        mytime  = self.Current_dict['Time(s)'][-number_of_steps_2ndTTS:]
-        voltage =      self.terminal_voltage()[-number_of_steps_2ndTTS:]
-        current =       self.circuit_current()[-number_of_steps_2ndTTS:]
+        key = '4W'
+        try:
+            # 4C <- the C-phase of the 4 pole winding
+            mytime  = self.Current_dict['Time(s)'][-number_of_steps_2ndTTS:]
+            voltage =      self.terminal_voltage()[-number_of_steps_2ndTTS:]
+            current =       self.circuit_current(which=key)[-number_of_steps_2ndTTS:]
+        except KeyError as error:
+            key = '8W'
+            mytime  = self.Current_dict['Time(s)'][-number_of_steps_2ndTTS:]
+            voltage =      self.terminal_voltage()[-number_of_steps_2ndTTS:]
+            current =       self.circuit_current(which=key)[-number_of_steps_2ndTTS:]
+
+
 
         # if len(mytime) > len(voltage):
         #     mytime = mytime[:len(voltage)]

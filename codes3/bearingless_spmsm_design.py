@@ -69,6 +69,7 @@ class bearingless_spmsm_template(object):
         Q = self.Q
         s = self.s
         p = self.p
+        # print('Debug:', self.mm_d_st)
         self.original_template_neighbor_bounds =  [ 
                             [ 0.35*360/Q, 0.9*360/Q],                                           # deg_alpha_st        = free_variables[0]
                             [  0.5,   5],                                                       # mm_d_so             = free_variables[1]
@@ -313,15 +314,23 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         #05 Windings & Excitation
         self.wily = spmsm_template.wily
 
+        self.DriveW_poles = spmsm_template.spec.p * 2
+        self.BeariW_poles = spmsm_template.spec.ps * 2
+        print('2p =', self.DriveW_poles, '| 2ps =', self.BeariW_poles)
+
         if self.DriveW_poles == 2:
             self.BeariW_poles = 4
             if self.DriveW_zQ % 2 != 0:
                 print('zQ=', self.DriveW_zQ)
                 raise Exception('This zQ does not suit for two layer winding.')
         elif self.DriveW_poles == 4:
-            self.BeariW_poles = 2;
+            self.BeariW_poles = 2
+        elif self.DriveW_poles == 8:
+            self.BeariW_poles = 10
         else:
             raise Exception('Not implemented error.')
+        print('2p =', self.DriveW_poles, '| 2ps =', self.BeariW_poles)
+
         self.BeariW_zQ      = self.DriveW_zQ
         self.BeariW_Rs         = self.DriveW_Rs * self.BeariW_zQ / self.DriveW_zQ
         if self.DriveW_CurrentAmp is None:
@@ -989,7 +998,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             # Create FEM Coil Condition
             # here we map circuit component `Coil2A' to FEM Coil Condition 'phaseAuauc
             # here we map circuit component `Coil4A' to FEM Coil Condition 'phaseAubud
-            for suffix, poles in zip(['GroupAC', 'GroupBD'], [2, 4]): # 仍然需要考虑poles，是因为为Coil设置Set那里的代码还没有更新。这里的2和4等价于leftlayer和rightlayer。
+            for suffix, poles in zip(['GroupAC', 'GroupBD'], [self.DriveW_poles, self.BeariW_poles]): # 仍然需要考虑poles，是因为为Coil设置Set那里的代码还没有更新。这里的2(self.DriveW_poles)和4(self.BeariW_poles)等价于leftlayer和rightlayer。
                 for UVW in ['U','V','W']:
                     study.CreateCondition("FEMCoil", 'phase'+UVW+suffix)
                     # link between FEM Coil Condition and Circuit FEM Coil
@@ -1042,7 +1051,8 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
                 else:
                     # print('Distributed winding.')
                     if self.wily.l_leftlayer1[index_leftlayer] != UVW:
-                        raise Exception('But in winding.')
+                        print('[Warn] Potential bug in your winding layout detected.')
+                        raise Exception('Bug in winding layout detected.')
                     # 右层导体的电流方向是正，那么与其串联的一个coil_pitch之处的左层导体就是负！不需要再检查l_leftlayer2了~
                     if UpDown == '+': 
                         UpDown = '-'

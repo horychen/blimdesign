@@ -90,7 +90,7 @@ class CrossSectInnerNotchedRotor(object):
 
         list_segments = []
         if s == 1:
-            # No notch!
+            # No magnet sement!
             # Then P6 is an extra point for a full rotor
             P6 = [r_ri*cos(alpha_P5), r_ri*-sin(alpha_P5)]
 

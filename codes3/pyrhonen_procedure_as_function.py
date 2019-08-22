@@ -1387,7 +1387,15 @@ class desgin_specification(object):
             # Bianchi 2006
             air_gap_flux_density_B = 0.9
             stator_tooth_flux_density_B_ds = 1.5
-            stator_yoke_flux_density_Bys = 1.2
+            if self.p == 2:
+                ROTOR_STATOR_YOKE_HEIGHT_RATIO = 0.75
+                stator_yoke_flux_density_Bys = 1.2
+                alpha_rm_over_alpha_rp = 1.0
+            else:
+                # penalty for p=1 motor, i.e., large yoke height
+                ROTOR_STATOR_YOKE_HEIGHT_RATIO = 0.5
+                stator_yoke_flux_density_Bys = 1.5
+                alpha_rm_over_alpha_rp = 0.75
             stator_outer_diameter_Dse = 0.225 # m
 
             speed_rpm = self.ExcitationFreq * 60 / self.p # rpm
@@ -1397,7 +1405,7 @@ class desgin_specification(object):
             stator_inner_radius_r_is  = rotor_outer_radius_r_or + 3.75*1e-3 # m (sleeve 3 mm, air gap 0.75 mm)
             stator_inner_diameter_Dis = stator_inner_radius_r_is*2
 
-            stator_yoke_height_h_ys = air_gap_flux_density_B * np.pi * stator_inner_diameter_Dis / (2*stator_yoke_flux_density_Bys * 2*self.p)
+            stator_yoke_height_h_ys = air_gap_flux_density_B * np.pi * stator_inner_diameter_Dis * alpha_rm_over_alpha_rp / (2*stator_yoke_flux_density_Bys * 2*self.p)
             stator_tooth_height_h_ds = (stator_outer_diameter_Dse - stator_inner_diameter_Dis) / 2 - stator_yoke_height_h_ys
             stator_slot_height_h_ss = stator_tooth_height_h_ds
             stator_tooth_width_b_ds = air_gap_flux_density_B *pi * stator_inner_diameter_Dis / (stator_tooth_flux_density_B_ds* self.Qs)
@@ -1430,7 +1438,7 @@ class desgin_specification(object):
             self.pmsm_template.mm_d_pm              = 5  # mm
             self.pmsm_template.deg_alpha_rm         = 90/90*360/(2*p) # deg
             self.pmsm_template.deg_alpha_rs         =                                   self.pmsm_template.deg_alpha_rm # if s=1
-            self.pmsm_template.mm_d_ri              = 1e3*0.75*stator_yoke_height_h_ys # TODO：This ratio (0.75) is randomly specified
+            self.pmsm_template.mm_d_ri              = 1e3*ROTOR_STATOR_YOKE_HEIGHT_RATIO*stator_yoke_height_h_ys # TODO：This ratio (0.75) is randomly specified
             self.pmsm_template.mm_r_ri              = 1e3*stator_inner_radius_r_is - self.pmsm_template.mm_d_pm - self.pmsm_template.mm_d_ri
             self.pmsm_template.mm_d_rp              = 4  # mm
             self.pmsm_template.mm_d_rs              = 0*3
