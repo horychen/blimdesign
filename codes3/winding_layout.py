@@ -61,7 +61,7 @@ class winding_layout(object):
             self.number_parallel_branch = 2.
             self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
             self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
-            self.initial_excitation_bias_compensation_deg = 360/Qs*0.5 # for torque winding
+            self.initial_excitation_bias_compensation_deg = 360/24*0.5 # for torque winding # Note that the initial excitation direction is biased (not aligned with x-axis) due to the fact that the u-phase winding is not aligned with x-axis
 
             # backward compatibility
             self.l41 = self.l_rightlayer1
@@ -89,7 +89,7 @@ class winding_layout(object):
             self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
             self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
 
-            self.initial_excitation_bias_compensation_deg = 360/Qs*0.5 # for torque winding
+            self.initial_excitation_bias_compensation_deg = 0 # for torque winding
 
             # backward compatibility
             self.l41 = self.l_rightlayer1

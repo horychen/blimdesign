@@ -1446,7 +1446,7 @@ class desgin_specification(object):
 
             # Excitation Properties
             self.pmsm_template.DriveW_Freq       = self.ExcitationFreq
-            self.pmsm_template.DriveW_Rs         = 0.0 # TODO:
+            self.pmsm_template.DriveW_Rs         = 1.0 # TODO: Must be greater than zero to let JMAG work
             self.pmsm_template.DriveW_zQ         = 10 # TODO:
             self.pmsm_template.DriveW_CurrentAmp = 100 # TODO:
             self.pmsm_template.DriveW_poles      = self.p*2
@@ -1463,6 +1463,10 @@ class desgin_specification(object):
             self.pmsm_template.spec = self
 
             # raise Exception('Not implemented error.')
+
+            required_torque = self.mec_power/(2*pi*speed_rpm)*60
+            rotor_volume_Vr = required_torque/(2*self.TangentialStress)
+            self.required_torque = required_torque
 
     def get_im_classic_bounds(self, which_filter='FixedStatorSlotDepth', user_bound_filter=None):
         spec = self

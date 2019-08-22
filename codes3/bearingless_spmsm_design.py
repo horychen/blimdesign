@@ -73,7 +73,7 @@ class bearingless_spmsm_template(object):
                             [ 0.35*360/Q, 0.9*360/Q],                                           # deg_alpha_st        = free_variables[0]
                             [  0.5,   5],                                                       # mm_d_so             = free_variables[1]
                             [0.8*self.mm_d_st,                1.2*self.mm_d_st],                # mm_d_st             = free_variables[2]
-                            [0.8*self.Radius_OuterStatorYoke, 1.2*self.Radius_OuterStatorYoke], # stator_outer_radius = free_variables[3]
+                            [1.0*self.Radius_OuterStatorYoke, 1.2*self.Radius_OuterStatorYoke], # stator_outer_radius = free_variables[3]
                             [0.8*self.mm_w_st,                1.2*self.mm_w_st],                # mm_w_st             = free_variables[4] # STATOR
                             [3,   4],                                                           # sleeve_length       = free_variables[5] # AIRGAP
                             [2.5, 7],                                                           # mm_d_pm             = free_variables[6] # ROTOR
@@ -834,7 +834,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         # N40H Reversible
         study.SetMaterialByName(u"Magnet", u"Arnold/Reversible/N40H")
         study.GetMaterial(u"Magnet").SetValue(u"EddyCurrentCalculation", 1)
-        study.GetMaterial(u"Magnet").SetValue(u"Temperature", 80) # TEMPERATURE
+        study.GetMaterial(u"Magnet").SetValue(u"Temperature", 80) # TEMPERATURE (There is no 75 deg C option)
 
         study.GetMaterial(u"Magnet").SetValue(u"Poles", self.DriveW_poles)
 

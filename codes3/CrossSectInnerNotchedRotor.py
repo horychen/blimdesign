@@ -68,8 +68,11 @@ class CrossSectInnerNotchedRotor(object):
         s        = self.s
         alpha_rp = 2*np.pi/(2*p) # pole span
 
-        # if abs(d_pm - d_rp) < 2*EPS: d_pm is not defined
-        #     print('Warn: [Notched Rotor] Detect d_rp is too close to d_pm. To avoid small line entity error in JMAG, will set d_pm equal to d_rp in CrossSectInnerNotchedMagnet.') # d_pm is not defined here so we cannot set d_rp to d_pm.
+        # if abs(d_pm - d_rp) < 2*EPS: # d_pm is not defined
+        #     print('Warn: [class CrossSectInnerNotchedRotor] Detect d_rp is too close to d_pm. To avoid small line entity error in JMAG, will set d_pm equal to d_rp in CrossSectInnerNotchedMagnet.') # d_pm is not defined here so we cannot set d_rp to d_pm.
+        if abs(alpha_rp - alpha_rm) <= 2 * np.pi/180: # if alpha_rm and alpha_rp has a difference smaller than 2 deg, then let alpha_rm equal to alpha_rp.
+            alpha_rm = alpha_rp
+            print('Rotor has no notch, i.e., there is no P2 or P3.')
 
         P1 = [r_ri, 0]
 
@@ -188,9 +191,13 @@ class CrossSectInnerNotchedMagnet(object):
         s        = self.notched_rotor.s
         alpha_rp = 2*np.pi/(2*p) # pole span
 
+        if abs(alpha_rp - alpha_rm) <= 2 * np.pi/180: # if alpha_rm and alpha_rp has a difference smaller than 2 deg, then let alpha_rm equal to alpha_rp.
+            alpha_rm = alpha_rp
+            print('Rotor has no notch, i.e., there is no P2 or P3.')
+
         if abs(d_pm - d_rp) < 2*EPS:
             d_pm = d_rp
-            print('Warn: [Magnet] Detect d_rp is too close to d_pm. To avoid small line entity error in JMAG, set d_pm equal to d_rp because rotor core is plotted already.')
+            print('Warn: [class CrossSectInnerNotchedMagnet] Detect d_rp is too close to d_pm. To avoid small line entity error in JMAG, set d_pm equal to d_rp because rotor core is plotted already.')
 
         P1 = [r_ri, 0]
 
