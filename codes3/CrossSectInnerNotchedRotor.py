@@ -309,11 +309,10 @@ class CrossSectSleeve(object):
         P1 = [r_or, 0]
         P2 = [r_or+d_sleeve, 0]
 
-        P3 = [P1[0]*cos(np.pi/p), P1[1]*-sin(np.pi/p)]
-        P4 = [P2[0]*cos(np.pi/p), P2[1]*-sin(np.pi/p)]
-
-        # P3 = [P1[1], -P1[0]] # Rotate 90 deg
-        # P4 = [P2[1], -P2[0]] # Rotate 90 deg
+        P3 = [  cos(np.pi/p)*P1[0] + sin(np.pi/p)*P1[1],
+               -sin(np.pi/p)*P1[0] + cos(np.pi/p)*P1[1] ]        
+        P4 = [  cos(np.pi/p)*P2[0] + sin(np.pi/p)*P2[1],
+               -sin(np.pi/p)*P2[0] + cos(np.pi/p)*P2[1] ]        
 
         list_regions = []
         list_segments = []
@@ -321,10 +320,10 @@ class CrossSectSleeve(object):
         list_segments += drawer.drawArc([0,0], P4, P2)
         list_segments += drawer.drawLine(P4, P3)
         list_segments += drawer.drawArc([0,0], P3, P1)
-        
+
         list_regions.append(list_segments)
         list_segments = []
-        # raise
+        # raise KeyboardInterrupt
 
         return list_regions # csToken # cross section token
 

@@ -16,7 +16,7 @@ class winding_layout(object):
             self.CommutatingSequenceB = 0
             self.number_parallel_branch = 1.
             self.bool_3PhaseCurrentSource = True
-            self.no_winding_layer = 1 # for troque winding
+            self.no_winding_layer = 1 # for torque winding
 
         # combined winding
         if DPNV_or_SEPA == True \
@@ -35,7 +35,7 @@ class winding_layout(object):
             self.CommutatingSequenceB = 0
             self.number_parallel_branch = 2.
             self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
-            self.no_winding_layer = 2 # for troque winding and this means there could be a short pitch
+            self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
 
             # backward compatibility
             self.l41 = self.l_rightlayer1
@@ -60,8 +60,8 @@ class winding_layout(object):
             self.CommutatingSequenceB = 0
             self.number_parallel_branch = 2.
             self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
-            self.no_winding_layer = 2 # for troque winding and this means there could be a short pitch
-            self.initial_excitation_bias_compensation_deg = 360/24*0.5 # for troque winding
+            self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
+            self.initial_excitation_bias_compensation_deg = 360/Qs*0.5 # for torque winding
 
             # backward compatibility
             self.l41 = self.l_rightlayer1
@@ -87,7 +87,9 @@ class winding_layout(object):
             self.CommutatingSequenceB = 0
             self.number_parallel_branch = 2.
             self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
-            self.no_winding_layer = 2 # for troque winding and this means there could be a short pitch
+            self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
+
+            self.initial_excitation_bias_compensation_deg = 360/Qs*0.5 # for torque winding
 
             # backward compatibility
             self.l41 = self.l_rightlayer1
@@ -129,4 +131,4 @@ class winding_layout(object):
         #     self.CommutatingSequenceB = 0
         #     self.number_parallel_branch = 1.
         #     self.bool_3PhaseCurrentSource = True
-        #     self.no_winding_layer = 1 # for troque winding
+        #     self.no_winding_layer = 1 # for torque winding

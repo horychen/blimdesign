@@ -369,14 +369,12 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         toolJd.iRotateCopy = self.rotorMagnet.notched_rotor.p*2
         region2 = toolJd.prepareSection(list_regions, bRotateMerge=False)
 
-
-        # Rotor Magnet
+        # Sleeve
         sleeve = CrossSectInnerNotchedRotor.CrossSectSleeve(
                         name = 'Sleeve',
                         notched_magnet = self.rotorMagnet,
                         d_sleeve = self.sleeve_length
                         )
-
         list_regions = sleeve.draw(toolJd)
         toolJd.bMirror = False
         toolJd.iRotateCopy = self.rotorMagnet.notched_rotor.p*2

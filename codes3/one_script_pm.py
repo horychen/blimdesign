@@ -22,6 +22,8 @@ if True:
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
     run_folder = r'run#610/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
+
+    run_folder = r'run#611/'
 else:
     if 'Y730' in fea_config_dict['pc_name']:
         ################################################################
@@ -73,8 +75,12 @@ fea_config_dict['run_folder'] = run_folder
 # spec's
 # my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals())
 my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals())
-spec.build_im_template(fea_config_dict)
-spec.build_pmsm_template(fea_config_dict, im_template=spec.im_template)
+if False: 
+    # Case Q=24 can use IM's stator for PMSM's
+    spec.build_im_template(fea_config_dict)
+    spec.build_pmsm_template(fea_config_dict, im_template=spec.im_template)
+else:
+    spec.build_pmsm_template(fea_config_dict, im_template=None)
 
 # select motor type ehere
 print('Build ACM template...')
@@ -210,6 +216,7 @@ class Problem_BearinglessSynchronousDesign(object):
 
             except Exception as e: # raise and need human inspection
 
+                raise e
                 print('-'*40 + 'Unexpected error is caught.')
                 print(str(e)) 
                 utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nUnexpected expection:' + str(e))
@@ -263,7 +270,7 @@ class Problem_BearinglessSynchronousDesign(object):
     # Return function name
     def get_name(self):
         return "Bearingless PMSM Design"
-    
+
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Multi-Objective Optimization
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -412,3 +419,5 @@ if True:
     #     print(pop.get_x())
     #     print(pop.get_f().tolist())
     #     raise e
+
+

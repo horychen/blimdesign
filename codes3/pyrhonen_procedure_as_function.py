@@ -1068,7 +1068,7 @@ class desgin_specification(object):
         print('\nStator outer diameter: $Dse=%g$ mm '% (stator_outer_diameter_Dse*1e3), file=fname)
         print('\nRotor inner diameter: $Dri=%g$ mm '% (rotor_inner_diameter_Dri*1e3), file=fname)
         print('\nRotor outer diameter: $D_{or}=%g$ mm'% (1e3*2*rotor_outer_radius_r_or), file=fname)
-        # print('Yegu Kang: stator_outer_diameter fixed at 250 mm.')
+        # print('Yegu Kang: stator_outer_diameter_Dse fixed at 250 mm.')
 
         # B@yoke
         By_list     = [    0,  0.5,   0.6, 0.7,   0.8,  0.9, 0.95,  1.0, 1.08,   1.1, 1.2,   1.3,   1.4, 1.5,  1.6,  1.7,   1.8,  1.9,   2.0] # Figure 3.17
@@ -1384,7 +1384,85 @@ class desgin_specification(object):
             # mm_d_rs                  = free_variables[12] = 
             # self.free_variables = free_variables
         else:
-            raise Exception('Not implemented error.')
+            # Bianchi 2006
+            air_gap_flux_density_B = 0.9
+            stator_tooth_flux_density_B_ds = 1.5
+            stator_yoke_flux_density_Bys = 1.2
+            stator_outer_diameter_Dse = 0.225 # m
+
+            speed_rpm = self.ExcitationFreq * 60 / self.p # rpm
+
+            rotor_outer_radius_r_or = eric_specify_tip_speed_get_radius(self.tip_speed, speed_rpm)
+            rotor_outer_diameter_Dr = rotor_outer_radius_r_or*2
+            stator_inner_radius_r_is  = rotor_outer_radius_r_or + 3.75*1e-3 # m (sleeve 3 mm, air gap 0.75 mm)
+            stator_inner_diameter_Dis = stator_inner_radius_r_is*2
+
+            stator_yoke_height_h_ys = air_gap_flux_density_B * np.pi * stator_inner_diameter_Dis / (2*stator_yoke_flux_density_Bys * 2*self.p)
+            stator_tooth_height_h_ds = (stator_outer_diameter_Dse - stator_inner_diameter_Dis) / 2 - stator_yoke_height_h_ys
+            stator_slot_height_h_ss = stator_tooth_height_h_ds
+            stator_tooth_width_b_ds = air_gap_flux_density_B *pi * stator_inner_diameter_Dis / (stator_tooth_flux_density_B_ds* self.Qs)
+
+            stator_slot_area = pi/(4*self.Qs) * ((stator_outer_diameter_Dse - 2*stator_yoke_height_h_ys)**2 - stator_inner_diameter_Dis**2) - stator_tooth_width_b_ds * stator_tooth_height_h_ds
+
+            if fea_config_dict is not None:
+                wily = winding_layout(fea_config_dict['DPNV'], self.Qs, self.p)
+
+            slot_pitch_pps = np.pi * (stator_inner_diameter_Dis + stator_slot_height_h_ss) / self.Qs
+            kov = 1.8 # \in [1.6, 2.0]
+            end_winding_length_Lew = np.pi*0.5 * (slot_pitch_pps + stator_tooth_width_b_ds) + slot_pitch_pps*kov * (wily.coil_pitch - 1)
+
+            Q = self.Qs
+            p = self.p
+            self.pmsm_template.deg_alpha_st         = 360/Q - 2 # deg
+            self.pmsm_template.deg_alpha_so         =                                   self.pmsm_template.deg_alpha_st/2 # im_template uses alpha_so as 0.
+            self.pmsm_template.mm_r_si              = 1e3*stator_inner_radius_r_is # mm
+            self.pmsm_template.mm_d_so              = 1 # mm
+            self.pmsm_template.mm_d_sp              =                                   1.5*self.pmsm_template.mm_d_so
+            self.pmsm_template.mm_d_st              = 1e3*(0.5*stator_outer_diameter_Dse - stator_yoke_height_h_ys) - self.pmsm_template.mm_r_si - self.pmsm_template.mm_d_sp  # mm
+            self.pmsm_template.mm_d_sy              = 1e3*stator_yoke_height_h_ys # mm
+            self.pmsm_template.mm_w_st              = 1e3*stator_tooth_width_b_ds # mm
+            self.pmsm_template.mm_r_st              = 0
+            self.pmsm_template.mm_r_sf              = 0
+            self.pmsm_template.mm_r_sb              = 0
+            self.pmsm_template.Q                    = Q
+            self.pmsm_template.sleeve_length        = 3  # mm
+            self.pmsm_template.fixed_air_gap_length = 0.75 # mm
+            self.pmsm_template.mm_d_pm              = 5  # mm
+            self.pmsm_template.deg_alpha_rm         = 90/90*360/(2*p) # deg
+            self.pmsm_template.deg_alpha_rs         =                                   self.pmsm_template.deg_alpha_rm # if s=1
+            self.pmsm_template.mm_d_ri              = 1e3*0.75*stator_yoke_height_h_ys # TODO：This ratio (0.75) is randomly specified
+            self.pmsm_template.mm_r_ri              = 1e3*stator_inner_radius_r_is - self.pmsm_template.mm_d_pm - self.pmsm_template.mm_d_ri
+            self.pmsm_template.mm_d_rp              = 4  # mm
+            self.pmsm_template.mm_d_rs              = 0*3
+            self.pmsm_template.p                    = p
+            self.pmsm_template.s                    = 1
+
+            # Those are some obsolete variables that are convenient to have.
+            self.pmsm_template.Radius_OuterStatorYoke = 1e3*0.5*stator_outer_diameter_Dse # mm
+            self.pmsm_template.Radius_OuterRotor      = 1e3*rotor_outer_radius_r_or # mm
+
+            # Those variables are for PMSM convenience
+            self.rotor_steel_outer_radius             = self.pmsm_template.Radius_OuterRotor
+
+            # Excitation Properties
+            self.pmsm_template.DriveW_Freq       = self.ExcitationFreq
+            self.pmsm_template.DriveW_Rs         = 0.0 # TODO:
+            self.pmsm_template.DriveW_zQ         = 10 # TODO:
+            self.pmsm_template.DriveW_CurrentAmp = 100 # TODO:
+            self.pmsm_template.DriveW_poles      = self.p*2
+
+            print('Pyrhonen TODO')
+            self.pmsm_template.Js                = 4e6 # Arms/mm^2 im_template.Js 
+            self.pmsm_template.fill_factor       = 0.5 # im_template.fill_factor 
+
+            self.pmsm_template.stack_length      = 100 # TODO:
+            self.pmsm_template.wily              = wily
+
+            # Specification details:
+            #         # 让儿子能访问爸爸
+            self.pmsm_template.spec = self
+
+            # raise Exception('Not implemented error.')
 
     def get_im_classic_bounds(self, which_filter='FixedStatorSlotDepth', user_bound_filter=None):
         spec = self
