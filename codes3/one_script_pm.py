@@ -26,8 +26,8 @@ if True:
 
     # run_folder = r'run#612/' # spec_ECCE_PMSM_
     # run_folder = r'run#6130/' # spec_ECCE_PMSM_ (Q6p2)
-    # run_folder = r'run#6140/' # spec_PEMD_BPMSM_Q12p2
-    run_folder = r'run#6151/' # spec_PEMD_BPMSM_Q6p1
+    run_folder = r'run#61499/' # spec_PEMD_BPMSM_Q12p2
+    # run_folder = r'run#6151/' # spec_PEMD_BPMSM_Q6p1
     # run_folder = r'run#6160/' # spec_PEMD_BPMSM_Q12p4
 else:
     if 'Y730' in fea_config_dict['pc_name']:
@@ -80,8 +80,8 @@ fea_config_dict['run_folder'] = run_folder
 # spec's
 # my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals()) # Q=24, p=1
 # my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
-# my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
-my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
+my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
+# my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
 # my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
 if False: 
     # Case Q=24 can use IM's stator for PMSM's
@@ -177,10 +177,14 @@ class Problem_BearinglessSynchronousDesign(object):
                         print('Skip deleting this folder...')
                 # update to be deleted when JMAG releases the use
                 ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
-
-            except:
+            except KeyboardInterrupt as error:
+                raise error
+            except Exception as error
                 f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
-
+                print(str(error))
+                logger = logging.getLogger(__name__)
+                logger.error(str(error))
+                break
                 # except FileNotFoundError as error: # The copy region target is not found
                 #     print(str(error))
                 #     print('CJH: "the ind***TranPMSM_torque.csv is not found" means the mesher or the solver has failed. For now, simply consider it to be bad design.')
@@ -238,7 +242,6 @@ class Problem_BearinglessSynchronousDesign(object):
                 #     print(str(e)) 
                 #     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nUnexpected expection:' + str(e))
                 #     raise e
-
             else:
                 # - Price
                 f1 

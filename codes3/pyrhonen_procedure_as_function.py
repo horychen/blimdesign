@@ -1454,16 +1454,17 @@ class desgin_specification(object):
 
             # Excitation Properties
             self.pmsm_template.DriveW_Freq       = self.ExcitationFreq
+            print('Pyrhonen TODO')
             self.pmsm_template.DriveW_Rs         = 1.0 # TODO: Must be greater than zero to let JMAG work
+            print('Pyrhonen TODO')
             self.pmsm_template.DriveW_zQ         = 10 # TODO:
             self.pmsm_template.DriveW_CurrentAmp = 100 # TODO:
             self.pmsm_template.DriveW_poles      = self.p*2
 
-            print('Pyrhonen TODO')
             self.pmsm_template.Js                = 4e6 # Arms/mm^2 im_template.Js 
             self.pmsm_template.fill_factor       = 0.5 # im_template.fill_factor 
 
-            self.pmsm_template.stack_length      = 100 # TODO:
+            self.pmsm_template.stack_length      = 100 # mm TODO:
             self.pmsm_template.wily              = wily
 
             # Specification details:

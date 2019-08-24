@@ -7,7 +7,7 @@ fea_config_dict = {
     ##########################
     # Sysetm Control
     ##########################
-    'designer.Show': True,
+    'designer.Show': False,
     'OnlyTableResults':False, # modified later according to pc_name # the only reason we want save mesh results are to obtain voltage profile for power factor evaluation
     'local_sensitivity_analysis':False,
     'local_sensitivity_analysis_number_of_variants': 20,
