@@ -768,7 +768,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         study.GetMeshControl().SetValue("AirMeshSize", 4) # mm
         study.GetMeshControl().SetValue("Adaptive", 0)
 
-        # This is not neccessary for whole model FEA
+        # This is not neccessary for whole model FEA. In fact, for BPMSM simulation, it causes mesh error "The copy target region is not found".
         # study.GetMeshControl().CreateCondition("RotationPeriodicMeshAutomatic", "autoRotMesh") # with this you can choose to set CircumferentialDivision automatically
 
         study.GetMeshControl().CreateCondition("Part", "MagnetMeshCtrl")

@@ -182,7 +182,7 @@ class CrossSectInnerRotorStatorWinding(object):
         # Compute the vector starting from PCoil to one of the corner of the polygon.
         def shrink(PC, P):
             vector = [ P[0] - PC[0], P[1] - PC[1]]
-            return [ PC[0]+0.95*vector[0], PC[1]+0.95*vector[1] ]
+            return [ PC[0]+0.900*vector[0], PC[1]+0.900*vector[1] ]
         P6_Shrink = shrink(PCoil, P6)
         P5_Shrink = shrink(PCoil, P5)
         P4_Shrink = shrink(PCoil, P4)

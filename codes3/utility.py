@@ -758,12 +758,9 @@ class suspension_force_vector(object):
         # print('sfv:', self.ss_avg_force_angle)
         self.ss_avg_force_magnitude = np.sqrt(self.ss_avg_force_vector[0]**2 + self.ss_avg_force_vector[1]**2)
 
-        self.force_err_ang_old_way = self.force_ang - self.ss_avg_force_angle
-        self.force_err_ang = self.compute_angle_error(self.ss_avg_force_angle, self.force_ang)
-        print(self.force_err_ang_old_way, self.force_err_ang)
-        if self.force_err_ang_old_way != self.force_err_ang:
-            print('Hey! self.force_err_ang_old_way != self.force_err_ang\n'*3)
-            raise('Hey! self.force_err_ang_old_way != self.force_err_ang\n')
+        self.force_err_ang_old_way = self.force_ang - self.ss_avg_force_angle # This can be wrong for the case "3 deg - 354 deg"
+        self.force_err_ang = self.compute_angle_error(np.ones(len(self.force_ang))*self.ss_avg_force_angle, np.array(self.force_ang))
+        # print(self.force_err_ang_old_way, self.force_err_ang)
 
         # print('sfv:', self.force_err_ang)
         self.force_err_abs = self.force_abs - self.ss_avg_force_magnitude

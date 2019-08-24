@@ -27,7 +27,7 @@ if True:
     # run_folder = r'run#612/' # spec_ECCE_PMSM_
     # run_folder = r'run#6130/' # spec_ECCE_PMSM_ (Q6p2)
     # run_folder = r'run#6140/' # spec_PEMD_BPMSM_Q12p2
-    run_folder = r'run#6150/' # spec_PEMD_BPMSM_Q6p1
+    run_folder = r'run#6151/' # spec_PEMD_BPMSM_Q6p1
     # run_folder = r'run#6160/' # spec_PEMD_BPMSM_Q12p4
 else:
     if 'Y730' in fea_config_dict['pc_name']:
