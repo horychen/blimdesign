@@ -768,7 +768,8 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         study.GetMeshControl().SetValue("AirMeshSize", 4) # mm
         study.GetMeshControl().SetValue("Adaptive", 0)
 
-        study.GetMeshControl().CreateCondition("RotationPeriodicMeshAutomatic", "autoRotMesh") # with this you can choose to set CircumferentialDivision automatically
+        # This is not neccessary for whole model FEA
+        # study.GetMeshControl().CreateCondition("RotationPeriodicMeshAutomatic", "autoRotMesh") # with this you can choose to set CircumferentialDivision automatically
 
         study.GetMeshControl().CreateCondition("Part", "MagnetMeshCtrl")
         study.GetMeshControl().GetCondition("MagnetMeshCtrl").SetValue("Size", self.meshSize_Magnet)

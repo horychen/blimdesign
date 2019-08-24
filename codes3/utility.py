@@ -24,7 +24,6 @@ class ExceptionBadNumberOfParts(Exception):
     def __str__(self):
         return str(self.message)
 
-        
 def communicate_database(spec):
     try:
         import mysql.connector
@@ -759,7 +758,13 @@ class suspension_force_vector(object):
         # print('sfv:', self.ss_avg_force_angle)
         self.ss_avg_force_magnitude = np.sqrt(self.ss_avg_force_vector[0]**2 + self.ss_avg_force_vector[1]**2)
 
-        self.force_err_ang = self.force_ang - self.ss_avg_force_angle
+        self.force_err_ang_old_way = self.force_ang - self.ss_avg_force_angle
+        self.force_err_ang = self.compute_angle_error(self.ss_avg_force_angle, self.force_ang)
+        print(self.force_err_ang_old_way, self.force_err_ang)
+        if self.force_err_ang_old_way != self.force_err_ang:
+            print('Hey! self.force_err_ang_old_way != self.force_err_ang\n'*3)
+            raise('Hey! self.force_err_ang_old_way != self.force_err_ang\n')
+
         # print('sfv:', self.force_err_ang)
         self.force_err_abs = self.force_abs - self.ss_avg_force_magnitude
 
@@ -775,6 +780,33 @@ class suspension_force_vector(object):
                                         abs(self.ss_max_force_err_ang[1]) ] )
         self.normalized_force_error_magnitude = max( [  abs(self.ss_max_force_err_abs[0]), 
                                                         abs(self.ss_max_force_err_abs[1]) ] ) / self.ss_avg_force_magnitude
+
+    def compute_angle_error(self, alpha_star, alpha_actual):
+        
+        #both angle arrays are assumed to be in degrees
+        N = alpha_star.shape[0] #determine number of input angles
+        
+        #first preallocate arrays for unit vectors directed at every angle
+        vectors_star = np.zeros((N,2))
+        vectors =      np.zeros((N,2))
+        
+        #unit vectors for desired angle
+        vectors_star[:,0] = np.cos( np.deg2rad(alpha_star) )
+        vectors_star[:,1] = np.sin( np.deg2rad(alpha_star) )
+        #unit vectors for actual angle
+        vectors[:,0] = np.cos( np.deg2rad(alpha_actual) )
+        vectors[:,1] = np.sin( np.deg2rad(alpha_actual) )
+        
+        #determine angle between vectors in degrees (note that this is only the angle magnitude):
+        #This is just doing the cross product between all corresponding unit vectors
+        error_angle_mag = np.rad2deg( np.arccos((vectors_star*vectors).sum(axis = 1)) )
+        
+        #to determine the error angle direction we can use the cross product between the vectors
+        #positive cross product means the desired vector lags the actual vector and the error angle
+        #is positive
+        sign = np.sign( np.cross(vectors_star, vectors) )
+        
+        return sign*error_angle_mag
 
 def pyplot_clear(axeses):
     # self.fig_main.clf()
@@ -1030,11 +1062,10 @@ class data_manager(object):
             voltage =      self.terminal_voltage()[-number_of_steps_2ndTTS:]
             current =       self.circuit_current(which=key)[-number_of_steps_2ndTTS:]
         except KeyError as error:
-            key = '8W'
+            key = '8W' # for the design with p=4, ps=5
             mytime  = self.Current_dict['Time(s)'][-number_of_steps_2ndTTS:]
             voltage =      self.terminal_voltage()[-number_of_steps_2ndTTS:]
             current =       self.circuit_current(which=key)[-number_of_steps_2ndTTS:]
-
 
 
         # if len(mytime) > len(voltage):

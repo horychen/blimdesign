@@ -24,11 +24,11 @@ if True:
     run_folder = r'run#610/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
     run_folder = r'run#611/' # zero Rs is not allowed
 
-    run_folder = r'run#612/' # spec_ECCE_PMSM_
-    run_folder = r'run#613/' # spec_ECCE_PMSM_ (Q6p2)
-    run_folder = r'run#614/' # spec_PEMD_BPMSM_Q12p2
-    run_folder = r'run#615/' # spec_PEMD_BPMSM_Q6p1
-    run_folder = r'run#616/' # spec_PEMD_BPMSM_Q12p4
+    # run_folder = r'run#612/' # spec_ECCE_PMSM_
+    # run_folder = r'run#6130/' # spec_ECCE_PMSM_ (Q6p2)
+    # run_folder = r'run#6140/' # spec_PEMD_BPMSM_Q12p2
+    run_folder = r'run#6150/' # spec_PEMD_BPMSM_Q6p1
+    # run_folder = r'run#6160/' # spec_PEMD_BPMSM_Q12p4
 else:
     if 'Y730' in fea_config_dict['pc_name']:
         ################################################################
@@ -81,8 +81,8 @@ fea_config_dict['run_folder'] = run_folder
 # my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals()) # Q=24, p=1
 # my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
 # my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
-# my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
-my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=6, p=1
+my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
+# my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
 if False: 
     # Case Q=24 can use IM's stator for PMSM's
     spec.build_im_template(fea_config_dict)
@@ -160,7 +160,8 @@ class Problem_BearinglessSynchronousDesign(object):
             if stuck_at == counter_fitness_called:
                 counter_loop += 1
 
-            try:
+            if True:
+            # try:
                 cost_function, f1, f2, f3, FRW, \
                 normalized_torque_ripple, \
                 normalized_force_error_magnitude, \
@@ -177,65 +178,65 @@ class Problem_BearinglessSynchronousDesign(object):
                 # update to be deleted when JMAG releases the use
                 ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
 
-            except FileNotFoundError as error: # The copy region target is not found
-                print(str(error))
-                print('CJH: "the ind***TranPMSM_torque.csv is not found" means the mesher or the solver has failed. For now, simply consider it to be bad design.')
-                f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
+            # except FileNotFoundError as error: # The copy region target is not found
+            #     print(str(error))
+            #     print('CJH: "the ind***TranPMSM_torque.csv is not found" means the mesher or the solver has failed. For now, simply consider it to be bad design.')
+            #     f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
 
-            except utility.ExceptionBadNumberOfParts as error:
-                print(str(error)) 
-                # print("Detail: {}".format(error.payload))
-                f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
-                utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3)
-                break
+            # except utility.ExceptionBadNumberOfParts as error:
+            #     print(str(error)) 
+            #     # print("Detail: {}".format(error.payload))
+            #     f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
+            #     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3)
+            #     break
 
-            except (utility.ExceptionReTry, pywintypes.com_error) as error:
-                print(error)
+            # except (utility.ExceptionReTry, pywintypes.com_error) as error:
+            #     print(error)
 
-                msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
-                logger = logging.getLogger(__name__)
-                logger.error(msg)
-                print(msg)
+            #     msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
+            #     logger = logging.getLogger(__name__)
+            #     logger.error(msg)
+            #     print(msg)
 
-                if counter_loop > 1: # > 1 = two attemps; > 2 = three attemps
-                    print(error)
-                    raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
-                else:
-                    from time import sleep
-                    print('\n\n\nSleep for 3 sec and continue.')
-                    sleep(3)
-                    continue
+            #     if counter_loop > 1: # > 1 = two attemps; > 2 = three attemps
+            #         print(error)
+            #         raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+            #     else:
+            #         from time import sleep
+            #         print('\n\n\nSleep for 3 sec and continue.')
+            #         sleep(3)
+            #         continue
 
-            except AttributeError as error:
-                print(str(error)) 
-                # print("Detail: {}".format(error.payload))
+            # except AttributeError as error:
+            #     print(str(error)) 
+            #     # print("Detail: {}".format(error.payload))
 
-                msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
-                logger = logging.getLogger(__name__)
-                logger.error(msg)
-                print(msg)
+            #     msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
+            #     logger = logging.getLogger(__name__)
+            #     logger.error(msg)
+            #     print(msg)
 
-                if 'designer.Application' in str(error):
-                    if counter_loop > 1: 
-                        print(error)
-                        raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
-                    else:
-                        from time import sleep
-                        print('\n\n\nSleep for 3 sec and continue.')
-                        sleep(3)                        
-                        continue
-                else:
-                    raise error
+            #     if 'designer.Application' in str(error):
+            #         if counter_loop > 1: 
+            #             print(error)
+            #             raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+            #         else:
+            #             from time import sleep
+            #             print('\n\n\nSleep for 3 sec and continue.')
+            #             sleep(3)                        
+            #             continue
+            #     else:
+            #         raise error
 
-            except Exception as e: # raise and need human inspection
+            # except Exception as e: # raise and need human inspection
 
-                # raise e
-                print('-'*40 + 'Unexpected error is caught.')
-                print(str(e)) 
-                utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nUnexpected expection:' + str(e))
-                raise e
+            #     # raise e
+            #     print('-'*40 + 'Unexpected error is caught.')
+            #     print(str(e)) 
+            #     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nUnexpected expection:' + str(e))
+            #     raise e
 
-            else:
+            # else:
                 break
 
 
@@ -265,6 +266,7 @@ class Problem_BearinglessSynchronousDesign(object):
                 f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
             print('f1,f2,f3:',f1,f2,f3)
         except:
+            msg = 'This design causes an error in JMAG and hence is discarded..'
             print(msg)
             logger = logging.getLogger(__name__)
             logger.warn(msg)

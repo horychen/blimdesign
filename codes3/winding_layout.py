@@ -82,11 +82,12 @@ class winding_layout(object):
             self.l_rightlayer2 = ['+', '+', '+', '+', '+', '+']
             self.l_leftlayer1  = ['W', 'U', 'V', 'W', 'U', 'V']
             self.l_leftlayer2  = ['-', '-', '-', '-', '-', '-']
-            self.grouping_AC   = [  1,   0,   0,   0,   1,   1] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
-            # self.grouping_AC   = [  0,   1,   1,   1,   0,   0]
+            # self.grouping_AC   = [  1,   0,   0,   0,   1,   1] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+            # self.grouping_AC   = [  0,   0,   0,   1,   1,   1]
+            self.grouping_AC   = [  0,   1,   0,   1,   0,   1] # Jingwei's layout
             self.coil_pitch    = -1 # left layer can be inferred from coil pitch and right layer diagram
             self.CommutatingSequenceD = 1
-            self.CommutatingSequenceB = 0
+            self.CommutatingSequenceB = 0 # [CHECKED]
             self.number_parallel_branch = 2.
             self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
             self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
@@ -110,9 +111,10 @@ class winding_layout(object):
             self.l_leftlayer1  = ['W', 'V', 'U', 'W', 'V', 'U']
             self.l_leftlayer2  = ['-', '+', '-', '+', '-', '+']
             self.grouping_AC   = [  0,   1,   0,   1,   0,   1] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+                                                                # Same with Jingwei's layout
             self.coil_pitch    = 2 # left layer can be inferred from coil pitch and right layer diagram
             self.CommutatingSequenceD = 1
-            self.CommutatingSequenceB = 0
+            self.CommutatingSequenceB = 0 # [CHECKED]
             self.number_parallel_branch = 2.
             self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
             self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
@@ -137,10 +139,11 @@ class winding_layout(object):
             self.l_rightlayer2 = ['+', '-', '+', '-', '+', '-', '+', '-', '+', '-', '+', '-']
             self.l_leftlayer1  = ['U', 'W', 'V', 'U', 'W', 'V', 'U', 'W', 'V', 'U', 'W', 'V']
             self.l_leftlayer2  = ['+', '-', '+', '-', '+', '-', '+', '-', '+', '-', '+', '-']
-            self.grouping_AC   = [  0,   1,   0,   0,   0,   0,   1,   0,   1,   1,   1,   1] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+            # self.grouping_AC   = [  0,   1,   0,   0,   0,   0,   1,   0,   1,   1,   1,   1] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+            self.grouping_AC   = [  0,   1,   1,   0,   0,   1,   1,   0,   0,   1,   1,   0] # Jingwei's layout
             self.coil_pitch    = 3 # left layer can be inferred from coil pitch and right layer diagram
             self.CommutatingSequenceD = 1 # D stands for Drive winding (i.e., torque winding)
-            self.CommutatingSequenceB = 0 # B stands for Bearing winding (i.e., suspension winding), commutating sequence decides the direction of the rotating field
+            self.CommutatingSequenceB = 1 # 0 # [CHECKED] # B stands for Bearing winding (i.e., suspension winding), commutating sequence decides the direction of the rotating field
             self.number_parallel_branch = 2.
             self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
             self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
@@ -173,10 +176,11 @@ class winding_layout(object):
             self.l_rightlayer2 = ['-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']
             self.l_leftlayer1  = ['W', 'U', 'V', 'W', 'U', 'V', 'W', 'U', 'V', 'W', 'U', 'V']
             self.l_leftlayer2  = ['+', '+', '+', '+', '+', '+', '+', '+', '+', '+', '+', '+']
-            self.grouping_AC   = [  0,   0,   0,   1,   1,   1,   1,   1,   1,   0,   0,   0] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+            # self.grouping_AC   = [  0,   0,   0,   1,   1,   1,   1,   1,   1,   0,   0,   0] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+            self.grouping_AC   = [  0,   0,   1,   1,   0,   0,   1,   1,   0,   0,   1,   1] # Jingwei's layout
             self.coil_pitch    = -1 # left layer can be inferred from coil pitch and right layer diagram
             self.CommutatingSequenceD = 1 # D stands for Drive winding (i.e., torque winding)
-            self.CommutatingSequenceB = 0 # B stands for Bearing winding (i.e., suspension winding), commutating sequence decides the direction of the rotating field
+            self.CommutatingSequenceB = 0 # [CHECKED] # B stands for Bearing winding (i.e., suspension winding), commutating sequence decides the direction of the rotating field
             self.number_parallel_branch = 2.
             self.bool_3PhaseCurrentSource = False # 3PhaseCurrentSource is a macro in circuit setup of JMAG
             self.no_winding_layer = 2 # for torque winding and this means there could be a short pitch
