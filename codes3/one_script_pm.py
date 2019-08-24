@@ -160,8 +160,8 @@ class Problem_BearinglessSynchronousDesign(object):
             if stuck_at == counter_fitness_called:
                 counter_loop += 1
 
-            if True:
-            # try:
+            # if True:
+            try:
                 cost_function, f1, f2, f3, FRW, \
                 normalized_torque_ripple, \
                 normalized_force_error_magnitude, \
@@ -178,98 +178,100 @@ class Problem_BearinglessSynchronousDesign(object):
                 # update to be deleted when JMAG releases the use
                 ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
 
-            # except FileNotFoundError as error: # The copy region target is not found
-            #     print(str(error))
-            #     print('CJH: "the ind***TranPMSM_torque.csv is not found" means the mesher or the solver has failed. For now, simply consider it to be bad design.')
-            #     f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
-
-            # except utility.ExceptionBadNumberOfParts as error:
-            #     print(str(error)) 
-            #     # print("Detail: {}".format(error.payload))
-            #     f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
-            #     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3)
-            #     break
-
-            # except (utility.ExceptionReTry, pywintypes.com_error) as error:
-            #     print(error)
-
-            #     msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
-            #     logger = logging.getLogger(__name__)
-            #     logger.error(msg)
-            #     print(msg)
-
-            #     if counter_loop > 1: # > 1 = two attemps; > 2 = three attemps
-            #         print(error)
-            #         raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
-            #     else:
-            #         from time import sleep
-            #         print('\n\n\nSleep for 3 sec and continue.')
-            #         sleep(3)
-            #         continue
-
-            # except AttributeError as error:
-            #     print(str(error)) 
-            #     # print("Detail: {}".format(error.payload))
-
-            #     msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
-            #     logger = logging.getLogger(__name__)
-            #     logger.error(msg)
-            #     print(msg)
-
-            #     if 'designer.Application' in str(error):
-            #         if counter_loop > 1: 
-            #             print(error)
-            #             raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
-            #         else:
-            #             from time import sleep
-            #             print('\n\n\nSleep for 3 sec and continue.')
-            #             sleep(3)                        
-            #             continue
-            #     else:
-            #         raise error
-
-            # except Exception as e: # raise and need human inspection
-
-            #     # raise e
-            #     print('-'*40 + 'Unexpected error is caught.')
-            #     print(str(e)) 
-            #     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nUnexpected expection:' + str(e))
-            #     raise e
-
-            # else:
-                break
-
-
-        # - Price
-        f1 
-        # - Efficiency @ Rated Power
-        f2 
-        # Ripple Performance (Weighted Sum)
-        f3 
-        print('f1,f2,f3:',f1,f2,f3)
-
-        try:
-            # Constraints (Em<0.2 and Ea<10 deg):
-            # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or SafetyFactor < 1.5:
-            # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
-            # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
-            if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.3 or abs(force_error_angle) > 10 or FRW < 0.75:
-                print('Constraints are violated:')
-                if abs(normalized_torque_ripple)>=0.3:
-                    print('\tabs(normalized_torque_ripple)>=0.3')
-                if abs(normalized_force_error_magnitude) >= 0.3:
-                    print('\tabs(normalized_force_error_magnitude) >= 0.3')
-                if abs(force_error_angle) > 10:
-                    print('\tabs(force_error_angle) > 10')
-                if FRW < 0.75:
-                    print('\tFRW < 0.75')
+            except:
                 f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
-            print('f1,f2,f3:',f1,f2,f3)
-        except:
-            msg = 'This design causes an error in JMAG and hence is discarded..'
-            print(msg)
-            logger = logging.getLogger(__name__)
-            logger.warn(msg)
+
+                # except FileNotFoundError as error: # The copy region target is not found
+                #     print(str(error))
+                #     print('CJH: "the ind***TranPMSM_torque.csv is not found" means the mesher or the solver has failed. For now, simply consider it to be bad design.')
+                #     f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
+
+                # except utility.ExceptionBadNumberOfParts as error:
+                #     print(str(error)) 
+                #     # print("Detail: {}".format(error.payload))
+                #     f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
+                #     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3)
+                #     break
+
+                # except (utility.ExceptionReTry, pywintypes.com_error) as error:
+                #     print(error)
+
+                #     msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
+                #     logger = logging.getLogger(__name__)
+                #     logger.error(msg)
+                #     print(msg)
+
+                #     if counter_loop > 1: # > 1 = two attemps; > 2 = three attemps
+                #         print(error)
+                #         raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+                #     else:
+                #         from time import sleep
+                #         print('\n\n\nSleep for 3 sec and continue.')
+                #         sleep(3)
+                #         continue
+
+                # except AttributeError as error:
+                #     print(str(error)) 
+                #     # print("Detail: {}".format(error.payload))
+
+                #     msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
+                #     logger = logging.getLogger(__name__)
+                #     logger.error(msg)
+                #     print(msg)
+
+                #     if 'designer.Application' in str(error):
+                #         if counter_loop > 1: 
+                #             print(error)
+                #             raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+                #         else:
+                #             from time import sleep
+                #             print('\n\n\nSleep for 3 sec and continue.')
+                #             sleep(3)                        
+                #             continue
+                #     else:
+                #         raise error
+
+                # except Exception as e: # raise and need human inspection
+
+                #     # raise e
+                #     print('-'*40 + 'Unexpected error is caught.')
+                #     print(str(e)) 
+                #     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nUnexpected expection:' + str(e))
+                #     raise e
+
+            else:
+                # - Price
+                f1 
+                # - Efficiency @ Rated Power
+                f2 
+                # Ripple Performance (Weighted Sum)
+                f3 
+                print('f1,f2,f3:',f1,f2,f3)
+
+                try:
+                    # Constraints (Em<0.2 and Ea<10 deg):
+                    # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or SafetyFactor < 1.5:
+                    # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
+                    # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
+                    if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.3 or abs(force_error_angle) > 10 or FRW < 0.75:
+                        print('Constraints are violated:')
+                        if abs(normalized_torque_ripple)>=0.3:
+                            print('\tabs(normalized_torque_ripple)>=0.3')
+                        if abs(normalized_force_error_magnitude) >= 0.3:
+                            print('\tabs(normalized_force_error_magnitude) >= 0.3')
+                        if abs(force_error_angle) > 10:
+                            print('\tabs(force_error_angle) > 10')
+                        if FRW < 0.75:
+                            print('\tFRW < 0.75')
+                        f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
+                    print('f1,f2,f3:',f1,f2,f3)
+                except:
+                    msg = 'This design causes an error in JMAG and hence is discarded..'
+                    print(msg)
+                    logger = logging.getLogger(__name__)
+                    logger.warn(msg)
+
+                break
 
         counter_fitness_return += 1
         print('Fitness: %d, %d\n----------------'%(counter_fitness_called, counter_fitness_return))
