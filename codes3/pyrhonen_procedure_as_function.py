@@ -1433,7 +1433,7 @@ class desgin_specification(object):
             self.pmsm_template.mm_r_sf              = 0
             self.pmsm_template.mm_r_sb              = 0
             self.pmsm_template.Q                    = Q
-            self.pmsm_template.sleeve_length        = 3  # mm
+            self.pmsm_template.sleeve_length        = 1 # 3 # mm
             self.pmsm_template.fixed_air_gap_length = 0.75 # mm
             self.pmsm_template.mm_d_pm              = 5  # mm
             self.pmsm_template.deg_alpha_rm         = 90/90*360/(2*p) # deg

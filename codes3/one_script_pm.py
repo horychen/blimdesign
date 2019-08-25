@@ -26,7 +26,7 @@ if True:
 
     # run_folder = r'run#612/' # spec_ECCE_PMSM_
     # run_folder = r'run#6130/' # spec_ECCE_PMSM_ (Q6p2)
-    run_folder = r'run#61499/' # spec_PEMD_BPMSM_Q12p2
+    run_folder = r'run#61497/' # spec_PEMD_BPMSM_Q12p2, 99 zQ is fixed to 10 | 98 zQ is derived | 97 sleeve length is reduced to 1 mm |
     # run_folder = r'run#6151/' # spec_PEMD_BPMSM_Q6p1
     # run_folder = r'run#6160/' # spec_PEMD_BPMSM_Q12p4
 else:
@@ -100,6 +100,7 @@ ad = acm_designer.acm_designer(fea_config_dict, spec)
 ad.init_logger(prefix='bpmsm')
 ad.bool_re_evaluate = bool_re_evaluate
 
+# ad.bounds_denorm = spec.acm_template.get_classic_bounds(which_filter='VariableSleeveLength')
 ad.bounds_denorm = spec.acm_template.get_classic_bounds(which_filter='FixedSleeveLength') # ad.get_classic_bounds()
 ad.bound_filter  = spec.acm_template.bound_filter
 print('---------------------\nBounds:')
