@@ -179,7 +179,7 @@ class Problem_BearinglessSynchronousDesign(object):
                 ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
             except KeyboardInterrupt as error:
                 raise error
-            except Exception as error
+            except Exception as error:
                 f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
                 print(str(error))
                 logger = logging.getLogger(__name__)

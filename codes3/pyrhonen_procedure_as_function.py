@@ -1453,19 +1453,21 @@ class desgin_specification(object):
             self.rotor_steel_outer_radius             = self.pmsm_template.Radius_OuterRotor
 
             # Excitation Properties
+            self.pmsm_template.wily              = wily
             self.pmsm_template.DriveW_Freq       = self.ExcitationFreq
             print('Pyrhonen TODO')
             self.pmsm_template.DriveW_Rs         = 1.0 # TODO: Must be greater than zero to let JMAG work
-            print('Pyrhonen TODO')
-            self.pmsm_template.DriveW_zQ         = 10 # TODO:
+            self.pmsm_template.DriveW_zQ         = self.get_zQ() # TODO:
             self.pmsm_template.DriveW_CurrentAmp = 100 # TODO:
             self.pmsm_template.DriveW_poles      = self.p*2
 
             self.pmsm_template.Js                = 4e6 # Arms/mm^2 im_template.Js 
             self.pmsm_template.fill_factor       = 0.5 # im_template.fill_factor 
 
-            self.pmsm_template.stack_length      = 100 # mm TODO:
-            self.pmsm_template.wily              = wily
+            self.pmsm_template.stack_length      = 1e3*self.get_stack_length() # mm TODO:
+            print('zQ:', self.pmsm_template.DriveW_zQ)
+            print('stack_length:', self.pmsm_template.stack_length)
+            # quit()
 
             # Specification details:
             #         # 让儿子能访问爸爸
@@ -1513,6 +1515,69 @@ class desgin_specification(object):
         self.filtered_template_neighbor_bounds = [bound for idx, bound in enumerate(self.original_template_neighbor_bounds) if idx not in index_not_included]
         return self.filtered_template_neighbor_bounds
 
+    def get_stack_length(self):
+        speed_rpm = self.ExcitationFreq * 60 / self.p # rpm
+        rotor_outer_radius_r_or = eric_specify_tip_speed_get_radius(self.tip_speed, speed_rpm)
+        required_torque = self.mec_power/(2*np.pi*speed_rpm)*60
+        rotor_volume_Vr = required_torque/(2*self.TangentialStress)
+        stack_length = rotor_volume_Vr / (np.pi * rotor_outer_radius_r_or**2)
+        return stack_length
+
+    def get_zQ(self):
+        stator_phase_voltage_rms = self.VoltageRating / np.sqrt(3)
+        desired_emf_Em = 0.95 * stator_phase_voltage_rms 
+        no_phase_m = 3
+        if self.DPNV_or_SEPA:
+            number_parallel_branch = 2
+        else:
+            number_parallel_branch = 1
+        speed_rpm = self.ExcitationFreq * 60 / self.p # rpm
+
+        rotor_outer_radius_r_or = eric_specify_tip_speed_get_radius(self.tip_speed, speed_rpm)
+        rotor_outer_diameter_Dr = rotor_outer_radius_r_or*2
+        air_gap_length_delta = 3.75*1e-3 # mm
+        air_gap_diameter_D = rotor_outer_diameter_Dr + air_gap_length_delta*2 # Assume single sided air gap length is 3.75 mm (including sleeve length of 3 mm)
+        pole_pitch_tau_p = np.pi*air_gap_diameter_D/(2*self.p)
+
+        if self.pmsm_template.wily.no_winding_layer == 1:
+            # full pitch - easy
+            coil_span_W = pole_pitch_tau_p
+        else: 
+            # short pitch (not tested)
+            stator_slot_pitch_tau_us = np.pi * air_gap_diameter_D / self.Qs
+            coil_span_W = self.pmsm_template.wily.coil_pitch * stator_slot_pitch_tau_us
+            # for 2 pole motor, the recommended short pitch is 0.7. --p76
+
+        kd1 = 2*sin(1/no_phase_m*np.pi/2)/(self.Qs/(no_phase_m*self.p)*sin(1*np.pi*self.p/self.Qs))
+        kq1 = sin(1*coil_span_W/pole_pitch_tau_p*np.pi/2)        
+        ksq1 = 1
+        kw1 = kd1 * kq1 * ksq1
+
+        alpha_i = 2/np.pi # ideal sinusoidal flux density distribusion, when the saturation happens in teeth, alpha_i becomes higher.
+
+        guess_air_gap_flux_density = 0.9 # T
+
+        stack_length = self.get_stack_length()
+        stack_length_eff = stack_length + 2 * air_gap_length_delta
+
+        air_gap_flux_Phi_m = alpha_i * guess_air_gap_flux_density * pole_pitch_tau_p * stack_length_eff
+
+        no_series_coil_turns_N = sqrt(2)*desired_emf_Em / (2*np.pi*self.ExcitationFreq * kw1 * air_gap_flux_Phi_m)
+        print('The desired value of no_series_coil_turns_N according to the guess_air_gap_flux_density is', no_series_coil_turns_N)
+        no_series_coil_turns_N = round(no_series_coil_turns_N)
+        print('Rounds up to:', no_series_coil_turns_N)
+        backup = no_series_coil_turns_N
+        distribution_q = self.Qs / (2*self.p*no_phase_m)
+        bool_we_have_plenty_voltage = True
+        if bool_we_have_plenty_voltage:
+            no_series_coil_turns_N = min([self.p*distribution_q*i for i in range(100,0,-1)], key=lambda x:abs(x - no_series_coil_turns_N)) # using larger turns value has priority
+        else:
+            no_series_coil_turns_N = min([self.p*distribution_q*i for i in range(100)], key=lambda x:abs(x - no_series_coil_turns_N))  # using lower turns value has priority # https://stackoverflow.com/questions/12141150/from-list-of-integers-get-number-closest-to-a-given-value
+        print('To be multiple of pq:', no_series_coil_turns_N)
+
+        no_conductors_per_slot_zQ = 2* no_phase_m * no_series_coil_turns_N / self.Qs * number_parallel_branch
+
+        return no_conductors_per_slot_zQ
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Play with this Pyrhonen procedure
