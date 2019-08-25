@@ -1458,15 +1458,16 @@ class desgin_specification(object):
             print('Pyrhonen TODO')
             self.pmsm_template.DriveW_Rs         = 1.0 # TODO: Must be greater than zero to let JMAG work
             self.pmsm_template.DriveW_zQ         = self.get_zQ() # TODO:
-            self.pmsm_template.DriveW_CurrentAmp = 100 # TODO:
+            self.pmsm_template.DriveW_CurrentAmp = np.sqrt(2)*self.get_stator_phase_current_rms() # TODO:
             self.pmsm_template.DriveW_poles      = self.p*2
 
             self.pmsm_template.Js                = 4e6 # Arms/mm^2 im_template.Js 
             self.pmsm_template.fill_factor       = 0.5 # im_template.fill_factor 
 
             self.pmsm_template.stack_length      = 1e3*self.get_stack_length() # mm TODO:
+            print('DriveW_CurrentAmp:', self.pmsm_template.DriveW_CurrentAmp, 'A')
             print('zQ:', self.pmsm_template.DriveW_zQ)
-            print('stack_length:', self.pmsm_template.stack_length)
+            print('stack_length:', self.pmsm_template.stack_length, 'mm')
             # quit()
 
             # Specification details:
@@ -1515,6 +1516,11 @@ class desgin_specification(object):
         self.filtered_template_neighbor_bounds = [bound for idx, bound in enumerate(self.original_template_neighbor_bounds) if idx not in index_not_included]
         return self.filtered_template_neighbor_bounds
 
+    def get_stator_phase_current_rms(self, no_phase_m=3):
+        stator_phase_voltage_rms = self.VoltageRating / np.sqrt(3)
+        stator_phase_current_rms = self.mec_power / (no_phase_m*self.guess_efficiency*stator_phase_voltage_rms*self.guess_power_factor)
+        return stator_phase_current_rms
+
     def get_stack_length(self):
         speed_rpm = self.ExcitationFreq * 60 / self.p # rpm
         rotor_outer_radius_r_or = eric_specify_tip_speed_get_radius(self.tip_speed, speed_rpm)
@@ -1523,10 +1529,10 @@ class desgin_specification(object):
         stack_length = rotor_volume_Vr / (np.pi * rotor_outer_radius_r_or**2)
         return stack_length
 
-    def get_zQ(self):
+    def get_zQ(self, no_phase_m=3):
         stator_phase_voltage_rms = self.VoltageRating / np.sqrt(3)
         desired_emf_Em = 0.95 * stator_phase_voltage_rms 
-        no_phase_m = 3
+        
         if self.DPNV_or_SEPA:
             number_parallel_branch = 2
         else:
