@@ -1545,19 +1545,22 @@ class desgin_specification(object):
         air_gap_diameter_D = rotor_outer_diameter_Dr + air_gap_length_delta*2 # Assume single sided air gap length is 3.75 mm (including sleeve length of 3 mm)
         pole_pitch_tau_p = np.pi*air_gap_diameter_D/(2*self.p)
 
-        if self.pmsm_template.wily.no_winding_layer == 1:
-            # full pitch - easy
-            coil_span_W = pole_pitch_tau_p
-        else: 
-            # short pitch (not tested)
-            stator_slot_pitch_tau_us = np.pi * air_gap_diameter_D / self.Qs
-            coil_span_W = self.pmsm_template.wily.coil_pitch * stator_slot_pitch_tau_us
-            # for 2 pole motor, the recommended short pitch is 0.7. --p76
+        if self.pmsm_template.wily.coil_pitch < 0:
+            kw1 = 1
+        else:
+            if self.pmsm_template.wily.no_winding_layer == 1:
+                # full pitch - easy
+                coil_span_W = pole_pitch_tau_p
+            else: 
+                # short pitch (not tested)
+                stator_slot_pitch_tau_us = np.pi * air_gap_diameter_D / self.Qs
+                coil_span_W = self.pmsm_template.wily.coil_pitch * stator_slot_pitch_tau_us
+                # for 2 pole motor, the recommended short pitch is 0.7. --p76
 
-        kd1 = 2*sin(1/no_phase_m*np.pi/2)/(self.Qs/(no_phase_m*self.p)*sin(1*np.pi*self.p/self.Qs))
-        kq1 = sin(1*coil_span_W/pole_pitch_tau_p*np.pi/2)        
-        ksq1 = 1
-        kw1 = kd1 * kq1 * ksq1
+            kd1 = 2*sin(1/no_phase_m*np.pi/2)/(self.Qs/(no_phase_m*self.p)*sin(1*np.pi*self.p/self.Qs))
+            kq1 = sin(1*coil_span_W/pole_pitch_tau_p*np.pi/2)        
+            ksq1 = 1
+            kw1 = kd1 * kq1 * ksq1
 
         alpha_i = 2/np.pi # ideal sinusoidal flux density distribusion, when the saturation happens in teeth, alpha_i becomes higher.
 
