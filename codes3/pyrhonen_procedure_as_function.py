@@ -1433,7 +1433,7 @@ class desgin_specification(object):
             self.pmsm_template.mm_r_sf              = 0
             self.pmsm_template.mm_r_sb              = 0
             self.pmsm_template.Q                    = Q
-            self.pmsm_template.sleeve_length        = 1 # 3 # mm
+            self.pmsm_template.sleeve_length        = 2 # 3 # mm
             self.pmsm_template.fixed_air_gap_length = 0.75 # mm
             self.pmsm_template.mm_d_pm              = 5  # mm
             self.pmsm_template.deg_alpha_rm         = 90/90*360/(2*p) # deg
@@ -1541,8 +1541,8 @@ class desgin_specification(object):
 
         rotor_outer_radius_r_or = eric_specify_tip_speed_get_radius(self.tip_speed, speed_rpm)
         rotor_outer_diameter_Dr = rotor_outer_radius_r_or*2
-        air_gap_length_delta = 3.75*1e-3 # mm
-        air_gap_diameter_D = rotor_outer_diameter_Dr + air_gap_length_delta*2 # Assume single sided air gap length is 3.75 mm (including sleeve length of 3 mm)
+        air_gap_length_delta = 2.75*1e-3 # mm
+        air_gap_diameter_D = rotor_outer_diameter_Dr + air_gap_length_delta*2 # Assume single sided air gap length is 2.75 mm (including sleeve length of 2 mm)
         pole_pitch_tau_p = np.pi*air_gap_diameter_D/(2*self.p)
 
         if self.pmsm_template.wily.coil_pitch < 0:

@@ -51,7 +51,7 @@ class bearingless_spmsm_template(object):
                               1,          # mm_w_st             = free_variables[4] # STATOR
                               0,          # sleeve_length       = free_variables[5] # AIRGAP  # 0: sleeve_length = 3 mm        # TIA ITEC
                               1,          # mm_d_pm             = free_variables[6] # ROTOR
-                              1,          # deg_alpha_rm        = free_variables[7]
+                              1,          # deg_alpha_rm        = free_variables[7] # 2019/08/25: 我发现 alpha_rm 导致的 notch 有可能会导致转矩波动——好吧，并不是，实际上没有 notch 的电机的转矩波动很大。
                               self.s!=1,  # deg_alpha_rs        = free_variables[8]           # 0: deg_alpha_rs = deg_alpha_rm # s=1
                               1,          # mm_d_ri             = free_variables[9]
                               1,          # rotor_outer_radius  = free_variables[10]                                           # Comment: the outer radius of the rotor without magnet
@@ -148,14 +148,16 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
                     idx_x_denorm += 1
                 else:
                     if idx == 5:
-                        free_variables[5] = spmsm_template.sleeve_length
+                        free_variables[idx] = spmsm_template.sleeve_length
                         print('TIA ITEC: Sleeve length is fixed to %g mm'%(spmsm_template.sleeve_length))
                     elif idx == 8:
-                        free_variables[8] = free_variables[idx-1]
+                        free_variables[idx] = free_variables[idx-1]
                     elif idx == 12:
-                        free_variables[12] = spmsm_template.mm_d_rs
+                        free_variables[idx] = spmsm_template.mm_d_rs
+                    elif idx == 7:
+                        free_variables[idx] = spmsm_template.deg_alpha_rm
                     else:
-                        raise Exception('Not tested feature.')
+                        raise Exception('Not tested feature. Add your referece for this free variable.')
 
         deg_alpha_st             = free_variables[0]  # if self.filter[0]  else spmsm_template.deg_alpha_st            
         mm_d_so                  = free_variables[1]  # if self.filter[1]  else spmsm_template.mm_d_so                 
@@ -341,7 +343,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
 
         self.CurrentAmp_per_phase = None # will be used in copper loss calculation
         self.slot_area_utilizing_ratio = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] + self.fea_config_dict['TORQUE_CURRENT_RATIO']
-        print('self.slot_area_utilizing_ratio:', self.slot_area_utilizing_ratio)
+        print('[Separate winding?] self.slot_area_utilizing_ratio:', self.slot_area_utilizing_ratio)
 
         if self.fea_config_dict is not None:
             self.dict_coil_connection = {41:self.wily.l41, 42:self.wily.l42, 21:self.wily.l21, 22:self.wily.l22} # 这里的2和4等价于leftlayer和rightlayer。

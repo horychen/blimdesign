@@ -228,7 +228,7 @@ class CrossSectInnerNotchedMagnet(object):
         #     list_segments += drawer.drawArc([0,0], P5, P4)
         #     list_segments += drawer.drawLine(P5, P6_extra)
         #     list_segments += drawer.drawArc([0,0], P6_extra, P3_extra)
-            
+
         # else:
             if s>1:
                 alpha_notch  = (alpha_rm - s*alpha_rs) / (s-1) # 永磁体占的弧度
@@ -243,14 +243,20 @@ class CrossSectInnerNotchedMagnet(object):
 
             if self.notched_rotor.deg_alpha_rm >= 180/p*0.9800:
                 print('FULL POLE PITCH MAGNET IS USED.')
-                P1p5 = [P2[0] - d_rp, P2[1]]
-                P2_extra = [P1p5[0]+d_pm, P2[1]]
-                P1p5_rotate = [P1p5[0]*cos(alpha_rp), P1p5[1]*-sin(alpha_rp)]
-                P2_extra_rotate = [P2_extra[0]*cos(alpha_rp), P2_extra[1]*-sin(alpha_rp)]
-                list_segments += drawer.drawLine(P1p5, P2_extra)
-                list_segments += drawer.drawArc([0,0], P2_extra_rotate, P2_extra)
-                list_segments += drawer.drawLine(P2_extra_rotate, P1p5_rotate)
-                list_segments += drawer.drawArc([0,0], P1p5_rotate, P1p5)
+                # Wrong codes:
+                # P1p5 = [P2[0] - d_rp, P2[1]]
+                # P2_extra = [P1p5[0]+d_pm, P2[1]]
+                # P1p5_rotate = [P1p5[0]*cos(alpha_rp), P1p5[1]*-sin(alpha_rp)]
+                # P2_extra_rotate = [P2_extra[0]*cos(alpha_rp), P2_extra[1]*-sin(alpha_rp)]
+                # list_segments += drawer.drawLine(P1p5, P2_extra)
+                # list_segments += drawer.drawArc([0,0], P2_extra_rotate, P2_extra)
+                # list_segments += drawer.drawLine(P2_extra_rotate, P1p5_rotate)
+                # list_segments += drawer.drawArc([0,0], P1p5_rotate, P1p5)
+
+                list_segments += drawer.drawLine(P3_extra, P4)
+                list_segments += drawer.drawArc([0,0], P5, P4)
+                list_segments += drawer.drawLine(P5, P6_extra)
+                list_segments += drawer.drawArc([0,0], P6_extra, P3_extra)
             else:
                 # list_segments += drawer.drawLine(P1, P2)
                 # list_segments += drawer.drawArc([0,0], P3, P2)

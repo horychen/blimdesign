@@ -26,7 +26,7 @@ if True:
 
     # run_folder = r'run#612/' # spec_ECCE_PMSM_
     # run_folder = r'run#6130/' # spec_ECCE_PMSM_ (Q6p2)
-    run_folder = r'run#61497/' # spec_PEMD_BPMSM_Q12p2, 99 zQ is fixed to 10 | 98 zQ is derived | 97 sleeve length is reduced to 1 mm |
+    run_folder = r'run#61495/' # spec_PEMD_BPMSM_Q12p2, 99 zQ is fixed to 10 | 98 zQ is derived | 97 sleeve length is reduced to 1 mm | 96 Jingwei's layout | 95 alpha_rm is fixed to be 360/2/p |
     # run_folder = r'run#6151/' # spec_PEMD_BPMSM_Q6p1
     # run_folder = r'run#6160/' # spec_PEMD_BPMSM_Q12p4
 else:
@@ -181,6 +181,7 @@ class Problem_BearinglessSynchronousDesign(object):
             except KeyboardInterrupt as error:
                 raise error
             except Exception as error:
+                raise error
                 f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
                 print(str(error))
                 logger = logging.getLogger(__name__)
@@ -412,7 +413,7 @@ if True:
                                  realb=0.9, 
                                  limit=2, preserve_diversity=True)) # https://esa.github.io/pagmo2/docs/python/algorithms/py_algorithms.html#pygmo.moead
     print('-'*40, '\n', algo)
-    # quit()
+    quit()
 
 ################################################################
 # MOO Step 3:
