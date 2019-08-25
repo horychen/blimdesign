@@ -26,9 +26,10 @@ if True:
 
     # run_folder = r'run#612/' # spec_ECCE_PMSM_
     # run_folder = r'run#6130/' # spec_ECCE_PMSM_ (Q6p2)
-    run_folder = r'run#61495/' # spec_PEMD_BPMSM_Q12p2, 99 zQ is fixed to 10 | 98 zQ is derived | 97 sleeve length is reduced to 1 mm | 96 Jingwei's layout | 95 alpha_rm is fixed to be 360/2/p |
+    # run_folder = r'run#61495/' # spec_PEMD_BPMSM_Q12p2, 99 zQ is fixed to 10 | 98 zQ is derived | 97 sleeve length is reduced to 1 mm | 96 Jingwei's layout | 95 alpha_rm is fixed to be 360/2/p | 94 full alpha_rm bug is fixed | )
     # run_folder = r'run#6151/' # spec_PEMD_BPMSM_Q6p1
     # run_folder = r'run#6160/' # spec_PEMD_BPMSM_Q12p4
+    run_folder = r'run#61799/' # spec_PEMD_BPMSM_Q24p1
 else:
     if 'Y730' in fea_config_dict['pc_name']:
         ################################################################
@@ -80,14 +81,17 @@ fea_config_dict['run_folder'] = run_folder
 # spec's
 # my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals()) # Q=24, p=1
 # my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
-my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
+# my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
 # my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
 # my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
+my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
+
 if False: 
     # Case Q=24 can use IM's stator for PMSM's
     spec.build_im_template(fea_config_dict)
     spec.build_pmsm_template(fea_config_dict, im_template=spec.im_template)
 else:
+    # Adopt Bianchi 2006 for a SPM motor template
     spec.build_pmsm_template(fea_config_dict, im_template=None)
 
 # select motor type ehere

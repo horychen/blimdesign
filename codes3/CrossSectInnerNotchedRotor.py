@@ -96,6 +96,7 @@ class CrossSectInnerNotchedRotor(object):
 
             if self.deg_alpha_rm >= 180/p*0.9800:
                 print('Non-NOTCHED ROTOR IS USED.\n')
+                print('alpha_P5 is', alpha_P5, alpha_P5/np.pi*180)
                 P1p5 = [P2[0] - d_rp, P2[1]]
                 list_segments += drawer.drawLine(P1, P1p5)
                 list_segments += drawer.drawArc([0,0], P5, P1p5)
@@ -111,6 +112,7 @@ class CrossSectInnerNotchedRotor(object):
         else:
             if alpha_rm >= 180/p*0.9800:
                 print('WARNING: NOT TESTED FULL POLE PITCH MAGNET WHEN s>1.')
+                raise Exception('WARNING: NOT TESTED FULL POLE PITCH MAGNET WHEN s>1.')
 
             alpha_notch  = (alpha_rm - s*alpha_rs) / (s-1) # 永磁体占的弧度
             P5
