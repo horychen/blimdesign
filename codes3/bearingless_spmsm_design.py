@@ -76,7 +76,7 @@ class bearingless_spmsm_template(object):
                             [0.8*self.mm_d_st,                1.2*self.mm_d_st],                # mm_d_st             = free_variables[2]
                             [1.0*self.Radius_OuterStatorYoke, 1.2*self.Radius_OuterStatorYoke], # stator_outer_radius = free_variables[3]
                             [0.8*self.mm_w_st,                1.2*self.mm_w_st],                # mm_w_st             = free_variables[4] # STATOR
-                            [1,   3],                                                           # sleeve_length       = free_variables[5] # AIRGAP
+                            [3,   6],                                                           # sleeve_length       = free_variables[5] # AIRGAP
                             [2.5, 7],                                                           # mm_d_pm             = free_variables[6] # ROTOR
                             [0.6*360/(2*p), 1.0*360/(2*p)],                                     # deg_alpha_rm        = free_variables[7]
                             [0.8*360/(2*p)/s, 0.975*360/(2*p)/s],                               # deg_alpha_rs        = free_variables[8]
