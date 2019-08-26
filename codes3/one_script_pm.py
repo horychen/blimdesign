@@ -27,9 +27,9 @@ if True:
 
     run_folder = r'run#62399/' # spec_ECCE_PMSM_ (Q6p2)
     run_folder = r'run#62499/' # spec_PEMD_BPMSM_Q12p2
-    run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1
-    run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4
-    run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
+    # run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1
+    # run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4
+    # run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
 else:
     if 'Y730' in fea_config_dict['pc_name']:
         ################################################################
@@ -81,10 +81,10 @@ fea_config_dict['run_folder'] = run_folder
 # spec's
 # my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals()) # Q=24, p=1
 # my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
-# my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
+my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
 # my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
 # my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
-my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
+# my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
 
 if False: 
     # Case Q=24 can use IM's stator for PMSM's
@@ -185,7 +185,7 @@ class Problem_BearinglessSynchronousDesign(object):
             except KeyboardInterrupt as error:
                 raise error
             except Exception as error:
-                raise error
+                # raise error
                 f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
                 print(str(error))
                 logger = logging.getLogger(__name__)
