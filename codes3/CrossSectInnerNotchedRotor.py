@@ -72,7 +72,14 @@ class CrossSectInnerNotchedRotor(object):
         #     print('Warn: [class CrossSectInnerNotchedRotor] Detect d_rp is too close to d_pm. To avoid small line entity error in JMAG, will set d_pm equal to d_rp in CrossSectInnerNotchedMagnet.') # d_pm is not defined here so we cannot set d_rp to d_pm.
         if abs(alpha_rp - alpha_rm) <= 2 * np.pi/180: # if alpha_rm and alpha_rp has a difference smaller than 2 deg, then let alpha_rm equal to alpha_rp.
             alpha_rm = alpha_rp
-            print('Rotor has no notch, i.e., there is no P2 or P3.')
+            if s == 1:
+                alpha_rs = alpha_rm # alpha_rs is the variable actually being used in the following...
+            else:
+                print('s=%d: This is not tested. For now it simply assumes the iron notch between poles becomes the iron notch between the segments of one pole.' % (s))
+            print('[class CrossSectInnerNotchedRotor] Rotor has no notch, i.e., there is no P2 or P3.')
+            print('alpha_rp is', alpha_rp)
+            print('alpha_rm is', alpha_rm)
+            print('alpha_rs is', alpha_rs)
 
         P1 = [r_ri, 0]
 
@@ -195,7 +202,11 @@ class CrossSectInnerNotchedMagnet(object):
 
         if abs(alpha_rp - alpha_rm) <= 2 * np.pi/180: # if alpha_rm and alpha_rp has a difference smaller than 2 deg, then let alpha_rm equal to alpha_rp.
             alpha_rm = alpha_rp
-            print('Rotor has no notch, i.e., there is no P2 or P3.')
+            if s == 1:
+                alpha_rs = alpha_rm # alpha_rs is the variable actually being used in the following...
+            else:
+                print('s=%d: This is not tested. For now it simply assumes the iron notch between poles becomes the iron notch between the segments of one pole.' % (s))
+            print('[class CrossSectInnerNotchedMagnet] Magnet is fully spanned.')
 
         if abs(d_pm - d_rp) < 2*EPS:
             d_pm = d_rp
