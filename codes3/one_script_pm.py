@@ -25,8 +25,8 @@ if True:
     run_folder = r'run#611/' # zero Rs is not allowed
     run_folder = r'run#61495/' # spec_PEMD_BPMSM_Q12p2, 99 zQ is fixed to 10 | 98 zQ is derived | 97 sleeve length is reduced to 1 mm | 96 Jingwei's layout | 95 alpha_rm is fixed to be 360/2/p | 94 full alpha_rm bug is fixed | )
 
-    run_folder = r'run#62399/' # spec_ECCE_PMSM_ (Q6p2)
-    run_folder = r'run#62499/' # spec_PEMD_BPMSM_Q12p2
+    run_folder = r'run#62399/' # spec_ECCE_PMSM_ (Q6p2) # Jingwei's winding layout
+    run_folder = r'run#62499/' # spec_PEMD_BPMSM_Q12p2  # Jingwei's winding layout
     # run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1
     # run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4
     # run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
