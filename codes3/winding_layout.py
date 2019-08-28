@@ -82,9 +82,8 @@ class winding_layout(object):
             self.l_rightlayer2 = ['+', '+', '+', '+', '+', '+']
             self.l_leftlayer1  = ['W', 'U', 'V', 'W', 'U', 'V']
             self.l_leftlayer2  = ['-', '-', '-', '-', '-', '-']
-            self.grouping_AC   = [  1,   0,   0,   0,   1,   1] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
-            # self.grouping_AC   = [  0,   0,   0,   1,   1,   1]
-            # self.grouping_AC   = [  0,   1,   0,   1,   0,   1] # Jingwei's layout
+            # self.grouping_AC   = [  0,   0,   0,   1,   1,   1] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+            self.grouping_AC   = [  0,   1,   0,   1,   0,   1] # Jingwei's layout
             self.coil_pitch    = -1 # left layer can be inferred from coil pitch and right layer diagram
                                     # We use negative coil_pitch to indicate concentrated winding
             self.CommutatingSequenceD = 1
@@ -141,10 +140,10 @@ class winding_layout(object):
             self.l_leftlayer1  = ['U', 'W', 'V', 'U', 'W', 'V', 'U', 'W', 'V', 'U', 'W', 'V']
             self.l_leftlayer2  = ['+', '-', '+', '-', '+', '-', '+', '-', '+', '-', '+', '-']
 
-            self.grouping_AC   = [  0,   1,   0,   0,   0,   0,   1,   0,   1,   1,   1,   1] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
-            self.CommutatingSequenceB = 1 # 0 # [CHECKED] # B stands for Bearing winding (i.e., suspension winding), commutating sequence decides the direction of the rotating field
-            # self.grouping_AC   = [  0,   1,   1,   0,   0,   1,   1,   0,   0,   1,   1,   0] # Jingwei's layout
-            # self.CommutatingSequenceB = 0 # 0 # [CHECKED] # B stands for Bearing winding (i.e., suspension winding), commutating sequence decides the direction of the rotating field
+            # self.grouping_AC   = [  0,   1,   0,   0,   0,   0,   1,   0,   1,   1,   1,   1] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+            # self.CommutatingSequenceB = 1 # 0 # [CHECKED] # B stands for Bearing winding (i.e., suspension winding), commutating sequence decides the direction of the rotating field
+            self.grouping_AC   = [  0,   1,   1,   0,   0,   1,   1,   0,   0,   1,   1,   0] # Jingwei's layout
+            self.CommutatingSequenceB = 0 # 0 # [CHECKED] # B stands for Bearing winding (i.e., suspension winding), commutating sequence decides the direction of the rotating field
             
             self.CommutatingSequenceD = 1 # D stands for Drive winding (i.e., torque winding)
             self.coil_pitch    = 3 # left layer can be inferred from coil pitch and right layer diagram
@@ -180,8 +179,8 @@ class winding_layout(object):
             self.l_rightlayer2 = ['-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-']
             self.l_leftlayer1  = ['W', 'U', 'V', 'W', 'U', 'V', 'W', 'U', 'V', 'W', 'U', 'V']
             self.l_leftlayer2  = ['+', '+', '+', '+', '+', '+', '+', '+', '+', '+', '+', '+']
-            self.grouping_AC   = [  0,   0,   0,   1,   1,   1,   1,   1,   1,   0,   0,   0] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
-            # self.grouping_AC   = [  0,   0,   1,   1,   0,   0,   1,   1,   0,   0,   1,   1] # Jingwei's layout
+            # self.grouping_AC   = [  0,   0,   0,   1,   1,   1,   1,   1,   1,   0,   0,   0] # 只取决于outerlayer/rightlayer的反相情况，AC是在悬浮逆变器激励下会反相的
+            self.grouping_AC   = [  0,   0,   1,   1,   0,   0,   1,   1,   0,   0,   1,   1] # Jingwei's layout
             self.coil_pitch    = -1 # left layer can be inferred from coil pitch and right layer diagram
                                     # We use negative coil_pitch to indicate concentrated winding
             self.CommutatingSequenceD = 1 # D stands for Drive winding (i.e., torque winding)

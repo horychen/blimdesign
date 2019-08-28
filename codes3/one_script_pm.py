@@ -4,7 +4,7 @@ import utility
 from utility import my_execfile
 import utility_moo
 from win32com.client import pywintypes
-bool_post_processing = True # solve or post-processing
+bool_post_processing = False # solve or post-processing
 bool_re_evaluate = False
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -25,9 +25,9 @@ if True:
     run_folder = r'run#611/' # zero Rs is not allowed
     run_folder = r'run#61495/' # spec_PEMD_BPMSM_Q12p2, 99 zQ is fixed to 10 | 98 zQ is derived | 97 sleeve length is reduced to 1 mm | 96 Jingwei's layout | 95 alpha_rm is fixed to be 360/2/p | 94 full alpha_rm bug is fixed | )
 
-    run_folder = r'run#62399/' # spec_ECCE_PMSM_ (Q6p2) # Jingwei's winding layout
+    run_folder = r'run#62390/' # spec_ECCE_PMSM_ (Q6p2) # Jingwei's winding layout
     # run_folder = r'run#62498/' # spec_PEMD_BPMSM_Q12p2  # 98 for Jingwei's winding layout
-    # run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1
+    # run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1)
     # run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4
     # run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
 
@@ -266,12 +266,12 @@ class Problem_BearinglessSynchronousDesign(object):
                     # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or SafetyFactor < 1.5:
                     # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
                     # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
-                    if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.3 or abs(force_error_angle) > 20 or FRW < 0.75:
+                    if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.35 or abs(force_error_angle) > 20 or FRW < 0.75:
                         print('Constraints are violated:')
                         if abs(normalized_torque_ripple)>=0.3:
                             print('\tabs(normalized_torque_ripple)>=0.3 | (=%f)' % (normalized_torque_ripple))
-                        if abs(normalized_force_error_magnitude) >= 0.3:
-                            print('\tabs(normalized_force_error_magnitude) >= 0.3 | (=%f' % (normalized_force_error_magnitude))
+                        if abs(normalized_force_error_magnitude) >= 0.35:
+                            print('\tabs(normalized_force_error_magnitude) >= 0.35 | (=%f)' % (normalized_force_error_magnitude))
                         if abs(force_error_angle) > 20:
                             print('\tabs(force_error_angle) > 20 | (=%f)' % (force_error_angle))
                         if FRW < 0.75:
@@ -311,8 +311,8 @@ if bool_post_processing == True:
     # Combine all data 
 
     # Select optimal design by user-defined criteria
-    if r'run#62599' in fea_config_dict['run_folder']:
-        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#62599/' # severson01
+    if r'run#62' in fea_config_dict['run_folder']:
+        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + ad.solver.fea_config_dict['run_folder'] 
         number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
         swarm_data_Y730 = ad.solver.swarm_data
 
@@ -339,7 +339,7 @@ if bool_post_processing == True:
             for idx, chromosome in enumerate(swarm_data_):
                 # if chromosome[-1] < 5 and chromosome[-2] < -0.95 and chromosome[-3] < -22500: # best Y730     #1625, 0.000702091 * 8050 * 9.8 = 55.38795899 N.  FRW = 223.257 / 55.38795899 = 4.0
                 # if chromosome[-1] < 10 and chromosome[-2] < -0.9585 and chromosome[-3] < -17500: # best Y730  #187, 0.000902584 * 8050 * 9.8 = 71.204851760 N. FRW = 151.246 / 71.204851760 = 2.124
-                if chromosome[-1] < 20 and chromosome[-2] < -0.90 and chromosome[-3] < 250: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
+                if chromosome[-1] < 22 and chromosome[-2] < -0.96 and chromosome[-3] < 220: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
                     print(idx, chromosome)
 
                     def pyx_script():
@@ -367,10 +367,6 @@ if bool_post_processing == True:
                     #     best_idx = idx
                     #     best_chromosome = chromosome
                     #     # pyx_script()
-
-        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#62599/' # ad.solver.fea_config_dict['run_folder'] 
-        number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
-        swarm_data_Y730 = ad.solver.swarm_data
 
         # print('-'*40+'\nY730' + '\n      L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.')
         print('-'*40+'\nY730' + '\n      _____________________________________________________________________________________')
