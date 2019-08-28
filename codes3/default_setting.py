@@ -23,7 +23,7 @@ fea_config_dict = {
     ##########################
     'TranRef-StepPerCycle':40, # FEMM: 5 deg   # 360 to be precise as FEMM: 0.5 deg 
     # 'FrequencyRange':range(1,6), # the first generation for PSO
-    'number_of_steps_1stTTS':32, # TSS actually...
+    'number_of_steps_1stTTS':32, # Should be TSS actually... Also, number_of_steps_1stTTS is not implemented.
     'number_of_steps_2ndTTS':32, # use a multiples of 4! # 8*32 # steps for half period (0.5). That is, we implement two time sections, the 1st section lasts half slip period and the 2nd section lasts half fandamental period.
     'number_cycles_prolonged':1, # 150
     'FEMM_Coarse_Mesh':True,

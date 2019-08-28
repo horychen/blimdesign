@@ -503,10 +503,18 @@ def add_plots(axeses, dm, title=None, label=None, zorder=None, time_list=None, s
     if axeses is not None:
         # plot for torque and force
         ax = axeses[0][0]; ax.plot(time_list, torque,                                           alpha=alpha, label=label, zorder=zorder)
+        ax.plot(time_list, np.ones(len(time_list)) * torque_average, 'k-')
         ax = axeses[0][1]; ax.plot(time_list, sfv.force_abs,                                    alpha=alpha, label=label, zorder=zorder)
+        ax.plot(time_list, sfv.force_x,                                      alpha=alpha, label=label, zorder=zorder)
+        ax.plot(time_list, sfv.force_y,                                      alpha=alpha, label=label, zorder=zorder)
+        ax.plot(time_list, np.ones(len(time_list)) * sfv.ss_avg_force_magnitude, 'k-')
         ax = axeses[1][0]; ax.plot(time_list, 100*sfv.force_err_abs/sfv.ss_avg_force_magnitude, label=label, alpha=alpha, zorder=zorder)
-        ax = axeses[1][1]; ax.plot(time_list, sfv.force_ang - sfv.ss_avg_force_angle,           label=label, alpha=alpha, zorder=zorder)
-
+        ax = axeses[1][1]; 
+        ax.plot(time_list, sfv.force_err_ang_old_way,                        label=label, alpha=alpha, zorder=zorder)
+        ax.plot(time_list, sfv.force_err_ang_new_way,                        label=label, alpha=alpha, zorder=zorder)
+        ax.plot(time_list, sfv.force_ang,                        label=label, alpha=alpha, zorder=zorder)
+        ax.plot(time_list, np.ones(len(time_list)) * sfv.ss_avg_force_angle, 'k-')
+        
     # plot for visialization of power factor 
     # dm.get_voltage_and_current(range_ss)
     # ax = axeses[2][0]; ax.plot(dm.mytime, dm.myvoltage, label=label, alpha=alpha, zorder=zorder)
@@ -753,14 +761,17 @@ class suspension_force_vector(object):
 
         self.ss_avg_force_vector    = np.array([sum(force_x[-range_ss:]), sum(force_y[-range_ss:])]) / range_ss #len(force_x[-range_ss:])
         self.ss_avg_force_angle     = np.arctan2(self.ss_avg_force_vector[1], self.ss_avg_force_vector[0]) / np.pi * 180
+        print('sfv.ss_avg_force_angle =', self.ss_avg_force_angle)
         if self.ss_avg_force_angle < 0:
             self.ss_avg_force_angle += 360
         # print('sfv:', self.ss_avg_force_angle)
         self.ss_avg_force_magnitude = np.sqrt(self.ss_avg_force_vector[0]**2 + self.ss_avg_force_vector[1]**2)
 
         self.force_err_ang_old_way = self.force_ang - self.ss_avg_force_angle # This can be wrong for the case "3 deg - 354 deg"
-        self.force_err_ang = self.compute_angle_error(np.ones(len(self.force_ang))*self.ss_avg_force_angle, np.array(self.force_ang))
-        # print(self.force_err_ang_old_way, self.force_err_ang)
+        self.force_err_ang_new_way = self.compute_angle_error(np.ones(len(self.force_ang))*self.ss_avg_force_angle, np.array(self.force_ang))
+        # for a, b in zip(self.force_err_ang_old_way[-range_ss:], self.force_err_ang_new_way[-range_ss:]):
+        #     print(a,b)
+        self.force_err_ang = self.force_err_ang_old_way
 
         # print('sfv:', self.force_err_ang)
         self.force_err_abs = self.force_abs - self.ss_avg_force_magnitude
@@ -1111,7 +1122,7 @@ def whole_row_reader(reader):
 
 
 
-def get_copper_loss_Bolognani(stator_slot_area, rotor_slot_area=None, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, copper_loss_parameters=None): 
+def get_copper_loss_Bolognani(stator_slot_area, rotor_slot_area=None, STATOR_SLOT_FILL_FACTOR=0.5, ROTOR_SLOT_FILL_FACTOR=1.0, TEMPERATURE_OF_COIL=75, copper_loss_parameters=None):
     # make sure these two values 
     # space_factor_kCu = SLOT_FILL_FACTOR in Pyrhonen09 design
     # space_factor_kAl = 1 in Pyrhonen09 design

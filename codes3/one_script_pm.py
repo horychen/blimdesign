@@ -4,7 +4,7 @@ import utility
 from utility import my_execfile
 import utility_moo
 from win32com.client import pywintypes
-bool_post_processing = False # solve or post-processing
+bool_post_processing = True # solve or post-processing
 bool_re_evaluate = False
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -26,10 +26,23 @@ if True:
     run_folder = r'run#61495/' # spec_PEMD_BPMSM_Q12p2, 99 zQ is fixed to 10 | 98 zQ is derived | 97 sleeve length is reduced to 1 mm | 96 Jingwei's layout | 95 alpha_rm is fixed to be 360/2/p | 94 full alpha_rm bug is fixed | )
 
     run_folder = r'run#62399/' # spec_ECCE_PMSM_ (Q6p2) # Jingwei's winding layout
-    run_folder = r'run#62499/' # spec_PEMD_BPMSM_Q12p2  # Jingwei's winding layout
+    # run_folder = r'run#62498/' # spec_PEMD_BPMSM_Q12p2  # 98 for Jingwei's winding layout
     # run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1
     # run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4
     # run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
+
+    fea_config_dict['run_folder'] = run_folder
+
+    # spec's
+    my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
+    # my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
+    # my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
+    # my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
+    # my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
+
+
+    # Adopt Bianchi 2006 for a SPM motor template
+    spec.build_pmsm_template(fea_config_dict, im_template=None)
 else:
     if 'Y730' in fea_config_dict['pc_name']:
         ################################################################
@@ -76,23 +89,14 @@ else:
         fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
         run_folder = r'run#603010/' # continued run from severson01
 
-fea_config_dict['run_folder'] = run_folder
+    fea_config_dict['run_folder'] = run_folder
 
-# spec's
-# my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals()) # Q=24, p=1
-# my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
-my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
-# my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
-# my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
-# my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
+    # spec's
+    my_execfile('./spec_TIA_ITEC_.py', g=globals(), l=locals()) # Q=24, p=1
 
-if False: 
     # Case Q=24 can use IM's stator for PMSM's
     spec.build_im_template(fea_config_dict)
     spec.build_pmsm_template(fea_config_dict, im_template=spec.im_template)
-else:
-    # Adopt Bianchi 2006 for a SPM motor template
-    spec.build_pmsm_template(fea_config_dict, im_template=None)
 
 # select motor type ehere
 print('Build ACM template...')
@@ -262,14 +266,14 @@ class Problem_BearinglessSynchronousDesign(object):
                     # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or SafetyFactor < 1.5:
                     # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
                     # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
-                    if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.3 or abs(force_error_angle) > 10 or FRW < 0.75:
+                    if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.3 or abs(force_error_angle) > 20 or FRW < 0.75:
                         print('Constraints are violated:')
                         if abs(normalized_torque_ripple)>=0.3:
                             print('\tabs(normalized_torque_ripple)>=0.3 | (=%f)' % (normalized_torque_ripple))
                         if abs(normalized_force_error_magnitude) >= 0.3:
                             print('\tabs(normalized_force_error_magnitude) >= 0.3 | (=%f' % (normalized_force_error_magnitude))
-                        if abs(force_error_angle) > 10:
-                            print('\tabs(force_error_angle) > 10 | (=%f)' % (force_error_angle))
+                        if abs(force_error_angle) > 20:
+                            print('\tabs(force_error_angle) > 20 | (=%f)' % (force_error_angle))
                         if FRW < 0.75:
                             print('\tFRW < 0.75 | (=%f' % (FRW))
                         f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
@@ -301,6 +305,84 @@ class Problem_BearinglessSynchronousDesign(object):
     # Return function name
     def get_name(self):
         return "Bearingless PMSM Design"
+
+
+if bool_post_processing == True:
+    # Combine all data 
+
+    # Select optimal design by user-defined criteria
+    if r'run#62599' in fea_config_dict['run_folder']:
+        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#62599/' # severson01
+        number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
+        swarm_data_Y730 = ad.solver.swarm_data
+
+        def selection_criteria(swarm_data_):
+            global best_idx, best_chromosome
+            # HIGH TORQUE DENSITY
+            # Y730
+            #       L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.
+            # 794 [1.16163, 9.00566, 8.34039, 2.91474, 0.786231, 2.76114, 1.2485, -22666.7, -0.953681, 4.89779]
+            # ----------------------------------------
+            # HIGH EFFICIENCY
+            # Y730
+            #       L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.
+            # 186 [1.25979, 6.80075, 5.64435, 5.8548, 1.59461, 2.11656, 2.58401, -17633.3, -0.958828, 5.53104]
+            # 615 [1.2725, 5.6206, 4.60947, 3.56502, 2.27635, 0.506179, 2.78758, -17888.9, -0.958846, 8.56211]
+            # ----------------------------------------
+            # LOW RIPPLE PERFORMANCE
+            # Severson02
+            #       L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.
+            # 1043 [1.38278, 8.91078, 7.43896, 2.66259, 0.611812, 1.50521, 1.51402, -19125.4, -0.953987, 2.91096]
+            # 1129 [1.38878, 8.68378, 7.97301, 2.82904, 0.586374, 1.97867, 1.45825, -19169.0, -0.954226, 2.99944]
+            # 1178 [1.36258, 8.9625, 7.49621, 2.5878, 0.503512, 0.678909, 1.74283, -19134.3, -0.952751, 2.90795]
+
+            for idx, chromosome in enumerate(swarm_data_):
+                # if chromosome[-1] < 5 and chromosome[-2] < -0.95 and chromosome[-3] < -22500: # best Y730     #1625, 0.000702091 * 8050 * 9.8 = 55.38795899 N.  FRW = 223.257 / 55.38795899 = 4.0
+                # if chromosome[-1] < 10 and chromosome[-2] < -0.9585 and chromosome[-3] < -17500: # best Y730  #187, 0.000902584 * 8050 * 9.8 = 71.204851760 N. FRW = 151.246 / 71.204851760 = 2.124
+                if chromosome[-1] < 20 and chromosome[-2] < -0.90 and chromosome[-3] < 250: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
+                    print(idx, chromosome)
+
+                    def pyx_script():
+                        # Plot cross section view
+                        import population
+                        im_best = population.bearingless_induction_motor_design.local_design_variant(ad.spec.im_template, 99, 999, best_chromosome[:-3])
+                        im_best.ID = str(best_idx)
+                        pyx_draw_model(im_best)
+                        quit()
+
+                    # # Take high torque density design for LSA
+                    # if idx == 1625 - 1:
+                    #     best_idx = idx
+                    #     best_chromosome = chromosome
+                    #     pyx_script()
+
+                    # # Take high efficiency design for LSA
+                    # if idx == 187 - 1:
+                    #     best_idx = idx
+                    #     best_chromosome = chromosome
+                    #     pyx_script()
+
+                    # # Take low ripple performance design for LSA
+                    # if idx == 1130 - 1:
+                    #     best_idx = idx
+                    #     best_chromosome = chromosome
+                    #     # pyx_script()
+
+        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + r'run#62599/' # ad.solver.fea_config_dict['run_folder'] 
+        number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
+        swarm_data_Y730 = ad.solver.swarm_data
+
+        # print('-'*40+'\nY730' + '\n      L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.')
+        print('-'*40+'\nY730' + '\n      _____________________________________________________________________________________')
+        selection_criteria(swarm_data_Y730)
+
+        # Set the output_dir back!
+        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + ad.solver.fea_config_dict['run_folder']
+        quit()
+
+    print('Sizes of the 3 populations (in order):', len(swarm_data_severson01), len(swarm_data_severson02), len(swarm_data_Y730))
+    ad.solver.swarm_data = swarm_data_severson01 + swarm_data_severson02 + swarm_data_Y730 # list add
+    quit()
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Multi-Objective Optimization
