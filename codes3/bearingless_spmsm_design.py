@@ -636,6 +636,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
 
         # two sections of different time step
         if True: # ECCE19
+            number_of_steps_1stTTS = self.fea_config_dict['number_of_steps_1stTTS'] 
             number_of_steps_2ndTTS = self.fea_config_dict['number_of_steps_2ndTTS'] 
             DM = app.GetDataManager()
             DM.CreatePointArray("point_array/timevsdivision", "SectionStepTable")
@@ -643,14 +644,14 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             refarray[0][0] = 0
             refarray[0][1] =    1
             refarray[0][2] =        50
-            refarray[1][0] = 2.0/self.DriveW_Freq
-            refarray[1][1] =    0.5 * number_of_steps_2ndTTS
+            refarray[1][0] = 4.0/self.DriveW_Freq
+            refarray[1][1] =    number_of_steps_1stTTS
             refarray[1][2] =        50
-            refarray[2][0] = 2.5/self.DriveW_Freq
-            refarray[2][1] =    1 * number_of_steps_2ndTTS # 最后的number_of_steps_2ndTTS（32）步，必须对应半个周期，从而和后面的铁耗计算相对应。
+            refarray[2][0] = 4.5/self.DriveW_Freq
+            refarray[2][1] =    number_of_steps_2ndTTS # 最后的number_of_steps_2ndTTS（32）步，必须对应半个周期，从而和后面的铁耗计算相对应。
             refarray[2][2] =        50
             DM.GetDataSet("SectionStepTable").SetTable(refarray)
-            number_of_total_steps = 1 + 0.5*number_of_steps_2ndTTS + 1 * number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
+            number_of_total_steps = 1 + number_of_steps_1stTTS + number_of_steps_2ndTTS # [Double Check] don't forget to modify here!
             study.GetStep().SetValue("Step", number_of_total_steps)
             study.GetStep().SetValue("StepType", 3)
             study.GetStep().SetTableProperty("Division", DM.GetDataSet("SectionStepTable"))
