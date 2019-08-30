@@ -23,7 +23,7 @@ fea_config_dict = {
     ##########################
     'TranRef-StepPerCycle':40, # FEMM: 5 deg   # 360 to be precise as FEMM: 0.5 deg 
     # 'FrequencyRange':range(1,6), # the first generation for PSO
-    'number_of_steps_1stTTS':32, # Should be TSS actually... Also, number_of_steps_1stTTS is not implemented.
+    'number_of_steps_1stTTS':24, # Should be TSS actually... Also, number_of_steps_1stTTS is not implemented.
     'number_of_steps_2ndTTS':32, # use a multiples of 4! # 8*32 # steps for half period (0.5). That is, we implement two time sections, the 1st section lasts half slip period and the 2nd section lasts half fandamental period.
     'number_cycles_prolonged':1, # 150
     'FEMM_Coarse_Mesh':True,
@@ -109,6 +109,50 @@ def where_am_i(fea_config_dict):
             fea_config_dict['OnlyTableResults'] = True  # save disk space for my PC
     # However, we need field data for iron loss calculation
     fea_config_dict['OnlyTableResults'] = False 
+
+def where_am_i(fea_config_dict):
+    def get_pc_name():
+        import platform
+        import socket
+        n1 = platform.node()
+        n2 = socket.gethostname()
+        n3 = os.environ["COMPUTERNAME"]
+        if n1 == n2 == n3:
+            return n1
+        elif n1 == n2:
+            return n1
+        elif n1 == n3:
+            return n1
+        elif n2 == n3:
+            return n2
+        else:
+            raise Exception("Computer names are not equal to each other.")
+
+    dir_interpreter = os.path.abspath('')
+    print(dir_interpreter)
+    if 'codes3' in dir_interpreter:
+        dir_parent = dir_interpreter + '/../' # '../' <- relative path is not always a good option
+    else:
+        print('Please cd to ./codes3 before running python scripts...')
+        raise Exception('Do not run the script from this directory: %s'%(dir_interpreter))
+    dir_codes = dir_parent + 'codes3/'
+    dir_femm_files = dir_parent + 'femm_files/'
+    pc_name = get_pc_name()
+    os.chdir(dir_codes)
+    # print(dir_parent, dir_codes, pc_name, sep='\n'); quit()
+    fea_config_dict['dir_interpreter']       = dir_interpreter
+    fea_config_dict['dir_parent']            = dir_parent
+    fea_config_dict['dir_codes']             = dir_codes
+    fea_config_dict['dir_femm_files']        = dir_femm_files
+    fea_config_dict['pc_name']               = pc_name
+
+    fea_config_dict['delete_results_after_calculation'] = False # True for saving disk space (but you lose voltage profile and element data)
+    if fea_config_dict['Restart'] == False:
+        fea_config_dict['OnlyTableResults'] = True  # save disk space for my PC
+    # However, we need field data for iron loss calculation
+    fea_config_dict['OnlyTableResults'] = False 
+
+
 # add path to fea_config_dict
 where_am_i(fea_config_dict)
 

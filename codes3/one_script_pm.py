@@ -4,7 +4,7 @@ import utility
 from utility import my_execfile
 import utility_moo
 from win32com.client import pywintypes
-bool_post_processing = False # solve or post-processing
+bool_post_processing = True # solve or post-processing
 bool_re_evaluate = False
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -25,18 +25,18 @@ if True:
     run_folder = r'run#611/' # zero Rs is not allowed
     run_folder = r'run#61495/' # spec_PEMD_BPMSM_Q12p2, 99 zQ is fixed to 10 | 98 zQ is derived | 97 sleeve length is reduced to 1 mm | 96 Jingwei's layout | 95 alpha_rm is fixed to be 360/2/p | 94 full alpha_rm bug is fixed | )
 
-    run_folder = r'run#62390/' # spec_ECCE_PMSM_ (Q6p2) # Jingwei's winding layout
+    # run_folder = r'run#62390/' # spec_ECCE_PMSM_ (Q6p2) # Jingwei's winding layout
     # run_folder = r'run#62498/' # spec_PEMD_BPMSM_Q12p2  # 98 for Jingwei's winding layout
-    # run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1)
+    run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1)
     # run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4
     # run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
 
     fea_config_dict['run_folder'] = run_folder
 
     # spec's
-    my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
+    # my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
     # my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
-    # my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
+    my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
     # my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
     # my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
 
@@ -275,7 +275,7 @@ class Problem_BearinglessSynchronousDesign(object):
                         if abs(force_error_angle) > 20:
                             print('\tabs(force_error_angle) > 20 | (=%f)' % (force_error_angle))
                         if FRW < 0.75:
-                            print('\tFRW < 0.75 | (=%f' % (FRW))
+                            print('\tFRW < 0.75 | (=%f)' % (FRW))
                         f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
                     print('f1,f2,f3:',f1,f2,f3)
                 except:
@@ -339,7 +339,7 @@ if bool_post_processing == True:
             for idx, chromosome in enumerate(swarm_data_):
                 # if chromosome[-1] < 5 and chromosome[-2] < -0.95 and chromosome[-3] < -22500: # best Y730     #1625, 0.000702091 * 8050 * 9.8 = 55.38795899 N.  FRW = 223.257 / 55.38795899 = 4.0
                 # if chromosome[-1] < 10 and chromosome[-2] < -0.9585 and chromosome[-3] < -17500: # best Y730  #187, 0.000902584 * 8050 * 9.8 = 71.204851760 N. FRW = 151.246 / 71.204851760 = 2.124
-                if chromosome[-1] < 22 and chromosome[-2] < -0.96 and chromosome[-3] < 220: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
+                if chromosome[-1] < 13 and chromosome[-2] < -0.90 and chromosome[-3] < 250: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
                     print(idx, chromosome)
 
                     def pyx_script():

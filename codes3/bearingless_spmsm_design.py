@@ -644,10 +644,10 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
             refarray[0][0] = 0
             refarray[0][1] =    1
             refarray[0][2] =        50
-            refarray[1][0] = 4.0/self.DriveW_Freq
+            refarray[1][0] = 3.0/self.DriveW_Freq
             refarray[1][1] =    number_of_steps_1stTTS
             refarray[1][2] =        50
-            refarray[2][0] = 4.5/self.DriveW_Freq
+            refarray[2][0] = 3.5/self.DriveW_Freq
             refarray[2][1] =    number_of_steps_2ndTTS # 最后的number_of_steps_2ndTTS（32）步，必须对应半个周期，从而和后面的铁耗计算相对应。
             refarray[2][2] =        50
             DM.GetDataSet("SectionStepTable").SetTable(refarray)
