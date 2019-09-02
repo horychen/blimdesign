@@ -156,9 +156,9 @@ def where_am_i(fea_config_dict):
 # add path to fea_config_dict
 where_am_i(fea_config_dict)
 
-from sys import path as sys_path
-# for importing your package
-sys_path.append(fea_config_dict['dir_lib'])
+# from sys import path as sys_path
+# # for importing your package
+# sys_path.append(fea_config_dict['dir_lib'])
 
 # import population
 # import FEMM_Solver

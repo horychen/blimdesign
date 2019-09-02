@@ -20,6 +20,7 @@ class swarm_data_container(object):
 
         # x, f(x)
         self.swarm_data_xf = []
+        self.project_names = []
         self.machine_data = []
         self.rated_data = []
         for el in self.swarm_data_raw:
@@ -35,6 +36,7 @@ class swarm_data_container(object):
             self.swarm_data_xf.append(x_denorm + [f1, f2, f3])
             # print(design_parameters_denorm, f1, f2, f3)
 
+            self.project_names.append(el[1][:-1])
             self.machine_data.append([float(x) for x in el[3].split(',')])
             self.rated_data.append(  [float(x) for x in el[4].split(',')])
 

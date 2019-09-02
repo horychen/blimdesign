@@ -4,7 +4,7 @@ import utility
 from utility import my_execfile
 import utility_moo
 from win32com.client import pywintypes
-bool_post_processing = True # solve or post-processing
+bool_post_processing = False # solve or post-processing
 bool_re_evaluate = False
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -25,20 +25,20 @@ if True:
     run_folder = r'run#611/' # zero Rs is not allowed
     run_folder = r'run#61495/' # spec_PEMD_BPMSM_Q12p2, 99 zQ is fixed to 10 | 98 zQ is derived | 97 sleeve length is reduced to 1 mm | 96 Jingwei's layout | 95 alpha_rm is fixed to be 360/2/p | 94 full alpha_rm bug is fixed | )
 
-    # run_folder = r'run#62390/' # spec_ECCE_PMSM_ (Q6p2) # Jingwei's winding layout
-    # run_folder = r'run#62498/' # spec_PEMD_BPMSM_Q12p2  # 98 for Jingwei's winding layout
-    run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1)
-    # run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4
-    # run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
+    # run_folder = r'run#62399/' # spec_ECCE_PMSM_ (Q6p2)
+    # run_folder = r'run#62499/' # spec_PEMD_BPMSM_Q12p2
+    # run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1)
+    # run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4)
+    run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
 
     fea_config_dict['run_folder'] = run_folder
 
     # spec's
     # my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
     # my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
-    my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
+    # my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
     # my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
-    # my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
+    my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=24, p=1, ps=2
 
 
     # Adopt Bianchi 2006 for a SPM motor template
@@ -315,7 +315,9 @@ if bool_post_processing == True:
         ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + ad.solver.fea_config_dict['run_folder'] 
         number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
         swarm_data_Y730 = ad.solver.swarm_data
-
+        swarm_project_names_Y730 = ad.solver.swarm_data_container.project_names
+        print('number_of_chromosome =', number_of_chromosome)
+ 
         def selection_criteria(swarm_data_):
             global best_idx, best_chromosome
             # HIGH TORQUE DENSITY
@@ -339,8 +341,8 @@ if bool_post_processing == True:
             for idx, chromosome in enumerate(swarm_data_):
                 # if chromosome[-1] < 5 and chromosome[-2] < -0.95 and chromosome[-3] < -22500: # best Y730     #1625, 0.000702091 * 8050 * 9.8 = 55.38795899 N.  FRW = 223.257 / 55.38795899 = 4.0
                 # if chromosome[-1] < 10 and chromosome[-2] < -0.9585 and chromosome[-3] < -17500: # best Y730  #187, 0.000902584 * 8050 * 9.8 = 71.204851760 N. FRW = 151.246 / 71.204851760 = 2.124
-                if chromosome[-1] < 13 and chromosome[-2] < -0.90 and chromosome[-3] < 250: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
-                    print(idx, chromosome)
+                if chromosome[-1] < 11 and chromosome[-2] < -0.92 and chromosome[-3] < 250: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
+                    print(idx, swarm_project_names_Y730[idx], chromosome[::-1])
 
                     def pyx_script():
                         # Plot cross section view
@@ -503,7 +505,7 @@ if True:
 ################################################################
     number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
     number_of_finished_iterations = number_of_chromosome // popsize
-    number_of_iterations = 50
+    number_of_iterations = 250
     logger = logging.getLogger(__name__)
     # try:
     if True:
