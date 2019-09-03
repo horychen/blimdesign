@@ -70,9 +70,13 @@ class JMAG(object): #< ToolBase & DrawerBase & MakerExtrudeBase & MakerRevolveBa
                 add_steel(self)
             else:
                 with open(fname, 'r') as f:
+                    flag_already_there = False
                     for line in f.readlines():
-                        if self.fea_config_dict['pc_name'] + '/' + self.fea_config_dict['Steel'] not in line:
-                            add_steel(self)
+                        if self.fea_config_dict['pc_name'] + '/' + self.fea_config_dict['Steel'] in line:
+                            flag_already_there = True
+                            break
+                    if flag_already_there == False:
+                        add_steel(self)
         else:
             app = self.app
 
