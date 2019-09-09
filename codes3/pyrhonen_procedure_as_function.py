@@ -1387,7 +1387,7 @@ class desgin_specification(object):
             # Bianchi 2006
             air_gap_flux_density_B = 0.9
             stator_tooth_flux_density_B_ds = 1.5
-            if self.p == 2:
+            if self.p >= 2:
                 ROTOR_STATOR_YOKE_HEIGHT_RATIO = 0.75
                 stator_yoke_flux_density_Bys = 1.2
                 alpha_rm_over_alpha_rp = 1.0

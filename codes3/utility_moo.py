@@ -500,7 +500,7 @@ def pyx_draw_model(im):
         return np.cos(_)*x + np.sin(_)*y, -np.sin(_)*x + np.cos(_)*y
     def is_at_stator(im, path):
         return np.sqrt(path[0]**2 + path[1]**2) > im.Radius_OuterRotor + 0.5*im.Length_AirGap
-    
+
     for path in (vg.tikz.track_path): # track_path is passed by reference and is changed by mirror
         path_mirror = deepcopy(path)
         # for mirror copy (along x-axis)

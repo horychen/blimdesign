@@ -13,6 +13,10 @@ Requirements:
 - latex (if you want pdf report for motor design)
 
 
+# TODO
+
+- The current circuit excitation will give wrong terminal voltage results (the electromagnetic performance is correct because the current is correct, though).
+
 
 
 

@@ -4,7 +4,7 @@ import utility
 from utility import my_execfile
 import utility_moo
 from win32com.client import pywintypes
-bool_post_processing = False # solve or post-processing
+bool_post_processing = True # solve or post-processing
 bool_re_evaluate = False
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
@@ -13,25 +13,21 @@ bool_re_evaluate = False
 # FEA setting
 my_execfile('./default_setting.py', g=globals(), l=locals())
 fea_config_dict
-fea_config_dict['Active_Qr'] = 16 # obsolete 
-fea_config_dict['local_sensitivity_analysis'] = False
-fea_config_dict['bool_refined_bounds'] = False
-fea_config_dict['use_weights'] = 'O2' # this is not used
 if True:
+    # PEMD2020
+
     # Combined winding PMSM
     fea_config_dict['TORQUE_CURRENT_RATIO'] = 0.95
     fea_config_dict['SUSPENSION_CURRENT_RATIO'] = 0.05
-    run_folder = r'run#610/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
-    run_folder = r'run#611/' # zero Rs is not allowed
-    run_folder = r'run#61495/' # spec_PEMD_BPMSM_Q12p2, 99 zQ is fixed to 10 | 98 zQ is derived | 97 sleeve length is reduced to 1 mm | 96 Jingwei's layout | 95 alpha_rm is fixed to be 360/2/p | 94 full alpha_rm bug is fixed | )
+        # run_folder = r'run#610/' # FRW constraint is added and sleeve_length is 3 (not varying). Excitation ratio is 95%:5% between Torque and Suspension windings.
+        # run_folder = r'run#611/' # zero Rs is not allowed
+        # run_folder = r'run#61495/' # spec_PEMD_BPMSM_Q12p2, 99 zQ is fixed to 10 | 98 zQ is derived | 97 sleeve length is reduced to 1 mm | 96 Jingwei's layout | 95 alpha_rm is fixed to be 360/2/p | 94 full alpha_rm bug is fixed | )
 
     # run_folder = r'run#62399/' # spec_ECCE_PMSM_ (Q6p2)
     # run_folder = r'run#62499/' # spec_PEMD_BPMSM_Q12p2
     # run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1)
     # run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4)
     run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
-
-    fea_config_dict['run_folder'] = run_folder
 
     # spec's
     # my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
@@ -40,10 +36,13 @@ if True:
     # my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
     my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=24, p=1, ps=2
 
+    fea_config_dict['run_folder'] = run_folder
 
     # Adopt Bianchi 2006 for a SPM motor template
     spec.build_pmsm_template(fea_config_dict, im_template=None)
 else:
+    # TIA_ITEC2018_PAPER
+
     if 'Y730' in fea_config_dict['pc_name']:
         ################################################################
         # Y730
@@ -98,9 +97,9 @@ else:
     spec.build_im_template(fea_config_dict)
     spec.build_pmsm_template(fea_config_dict, im_template=spec.im_template)
 
-# select motor type ehere
-print('Build ACM template...')
+# select motor type here
 spec.acm_template = spec.pmsm_template
+print('Build ACM template...')
 
 import acm_designer
 global ad
@@ -132,254 +131,11 @@ if ad.bool_re_evaluate:
 import pygmo as pg
 global counter_fitness_called, counter_fitness_return
 from acm_designer import get_bad_fintess_values
-
-class Problem_BearinglessSynchronousDesign(object):
-
-    # Define objectives
-    def fitness(self, x):
-        global ad, counter_fitness_called, counter_fitness_return
-
-        if ad.flag_do_not_evaluate_when_init_pop == True:
-            return [0, 0, 0]
-
-        ad, counter_fitness_called, counter_fitness_return
-        if counter_fitness_called == counter_fitness_return:
-            counter_fitness_called += 1
-        else:
-            # This is not reachable
-            raise Exception('counter_fitness_called')
-        print('Call fitness: %d, %d'%(counter_fitness_called, counter_fitness_return))
-
-        # 不要标幺化了！统一用真的bounds，见get_bounds()
-        x_denorm = x
-
-        # evaluate x_denorm via FEA tools
-        counter_loop = 0
-        stuck_at = 0
-        while True:
-            if ad.bool_re_evaluate:
-                if counter_fitness_return >= len(ad.solver.swarm_data):
-                    quit()
-                x_denorm = ad.solver.swarm_data[counter_fitness_return][:-3]
-                print(ad.solver.swarm_data[counter_fitness_return])
-
-            if stuck_at < counter_fitness_called:
-                stuck_at = counter_fitness_called
-                counter_loop = 0 # reset
-            if stuck_at == counter_fitness_called:
-                counter_loop += 1
-
-            # if True:
-            try:
-                cost_function, f1, f2, f3, FRW, \
-                normalized_torque_ripple, \
-                normalized_force_error_magnitude, \
-                force_error_angle = \
-                    ad.evaluate_design(ad.spec.acm_template, x_denorm, counter_fitness_called, counter_loop=counter_loop)
-
-                # remove folder .jfiles to save space (we have to generate it first in JMAG Designer to have field data and voltage profiles)
-                if ad.solver.folder_to_be_deleted is not None and os.path.isdir(ad.solver.folder_to_be_deleted):
-                    try:
-                        shutil.rmtree(ad.solver.folder_to_be_deleted) # .jfiles directory
-                    except PermissionError as error:
-                        print(error)
-                        print('Skip deleting this folder...')
-                # update to be deleted when JMAG releases the use
-                ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
-            except KeyboardInterrupt as error:
-                raise error
-            except Exception as error:
-                # raise error
-                f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
-                print(str(error))
-                logger = logging.getLogger(__name__)
-                logger.error(str(error))
-                break
-                # except FileNotFoundError as error: # The copy region target is not found
-                #     print(str(error))
-                #     print('CJH: "the ind***TranPMSM_torque.csv is not found" means the mesher or the solver has failed. For now, simply consider it to be bad design.')
-                #     f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
-
-                # except utility.ExceptionBadNumberOfParts as error:
-                #     print(str(error)) 
-                #     # print("Detail: {}".format(error.payload))
-                #     f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
-                #     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nExceptionBadNumberOfParts:' + str(error) + '\n'*3)
-                #     break
-
-                # except (utility.ExceptionReTry, pywintypes.com_error) as error:
-                #     print(error)
-
-                #     msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
-                #     logger = logging.getLogger(__name__)
-                #     logger.error(msg)
-                #     print(msg)
-
-                #     if counter_loop > 1: # > 1 = two attemps; > 2 = three attemps
-                #         print(error)
-                #         raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
-                #     else:
-                #         from time import sleep
-                #         print('\n\n\nSleep for 3 sec and continue.')
-                #         sleep(3)
-                #         continue
-
-                # except AttributeError as error:
-                #     print(str(error)) 
-                #     # print("Detail: {}".format(error.payload))
-
-                #     msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
-                #     logger = logging.getLogger(__name__)
-                #     logger.error(msg)
-                #     print(msg)
-
-                #     if 'designer.Application' in str(error):
-                #         if counter_loop > 1: 
-                #             print(error)
-                #             raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
-                #         else:
-                #             from time import sleep
-                #             print('\n\n\nSleep for 3 sec and continue.')
-                #             sleep(3)                        
-                #             continue
-                #     else:
-                #         raise error
-
-                # except Exception as e: # raise and need human inspection
-
-                #     # raise e
-                #     print('-'*40 + 'Unexpected error is caught.')
-                #     print(str(e)) 
-                #     utility.send_notification(ad.solver.fea_config_dict['pc_name'] + '\n\nUnexpected expection:' + str(e))
-                #     raise e
-            else:
-                # - Price
-                f1 
-                # - Efficiency @ Rated Power
-                f2 
-                # Ripple Performance (Weighted Sum)
-                f3 
-                print('f1,f2,f3:',f1,f2,f3)
-
-                try:
-                    # Constraints (Em<0.2 and Ea<10 deg):
-                    # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or SafetyFactor < 1.5:
-                    # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10 or FRW < 1:
-                    # if abs(normalized_torque_ripple)>=0.2 or abs(normalized_force_error_magnitude) >= 0.2 or abs(force_error_angle) > 10:
-                    if abs(normalized_torque_ripple)>=0.3 or abs(normalized_force_error_magnitude) >= 0.35 or abs(force_error_angle) > 20 or FRW < 0.75:
-                        print('Constraints are violated:')
-                        if abs(normalized_torque_ripple)>=0.3:
-                            print('\tabs(normalized_torque_ripple)>=0.3 | (=%f)' % (normalized_torque_ripple))
-                        if abs(normalized_force_error_magnitude) >= 0.35:
-                            print('\tabs(normalized_force_error_magnitude) >= 0.35 | (=%f)' % (normalized_force_error_magnitude))
-                        if abs(force_error_angle) > 20:
-                            print('\tabs(force_error_angle) > 20 | (=%f)' % (force_error_angle))
-                        if FRW < 0.75:
-                            print('\tFRW < 0.75 | (=%f)' % (FRW))
-                        f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
-                    print('f1,f2,f3:',f1,f2,f3)
-                except:
-                    msg = 'This design causes an error in JMAG and hence is discarded..'
-                    print(msg)
-                    logger = logging.getLogger(__name__)
-                    logger.warn(msg)
-
-                break
-
-        counter_fitness_return += 1
-        print('Fitness: %d, %d\n----------------'%(counter_fitness_called, counter_fitness_return))
-        # raise KeyboardInterrupt
-        return [f1, f2, f3]
-
-    # Return number of objectives
-    def get_nobj(self):
-        return 3
-
-    # Return bounds of decision variables (a.k.a. chromosome)
-    def get_bounds(self):
-        global ad
-        print('Problem_BearinglessSynchronousDesign.get_bounds:', ad.bounds_denorm)
-        min_b, max_b = np.asarray(ad.bounds_denorm).T 
-        return ( min_b.tolist(), max_b.tolist() )
-
-    # Return function name
-    def get_name(self):
-        return "Bearingless PMSM Design"
-
+from acm_designer import Problem_BearinglessSynchronousDesign
 
 if bool_post_processing == True:
-    # Combine all data 
-
-    # Select optimal design by user-defined criteria
-    if r'run#62' in fea_config_dict['run_folder']:
-        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + ad.solver.fea_config_dict['run_folder'] 
-        number_of_chromosome = ad.solver.read_swarm_data(ad.bound_filter)
-        swarm_data_Y730 = ad.solver.swarm_data
-        swarm_project_names_Y730 = ad.solver.swarm_data_container.project_names
-        print('number_of_chromosome =', number_of_chromosome)
- 
-        def selection_criteria(swarm_data_):
-            global best_idx, best_chromosome
-            # HIGH TORQUE DENSITY
-            # Y730
-            #       L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.
-            # 794 [1.16163, 9.00566, 8.34039, 2.91474, 0.786231, 2.76114, 1.2485, -22666.7, -0.953681, 4.89779]
-            # ----------------------------------------
-            # HIGH EFFICIENCY
-            # Y730
-            #       L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.
-            # 186 [1.25979, 6.80075, 5.64435, 5.8548, 1.59461, 2.11656, 2.58401, -17633.3, -0.958828, 5.53104]
-            # 615 [1.2725, 5.6206, 4.60947, 3.56502, 2.27635, 0.506179, 2.78758, -17888.9, -0.958846, 8.56211]
-            # ----------------------------------------
-            # LOW RIPPLE PERFORMANCE
-            # Severson02
-            #       L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.
-            # 1043 [1.38278, 8.91078, 7.43896, 2.66259, 0.611812, 1.50521, 1.51402, -19125.4, -0.953987, 2.91096]
-            # 1129 [1.38878, 8.68378, 7.97301, 2.82904, 0.586374, 1.97867, 1.45825, -19169.0, -0.954226, 2.99944]
-            # 1178 [1.36258, 8.9625, 7.49621, 2.5878, 0.503512, 0.678909, 1.74283, -19134.3, -0.952751, 2.90795]
-
-            for idx, chromosome in enumerate(swarm_data_):
-                # if chromosome[-1] < 5 and chromosome[-2] < -0.95 and chromosome[-3] < -22500: # best Y730     #1625, 0.000702091 * 8050 * 9.8 = 55.38795899 N.  FRW = 223.257 / 55.38795899 = 4.0
-                # if chromosome[-1] < 10 and chromosome[-2] < -0.9585 and chromosome[-3] < -17500: # best Y730  #187, 0.000902584 * 8050 * 9.8 = 71.204851760 N. FRW = 151.246 / 71.204851760 = 2.124
-                if chromosome[-1] < 11 and chromosome[-2] < -0.92 and chromosome[-3] < 250: # best severson02 #1130, 0.000830274 * 8050 * 9.8 = 65.50031586 N.  FRW = 177.418 / 65.5 = 2.7
-                    print(idx, swarm_project_names_Y730[idx], chromosome[::-1])
-
-                    def pyx_script():
-                        # Plot cross section view
-                        import population
-                        im_best = population.bearingless_induction_motor_design.local_design_variant(ad.spec.im_template, 99, 999, best_chromosome[:-3])
-                        im_best.ID = str(best_idx)
-                        pyx_draw_model(im_best)
-                        quit()
-
-                    # # Take high torque density design for LSA
-                    # if idx == 1625 - 1:
-                    #     best_idx = idx
-                    #     best_chromosome = chromosome
-                    #     pyx_script()
-
-                    # # Take high efficiency design for LSA
-                    # if idx == 187 - 1:
-                    #     best_idx = idx
-                    #     best_chromosome = chromosome
-                    #     pyx_script()
-
-                    # # Take low ripple performance design for LSA
-                    # if idx == 1130 - 1:
-                    #     best_idx = idx
-                    #     best_chromosome = chromosome
-                    #     # pyx_script()
-
-        # print('-'*40+'\nY730' + '\n      L_g,    w_st,   w_rt,   theta_so,   w_ro,    d_so,    d_ro,    -TRV,    -eta,    OC.')
-        print('-'*40+'\nY730' + '\n      _____________________________________________________________________________________')
-        selection_criteria(swarm_data_Y730)
-
-        # Set the output_dir back!
-        ad.solver.output_dir = ad.solver.fea_config_dict['dir_parent'] + ad.solver.fea_config_dict['run_folder']
-        quit()
-
-    print('Sizes of the 3 populations (in order):', len(swarm_data_severson01), len(swarm_data_severson02), len(swarm_data_Y730))
-    ad.solver.swarm_data = swarm_data_severson01 + swarm_data_severson02 + swarm_data_Y730 # list add
+    import one_script_pm_post_processing 
+    one_script_pm_post_processing.post_processing(ad, fea_config_dict)
     quit()
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~

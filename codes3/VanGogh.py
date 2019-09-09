@@ -629,9 +629,17 @@ class VanGogh_TikZPlotter():
     def mirror_and_copyrotate(Q, Radius, fraction):
         return
 
+    def getSketch(self, sketchName, color=None):
+        print('%s @ getSketch: I am dummy function to be consistent with JMAG codes.'%(sketchName))
+    def prepareSection(self, list_regions, bMirrorMerge=True, bRotateMerge=True):
+        print('@ prepareSection: I am dummy function to be consistent with JMAG codes.')
+
+    def drawLine(self, p1, p2):
+        self.draw_line(p1, p2)
+        return [str(p1)+','+str(p2)]
     def draw_line(self, p1, p2, ax=None, **kwarg):
         msg = '\\draw[black] (%12.8f,%12.8f) -- (%12.8f,%12.8f);\n' % (p1[0], p2[0], p1[1], p2[1])
-        # print msg
+        # print(msg)
         self.file.write(msg)
 
         # PyX
@@ -643,6 +651,15 @@ class VanGogh_TikZPlotter():
         if 'untrack' not in kwarg:
             self.track_path.append([p1[0], p1[1], p2[0], p2[1]])
 
+    def drawArc(self, centerxy, startxy, endxy):
+        # wrong:
+        # angle_between_points = self.get_postive_angle(endxy, center=centerxy) - self.get_postive_angle(startxy, center=centerxy) # assume both points are on the circle of the arc
+        # correct:
+        angle_between_points = atan2(endxy[1], endxy[0]) - atan2(startxy[1], startxy[0])
+
+        relangle = -0.5 * angle_between_points # simple math: https://pyx-project.org/manual/connector.html?highlight=relangle
+        self.draw_arc(startxy, endxy, centerxy=centerxy, relangle=relangle)
+        return [str(startxy)+','+str(endxy)]
     def draw_arc(self, startxy, endxy, centerxy=(0,0), **kwarg):
         # %DRAWARC Draw an arc in the current TikZ graphic.
         # %   drawarc(mn, [center_x,_y], [start_x, _y], [end_x, _y])
@@ -707,18 +724,25 @@ class VanGogh_TikZPlotter():
         def rad2deg(rad):
             return rad/pi*180.
         msg = '\\draw[black] (%12.8f,%12.8f) arc (%12.8f:%12.8f:%12.8f);\n' % (x, y, rad2deg(start), rad2deg(stop), radius)
-        # print msg
+        # print(msg)
         self.file.write(msg)
 
-        # Below is PyX | Above is TikZ
+        # Below is PyX | Above is TikZ (FYI, TikZ is written by Eric and is not working as expected, so use my PyX codes instead)
+        # Below is PyX | Above is TikZ (FYI, TikZ is written by Eric and is not working as expected, so use my PyX codes instead)
+        # Below is PyX | Above is TikZ (FYI, TikZ is written by Eric and is not working as expected, so use my PyX codes instead)
+
         # PyX
         textattrs = [pyx.text.halign.center, pyx.text.vshift.middlezero]
-        X = pyx.text.text(startxy[0], startxy[1], r"", textattrs) # must have textattrs or normsubpath cannot close erro
+        X = pyx.text.text(startxy[0], startxy[1], r"", textattrs) # must have textattrs or else you will have normsubpath cannot close error: AssertionError: normsubpathitems do not match
         Y = pyx.text.text(endxy[0], endxy[1], r"", textattrs)
-        self.c.stroke(pyx.connector.arc(X, Y, boxdists=[0.0, 0.0], relangle=kwarg['relangle']/pi*180), [pyx.color.rgb.black, pyx.style.linewidth.THICK])
+        self.c.stroke(pyx.connector.arc(X, Y, boxdists=[0.0, 0.0], relangle=kwarg['relangle']/pi*180), [pyx.color.rgb.black, pyx.style.linewidth.THICK]) # https://pyx-project.org/manual/connector.html?highlight=relangle
             # print '[%g,%g,%g,%g,%g],'%(startxy[0], startxy[1], endxy[0], endxy[1], 0.5*kwarg['relangle'])
         if 'untrack' not in kwarg:
             self.track_path.append([startxy[0], startxy[1], endxy[0], endxy[1], centerxy[0], centerxy[1], kwarg['relangle']])
+
+        # extra points
+        self.c.fill(pyx.path.circle(startxy[0], startxy[1], 0.25))
+        self.c.fill(pyx.path.circle(endxy[0], endxy[1], 0.25))
 
 # wiki: https://en.wikipedia.org/wiki/Tangent_lines_to_circles
 def get_tangent_points_of_two_circles(center1, radius1, center2, radius2):

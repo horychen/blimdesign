@@ -159,19 +159,19 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
                     else:
                         raise Exception('Not tested feature. Add your referece for this free variable.')
 
-        deg_alpha_st             = free_variables[0]  # if self.filter[0]  else spmsm_template.deg_alpha_st            
-        mm_d_so                  = free_variables[1]  # if self.filter[1]  else spmsm_template.mm_d_so                 
-        mm_d_st                  = free_variables[2]  # if self.filter[2]  else spmsm_template.mm_d_st                 
-        stator_outer_radius      = free_variables[3]  # if self.filter[3]  else spmsm_template.stator_outer_radius     
-        mm_w_st                  = free_variables[4]  # if self.filter[4]  else spmsm_template.mm_w_st                 
-        sleeve_length            = free_variables[5]  # if self.filter[5]  else spmsm_template.sleeve_length           
-        mm_d_pm                  = free_variables[6]  # if self.filter[6]  else spmsm_template.mm_d_pm                 
-        deg_alpha_rm             = free_variables[7]  # if self.filter[7]  else spmsm_template.deg_alpha_rm            
-        deg_alpha_rs             = free_variables[8]  # if self.filter[8]  else deg_alpha_rm
-        mm_d_ri                  = free_variables[9]  # if self.filter[9]  else spmsm_template.mm_d_ri                 
-        rotor_steel_outer_radius = free_variables[10] # if self.filter[10] else spmsm_template.rotor_steel_outer_radius
-        mm_d_rp                  = free_variables[11] # if self.filter[11] else spmsm_template.mm_d_rp                 
-        mm_d_rs                  = free_variables[12] # if self.filter[12] else spmsm_template.mm_d_rs                 
+        deg_alpha_st                = free_variables[0]  # if self.filter[0]  else spmsm_template.deg_alpha_st            
+        mm_d_so                     = free_variables[1]  # if self.filter[1]  else spmsm_template.mm_d_so                 
+        mm_d_st                     = free_variables[2]  # if self.filter[2]  else spmsm_template.mm_d_st                 
+        stator_outer_radius         = free_variables[3]  # if self.filter[3]  else spmsm_template.stator_outer_radius     
+        mm_w_st                     = free_variables[4]  # if self.filter[4]  else spmsm_template.mm_w_st                 
+        sleeve_length               = free_variables[5]  # if self.filter[5]  else spmsm_template.sleeve_length           
+        mm_d_pm                     = free_variables[6]  # if self.filter[6]  else spmsm_template.mm_d_pm                 
+        deg_alpha_rm                = free_variables[7]  # if self.filter[7]  else spmsm_template.deg_alpha_rm            
+        deg_alpha_rs                = free_variables[8]  # if self.filter[8]  else deg_alpha_rm
+        mm_d_ri                     = free_variables[9]  # if self.filter[9]  else spmsm_template.mm_d_ri                 
+        mm_rotor_steel_outer_radius = free_variables[10] # if self.filter[10] else spmsm_template.mm_rotor_steel_outer_radius
+        mm_d_rp                     = free_variables[11] # if self.filter[11] else spmsm_template.mm_d_rp                 
+        mm_d_rs                     = free_variables[12] # if self.filter[12] else spmsm_template.mm_d_rs                 
 
         if mm_d_rp > mm_d_pm:
             mm_d_rp = mm_d_pm
@@ -182,7 +182,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
 
         self.deg_alpha_st = free_variables[0]
         self.deg_alpha_so = spmsm_template.deg_alpha_so
-        self.mm_r_si      = rotor_steel_outer_radius + (mm_d_pm - mm_d_rp) + sleeve_length + spmsm_template.fixed_air_gap_length
+        self.mm_r_si      = mm_rotor_steel_outer_radius + (mm_d_pm - mm_d_rp) + sleeve_length + spmsm_template.fixed_air_gap_length
         self.mm_d_so      = free_variables[1]
         self.mm_d_sp      = 1.5*self.mm_d_so # The neck is 0.5 of the head as IM's geometry.
         self.mm_d_st      = free_variables[2]; stator_outer_radius = free_variables[3]
@@ -197,8 +197,8 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         self.mm_d_pm      = free_variables[6]
         self.deg_alpha_rm = free_variables[7]
         self.deg_alpha_rs = free_variables[8]
-        self.mm_d_ri      = free_variables[9]; rotor_steel_outer_radius = free_variables[10]
-        self.mm_r_ri      = rotor_steel_outer_radius - mm_d_rp - mm_d_ri
+        self.mm_d_ri      = free_variables[9]; mm_rotor_steel_outer_radius = free_variables[10]
+        self.mm_r_ri      = mm_rotor_steel_outer_radius - mm_d_rp - mm_d_ri
         self.mm_d_rp      = free_variables[11]
         self.mm_d_rs      = free_variables[12]
         self.p = spmsm_template.p
@@ -235,8 +235,8 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         #                                 ]
 
         # obsolete variable from IM
-        self.Radius_OuterRotor = rotor_steel_outer_radius  + (mm_d_pm - mm_d_rp) # the outer radius of the rotor with magnet / the magnet
-        self.Length_AirGap = self.fixed_air_gap_length
+        self.Radius_OuterRotor = mm_rotor_steel_outer_radius  + (mm_d_pm - mm_d_rp) # the outer radius of the rotor with magnet / the magnet
+        self.Length_AirGap = self.fixed_air_gap_length + self.sleeve_length
         self.ID = 'p%gs%g'%(self.p,self.s)
         self.number_current_generation = 0
         self.individual_index = counter
@@ -360,7 +360,7 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         else:
             raise Exception('Not implemented.')
 
-    def draw_spmsm(self, toolJd):
+    def draw_spmsm(self, toolJd, bool_pyx=False):
 
         # Rotor Core
         list_segments = self.rotorCore.draw(toolJd)
@@ -369,10 +369,11 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         region1 = toolJd.prepareSection(list_segments)
 
         # Shaft
-        list_segments = self.shaft.draw(toolJd)
-        toolJd.bMirror = False
-        toolJd.iRotateCopy = 1
-        region0 = toolJd.prepareSection(list_segments)
+        if not bool_pyx:
+            list_segments = self.shaft.draw(toolJd)
+            toolJd.bMirror = False
+            toolJd.iRotateCopy = 1
+            region0 = toolJd.prepareSection(list_segments)
 
         # Rotor Magnet
         list_regions = self.rotorMagnet.draw(toolJd)
@@ -381,15 +382,16 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         region2 = toolJd.prepareSection(list_regions, bRotateMerge=False)
 
         # Sleeve
-        sleeve = CrossSectInnerNotchedRotor.CrossSectSleeve(
-                        name = 'Sleeve',
-                        notched_magnet = self.rotorMagnet,
-                        d_sleeve = self.sleeve_length
-                        )
-        list_regions = sleeve.draw(toolJd)
-        toolJd.bMirror = False
-        toolJd.iRotateCopy = self.rotorMagnet.notched_rotor.p*2
-        regionS = toolJd.prepareSection(list_regions)
+        if not bool_pyx:
+            sleeve = CrossSectInnerNotchedRotor.CrossSectSleeve(
+                            name = 'Sleeve',
+                            notched_magnet = self.rotorMagnet,
+                            d_sleeve = self.sleeve_length
+                            )
+            list_regions = sleeve.draw(toolJd)
+            toolJd.bMirror = False
+            toolJd.iRotateCopy = self.rotorMagnet.notched_rotor.p*2
+            regionS = toolJd.prepareSection(list_regions)
 
         # Stator Core
         list_regions = self.stator_core.draw(toolJd)
@@ -397,35 +399,36 @@ class bearingless_spmsm_design(bearingless_spmsm_template):
         toolJd.iRotateCopy = self.stator_core.Q
         region3 = toolJd.prepareSection(list_regions)
 
-        # Stator Winding
-        list_regions = self.coils.draw(toolJd)
-        toolJd.bMirror = False
-        toolJd.iRotateCopy = self.coils.stator_core.Q
-        region4 = toolJd.prepareSection(list_regions)
+        if not bool_pyx:
+            # Stator Winding
+            list_regions = self.coils.draw(toolJd)
+            toolJd.bMirror = False
+            toolJd.iRotateCopy = self.coils.stator_core.Q
+            region4 = toolJd.prepareSection(list_regions)
 
-        CurrentAmp_in_the_slot = self.coils.mm2_slot_area * self.fill_factor * self.Js*1e-6 * np.sqrt(2) #/2.2*2.8
-        CurrentAmp_per_conductor = CurrentAmp_in_the_slot / self.DriveW_zQ
-        CurrentAmp_per_phase = CurrentAmp_per_conductor * self.wily.number_parallel_branch # 跟几层绕组根本没关系！除以zQ的时候，就已经变成每根导体的电流了。
-        variant_DriveW_CurrentAmp = CurrentAmp_per_phase # this current amp value is for non-bearingless motor
-        self.CurrentAmp_per_phase = CurrentAmp_per_phase
-        self.DriveW_CurrentAmp = self.fea_config_dict['TORQUE_CURRENT_RATIO'] * variant_DriveW_CurrentAmp 
-        self.BeariW_CurrentAmp = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] * variant_DriveW_CurrentAmp
+            CurrentAmp_in_the_slot = self.coils.mm2_slot_area * self.fill_factor * self.Js*1e-6 * np.sqrt(2) #/2.2*2.8
+            CurrentAmp_per_conductor = CurrentAmp_in_the_slot / self.DriveW_zQ
+            CurrentAmp_per_phase = CurrentAmp_per_conductor * self.wily.number_parallel_branch # 跟几层绕组根本没关系！除以zQ的时候，就已经变成每根导体的电流了。
+            variant_DriveW_CurrentAmp = CurrentAmp_per_phase # this current amp value is for non-bearingless motor
+            self.CurrentAmp_per_phase = CurrentAmp_per_phase
+            self.DriveW_CurrentAmp = self.fea_config_dict['TORQUE_CURRENT_RATIO'] * variant_DriveW_CurrentAmp 
+            self.BeariW_CurrentAmp = self.fea_config_dict['SUSPENSION_CURRENT_RATIO'] * variant_DriveW_CurrentAmp
 
-        slot_area_utilizing_ratio = (self.DriveW_CurrentAmp + self.BeariW_CurrentAmp) / self.CurrentAmp_per_phase
-        print('---Heads up! slot_area_utilizing_ratio is', slot_area_utilizing_ratio)
+            slot_area_utilizing_ratio = (self.DriveW_CurrentAmp + self.BeariW_CurrentAmp) / self.CurrentAmp_per_phase
+            print('---Heads up! slot_area_utilizing_ratio is', slot_area_utilizing_ratio)
 
-        print('---Variant CurrentAmp_in_the_slot =', CurrentAmp_in_the_slot)
-        print('---variant_DriveW_CurrentAmp = CurrentAmp_per_phase =', variant_DriveW_CurrentAmp)
-        print('---self.DriveW_CurrentAmp =', self.DriveW_CurrentAmp)
-        print('---self.BeariW_CurrentAmp =', self.BeariW_CurrentAmp)
-        print('---TORQUE_CURRENT_RATIO:', self.fea_config_dict['TORQUE_CURRENT_RATIO'])
-        print('---SUSPENSION_CURRENT_RATIO:', self.fea_config_dict['SUSPENSION_CURRENT_RATIO'])
+            print('---Variant CurrentAmp_in_the_slot =', CurrentAmp_in_the_slot)
+            print('---variant_DriveW_CurrentAmp = CurrentAmp_per_phase =', variant_DriveW_CurrentAmp)
+            print('---self.DriveW_CurrentAmp =', self.DriveW_CurrentAmp)
+            print('---self.BeariW_CurrentAmp =', self.BeariW_CurrentAmp)
+            print('---TORQUE_CURRENT_RATIO:', self.fea_config_dict['TORQUE_CURRENT_RATIO'])
+            print('---SUSPENSION_CURRENT_RATIO:', self.fea_config_dict['SUSPENSION_CURRENT_RATIO'])
 
-        # Import Model into Designer
-        toolJd.doc.SaveModel(False) # True: Project is also saved. 
-        model = toolJd.app.GetCurrentModel()
-        model.SetName(self.name)
-        model.SetDescription(self.show(toString=True))
+            # Import Model into Designer
+            toolJd.doc.SaveModel(False) # True: Project is also saved. 
+            model = toolJd.app.GetCurrentModel()
+            model.SetName(self.name)
+            model.SetDescription(self.show(toString=True))
 
         return True
 

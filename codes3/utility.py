@@ -1146,7 +1146,7 @@ def get_copper_loss_Bolognani(stator_slot_area, rotor_slot_area=None, STATOR_SLO
     area_copper_S_Cu         = STATOR_SLOT_FILL_FACTOR * Area_S_slot
     a                        = copper_loss_parameters[2]
     zQ                       = copper_loss_parameters[3]
-    coil_pitch_yq            = copper_loss_parameters[4]
+    coil_pitch_yq            = abs(copper_loss_parameters[4]) # coil pitch is -1 for concentrated winding so an abs() is required.
     Q                        = copper_loss_parameters[5]
     stack_length_m           = 1e-3*copper_loss_parameters[6]
     current_rms_value        = copper_loss_parameters[7] / 1.4142135623730951 # for one phase
@@ -1166,7 +1166,8 @@ def get_copper_loss_Bolognani(stator_slot_area, rotor_slot_area=None, STATOR_SLO
     Vol_Cu = area_copper_S_Cu * (stack_length_m + end_winding_length_Lew) * Q
     stator_copper_loss = rho_Copper * Vol_Cu * Js**2
 
-    Vol_Cu_along_stack = area_copper_S_Cu * (end_winding_length_Lew) * Q
+    Vol_Cu_along_stack = area_copper_S_Cu * (end_winding_length_Lew) * Q # wrong?
+    Vol_Cu_along_stack = area_copper_S_Cu * (stack_length_m) * Q
     stator_copper_loss_along_stack = rho_Copper * Vol_Cu_along_stack * Js**2
 
     print('Stator current [Arms]:', current_rms_value, 'Js:', Js)
@@ -1203,7 +1204,8 @@ def get_copper_loss_Bolognani(stator_slot_area, rotor_slot_area=None, STATOR_SLO
         Vol_Cu = area_copper_S_Cu * (stack_length_m + end_winding_length_Lew) * Q
         rotor_copper_loss = rho_Copper * Vol_Cu * Jr**2
 
-        Vol_Cu_along_stack = area_copper_S_Cu * (end_winding_length_Lew) * Q
+        Vol_Cu_along_stack = area_copper_S_Cu * (end_winding_length_Lew) * Q # wrong?
+        Vol_Cu_along_stack = area_copper_S_Cu * (stack_length_m) * Q
         rotor_copper_loss_along_stack = rho_Copper * Vol_Cu_along_stack * Jr**2
         print('Rotor current [Arms]:', current_rms_value, 'Jr:', Jr)
     else:
@@ -1333,7 +1335,7 @@ def read_csv_results_4_general_purpose(study_name, path_prefix, fea_config_dict,
                     rotor_eddycurrent_loss  = float(row[1]) # Rotor Core
                     stator_eddycurrent_loss = float(row[4]) # Stator Core
                     print('Eddy current loss:', stator_eddycurrent_loss, rotor_eddycurrent_loss)
-                    break                    
+                    break
     with open(path_prefix + study_name + '_hysteresis_loss_loss.csv', 'r') as f:
         count = 0
         for row in csv_row_reader(f):

@@ -33,12 +33,13 @@ fea_config_dict = {
     ##########################
     'JMAG_Scheduler':False, # multi-cores run
     'delete_results_after_calculation': False, # check if True can we still export Terminal Voltage? 如果是True，那么就得不到Terminal Voltage和功率因数了！
-    'use_weights':None,
+    'use_weights':'O2', # For DE. | This is not used in MOO
+    'bool_refined_bounds': False, # Don't use this. Use classic bounds based on an initial design instead.
 
     ##########################
     # Design Specifications
     ##########################
-    'Active_Qr':None, #16, #32,
+    'Active_Qr': 16,# None, #16, #32, # Induction motor rotor bar number
     'PoleSpecific': True,
     'use_drop_shape_rotor_bar': True,
     'DPNV': True,
@@ -53,6 +54,8 @@ fea_config_dict = {
     'Bar_Conductivity':1/((3.76*75+873)*1e-9/55.), # @75 Degree Celsius # 1/((3.76*100+873)*1e-9/55.) for Copper, where temperature is 25 or 100 deg Celsius.
     # 'Bar_Conductivity':40e6, # 40e6 for Aluminium; 
 }
+
+# obsolete
 def where_am_i(fea_config_dict):
     dir_interpreter = os.path.abspath('')
     print(dir_interpreter)
@@ -110,6 +113,7 @@ def where_am_i(fea_config_dict):
     # However, we need field data for iron loss calculation
     fea_config_dict['OnlyTableResults'] = False 
 
+# self-introspective
 def where_am_i(fea_config_dict):
     def get_pc_name():
         import platform
