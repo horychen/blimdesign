@@ -162,6 +162,13 @@ if __name__ == '__main__':
         import acm_designer
         global ad
         ad = acm_designer.acm_designer(fea_config_dict, spec)
+        __builtins__.ad = ad # share global variable between modules
+        print(__builtins__.ad)
+
+        global counter_fitness_called, counter_fitness_return
+        counter_fitness_called, counter_fitness_return = 0, 0
+        __builtins__.counter_fitness_called = counter_fitness_called
+        __builtins__.counter_fitness_return = counter_fitness_return
 
         ad.bounds_denorm = spec.acm_template.get_classic_bounds(which_filter='VariableSleeveLength')
         # ad.bounds_denorm = spec.acm_template.get_classic_bounds(which_filter='FixedSleeveLength') # ad.get_classic_bounds() <- obsolete
@@ -185,7 +192,7 @@ if __name__ == '__main__':
             # plot the Pareto front for the archive
             import utility_moo
 
-            from acm_designer import Problem_BearinglessSynchronousDesign
+            from Problem_BearinglessSynchronousDesign import Problem_BearinglessSynchronousDesign
             udp = Problem_BearinglessSynchronousDesign()
             import pygmo as pg
             prob = pg.problem(udp)

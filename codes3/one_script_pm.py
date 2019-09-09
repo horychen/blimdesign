@@ -130,8 +130,13 @@ if ad.bool_re_evaluate:
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 import pygmo as pg
 global counter_fitness_called, counter_fitness_return
+counter_fitness_called, counter_fitness_return = 0, 0
+__builtins__.ad = ad # share global variable between modules # https://stackoverflow.com/questions/142545/how-to-make-a-cross-module-variable
+__builtins__.counter_fitness_called = counter_fitness_called
+__builtins__.counter_fitness_return = counter_fitness_return
 from acm_designer import get_bad_fintess_values
-from acm_designer import Problem_BearinglessSynchronousDesign
+print(__builtins__.ad)
+from Problem_BearinglessSynchronousDesign import Problem_BearinglessSynchronousDesign
 
 if bool_post_processing == True:
     import one_script_pm_post_processing 
@@ -148,7 +153,6 @@ if True:
 #   The magic method __init__ cannot be fined for UDP class
 ################################################################
     udp = Problem_BearinglessSynchronousDesign()
-    counter_fitness_called, counter_fitness_return = 0, 0
     prob = pg.problem(udp)
 
     popsize = 78

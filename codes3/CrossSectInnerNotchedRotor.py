@@ -116,14 +116,15 @@ class CrossSectInnerNotchedRotor(object):
                 list_segments += drawer.drawArc([0,0], P5, P4)
                 list_segments += drawer.drawLine(P5, P6)
                 list_segments += drawer.drawArc([0,0], P6, P1)
-                def print_point(P):
-                    print( '(%g, %g)' % (P[0], P[1]) )
-                print_point(P1)
-                print_point(P2)
-                print_point(P3)
-                print_point(P4)
-                print_point(P5)
-                print_point(P6)
+                # debug
+                # def print_point(P):
+                #     print( '(%g, %g)' % (P[0], P[1]) )
+                # print_point(P1)
+                # print_point(P2)
+                # print_point(P3)
+                # print_point(P4)
+                # print_point(P5)
+                # print_point(P6)
         else:
             if alpha_rm >= 180/p*0.9800:
                 print('WARNING: NOT TESTED FULL POLE PITCH MAGNET WHEN s>1.')
