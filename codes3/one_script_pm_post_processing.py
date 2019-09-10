@@ -105,13 +105,13 @@ def post_processing(ad, fea_config_dict):
     # Select optimal design by user-defined criteria
     if r'run#62399' in fea_config_dict['run_folder']:
         selection_criteria(ad, _swarm_data, _swarm_project_names, upper_bound_objectives=[22, -0.94, 200], best_idx=2908)
+        quit()
     elif r'run#62499' in fea_config_dict['run_folder']:
         selection_criteria(ad, _swarm_data, _swarm_project_names, upper_bound_objectives=[22, -0.94, 200], best_idx=4235)
     elif r'run#62599' in fea_config_dict['run_folder']:
         selection_criteria(ad, _swarm_data, _swarm_project_names, upper_bound_objectives=[13, -0.94, 200], best_idx=3741)
     elif r'run#62699' in fea_config_dict['run_folder']:
         selection_criteria(ad, _swarm_data, _swarm_project_names, upper_bound_objectives=[3, -0.946, 80], best_idx=57)
-        quit()
     elif r'run#62799' in fea_config_dict['run_folder']:
         selection_criteria(ad, _swarm_data, _swarm_project_names, upper_bound_objectives=[6, -0.94, 200], best_idx=17)
     else:

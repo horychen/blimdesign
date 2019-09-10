@@ -1,31 +1,31 @@
-import logging
-from acm_designer import get_bad_fintess_values
-import numpy as np
 import builtins
-import os
-
-if hasattr(builtins, 'ad') and hasattr(builtins, 'counter_fitness_called') and hasattr(builtins, 'counter_fitness_return'):
+if hasattr(builtins, 'ad'):
     print('Global variables are shared between modules...')
 else:
-    raise Exception('Please add "ad" and two other counter variables to module __builtins__.')
+    raise Exception('Please add global variable (address) "ad" to module __builtins__.')
 print(builtins.ad)
+print(ad)
+print(ad.counter_fitness_called)
+print(ad.counter_fitness_return)
 
+import logging, os
+import numpy as np
+from acm_designer import get_bad_fintess_values
 class Problem_BearinglessSynchronousDesign(object):
 
     # Define objectives
     def fitness(self, x):
-        global ad, counter_fitness_called, counter_fitness_return
+        global ad
 
         if ad.flag_do_not_evaluate_when_init_pop == True:
             return [0, 0, 0]
 
-        ad, counter_fitness_called, counter_fitness_return
-        if counter_fitness_called == counter_fitness_return:
-            counter_fitness_called += 1
+        if ad.counter_fitness_called == ad.counter_fitness_return:
+            ad.counter_fitness_called += 1
         else:
             # This is not reachable
-            raise Exception('counter_fitness_called')
-        print('Call fitness: %d, %d'%(counter_fitness_called, counter_fitness_return))
+            raise Exception('ad.counter_fitness_called')
+        print('Call fitness: %d, %d'%(ad.counter_fitness_called, ad.counter_fitness_return))
 
         # 不要标幺化了！统一用真的bounds，见get_bounds()
         x_denorm = x
@@ -35,15 +35,15 @@ class Problem_BearinglessSynchronousDesign(object):
         stuck_at = 0
         while True:
             if ad.bool_re_evaluate:
-                if counter_fitness_return >= len(ad.solver.swarm_data):
+                if ad.counter_fitness_return >= len(ad.solver.swarm_data):
                     quit()
-                x_denorm = ad.solver.swarm_data[counter_fitness_return][:-3]
-                print(ad.solver.swarm_data[counter_fitness_return])
+                x_denorm = ad.solver.swarm_data[ad.counter_fitness_return][:-3]
+                print(ad.solver.swarm_data[ad.counter_fitness_return])
 
-            if stuck_at < counter_fitness_called:
-                stuck_at = counter_fitness_called
+            if stuck_at < ad.counter_fitness_called:
+                stuck_at = ad.counter_fitness_called
                 counter_loop = 0 # reset
-            if stuck_at == counter_fitness_called:
+            if stuck_at == ad.counter_fitness_called:
                 counter_loop += 1
 
             # if True:
@@ -52,7 +52,7 @@ class Problem_BearinglessSynchronousDesign(object):
                 normalized_torque_ripple, \
                 normalized_force_error_magnitude, \
                 force_error_angle = \
-                    ad.evaluate_design(ad.spec.acm_template, x_denorm, counter_fitness_called, counter_loop=counter_loop)
+                    ad.evaluate_design(ad.spec.acm_template, x_denorm, ad.counter_fitness_called, counter_loop=counter_loop)
 
                 # remove folder .jfiles to save space (we have to generate it first in JMAG Designer to have field data and voltage profiles)
                 if ad.solver.folder_to_be_deleted is not None and os.path.isdir(ad.solver.folder_to_be_deleted):
@@ -100,14 +100,14 @@ class Problem_BearinglessSynchronousDesign(object):
                 # except (utility.ExceptionReTry, pywintypes.com_error) as error:
                 #     print(error)
 
-                #     msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
+                #     msg = 'FEA tool failed for individual #%d: attemp #%d.'%(ad.counter_fitness_called, counter_loop)
                 #     logger = logging.getLogger(__name__)
                 #     logger.error(msg)
                 #     print(msg)
 
                 #     if counter_loop > 1: # > 1 = two attemps; > 2 = three attemps
                 #         print(error)
-                #         raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+                #         raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(ad.counter_fitness_called))
                 #     else:
                 #         from time import sleep
                 #         print('\n\n\nSleep for 3 sec and continue.')
@@ -118,7 +118,7 @@ class Problem_BearinglessSynchronousDesign(object):
                 #     print(str(error)) 
                 #     # print("Detail: {}".format(error.payload))
 
-                #     msg = 'FEA tool failed for individual #%d: attemp #%d.'%(counter_fitness_called, counter_loop)
+                #     msg = 'FEA tool failed for individual #%d: attemp #%d.'%(ad.counter_fitness_called, counter_loop)
                 #     logger = logging.getLogger(__name__)
                 #     logger.error(msg)
                 #     print(msg)
@@ -126,7 +126,7 @@ class Problem_BearinglessSynchronousDesign(object):
                 #     if 'designer.Application' in str(error):
                 #         if counter_loop > 1: 
                 #             print(error)
-                #             raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(counter_fitness_called))
+                #             raise Exception('Abort the optimization. Two attemps to evaluate the design have all failed for individual #%d'%(ad.counter_fitness_called))
                 #         else:
                 #             from time import sleep
                 #             print('\n\n\nSleep for 3 sec and continue.')
@@ -176,8 +176,8 @@ class Problem_BearinglessSynchronousDesign(object):
 
                 break
 
-        counter_fitness_return += 1
-        print('Fitness: %d, %d\n----------------'%(counter_fitness_called, counter_fitness_return))
+        ad.counter_fitness_return += 1
+        print('Fitness: %d, %d\n----------------'%(ad.counter_fitness_called, ad.counter_fitness_return))
         # raise KeyboardInterrupt
         return [f1, f2, f3]
 

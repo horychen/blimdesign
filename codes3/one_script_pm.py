@@ -5,7 +5,7 @@ from utility import my_execfile
 import utility_moo
 from win32com.client import pywintypes
 bool_post_processing = False # solve or post-processing
-bool_re_evaluate = True
+bool_re_evaluate = False
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
@@ -26,15 +26,15 @@ if True:
     # run_folder = r'run#62399/' # spec_ECCE_PMSM_ (Q6p2)
     # run_folder = r'run#62499/' # spec_PEMD_BPMSM_Q12p2
     # run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1)
-    run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4)
-    # run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
+    # run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4)
+    run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
 
     # spec's
-    # my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
+    # my_execfile('./spec_ECCE_PMSM_Q6p2.py', g=globals(), l=locals()) # Q=6, p=2
     # my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
     # my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
-    my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
-    # my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=24, p=1, ps=2
+    # my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
+    my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=24, p=1, ps=2
 
     fea_config_dict['run_folder'] = run_folder
 
@@ -128,13 +128,11 @@ if ad.bool_re_evaluate:
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # Optimization
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
-import pygmo as pg
-global counter_fitness_called, counter_fitness_return
-counter_fitness_called, counter_fitness_return = 0, 0
-__builtins__.ad = ad # share global variable between modules # https://stackoverflow.com/questions/142545/how-to-make-a-cross-module-variable
-__builtins__.counter_fitness_called = counter_fitness_called
-__builtins__.counter_fitness_return = counter_fitness_return
 from acm_designer import get_bad_fintess_values
+import pygmo as pg
+ad.counter_fitness_called = 0
+ad.counter_fitness_return = 0
+__builtins__.ad = ad # share global variable between modules # https://stackoverflow.com/questions/142545/how-to-make-a-cross-module-variable
 print(__builtins__.ad)
 from Problem_BearinglessSynchronousDesign import Problem_BearinglessSynchronousDesign
 
@@ -197,8 +195,8 @@ if True:
             print('Gotta make do with swarm_data to generate survivor.')
 
         # 这些计数器的值永远都是评估过的chromosome的个数。
-        counter_fitness_called = counter_fitness_return = number_of_chromosome
-        print('counter_fitness_called = counter_fitness_return = number_of_chromosome = %d'%(number_of_chromosome))
+        ad.counter_fitness_called = ad.counter_fitness_return = number_of_chromosome
+        print('ad.counter_fitness_called = ad.counter_fitness_return = number_of_chromosome = %d'%(number_of_chromosome))
 
     else:
         print('Nothing exists in swarm_data.txt.\nThis is a whole new run.')
@@ -207,7 +205,7 @@ if True:
         number_of_finished_iterations = 0 # 实际上跑起来它不是零，而是一，因为我们认为初始化的一代也是一代。或者，我们定义number_of_finished_iterations = number_of_chromosome // popsize
 
     if bool_re_evaluate:
-        counter_fitness_called = counter_fitness_return = 0        
+        ad.counter_fitness_called = ad.counter_fitness_return = 0        
 
     # 初始化population，如果ad.flag_do_not_evaluate_when_init_pop是False，那么就说明是 new run，否则，整代个体的fitness都是[0,0,0]。
     pop = pg.population(prob, size=popsize) 
@@ -244,7 +242,7 @@ if True:
     # 初始化以后，pop.problem.get_fevals()就是popsize，但是如果大于popsize，说明“pop.set_x(i, pop_array[i]) # evaluate this guy”被调用了，说明还没输出过 survivors 数据，那么就写一下。
     if pop.problem.get_fevals() > popsize:
         print('Write survivors.')
-        ad.solver.write_swarm_survivor(pop, counter_fitness_return)
+        ad.solver.write_swarm_survivor(pop, ad.counter_fitness_return)
 
 ################################################################
 # MOO Step 2:
@@ -276,7 +274,7 @@ if True:
             pop = algo.evolve(pop)
 
             msg += 'Write survivors to file. '
-            ad.solver.write_swarm_survivor(pop, counter_fitness_return)
+            ad.solver.write_swarm_survivor(pop, ad.counter_fitness_return)
 
             hv = pg.hypervolume(pop)
             quality_measure = hv.compute(ref_point=get_bad_fintess_values(machine_type='PMSM', ref=True)) # ref_point must be dominated by the pop's pareto front
