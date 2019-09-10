@@ -1,4 +1,8 @@
+import logging
+from acm_designer import get_bad_fintess_values
+import numpy as np
 import builtins
+import os
 
 if hasattr(builtins, 'ad') and hasattr(builtins, 'counter_fitness_called') and hasattr(builtins, 'counter_fitness_return'):
     print('Global variables are shared between modules...')
@@ -61,7 +65,20 @@ class Problem_BearinglessSynchronousDesign(object):
                 ad.solver.folder_to_be_deleted = ad.solver.expected_project_file[:-5]+'jfiles'
             except KeyboardInterrupt as error:
                 raise error
+
+            # except utility.ExceptionReTry as error: # The copy region target is not found
+            #     print(str(error))
+            #     print('CJH: "the ind***TranPMSM_torque.csv is not found" means the mesher or the solver has failed. For now, simply consider it to be bad design.')
+            #     f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
+            #     logger = logging.getLogger(__name__)
+            #     logger.error(str(error))
+            #     break
+
             except Exception as error:
+                # if ad.bool_re_evaluate == True:
+                #     print('bool_re_evaluate is True...')
+                #     raise error
+
                 # raise error
                 f1, f2, f3 = get_bad_fintess_values(machine_type='PMSM')
                 print(str(error))

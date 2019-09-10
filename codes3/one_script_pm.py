@@ -4,8 +4,8 @@ import utility
 from utility import my_execfile
 import utility_moo
 from win32com.client import pywintypes
-bool_post_processing = True # solve or post-processing
-bool_re_evaluate = False
+bool_post_processing = False # solve or post-processing
+bool_re_evaluate = True
 
 #~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~
 # 0. FEA Setting / General Information & Packages Loading
@@ -26,15 +26,15 @@ if True:
     # run_folder = r'run#62399/' # spec_ECCE_PMSM_ (Q6p2)
     # run_folder = r'run#62499/' # spec_PEMD_BPMSM_Q12p2
     # run_folder = r'run#62599/' # spec_PEMD_BPMSM_Q6p1)
-    # run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4)
-    run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
+    run_folder = r'run#62699/' # spec_PEMD_BPMSM_Q12p4)
+    # run_folder = r'run#62799/' # spec_PEMD_BPMSM_Q24p1
 
     # spec's
     # my_execfile('./spec_ECCE_PMSM_.py', g=globals(), l=locals()) # Q=6, p=2
     # my_execfile('./spec_PEMD_BPMSM_Q12p2.py', g=globals(), l=locals()) # Q=12, p=2
     # my_execfile('./spec_PEMD_BPMSM_Q6p1.py', g=globals(), l=locals()) # Q=6, p=1
-    # my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
-    my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=24, p=1, ps=2
+    my_execfile('./spec_PEMD_BPMSM_Q12p4.py', g=globals(), l=locals()) # Q=12, p=4, ps=5
+    # my_execfile('./spec_PEMD_BPMSM_Q24p1.py', g=globals(), l=locals()) # Q=24, p=1, ps=2
 
     fea_config_dict['run_folder'] = run_folder
 
