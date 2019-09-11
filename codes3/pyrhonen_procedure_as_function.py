@@ -1339,7 +1339,7 @@ class desgin_specification(object):
             self.pmsm_template.mm_d_rp              = 4  # mm
             self.pmsm_template.mm_d_rs              = 0*3
             self.pmsm_template.p                    = p
-            self.pmsm_template.s                    = 1
+            self.pmsm_template.s                    = self.no_segmented_magnets
 
             # Those are some obsolete variables that are convenient to have.
             self.pmsm_template.Radius_OuterStatorYoke = im_template.Radius_OuterStatorYoke
@@ -1443,7 +1443,7 @@ class desgin_specification(object):
             self.pmsm_template.mm_d_rp              = 4  # mm
             self.pmsm_template.mm_d_rs              = 0*3
             self.pmsm_template.p                    = p
-            self.pmsm_template.s                    = 1
+            self.pmsm_template.s                    = self.no_segmented_magnets
 
             # Those are some obsolete variables that are convenient to have.
             self.pmsm_template.Radius_OuterStatorYoke = 1e3*0.5*stator_outer_diameter_Dse # mm

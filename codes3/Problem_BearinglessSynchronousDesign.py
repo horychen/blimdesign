@@ -195,3 +195,6 @@ class Problem_BearinglessSynchronousDesign(object):
     # Return function name
     def get_name(self):
         return "Bearingless PMSM Design"
+
+
+
